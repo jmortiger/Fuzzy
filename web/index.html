@@ -48,7 +48,10 @@
           serviceWorkerVersion: serviceWorkerVersion,
         },
         onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
+		// https://stackoverflow.com/questions/75536021/flutter-was-unable-to-create-enough-overlay-surfaces
+          engineInitializer.initializeEngine({
+            renderer: "html",
+          }).then(function(appRunner) {
             appRunner.runApp();
           });
         }
