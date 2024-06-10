@@ -13,10 +13,14 @@ dependencies:
   http: ^1.2.0
   j_util:
     #path: C:/Users/***REMOVED***source/repos/j_util
+    #https://dart.dev/tools/pub/dependencies#git-packages
+    #git: https://github.com/***REMOVED***/j_util.git
     path: ../j_util/
   oauth2: ^2.0.2
   package_info_plus: ^5.0.1
   path_provider: ^2.1.3
+  progressive_image: ^2.0.1
+  video_player: ^2.8.6
 
 dev_dependencies:
   flutter_test:
@@ -26,3 +30,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/

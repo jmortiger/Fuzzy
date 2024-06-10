@@ -1,21 +1,48 @@
+// https://www.liquid-technologies.com/online-json-to-schema-converter
+// https://app.quicktype.io/
 import 'package:j_util/j_util_full.dart';
 
 import '../image_listing.dart';
 
 typedef JsonOut = Map<String, dynamic>;
 
-final class E6Posts {
+abstract class E6Posts {
+  Iterable<E6PostResponse> get posts;
+
+  int get count;
+  // E6Posts fromJsonConstructor(JsonOut json);
+  E6PostResponse? tryGet(
+    int index, {
+    bool checkForValidFileUrl = true,
+  });
+  Set<int> get restrictedIndices;
+}
+
+final class E6PostsLazy extends E6Posts {
   final _postList = <E6PostResponse>[];
   final Late<int> _postCapacity = Late();
   int get capacity => _postCapacity.itemSafe ?? -1;
+  @override
   int get count => _postList.length;
   final Iterator<E6PostResponse> _postListIterator;
+  @override
+  final Set<int> restrictedIndices = {};
+  @override
   E6PostResponse? tryGet(
     int index, {
     bool checkForValidFileUrl = true,
   }) {
     try {
-      return (this[index].file.url != "") ? this[index] : this[index + 1];
+      if (checkForValidFileUrl) {
+        index += restrictedIndices.where((element) => element < index).length;
+        while (this[index].file.url == "") {
+          restrictedIndices.add(index++);
+        }
+      }
+      return this[index];
+      // return (!checkForValidFileUrl || this[index].file.url != "")
+      //     ? this[index]
+      //     : this[index + 1];
     } catch (e) {
       return null;
     }
@@ -44,49 +71,75 @@ final class E6Posts {
     return _postList[index];
   }
 
+  @override
   final Iterable<E6PostResponse> posts;
 
-  E6Posts({required this.posts}) : _postListIterator = posts.iterator;
-  factory E6Posts.fromJson(JsonOut json) => E6Posts(
+  E6PostsLazy({required this.posts}) : _postListIterator = posts.iterator;
+  factory E6PostsLazy.fromJson(JsonOut json) => E6PostsLazy(
       posts:
           (json["posts"] as Iterable).map((e) => E6PostResponse.fromJson(e)));
 }
 
-final class E6PostResponse implements ImageListing {
+final class E6PostsSync implements E6Posts {
   @override
-  Uri get imageAddress => Uri.parse(file.url);
+  final Set<int> restrictedIndices /*  = {} */;
   @override
-  String get imageUrl => file.url;
+  final int count;
   @override
-  Uri get imagePreviewAddress => Uri.parse(preview.url);
-  @override
-  String get imagePreviewUrl => preview.url;
-  @override
-  int get imageWidth => file.width;
-  @override
-  int get imageHeight => file.height;
-  @override
-  int get imagePreviewWidth => preview.width;
-  @override
-  int get imagePreviewHeight => preview.height;
+  E6PostResponse? tryGet(
+    int index, {
+    bool checkForValidFileUrl = true,
+  }) {
+    try {
+      if (checkForValidFileUrl) {
+        index += restrictedIndices.where((element) => element <= index).length;
+      }
+      return this[index];
+      // return (!checkForValidFileUrl || this[index].file.url != "")
+      //     ? this[index]
+      //     : this[index + 1];
+    } catch (e) {
+      return null;
+    }
+  }
 
+  E6PostResponse operator [](int index) {
+    return posts[index];
+  }
+
+  @override
+  final List<E6PostResponse> posts;
+
+  E6PostsSync({required this.posts})
+      : count = posts.length,
+        restrictedIndices =
+            posts.indicesWhere((e, i, l) => !e.file.hasValidUrl).toSet();
+  factory E6PostsSync.fromJson(JsonOut json) => E6PostsSync(
+      posts: (json["posts"] as List)
+          .mapAsList((e, i, l) => E6PostResponse.fromJson(e)));
+}
+
+final class E6PostResponse implements PostListing {
   // #region Json Fields
   /// The ID number of the post.
   final int id;
 
   /// The time the post was created in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.
-  final String created_at;
+  final String createdAt;
 
   /// The time the post was last updated in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.
-  final String updated_at;
+  final String updatedAt;
 
   /// (array group)
+  @override
   final E6FileResponse file;
 
   /// (array group)
+  @override
   final E6Preview preview;
 
   /// (array group)
+  @override
   final E6Sample sample;
 
   /// (array group)
@@ -96,10 +149,10 @@ final class E6PostResponse implements ImageListing {
   final E6PostTags tags;
 
   /// A JSON array of tags that are locked on the post.
-  final List<String> locked_tags;
+  final List<String> lockedTags;
 
   /// An ID that increases for every post alteration on E6 (explained below)
-  final int change_seq;
+  final int changeSeq;
 
   /// (array group)
   final E6Flags flags;
@@ -108,7 +161,7 @@ final class E6PostResponse implements ImageListing {
   final String rating;
 
   /// How many people have favorited the post.
-  final int fav_count;
+  final int favCount;
 
   /// The source field of the post.
   final List<String> sources;
@@ -120,135 +173,238 @@ final class E6PostResponse implements ImageListing {
   final E6Relationships relationships;
 
   /// The ID of the user that approved the post, if available.
-  final int? approver_id;
+  final int? approverId;
 
   /// The ID of the user that uploaded the post.
-  final int uploader_id;
+  final int uploaderId;
 
   /// The post’s description.
   final String description;
 
   /// The count of comments on the post.
-  final int comment_count;
+  final int commentCount;
 
-  /// If provided auth credentials, will return if the authenticated user has favorited the post or not.
-  final bool? is_favorited;
+  /// If provided auth credentials, will return if the authenticated user has
+  /// favorited the post or not. If not provided, will be false.
+  final bool isFavorited;
+
+  // #region Not Documented
+  /// Guess
+  final bool hasNotes;
+
+  /// If post is a video, the video length. Otherwise, null.
+  final num? duration;
+  // #endregion Not Documented
   // #endregion Json Fields
 
   E6PostResponse({
     required this.id,
-    required this.created_at,
-    required this.updated_at,
+    required this.createdAt,
+    required this.updatedAt,
     required this.file,
     required this.preview,
     required this.sample,
     required this.score,
     required this.tags,
-    required this.locked_tags,
-    required this.change_seq,
+    required this.lockedTags,
+    required this.changeSeq,
     required this.flags,
     required this.rating,
-    required this.fav_count,
+    required this.favCount,
     required this.sources,
     required this.pools,
     required this.relationships,
-    required this.approver_id,
-    required this.uploader_id,
+    required this.approverId,
+    required this.uploaderId,
     required this.description,
-    required this.comment_count,
-    required this.is_favorited,
+    required this.commentCount,
+    required this.isFavorited,
+    required this.hasNotes,
+    required this.duration,
   });
 
   factory E6PostResponse.fromJson(JsonOut json) => E6PostResponse(
         id: json["id"] as int,
-        created_at: json["created_at"] as String,
-        updated_at: json["updated_at"] as String,
+        createdAt: json["created_at"] as String,
+        updatedAt: json["updated_at"] as String,
         file: E6FileResponse.fromJson(json["file"] as JsonOut),
         preview: E6Preview.fromJson(json["preview"] as JsonOut),
         sample: E6Sample.fromJson(json["sample"] as JsonOut),
         score: E6Score.fromJson(json["score"] as JsonOut),
         tags: E6PostTags.fromJson(json["tags"] as JsonOut),
-        locked_tags: (json["locked_tags"] as List).cast<String>(),
-        change_seq: json["change_seq"] as int,
-        flags: E6Flags.fromJson(json["flags"] as JsonOut),
+        lockedTags: (json["locked_tags"] as List).cast<String>(),
+        changeSeq: json["change_seq"] as int,
+        flags: E6FlagsBit.fromJson(json["flags"] as JsonOut),
         rating: json["rating"] as String,
-        fav_count: json["fav_count"] as int,
+        favCount: json["fav_count"] as int,
         sources: (json["sources"] as List).cast<String>(),
         pools: (json["pools"] as List).cast<String>(),
         relationships:
             E6Relationships.fromJson(json["relationships"] as JsonOut),
-        approver_id: json["approver_id"] as int?,
-        uploader_id: json["uploader_id"] as int,
+        approverId: json["approver_id"] as int?,
+        uploaderId: json["uploader_id"] as int,
         description: json["description"] as String,
-        comment_count: json["comment_count"] as int,
-        is_favorited: json["is_favorited"] as bool?,
+        commentCount: json["comment_count"] as int,
+        isFavorited: json["is_favorited"] as bool,
+        hasNotes: json["has_notes"] as bool,
+        duration: json["duration"] as num?,
       );
 }
 
-class E6Relationships {
-  /// The ID of the post’s parent, if it has one.
-  final int? parent_id;
+/// TODO: Extend [E6Preview]?
+class E6FileResponse extends E6Preview {
+  /* /// The width of the post.
+  @override
+  final int width;
 
-  /// If the post has child posts (True/False)
-  final bool has_children;
+  /// The height of the post.
+  @override
+  final int height; */
 
-  /// If the post has active child posts (True/False)
+  /// The file’s extension.
+  final String ext;
+
+  /// The size of the file in bytes.
+  final int size;
+
+  /// The md5 of the file.
+  final String md5;
+
+  /* /// The URL where the file is hosted on E6.
   ///
-  /// J's Note: I assume "active" means not deleted
-  final bool has_active_children;
+  /// If auth is not provided, this may be null. This is currently replaced
+  /// with an empty string in from json.
+  /// https://e621.net/help/global_blacklist
+  @override
+  final String url;
+  bool get hasValidUrl =>
+      url.isNotEmpty &&
+      (_address.isAssigned
+          ? true
+          : (_address.itemSafe = Uri.tryParse(url)) != null);
 
-  /// A list of child post IDs that are linked to the post, if it has any.
-  final List<String> children;
+  final Late<Uri> _address = Late();
+  @override
+  Uri get address => Uri.parse(url); */
 
-  E6Relationships({
-    required this.parent_id,
-    required this.has_children,
-    required this.has_active_children,
-    required this.children,
+  E6FileResponse({
+    required super.width,
+    required super.height,
+    required this.ext,
+    required this.size,
+    required this.md5,
+    required super.url,
   });
-  factory E6Relationships.fromJson(JsonOut json) => E6Relationships(
-        parent_id: json["parent_id"] as int?,
-        has_children: json["has_children"] as bool,
-        has_active_children: json["has_active_children"] as bool,
-        children: (json["children"] as List).cast<String>(),
+  factory E6FileResponse.fromJson(JsonOut json) => E6FileResponse(
+        width: json["width"] as int,
+        height: json["height"] as int,
+        ext: json["ext"] as String,
+        size: json["size"] as int,
+        md5: json["md5"] as String,
+        url: json["url"] as String? ?? "",
       );
 }
 
-class E6Flags {
-  /// If the post is pending approval. (True/False)
-  final bool pending;
+class E6Preview implements IImageInfo {
+  /// The width of the post preview.
+  @override
+  final int width;
 
-  /// If the post is flagged for deletion. (True/False)
-  final bool flagged;
+  /// The height of the post preview.
+  @override
+  final int height;
 
-  /// If the post has it’s notes locked. (True/False)
-  final bool note_locked;
+  /// {@template E6Preview.url}
+  ///
+  /// The URL where the preview file is hosted on E6
+  ///
+  /// If auth is not provided, this may be null. This is currently replaced
+  /// with an empty string in from json.
+  /// https://e621.net/help/global_blacklist
+  ///
+  /// {@endtemplate}
+  @override
+  final String url;
+  @override
+  bool get hasValidUrl =>
+      url.isNotEmpty &&
+      (_address.isAssigned
+          ? true
+          : (_address.itemSafe = Uri.tryParse(url)) != null);
 
-  /// If the post’s status has been locked. (True/False)
-  final bool status_locked;
+  final Late<Uri> _address = Late();
+  @override
+  Uri get address => Uri.parse(url);
 
-  /// If the post’s rating has been locked. (True/False)
-  final bool rating_locked;
-
-  /// If the post has been deleted. (True/False)
-  final bool deleted;
-
-  E6Flags({
-    required this.pending,
-    required this.flagged,
-    required this.note_locked,
-    required this.status_locked,
-    required this.rating_locked,
-    required this.deleted,
+  E6Preview({
+    required this.width,
+    required this.height,
+    required this.url,
   });
-  factory E6Flags.fromJson(JsonOut json) => E6Flags(
-        pending: json["pending"] as bool,
-        flagged: json["flagged"] as bool,
-        note_locked: json["note_locked"] as bool,
-        status_locked: json["status_locked"] as bool,
-        rating_locked: json["rating_locked"] as bool,
-        deleted: json["deleted"] as bool,
+  factory E6Preview.fromJson(JsonOut json) => E6Preview(
+        width: json["width"] as int,
+        height: json["height"] as int,
+        url: json["url"] as String? ?? "",
       );
+}
+
+class E6Sample extends E6Preview implements ISampleInfo {
+  /// If the post has a sample/thumbnail or not. (True/False)
+  @override
+  final bool has;
+
+  /* /// The width of the post sample.
+  final int width;
+  /// The height of the post sample.
+  final int height; */
+
+  /// {@macro E6Preview.url}
+  ///
+  /// If the post is a video, this is a preview image from the video
+  @override
+  /* final String url; */
+  String get url => super.url;
+
+  E6Sample({
+    required this.has,
+    required super.width,
+    required super.height,
+    required super.url,
+  });
+  factory E6Sample.fromJson(JsonOut json) => E6Sample(
+        has: json["has"] as bool,
+        width: json["width"] as int,
+        height: json["height"] as int,
+        url: json["url"] as String? ?? "",
+      );
+}
+
+class E6Score {
+  /// The number of times voted up.
+  final int up;
+
+  /// A negative number representing the number of times voted down.
+  final int down;
+
+  /// The total score (up + down).
+  final int total;
+
+  E6Score({
+    required this.up,
+    required this.down,
+    required this.total,
+  });
+  factory E6Score.fromJson(JsonOut json) => E6Score(
+        up: json["up"] as int,
+        down: json["down"] as int,
+        total: json["total"] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        "up": up,
+        "down": down,
+        "total": total,
+      };
 }
 
 class E6PostTags {
@@ -273,6 +429,11 @@ class E6PostTags {
   /// A JSON array of all the meta tags on the post.
   final List<String> meta;
 
+  // #region Undocumented
+  /// A JSON array of all the copyright tags on the post.
+  final List<String> copyright;
+  // #endregion Undocumented
+
   E6PostTags({
     required this.general,
     required this.species,
@@ -281,6 +442,7 @@ class E6PostTags {
     required this.invalid,
     required this.lore,
     required this.meta,
+    required this.copyright,
   });
   factory E6PostTags.fromJson(JsonOut json) => E6PostTags(
         general: (json["general"] as List).cast<String>(),
@@ -290,113 +452,283 @@ class E6PostTags {
         invalid: (json["invalid"] as List).cast<String>(),
         lore: (json["lore"] as List).cast<String>(),
         meta: (json["meta"] as List).cast<String>(),
+        copyright: (json["copyright"] as List).cast<String>(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "general": List<dynamic>.from(general.map((x) => x)),
+        "species": List<dynamic>.from(species.map((x) => x)),
+        "character": List<dynamic>.from(character.map((x) => x)),
+        "artist": List<dynamic>.from(artist.map((x) => x)),
+        "invalid": List<dynamic>.from(invalid.map((x) => x)),
+        "lore": List<dynamic>.from(lore.map((x) => x)),
+        "meta": List<dynamic>.from(meta.map((x) => x)),
+        "copyright": List<dynamic>.from(copyright.map((x) => x)),
+      };
+}
+
+class E6Flags {
+  /// If the post is pending approval. (True/False)
+  final bool pending;
+
+  /// If the post is flagged for deletion. (True/False)
+  final bool flagged;
+
+  /// If the post has it’s notes locked. (True/False)
+  final bool noteLocked;
+
+  /// If the post’s status has been locked. (True/False)
+  final bool statusLocked;
+
+  /// If the post’s rating has been locked. (True/False)
+  final bool ratingLocked;
+
+  /// If the post has been deleted. (True/False)
+  final bool deleted;
+
+  E6Flags({
+    required this.pending,
+    required this.flagged,
+    required this.noteLocked,
+    required this.statusLocked,
+    required this.ratingLocked,
+    required this.deleted,
+  });
+  factory E6Flags.fromJson(JsonOut json) => E6Flags(
+        pending: json["pending"] as bool,
+        flagged: json["flagged"] as bool,
+        noteLocked: json["note_locked"] as bool,
+        statusLocked: json["status_locked"] as bool,
+        ratingLocked: json["rating_locked"] as bool,
+        deleted: json["deleted"] as bool,
       );
 }
 
-class E6FileResponse {
-  /// The width of the post.
-  final int width;
+enum PostFlags {
+  /// int.parse("000001", radix: 2);
+  pending(bit: 1),
 
-  /// The height of the post.
-  final int height;
+  /// int.parse("000010", radix: 2);
+  flagged(bit: 2),
 
-  /// The file’s extension.
-  final String ext;
+  /// int.parse("000100", radix: 2);
+  noteLocked(bit: 4),
 
-  /// The size of the file in bytes.
-  final int size;
+  /// int.parse("001000", radix: 2);
+  statusLocked(bit: 8),
 
-  /// The md5 of the file.
-  final String md5;
+  /// int.parse("010000", radix: 2);
+  ratingLocked(bit: 16),
 
-  /// The URL where the file is hosted on E6
-  final String url;
+  /// int.parse("100000", radix: 2);
+  deleted(bit: 32);
 
-  E6FileResponse({
-    required this.width,
+  final int bit;
+  const PostFlags({required this.bit});
+
+  /// int.parse("000001", radix: 2);
+  static const int pendingFlag = 1;
+
+  /// int.parse("000010", radix: 2);
+  static const int flaggedFlag = 2;
+
+  /// int.parse("000100", radix: 2);
+  static const int noteLockedFlag = 4;
+
+  /// int.parse("001000", radix: 2);
+  static const int statusLockedFlag = 8;
+
+  /// int.parse("010000", radix: 2);
+  static const int ratingLockedFlag = 16;
+
+  /// int.parse("100000", radix: 2);
+  static const int deletedFlag = 32;
+  static int toInt(PostFlags f) => f.bit;
+  static List<PostFlags> getFlags(int f) {
+    var l = <PostFlags>[];
+    if (f & pending.bit == pending.bit) l.add(pending);
+    if (f & flagged.bit == flagged.bit) l.add(flagged);
+    if (f & noteLocked.bit == noteLocked.bit) l.add(noteLocked);
+    if (f & statusLocked.bit == statusLocked.bit) l.add(statusLocked);
+    if (f & ratingLocked.bit == ratingLocked.bit) l.add(ratingLocked);
+    if (f & deleted.bit == deleted.bit) l.add(deleted);
+    return l;
+  }
+
+  bool hasFlag(int f) => (PostFlags.toInt(this) & f) == PostFlags.toInt(this);
+}
+
+class E6FlagsBit implements E6Flags {
+  @override
+  bool get deleted => (_data & pendingFlag) == pendingFlag;
+
+  @override
+  bool get flagged => (_data & flaggedFlag) == flaggedFlag;
+
+  @override
+  bool get noteLocked => (_data & noteLockedFlag) == noteLockedFlag;
+
+  @override
+  bool get pending => (_data & statusLockedFlag) == statusLockedFlag;
+
+  @override
+  bool get ratingLocked => (_data & ratingLockedFlag) == ratingLockedFlag;
+
+  @override
+  bool get statusLocked => (_data & deletedFlag) == deletedFlag;
+  final int _data;
+  E6FlagsBit({
+    required bool pending,
+    required bool flagged,
+    required bool noteLocked,
+    required bool statusLocked,
+    required bool ratingLocked,
+    required bool deleted,
+  }) : _data = (pending ? pendingFlag : 0) +
+            (flagged ? flaggedFlag : 0) +
+            (noteLocked ? noteLockedFlag : 0) +
+            (statusLocked ? statusLockedFlag : 0) +
+            (ratingLocked ? ratingLockedFlag : 0) +
+            (deleted ? deletedFlag : 0);
+  factory E6FlagsBit.fromJson(JsonOut json) => E6FlagsBit(
+        pending: json["pending"] as bool,
+        flagged: json["flagged"] as bool,
+        noteLocked: json["note_locked"] as bool,
+        statusLocked: json["status_locked"] as bool,
+        ratingLocked: json["rating_locked"] as bool,
+        deleted: json["deleted"] as bool,
+      );
+  static int getValue({
+    bool pending = false,
+    bool flagged = false,
+    bool noteLocked = false,
+    bool statusLocked = false,
+    bool ratingLocked = false,
+    bool deleted = false,
+  }) =>
+      (pending ? pendingFlag : 0) +
+      (flagged ? flaggedFlag : 0) +
+      (noteLocked ? noteLockedFlag : 0) +
+      (statusLocked ? statusLockedFlag : 0) +
+      (ratingLocked ? ratingLockedFlag : 0) +
+      (deleted ? deletedFlag : 0);
+
+  static const int pendingFlag = 1; //int.parse("000001", radix: 2);
+  static const int flaggedFlag = 2; //int.parse("000010", radix: 2);
+  static const int noteLockedFlag = 4; //int.parse("000100", radix: 2);
+  static const int statusLockedFlag = 8; //int.parse("001000", radix: 2);
+  static const int ratingLockedFlag = 16; //int.parse("010000", radix: 2);
+  static const int deletedFlag = 32; //int.parse("100000", radix: 2);
+}
+
+class E6Relationships {
+  /// The ID of the post’s parent, if it has one.
+  final int? parentId;
+
+  /// If the post has child posts (True/False)
+  final bool hasChildren;
+
+  /// If the post has active child posts (True/False)
+  ///
+  /// J's Note: I assume "active" means not deleted
+  final bool hasActiveChildren;
+
+  /// A list of child post IDs that are linked to the post, if it has any.
+  final List<String> children;
+
+  bool get hasParent => parentId != null;
+
+  E6Relationships({
+    required this.parentId,
+    required this.hasChildren,
+    required this.hasActiveChildren,
+    required this.children,
+  });
+  factory E6Relationships.fromJson(JsonOut json) => E6Relationships(
+        parentId: json["parent_id"] as int?,
+        hasChildren: json["has_children"] as bool,
+        hasActiveChildren: json["has_active_children"] as bool,
+        children: (json["children"] as List).cast<String>(),
+      );
+}
+
+class Alternates {
+  Alternate? the480P;
+  Alternate? the720P;
+  Alternate? original;
+  Map<String, Alternate> alternates;
+
+  Alternates({
+    this.the480P,
+    this.the720P,
+    this.original,
+    required this.alternates,
+  });
+
+  factory Alternates.fromJson(Map<String, dynamic> json) => Alternates(
+        the480P: json["480p"] == null ? null : Alternate.fromJson(json["480p"]),
+        the720P: json["720p"] == null ? null : Alternate.fromJson(json["720p"]),
+        original: json["original"] == null
+            ? null
+            : Alternate.fromJson(json["original"]),
+        alternates: {
+          for (var e in json.entries)
+            e.key: Alternate.fromJson(e.value as JsonOut)
+        },
+      );
+
+  Map<String, dynamic> toJson() => {
+        "480p": the480P?.toJson(),
+        "720p": the720P?.toJson(),
+        "original": original?.toJson(),
+      };
+}
+
+class Alternate {
+  static const types = ["video"];
+  int height;
+  String type;
+  List<String?> urls;
+  int width;
+
+  Alternate({
     required this.height,
-    required this.ext,
-    required this.size,
-    required this.md5,
-    required this.url,
-  });
-  factory E6FileResponse.fromJson(JsonOut json) => E6FileResponse(
-        width: json["width"] as int,
-        height: json["height"] as int,
-        ext: json["ext"] as String,
-        size: json["size"] as int,
-        md5: json["md5"] as String,
-        url: json["url"] as String? ?? "", // TODO: THIS CAN BE NULL???
-      );
-}
-
-class E6Preview {
-  /// The width of the post preview.
-  final int width;
-
-  /// The height of the post preview.
-  final int height;
-
-  /// The URL where the preview file is hosted on E6
-  final String url;
-
-  E6Preview({
+    required this.type,
+    required this.urls,
     required this.width,
-    required this.height,
-    required this.url,
   });
-  factory E6Preview.fromJson(JsonOut json) => E6Preview(
-        width: json["width"] as int,
-        height: json["height"] as int,
-        url: json["url"] as String,
+
+  factory Alternate.fromJson(Map<String, dynamic> json) => Alternate(
+        height: json["height"],
+        type: json["type"],
+        urls: List<String?>.from(json["urls"].map((x) => x)),
+        width: json["width"],
       );
+
+  Map<String, dynamic> toJson() => {
+        "height": height,
+        "type": type,
+        "urls": List<dynamic>.from(urls.map((x) => x)),
+        "width": width,
+      };
 }
 
-class E6Score {
-  /// The number of times voted up.
-  final int up;
+enum PostDataType {
+  png,
+  jpg,
+  gif,
+  webm,
+  mp4,
+  swf;
 
-  /// A negative number representing the number of times voted down.
-  final int down;
-
-  /// The total score (up + down).
-  final int total;
-
-  E6Score({
-    required this.up,
-    required this.down,
-    required this.total,
-  });
-  factory E6Score.fromJson(JsonOut json) => E6Score(
-        up: json["up"] as int,
-        down: json["down"] as int,
-        total: json["total"] as int,
-      );
+  bool isResourceOfDataType(String url) =>
+      url.endsWith(toString()) ||
+      (this == PostDataType.jpg && url.endsWith("jpeg"));
 }
 
-class E6Sample {
-  /// If the post has a sample/thumbnail or not. (True/False)
-  final bool has;
-
-  /// The width of the post sample.
-  final int width;
-
-  /// The height of the post sample.
-  final int height;
-
-  /// The URL where the sample file is hosted on E6.
-  final String url;
-
-  E6Sample({
-    required this.has,
-    required this.width,
-    required this.height,
-    required this.url,
-  });
-  factory E6Sample.fromJson(JsonOut json) => E6Sample(
-        has: json["has"] as bool,
-        width: json["width"] as int,
-        height: json["height"] as int,
-        url: json["url"] as String,
-      );
+enum PostType {
+  image,
+  video,
+  flash,
+  ;
 }

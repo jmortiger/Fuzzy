@@ -15,7 +15,7 @@ void main() {
     // expect(t.runtimeType, isA<Map<String, dynamic>>);
     expect(t["posts"].runtimeType, List);
     // print(t);
-    var t2 = E6Posts.fromJson(t);
+    var t2 = E6PostsLazy.fromJson(t);
     // expect(t.posts[0].runtimeType, E6PostResponse);
     expect(t2.posts.first.runtimeType, E6PostResponse);
   });
