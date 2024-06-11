@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:fuzzy/util/util_platform_web.dart' as ui_web;
 import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/models/e621/e6_models.dart';
 import 'package:fuzzy/widgets/w_post_view.dart';
@@ -14,6 +13,7 @@ class WImageResult extends StatelessWidget {
   final PostListing imageListing;
   final int index;
   final bool isSelected;
+  final bool areAnySelected;
 
   final String searchText;
 
@@ -26,6 +26,7 @@ class WImageResult extends StatelessWidget {
     this.searchText = "",
     this.onSelectionToggle,
     this.isSelected = false,
+    this.areAnySelected = false,
   });
 
   @override
@@ -50,7 +51,7 @@ class WImageResult extends StatelessWidget {
         // _buildActionChip(context, w, h, url),
         _buildWithInputDetector(context, w, h, url),
         PostInfoPane(post: imageListing),
-        if (isSelected) _buildCheckmark(context)
+        if (isSelected) _buildCheckmark(context),
       ],
     );
   }
@@ -77,7 +78,7 @@ class WImageResult extends StatelessWidget {
       // },
       onLongPress: () {
         print("OnLongPress");
-        /* if (!isSelected)  */onSelectionToggle?.call(index);
+        /* if (!isSelected)  */ onSelectionToggle?.call(index);
       },
       // onDoubleTap: () {
       //   print("onDoubleTap");
@@ -85,7 +86,7 @@ class WImageResult extends StatelessWidget {
       // },
       onTap: () {
         print("OnTap");
-        if (isSelected) {
+        if (isSelected || areAnySelected) {
           onSelectionToggle?.call(index);
         } else {
           Navigator.push(
@@ -209,8 +210,22 @@ class PostInfoPane extends StatelessWidget {
           color: const Color.fromARGB(149, 46, 46, 46),
           child: Text.rich(
             TextSpan(
-              text: "${e6Post.file.ext} ${e6Post.score.total} (",
+              text: " ",
               children: [
+                TextSpan(
+                    text: "${e6Post.rating.toUpperCase()} ",
+                    style: TextStyle(
+                      color: switch (e6Post.rating) {
+                        "s" => Colors.green,
+                        "q" => Colors.amber,
+                        "e" => Colors.red,
+                        _ => throw UnsupportedError("type not supported"),
+                      },
+                      fontWeight: FontWeight.bold,
+                    )),
+                TextSpan(
+                  text: "${e6Post.file.ext} ${e6Post.score.total} (",
+                ),
                 // const TextSpan(text: "U: "),
                 TextSpan(
                     text: "${e6Post.score.up}",

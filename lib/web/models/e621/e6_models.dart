@@ -263,6 +263,8 @@ class E6FileResponse extends E6Preview {
 
   /// The file’s extension.
   final String ext;
+  @override
+  String get extension => ext;
 
   /// The size of the file in bytes.
   final int size;
@@ -314,6 +316,12 @@ class E6Preview implements IImageInfo {
   @override
   final int height;
 
+  @override
+  String get extension => url.substring(url.lastIndexOf(".") + 1);
+  
+  @override
+  bool get isAVideo => extension == "webm" || extension == "mp4";
+
   /// {@template E6Preview.url}
   ///
   /// The URL where the preview file is hosted on E6
@@ -364,6 +372,9 @@ class E6Sample extends E6Preview implements ISampleInfo {
   @override
   /* final String url; */
   String get url => super.url;
+
+  @override
+  bool get isAVideo => extension == "webm" || extension == "mp4";
 
   E6Sample({
     required this.has,

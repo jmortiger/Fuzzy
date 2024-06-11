@@ -9,6 +9,7 @@ import 'package:fuzzy/web/models/e621/tag_d_b.dart';
 import 'package:fuzzy/web/site.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:fuzzy/util/util.dart' as util;
+import 'package:j_util/j_util_full.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({
@@ -20,72 +21,140 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  bool openMenu = false;
-  bool toggleMenu() => openMenu = !openMenu;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Fuzzy"),
       ),
-      body: SafeArea(
-        child: buildSearchView(context),
-      ),
-      endDrawer: Drawer(
-        child: ListView(
-          children: [
-            const DrawerHeader(
-              child: Text("Menu"),
-            ),
-            ListTile(
-              title: const Text("Toggle Lazy Loading"),
-              leading: lazyLoad
-                  ? const Icon(Icons.check_box)
-                  : const Icon(Icons.check_box_outline_blank),
-              onTap: () {
-                print("Before: $lazyLoad");
-                setState(() => toggleLazyLoad());
-                print("After: $lazyLoad");
-                setState(() => toggleMenu());
-              },
-            ),
-            ListTile(
-              title: const Text("Toggle Auth headers"),
-              leading: sendAuthHeaders
-                  ? const Icon(Icons.check_box)
-                  : const Icon(Icons.check_box_outline_blank),
-              onTap: () {
-                print("Before: $sendAuthHeaders");
-                setState(() => toggleSendAuthHeaders());
-                print("After: $sendAuthHeaders");
-                setState(() => toggleMenu());
-              },
-            ),
-            ListTile(
-              title: const Text("Toggle Force Safe"),
-              leading: forceSafe
-                  ? const Icon(Icons.check_box)
-                  : const Icon(Icons.check_box_outline_blank),
-              onTap: () {
-                print("Before: $forceSafe");
-                setState(() => toggleForceSafe());
-                print("After: $forceSafe");
-                setState(() => toggleMenu());
-              },
-            ),
-            ListTile(
-              title: const Text("Toggle Image Display Method"),
-              // leading: lazyLoad ? const Icon(Icons.check_box) :const Icon(Icons.check_box_outline_blank),
-              onTap: () {
-                print("Before: ${imageFit.name}");
-                imageFit =
-                    imageFit == BoxFit.contain ? BoxFit.cover : BoxFit.contain;
-                print("After: ${imageFit.name}");
-                setState(() => toggleMenu());
-              },
-            ),
-          ],
-        ),
+      body: SafeArea(child: buildSearchView(context)),
+      endDrawer: _buildDrawer(context),
+      floatingActionButton: _buildFab(context),
+    );
+  }
+
+  ExpandableFab? _buildFab(BuildContext context) {
+    return selectedIndices.isNotEmpty
+        ? ExpandableFab(
+            distance: 112,
+            children: [
+              ActionButton(
+                icon: const Icon(Icons.clear),
+                tooltip: "Clear Selections",
+                onPressed: () => onSelectionCleared.invoke(),
+              ),
+              ActionButton(
+                icon: const Icon(Icons.add),
+                tooltip: "Add selected to pool",
+                onPressed: () {
+                  print("To Be Implemented");
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("To Be Implemented")),
+                  );
+                },
+              ),
+              ActionButton(
+                icon: const Icon(Icons.add),
+                tooltip: "Add selected to favorites",
+                onPressed: () {
+                  print("To Be Implemented");
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("To Be Implemented")),
+                  );
+                },
+              ),
+              ActionButton(
+                icon: const Icon(Icons.delete),
+                tooltip: "Remove selected from pool",
+                onPressed: () {
+                  print("To Be Implemented");
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("To Be Implemented")),
+                  );
+                },
+              ),
+              ActionButton(
+                icon: const Icon(Icons.delete),
+                tooltip: "Remove selected from favorites",
+                onPressed: () {
+                  print("To Be Implemented");
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("To Be Implemented")),
+                  );
+                },
+              ),
+            ],
+          )
+        : null;
+  }
+
+  Drawer _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        children: [
+          const DrawerHeader(
+            child: Text("Menu"),
+          ),
+          ListTile(
+            title: const Text("Toggle Lazy Loading"),
+            leading: lazyLoad
+                ? const Icon(Icons.check_box)
+                : const Icon(Icons.check_box_outline_blank),
+            onTap: () {
+              print("Before: $lazyLoad");
+              setState(() => toggleLazyLoad());
+              print("After: $lazyLoad");
+              // Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text("Toggle Lazy Building"),
+            leading: lazyBuilding
+                ? const Icon(Icons.check_box)
+                : const Icon(Icons.check_box_outline_blank),
+            onTap: () {
+              print("Before: $lazyBuilding");
+              setState(() => toggleLazyBuilding());
+              print("After: $lazyBuilding");
+              // Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text("Toggle Auth headers"),
+            leading: sendAuthHeaders
+                ? const Icon(Icons.check_box)
+                : const Icon(Icons.check_box_outline_blank),
+            onTap: () {
+              print("Before: $sendAuthHeaders");
+              setState(() => toggleSendAuthHeaders());
+              print("After: $sendAuthHeaders");
+              // Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text("Toggle Force Safe"),
+            leading: forceSafe
+                ? const Icon(Icons.check_box)
+                : const Icon(Icons.check_box_outline_blank),
+            onTap: () {
+              print("Before: $forceSafe");
+              setState(() => toggleForceSafe());
+              print("After: $forceSafe");
+              // Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text("Toggle Image Display Method"),
+            // leading: lazyLoad ? const Icon(Icons.check_box) :const Icon(Icons.check_box_outline_blank),
+            onTap: () {
+              print("Before: ${imageFit.name}");
+              imageFit =
+                  imageFit == BoxFit.contain ? BoxFit.cover : BoxFit.contain;
+              print("After: ${imageFit.name}");
+              // Navigator.pop(context);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -93,6 +162,8 @@ class _HomePageState extends State<HomePage> {
   // #region From WSearchView
   bool lazyLoad = false;
   bool toggleLazyLoad() => lazyLoad = !lazyLoad;
+  bool lazyBuilding = false;
+  bool toggleLazyBuilding() => lazyBuilding = !lazyBuilding;
   bool tagSafety = false;
   bool toggleTagSafety() => tagSafety = !tagSafety;
   bool sendAuthHeaders = false;
@@ -103,6 +174,8 @@ class _HomePageState extends State<HomePage> {
   Future<http.StreamedResponse>? pr;
   int? currentPostCollectionExpectedSize;
   E6Posts? posts;
+  Set<int> selectedIndices = {};
+  JPureEvent onSelectionCleared = JPureEvent();
 
   @widgetFactory
   Widget buildSearchView(BuildContext context) {
@@ -133,9 +206,16 @@ class _HomePageState extends State<HomePage> {
                     ? (currentPostCollectionExpectedSize ?? 50)
                     : posts!.count,
                 searchText: searchText,
+                onPostsSelected: (indices, newest) {
+                  setState(() {
+                    selectedIndices = indices;
+                  });
+                },
+                onSelectionCleared: JPureEvent(),
+                useLazyBuilding: lazyBuilding,
               ),
             );
-          })()
+          })(),
       ],
     );
   }
@@ -248,7 +328,11 @@ class _HomePageState extends State<HomePage> {
     int limit = 50,
     String? page,
   }) {
-    pr = deliverSearchRequest(tags: forceSafe ? "$tags rating:safe" : tags, limit: limit, page: page).send();
+    pr = deliverSearchRequest(
+            tags: forceSafe ? "$tags rating:safe" : tags,
+            limit: limit,
+            page: page)
+        .send();
     pr!.then((value) {
       value.stream.bytesToString().then((value) {
         setState(() {

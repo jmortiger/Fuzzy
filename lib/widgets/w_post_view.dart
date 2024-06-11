@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fuzzy/widgets/w_video_player_screen.dart';
 // import 'package:fuzzy/util/util_platform_web.dart' as ui_web;
 import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/models/e621/e6_models.dart';
@@ -11,9 +12,17 @@ class WPostView extends StatelessWidget {
     super.key,
     required this.postListing,
   });
-
+  E6PostResponse get e6Post => postListing as E6PostResponse;
   @override
   Widget build(BuildContext context) {
+    var headerStyle =
+        const DefaultTextStyle.fallback().style.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.amber,
+              decoration: TextDecoration.underline,
+              decorationStyle: TextDecorationStyle.solid,
+              fontSize: (const DefaultTextStyle.fallback().style.fontSize ?? 12) * 1.5,
+            );
     var IImageInfo(width: w, height: h, url: url) = postListing.file;
     return Scaffold(
       appBar: AppBar(
@@ -22,59 +31,109 @@ class WPostView extends StatelessWidget {
       body: ListView(
         // padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
         children: [
-          /* (Platform.isWeb
-              ?  */
           Container(
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width,
-              maxHeight: h.toDouble(),
+              maxHeight: (MediaQuery.of(context).size.width / w) * h.toDouble(),
             ),
             child: AspectRatio(
               aspectRatio: w / h,
-              //child: _oldImg(url, w, h),
-              child: Platform.isWeb
-                  ? _createHtmlImageElement(url, w, h)
-                  : Image.network(
-                      url,
-                      errorBuilder: (context, error, stackTrace) => throw error,
-                      fit: BoxFit.contain,
-                      width: w.toDouble(),
-                      height: h.toDouble(),
-                      cacheWidth: w,
-                      cacheHeight: h,
-                    ),
+              child: _buildMainContent(url, w, h),
             ),
-          )
-          /* : Container(
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width,
-                    maxHeight: h.toDouble(),
-                  ),
-                  child: AspectRatio(
-                    aspectRatio: w / h,
-                    child: Image.network(
-                      url,
-                      errorBuilder: (context, error, stackTrace) => throw error,
-                      fit: BoxFit.contain,
-                      width: w.toDouble(),
-                      height: h.toDouble(),
-                      cacheWidth: w,
-                      cacheHeight: h,
-                    ),
-                  ),
-                )) */
-          ,
-          ...(postListing as E6PostResponse).tags.general.map((e) => Text(e)),
+          ),
+          Text(
+            "Artist",
+            style: headerStyle,
+          ),
+          ...e6Post.tags.artist.map((e) => SelectableText(e)),
           // ListView.builder(
           //   itemBuilder: (BuildContext context, int index) {
-          //     return (postListing as E6PostResponse).tags.general.length > index
-          //         ? Text((postListing as E6PostResponse).tags.general[index])
+          //     return e6Post.tags.artist.length > index
+          //         ? Text(e6Post.tags.artist[index])
+          //         : null;
+          //   },
+          // ),
+          Text(
+            "Species",
+            style: headerStyle,
+          ),
+          ...e6Post.tags.species.map((e) => SelectableText(e)),
+          // ListView.builder(
+          //   itemBuilder: (BuildContext context, int index) {
+          //     return e6Post.tags.species.length > index
+          //         ? Text(e6Post.tags.species[index])
+          //         : null;
+          //   },
+          // ),
+          Text(
+            "Copyright",
+            style: headerStyle,
+          ),
+          ...e6Post.tags.copyright.map((e) => SelectableText(e)),
+          // ListView.builder(
+          //   itemBuilder: (BuildContext context, int index) {
+          //     return e6Post.tags.copyright.length > index
+          //         ? Text(e6Post.tags.copyright[index])
+          //         : null;
+          //   },
+          // ),
+          Text(
+            "General",
+            style: headerStyle,
+          ),
+          ...e6Post.tags.general.map((e) => SelectableText(e)),
+          // ListView.builder(
+          //   itemBuilder: (BuildContext context, int index) {
+          //     return e6Post.tags.general.length > index
+          //         ? Text(e6Post.tags.general[index])
+          //         : null;
+          //   },
+          // ),
+          Text(
+            "Lore",
+            style: headerStyle,
+          ),
+          ...e6Post.tags.lore.map((e) => SelectableText(e)),
+          // ListView.builder(
+          //   itemBuilder: (BuildContext context, int index) {
+          //     return e6Post.tags.lore.length > index
+          //         ? Text(e6Post.tags.lore[index])
+          //         : null;
+          //   },
+          // ),
+          Text(
+            "Meta",
+            style: headerStyle,
+          ),
+          ...e6Post.tags.meta.map((e) => SelectableText(e)),
+          // ListView.builder(
+          //   itemBuilder: (BuildContext context, int index) {
+          //     return e6Post.tags.meta.length > index
+          //         ? Text(e6Post.tags.meta[index])
           //         : null;
           //   },
           // ),
         ],
       ),
     );
+  }
+
+  Widget _buildMainContent(String url, int w, int h) {
+    return postListing.file.isAVideo
+        ? WVideoPlayerScreen(
+            resourceUri: postListing.file.address,
+          )
+        : Platform.isWeb
+            ? _createHtmlImageElement(url, w, h)
+            : Image.network(
+                url,
+                errorBuilder: (context, error, stackTrace) => throw error,
+                fit: BoxFit.contain,
+                width: w.toDouble(),
+                height: h.toDouble(),
+                cacheWidth: w,
+                cacheHeight: h,
+              );
   }
 
   @widgetFactory

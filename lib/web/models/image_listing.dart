@@ -10,6 +10,8 @@ abstract interface class IImageInfo {
   int get width;
   int get height;
   bool get hasValidUrl => Uri.tryParse(url) != null;
+  String get extension;
+  bool get isAVideo => extension == "webm" || extension == "mp4";
 }
 
 abstract interface class ISampleInfo extends IImageInfo {
