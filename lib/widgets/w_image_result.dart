@@ -19,6 +19,9 @@ class WImageResult extends StatelessWidget {
 
   final void Function(int index)? onSelectionToggle;
 
+  String get _buildTooltipString =>
+      "$searchText[$index]: ${(imageListing as E6PostResponse).id.toString()}";
+
   const WImageResult({
     super.key,
     required this.imageListing,
@@ -49,27 +52,69 @@ class WImageResult extends StatelessWidget {
     return Stack(
       children: [
         // _buildActionChip(context, w, h, url),
-        _buildWithInputDetector(context, w, h, url),
+        // _buildWithInputDetector(context, w, h, url),
+        _buildPane(w, h, url),
         PostInfoPane(post: imageListing),
         if (isSelected) _buildCheckmark(context),
+        _buildInputDetector(context, w, h, url),
       ],
     );
   }
 
   Widget _buildCheckmark(BuildContext context) {
-    return Align(
-      alignment: AlignmentDirectional.bottomEnd,
-      // heightFactor: 6,
-      // widthFactor: 6,
-      child: Icon(
-        Icons.check,
-        color: Colors.green,
-        opticalSize: (IconTheme.of(context).opticalSize ?? 48) * 6,
-        size: (IconTheme.of(context).size ?? 24) * 6,
+    return IgnorePointer(
+      ignoring: true,
+      child: Align(
+        alignment: AlignmentDirectional.bottomEnd,
+        // heightFactor: 6,
+        // widthFactor: 6,
+        child: Icon(
+          Icons.check,
+          color: Colors.green,
+          opticalSize: (IconTheme.of(context).opticalSize ?? 48) * 6,
+          size: (IconTheme.of(context).size ?? 24) * 6,
+        ),
       ),
     );
   }
 
+  Widget _buildInputDetector(
+      BuildContext context, int w, int h, String url) {
+    return Positioned.fill(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          // onHover: (value) {
+          //   // tooltip: _buildTooltipString,
+          // },
+          onLongPress: () {
+            print("OnLongPress");
+            /* if (!isSelected)  */ onSelectionToggle?.call(index);
+          },
+          // onDoubleTap: () {
+          //   print("onDoubleTap");
+          //   /* if (!isSelected)  */onSelectionToggle?.call(index);
+          // },
+          onTap: () {
+            print("OnTap");
+            if (isSelected || areAnySelected) {
+              onSelectionToggle?.call(index);
+            } else {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => WPostView(postListing: imageListing),
+                  ));
+            }
+          },
+          // TODO: Fix vertical image offset
+          // child: _buildPane(w, h, url),
+        ),
+      ),
+    );
+  }
+
+  // #region Nested Image & Interaction
   InkWell _buildWithInputDetector(
       BuildContext context, int w, int h, String url) {
     return InkWell(
@@ -115,6 +160,7 @@ class WImageResult extends StatelessWidget {
       label: _buildPane(w, h, url),
     );
   }
+  // #endregion Nested Image & Interaction
 
   Center _buildPane(int w, int h, String url) {
     return Center(
@@ -134,9 +180,6 @@ class WImageResult extends StatelessWidget {
       ),
     );
   }
-
-  String get _buildTooltipString =>
-      "$searchText[$index]: ${(imageListing as E6PostResponse).id.toString()}";
 
   @widgetFactory
   HtmlElementView _createHtmlImageElement(String url, int w, int h) {
