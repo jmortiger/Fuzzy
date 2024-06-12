@@ -5,11 +5,11 @@ import 'package:j_util/j_util_full.dart';
 
 class TagDB {
   final Set<String> tagSet;
-  final List<TagDBEntry/* Full */> tags;
+  final List<TagDBEntry /* Full */ > tags;
   final Map<String, (TagCategory, int)> tagsMap;
-  final PriorityQueue<TagDBEntry/* Full */> tagsByPopularity;
+  final PriorityQueue<TagDBEntry /* Full */ > tagsByPopularity;
   // final List<PriorityQueue<TagDBEntry/* Full */>> tagsByFirstCharsThenPopularity;
-  final CustomPriorityQueue<TagDBEntry/* Full */> tagsByString;
+  final CustomPriorityQueue<TagDBEntry /* Full */ > tagsByString;
   final Map<String, (int, int)> _startEndOfChar = <String, (int, int)>{};
   (int, int) getCharStartAndEnd(String character) =>
       _startEndOfChar[character[0]] ??
@@ -79,11 +79,9 @@ class TagDB {
   // );
 }
 
-class TagDBEntryFull extends TagDBEntry/*  implements Comparable<TagDBEntryFull> */ {
+class TagDBEntryFull
+    extends TagDBEntry {
   final int id;
-  // final String name;
-  // final TagCategory category;
-  // final int postCount;
 
   TagDBEntryFull({
     required this.id,
@@ -104,11 +102,6 @@ class TagDBEntryFull extends TagDBEntry/*  implements Comparable<TagDBEntryFull>
         category: json["category"] as TagCategory,
         postCount: json["post_count"] as int,
       );
-
-  /* @override
-  // int compareTo(TagDBEntryFull other) => other.postCount - postCount;
-  int compareTo(TagDBEntry/* Full */ other) =>
-      (other.postCount - (other.postCount % 5)) - (postCount - postCount % 5); */
 }
 
 class TagDBEntry implements Comparable<TagDBEntry> {
@@ -151,7 +144,8 @@ class TagSearchModel {
   factory TagSearchModel.fromJson(JsonMap json) => TagSearchModel(
       tags: json["tags"] != null ? [] : (json as List).cast<TagSearchEntry>());
 
-  dynamic toJson() => tags.isEmpty ? { "tags":[] } : json.decode(tags.toString());
+  dynamic toJson() =>
+      tags.isEmpty ? {"tags": []} : json.decode(tags.toString());
 }
 
 class TagSearchEntry {
@@ -216,10 +210,11 @@ class TagSearchEntry {
         "updated_at": updatedAt,
       };
 }
+
 /// https://e621.net/wiki_pages/11262
-enum TagCategory {
+enum TagCategory with PrettyPrintEnum {
   /// 0
-  /// 
+  ///
   /// This is the default type of tag, hence why it's mentioned first. If you
   /// do not specify the type of tag you want a tag to be when you create it,
   /// this is what it will become. General tags are for things that do not fall
@@ -227,9 +222,9 @@ enum TagCategory {
   general,
 
   /// 1
-  /// 
+  ///
   /// Artist tags identify the tag as the artist. This doesn't mean the artist
-  /// of the original copyrighted artwork (for example, you wouldn't use the 
+  /// of the original copyrighted artwork (for example, you wouldn't use the
   /// ken_sugimori tag on a picture of Pikachu drawn by someone else).
   artist,
 
@@ -237,7 +232,7 @@ enum TagCategory {
   _error,
 
   /// 3
-  /// 
+  ///
   /// A copyright tag is for the program or series that a copyrighted character
   /// or some other element (such as objects) was first featured in, like
   /// Renamon in Digimon or Pikachu and Poké Balls in Pokémon. It can also be
@@ -247,28 +242,28 @@ enum TagCategory {
   copyright,
 
   /// 4
-  /// 
-  /// A character tag is a tag defining the name of a character, like 
+  ///
+  /// A character tag is a tag defining the name of a character, like
   /// pinkie_pie_(mlp) or fox_mccloud.
   character,
 
   /// 5
-  /// 
-  /// A species tag describes the species of a character or being in the 
+  ///
+  /// A species tag describes the species of a character or being in the
   /// picture like domestic_cat, feline or domestic_dog, canine.
   species,
 
   /// 6
-  /// 
+  ///
   /// The invalid type, which was technically also introduced alongside Meta
   /// and Lore in March 2020, is for tags that are not allowed on any posts,
-  /// such as things that are too common and unspecific to individually tag 
+  /// such as things that are too common and unspecific to individually tag
   /// or common tagging errors. These kinds of tags should be either fixed to
   /// add the proper intended tags or modified to be more specific. If doing so
   /// is not necessary, then the invalid tag should be removed outright. Either
   /// way, invalid tags will be the first type you see on the sidebar, even
   /// above artists, as a reminder that those tags should not be there.
-  /// 
+  ///
   /// Previously, tags were invalidated by being aliased to either invalid_tag
   /// or invalid_color. While eSix will continue using these tags for the
   /// foreseeable future, some invalidated tags had their original aliases
@@ -277,15 +272,15 @@ enum TagCategory {
   invalid,
 
   /// 7
-  /// 
+  ///
   /// Meta (as in metadata) was introduced as one of two new tag types in March
   /// 2020. This type is for the technical side of the post's file, the post
   /// itself, or things relating to e6's own handling of a post.
-  /// 
+  ///
   /// <details><summary>Types of meta tags</summary>
-  /// 
-  /// * File resolution: hi_res, absurd_res, superabsurd_res, low_res, and 
-  /// thumbnail. Resolution meta tags are added automatically by the site, 
+  ///
+  /// * File resolution: hi_res, absurd_res, superabsurd_res, low_res, and
+  /// thumbnail. Resolution meta tags are added automatically by the site,
   /// since it can read resolution metadata.
   /// * Written, drawn, painted, or typed text.
   /// * Text done in specific languages, including "real" or natural languages (e.g. english_text, japanese_text) and constructed languages (e.g. esperanto_text and fictional languages including tantalog_text from Lilo & Stitch and aurebesh_text from Star Wars).
@@ -317,15 +312,15 @@ enum TagCategory {
   /// * Watermarks: watermark, distracting_watermark, 3rd_party_watermark.
   /// * An artist's signature.
   /// * A web link or URL.</details>
-  /// 
+  ///
   /// Note that there are also four meta tags that are typed as artist tags instead:
-  /// 
+  ///
   /// * epilepsy_warning for posts containing flashing lights that could trigger epileptic seizures.
   /// * jumpscare_warning for animated and Flash posts containing shocking imagery and/or sounds that can catch a viewer off-guard.
   /// * audio_warning for loud, deafening audio in Flash and WebM posts
   /// * unknown_artist_signature for posts in which the artist isn't known but a signature is on it.
   /// * third-party edit for posts edited by someone other than the original artist(s).
-  /// 
+  ///
   /// The first three are deliberately typed as such because the bright orange
   /// color warns users about the potential dangers of those posts. The fourth
   /// is to encourage members to try to identify artists by their signatures
@@ -337,11 +332,14 @@ enum TagCategory {
   meta,
 
   /// 8
-  /// 
+  ///
   /// This is for providing and correcting specific outside information (not
   /// covered by copyright or character) when tag what you see otherwise cannot
   /// provide such. These tags are all suffixed _(lore), and only admins can
   /// introduce new lore tags. [Read more](
   /// https://e621.net/wiki_pages/show_or_new?title=e621%3Alore_tags).
   lore;
+
+  bool get isTrueCategory => this != _error;
+  bool get isValidCategory => this != _error && this != invalid;
 }

@@ -1,5 +1,6 @@
 // https://www.liquid-technologies.com/online-json-to-schema-converter
 // https://app.quicktype.io/
+import 'package:fuzzy/web/models/e621/tag_d_b.dart';
 import 'package:j_util/j_util_full.dart';
 
 import '../image_listing.dart';
@@ -20,7 +21,7 @@ abstract class E6Posts {
 
 final class E6PostsLazy extends E6Posts {
   final _postList = <E6PostResponse>[];
-  final Late<int> _postCapacity = Late();
+  final _postCapacity = LateFinal<int>();
   int get capacity => _postCapacity.itemSafe ?? -1;
   @override
   int get count => _postList.length;
@@ -318,7 +319,7 @@ class E6Preview implements IImageInfo {
 
   @override
   String get extension => url.substring(url.lastIndexOf(".") + 1);
-  
+
   @override
   bool get isAVideo => extension == "webm" || extension == "mp4";
 
@@ -340,7 +341,7 @@ class E6Preview implements IImageInfo {
           ? true
           : (_address.itemSafe = Uri.tryParse(url)) != null);
 
-  final Late<Uri> _address = Late();
+  final _address = LateFinal<Uri>();
   @override
   Uri get address => Uri.parse(url);
 
@@ -444,6 +445,21 @@ class E6PostTags {
   /// A JSON array of all the copyright tags on the post.
   final List<String> copyright;
   // #endregion Undocumented
+
+  List<String> getByCategory(TagCategory c) =>
+      getByCategorySafe(c) ??
+      (throw ArgumentError.value(c, "c", "Can't be TagCategory._error"));
+  List<String>? getByCategorySafe(TagCategory c) => switch (c) {
+        TagCategory.general => general,
+        TagCategory.species => species,
+        TagCategory.character => character,
+        TagCategory.artist => artist,
+        TagCategory.invalid => invalid,
+        TagCategory.lore => lore,
+        TagCategory.meta => meta,
+        TagCategory.copyright => copyright,
+        _ => null,
+      };
 
   E6PostTags({
     required this.general,

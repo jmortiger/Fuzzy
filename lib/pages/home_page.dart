@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:http/http.dart' as http;
 import 'package:fuzzy/web/models/e621/e6_models.dart';
@@ -21,6 +22,16 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    onSelectionCleared.subscribe(() {
+      setState(() {
+        selectedIndices.clear();
+      });
+    });
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -96,6 +107,15 @@ class _HomePageState extends State<HomePage> {
             child: Text("Menu"),
           ),
           ListTile(
+            title: const Text("Go to settings"),
+            onTap: () {
+              // Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(
+                builder: (context) => const SettingsPage(),
+              ));
+            },
+          ),
+          ListTile(
             title: const Text("Toggle Lazy Loading"),
             leading: lazyLoad
                 ? const Icon(Icons.check_box)
@@ -167,7 +187,13 @@ class _HomePageState extends State<HomePage> {
   bool tagSafety = false;
   bool toggleTagSafety() => tagSafety = !tagSafety;
   bool sendAuthHeaders = false;
-  bool toggleSendAuthHeaders() => sendAuthHeaders = !sendAuthHeaders;
+  bool toggleSendAuthHeaders() {
+    sendAuthHeaders = !sendAuthHeaders;
+    if (sendAuthHeaders && !E621AccessData.devData.isAssigned) {
+      E621AccessData.devData.getItem();
+    }
+    return sendAuthHeaders;
+  }
   bool forceSafe = true;
   bool toggleForceSafe() => forceSafe = !forceSafe;
   String searchText = "";
@@ -211,7 +237,7 @@ class _HomePageState extends State<HomePage> {
                     selectedIndices = indices;
                   });
                 },
-                onSelectionCleared: JPureEvent(),
+                onSelectionCleared: onSelectionCleared,
                 useLazyBuilding: lazyBuilding,
               ),
             );
@@ -310,13 +336,13 @@ class _HomePageState extends State<HomePage> {
           "limit": (0, {"LIMIT": limit}),
           "tags": (0, {"SEARCH_STRING": tags}),
         },
-        headers: sendAuthHeaders
+        headers: sendAuthHeaders && E621AccessData.devData.isAssigned
             ? {
                 "Authorization": (
                   0,
                   {
-                    "USERNAME": E621AccessData.myUsername,
-                    "API_KEY": E621AccessData.myApiKey,
+                    "USERNAME": E621AccessData.devData.item.username,
+                    "API_KEY": E621AccessData.devData.item.apiKey,
                   }
                 ),
               }

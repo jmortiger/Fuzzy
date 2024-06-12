@@ -4,28 +4,6 @@ import 'package:fuzzy/web/models/e621/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/j_util_full.dart';
 
-// class WPostSearchResultsStateless extends StatelessWidget {
-//   final E6Posts posts;
-//   const WPostSearchResultsStateless({
-//     super.key,
-//     required this.posts,
-//   });
-//   @override
-//   Widget build(BuildContext context) => _makeGridView(posts);
-//
-//   GridView _makeGridView(E6Posts posts) => GridView.builder(
-//         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-//           crossAxisCount: 3,
-//           crossAxisSpacing: 4,
-//           mainAxisSpacing: 4,
-//         ),
-//         itemBuilder: (context, index) {
-//           var data = posts.tryGet(index);
-//           return (data == null) ? null : WImageResult(imageListing: data, searchText: widget.searchText,);
-//         },
-//       );
-// }
-
 class WPostSearchResults extends StatefulWidget {
   final E6Posts posts;
   final int expectedCount;
@@ -54,7 +32,9 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
 
   @override
   void initState() {
-    widget._onSelectionCleared?.subscribe(() => selectedIndices.clear());
+    widget._onSelectionCleared?.subscribe(() => setState(() {
+      selectedIndices.clear();
+    }));
     super.initState();
   }
 

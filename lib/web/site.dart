@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:flutter/services.dart' as service;
 import 'package:fuzzy/web/models/e621/tag_d_b.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:fuzzy/util/util.dart';
@@ -23,11 +26,31 @@ abstract base class PersistentSite extends Site {
 }
 
 final class E621AccessData {
-  static const myData = E621AccessData(
-      apiKey: myApiKey, username: myUsername, userAgent: myUserAgent);
-  static const myApiKey = "ff340bde96571625c17160818ec0acdf";
-  static const myUsername = "***REMOVED***;
-  static const myUserAgent = "fuzzy/0.1.0 by atotaltirefire@gmail.com";
+  // static final devData = E621AccessData(
+  //     apiKey: devApiKey, username: devUsername, userAgent: devUserAgent);
+  static final devData = LazyInitializer<E621AccessData>(() async {
+    try {
+      return E621AccessData.fromJson(
+        (jsonDecode(
+          await (
+            service.rootBundle.loadString("assets/devData.json")..onError(
+              (e, st) {
+                print(e);
+                throw e!;
+              }
+            )
+          )
+        ) as JsonOut)["e621"] as JsonOut);
+    } catch (e) {
+      print(e);
+      rethrow;
+    }
+  });
+  String? get devApiKey => devData.itemSafe?.apiKey;
+  String? get devUsername => devData.itemSafe?.username;
+  String? get devUserAgent => devData.itemSafe?.userAgent;
+  // static get devData => _devData;
+  static final userData = LateFinal<E621AccessData>();
   final String apiKey;
   final String username;
   final String userAgent;
@@ -48,9 +71,9 @@ final class E621AccessData {
           userAgent: userAgent ??
               "fuzzy/${version.itemSafe} by atotaltirefire@gmail.com");
   JsonOut toJson() => {
-        "api_key": apiKey,
+        "apiKey": apiKey,
         "username": username,
-        "user_agent": userAgent,
+        "userAgent": userAgent,
       };
   factory E621AccessData.fromJson(JsonOut json) => E621AccessData(
         apiKey: json["apiKey"] as String,
@@ -65,7 +88,7 @@ final class E621AccessData {
 sealed class E621 extends Site {
   static const String rootUrl = "https://e621.net/";
   static final Uri rootUri = Uri.parse(rootUrl);
-  static final Late<E621AccessData> accessData = Late();
+  static final accessData = LateFinal<E621AccessData>();
   E621();
   // static final String filePath = ;
 }
@@ -87,51 +110,69 @@ enum PostRating {
 enum E621ApiEndpoints {
   /// PARAMS: none
   dbExportTags,
+
   /// PARAMS:
   /// QUERY:
   /// * LIMIT
   /// * SEARCH_STRING
   /// * MODIFIER & ID or PAGE_NUMBER
-  /// 
+  ///
   searchPosts,
-  /// PARAMS: 
+
+  /// PARAMS:
   uploadNewPost,
-  /// PARAMS: 
+
+  /// PARAMS:
   /// * URL: Pool_ID
-  /// 
+  ///
   updatePost,
-  /// PARAMS: 
+
+  /// PARAMS:
   searchFlags,
-  /// PARAMS: 
+
+  /// PARAMS:
   createNewFlag,
-  /// PARAMS: 
+
+  /// PARAMS:
   /// URL: Post_ID
   voteOnPost,
-  /// PARAMS: 
+
+  /// PARAMS:
   /// URL: Post_ID
   favoritePost,
-  /// PARAMS: 
+
+  /// PARAMS:
   /// URL: Post_ID
   deleteFavorite,
-  /// PARAMS: 
+
+  /// PARAMS:
   searchNotes,
-  /// PARAMS: 
+
+  /// PARAMS:
   createNewNote,
-  /// PARAMS: 
+
+  /// PARAMS:
   updateAnExistingNote,
-  /// PARAMS: 
+
+  /// PARAMS:
   deleteNote,
-  /// PARAMS: 
+
+  /// PARAMS:
   revertNote,
-  /// PARAMS: 
+
+  /// PARAMS:
   searchPools,
-  /// PARAMS: 
+
+  /// PARAMS:
   createNewPool,
-  /// PARAMS: 
+
+  /// PARAMS:
   updatePool,
-  /// PARAMS: 
+
+  /// PARAMS:
   revertPool,
-  /// PARAMS: 
+
+  /// PARAMS:
   /// search\[name_matches\]
   /// search\[category\]
   /// search\[order\]

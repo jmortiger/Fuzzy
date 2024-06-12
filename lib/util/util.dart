@@ -23,7 +23,7 @@ final LazyInitializer<String> appDataPath =
           (value) => value.absolute.path,
         ));
 
-final Late<TagDB> tagDb = Late();
+final tagDb = LateFinal<TagDB>();
 Future<TagDB> _androidCallback(http.StreamedResponse value) => decompressGzPlainTextStream(value).then((vf) {
               print("Tag Database Decompressed!");
               return TagDB.makeFromCsvString(
