@@ -205,7 +205,7 @@ class WImageResult extends StatelessWidget {
           e.style.maxWidth = "100%";
           e.style.maxHeight = "100%";
           e.style.objectFit = "contain";
-          print("Trying to contain");
+          // print("Trying to contain");
           // e.style.aspectRatio = "${w / h}";
         } else /* if (imageFit == BoxFit.cover) */ {
           if (w > h) {
@@ -218,10 +218,12 @@ class WImageResult extends StatelessWidget {
             e.style.width = "100%";
             e.style.height = "auto";
           }
-          e.style.maxWidth = "100%";
-          e.style.maxHeight = "100%";
+          e.style.minWidth = "100%";
+          e.style.minHeight = "100%";
+          e.style.maxWidth = "100vw";
+          e.style.maxHeight = "100vh";
           e.style.objectFit = "cover";
-          print("Trying to cover");
+          // print("Trying to cover");
           // e.style.aspectRatio = "${w / h}";
         }
       },

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/app_settings.dart';
 import 'package:fuzzy/web/models/e621/tag_d_b.dart';
+import 'package:fuzzy/web/site.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
+import 'package:http/http.dart' as http;
+import 'package:j_util/j_util_widgets.dart';
 import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/models/e621/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
@@ -19,32 +22,207 @@ class WPostView extends StatelessWidget {
   Widget build(BuildContext context) {
     var IImageInfo(width: w, height: h, url: url) = postListing.file;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Fuzzy"),
-      ),
-      body: ListView(
-        // padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
-        children: [
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: pvs.allowOverflow
-                  ? MediaQuery.of(context).size.width
-                  : (MediaQuery.of(context).size.height / h) * w.toDouble(),
-              maxHeight: pvs.allowOverflow
-                  ? (MediaQuery.of(context).size.width / w) * h.toDouble()
-                  : MediaQuery.of(context).size.height,
+      // appBar: AppBar(title: const Text("Fuzzy")),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            ListView(
+              // padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
+              children: [
+                Container(
+                  constraints: BoxConstraints(
+                    maxWidth: pvs.allowOverflow
+                        ? MediaQuery.of(context).size.width
+                        : (MediaQuery.of(context).size.height / h) * w.toDouble(),
+                    maxHeight: pvs.allowOverflow
+                        ? (MediaQuery.of(context).size.width / w) * h.toDouble()
+                        : MediaQuery.of(context).size.height,
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: w / h,
+                    child: _buildMainContent(url, w, h),
+                  ),
+                ),
+                SelectableText(e6Post.description),
+                ..._buildTagsDisplay(context),
+              ],
             ),
-            child: AspectRatio(
-              aspectRatio: w / h,
-              child: _buildMainContent(url, w, h),
+            Align(
+              alignment: AlignmentDirectional.topStart,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back),
+                style: const ButtonStyle(
+                  backgroundColor: WidgetStateColor.transparent,
+                ),
+              ),
             ),
-          ),
-          ..._buildTagsDisplay(context),
-        ],
+          ],
+        ),
       ),
+      floatingActionButton: _buildFab(context),
     );
   }
 
+  ExpandableFab _buildFab(BuildContext context) {
+    return ExpandableFab(
+      distance: 112,
+      children: [
+        ActionButton(
+          icon: const Icon(Icons.add),
+          tooltip: "Add to pool",
+          onPressed: () {
+            print("To Be Implemented");
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("To Be Implemented")),
+            );
+          },
+        ),
+        ActionButton(
+          icon: const Icon(Icons.favorite),
+          tooltip: "Add to favorites",
+          onPressed: () async {
+            print("Adding ${e6Post.id} to favorites...");
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Adding ${e6Post.id} to favorites...")),
+            );
+            var t = E621.sendRequest(
+              E621.initAddFavoriteRequest(
+                e6Post.id,
+                username: E621AccessData.devUsername,
+                apiKey: E621AccessData.devApiKey,
+              ),
+            );
+            t.then(
+              (v) => v.stream.listen(
+                null,
+                onDone: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("${v.statusCode}: ${v.reasonPhrase}"),
+                      action: SnackBarAction(
+                        label: "Undo",
+                        onPressed: () async {
+                          try {
+                            var newStream = E621.sendRequest(
+                              E621.initDeleteFavoriteRequest(
+                                int.parse(
+                                  v.request!.url.queryParameters["post_id"]!,
+                                ),
+                                username: E621AccessData.devUsername,
+                                apiKey: E621AccessData.devApiKey,
+                              ),
+                            );
+                            newStream.then(
+                              (value2) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      "${value2.statusCode}: ${value2.reasonPhrase}",
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          } catch (e) {
+                            print(e);
+                            rethrow;
+                          }
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+        ActionButton(
+          icon: const Icon(Icons.delete),
+          tooltip: "Remove selected from pool",
+          onPressed: () {
+            print("To Be Implemented");
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("To Be Implemented")),
+            );
+          },
+        ),
+        ActionButton(
+          icon: const Icon(Icons.heart_broken_outlined),
+          tooltip: "Remove selected from favorites",
+          onPressed: () async {
+            print("Removing ${e6Post.id} from favorites...");
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Removing ${e6Post.id} from favorites..."),
+              ),
+            );
+            var t = E621.sendRequest(
+              E621.initDeleteFavoriteRequest(
+                e6Post.id,
+                username: E621AccessData.devUsername,
+                apiKey: E621AccessData.devApiKey,
+              ),
+            );
+            t
+                .then(
+              (value) => value.stream.listen(
+                null,
+                onDone: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        "${value.statusCode}: ${value.reasonPhrase}",
+                      ),
+                      action: SnackBarAction(
+                        label: "Undo",
+                        onPressed: () async {
+                          var newStream = E621
+                              .sendRequest(
+                            E621.initAddFavoriteRequest(
+                              int.parse(
+                                value.request!.url.pathSegments.last.substring(
+                                  0,
+                                  value.request!.url.pathSegments.last
+                                      .indexOf("."),
+                                ),
+                              ),
+                              username: E621AccessData.devUsername,
+                              apiKey: E621AccessData.devApiKey,
+                            ),
+                          )
+                              .onError((error, stackTrace) {
+                            print(error);
+                            throw error!;
+                          });
+                          newStream.then(
+                            (value2) {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                content: Text(
+                                  "${value2.statusCode}: ${value2.reasonPhrase}",
+                                ),
+                              ));
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+            )
+                .onError((error, stackTrace) {
+              print(error);
+              throw error!;
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  // TODO: Use ExpansionPanelList & ExpansionPanel for tags https://api.flutter.dev/flutter/material/ExpansionPanelList-class.html
   @widgetFactory
   Widget _buildMainContent(String url, int w, int h) {
     return postListing.file.isAVideo
@@ -77,37 +255,44 @@ class WPostView extends StatelessWidget {
       ...?_buildTagDisplay(
           context,
           headerStyle.copyWith(
-              color: pvs.tagColors[tagOrder.elementAtOrNull(0)]),
+            color: pvs.tagColors[tagOrder.elementAtOrNull(0)],
+          ),
           tagOrder.elementAtOrNull(0)),
       ...?_buildTagDisplay(
           context,
           headerStyle.copyWith(
-              color: pvs.tagColors[tagOrder.elementAtOrNull(1)]),
+            color: pvs.tagColors[tagOrder.elementAtOrNull(1)],
+          ),
           tagOrder.elementAtOrNull(1)),
       ...?_buildTagDisplay(
           context,
           headerStyle.copyWith(
-              color: pvs.tagColors[tagOrder.elementAtOrNull(2)]),
+            color: pvs.tagColors[tagOrder.elementAtOrNull(2)],
+          ),
           tagOrder.elementAtOrNull(2)),
       ...?_buildTagDisplay(
           context,
           headerStyle.copyWith(
-              color: pvs.tagColors[tagOrder.elementAtOrNull(3)]),
+            color: pvs.tagColors[tagOrder.elementAtOrNull(3)],
+          ),
           tagOrder.elementAtOrNull(3)),
       ...?_buildTagDisplay(
           context,
           headerStyle.copyWith(
-              color: pvs.tagColors[tagOrder.elementAtOrNull(4)]),
+            color: pvs.tagColors[tagOrder.elementAtOrNull(4)],
+          ),
           tagOrder.elementAtOrNull(4)),
       ...?_buildTagDisplay(
           context,
           headerStyle.copyWith(
-              color: pvs.tagColors[tagOrder.elementAtOrNull(5)]),
+            color: pvs.tagColors[tagOrder.elementAtOrNull(5)],
+          ),
           tagOrder.elementAtOrNull(5)),
       ...?_buildTagDisplay(
           context,
           headerStyle.copyWith(
-              color: pvs.tagColors[tagOrder.elementAtOrNull(6)]),
+            color: pvs.tagColors[tagOrder.elementAtOrNull(6)],
+          ),
           tagOrder.elementAtOrNull(6)),
     ];
   }
@@ -165,6 +350,7 @@ class WPostView extends StatelessWidget {
     );
   }
 
+  @widgetFactory
   HtmlElementView _oldImg(String url, int w, int h) {
     return HtmlElementView.fromTagName(
       tagName: "img",

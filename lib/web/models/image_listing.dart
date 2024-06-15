@@ -2,6 +2,7 @@ abstract interface class PostListing {
   IImageInfo get file;
   IImageInfo get preview;
   ISampleInfo get sample;
+  int get id;
 }
 
 abstract interface class IImageInfo {

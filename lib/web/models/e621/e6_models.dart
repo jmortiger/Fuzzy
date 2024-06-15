@@ -18,11 +18,17 @@ abstract class E6Posts {
   });
   Set<int> get restrictedIndices;
 }
+class FullyIteratedArgs extends JEventArgs {
+  final List<E6PostResponse> posts;
 
+  const FullyIteratedArgs(this.posts);
+}
 final class E6PostsLazy extends E6Posts {
+  final onFullyIterated = JEvent<FullyIteratedArgs>();
   final _postList = <E6PostResponse>[];
   final _postCapacity = LateFinal<int>();
   int get capacity => _postCapacity.itemSafe ?? -1;
+  bool get isFullyProcessed => _postCapacity.isAssigned;
   @override
   int get count => _postList.length;
   final Iterator<E6PostResponse> _postListIterator;
@@ -65,8 +71,9 @@ final class E6PostsLazy extends E6Posts {
           i++) {
         _postList.add(_postListIterator.current);
       }
-      if (mn == false) {
+      if (mn == false && !isFullyProcessed) {
         _postCapacity.item = _postList.length;
+        onFullyIterated.invoke(FullyIteratedArgs(_postList));
       }
     }
     return _postList[index];
@@ -123,6 +130,7 @@ final class E6PostsSync implements E6Posts {
 final class E6PostResponse implements PostListing {
   // #region Json Fields
   /// The ID number of the post.
+  @override
   final int id;
 
   /// The time the post was created in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.

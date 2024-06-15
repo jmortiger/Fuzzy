@@ -1,4 +1,7 @@
+import 'dart:async' show FutureOr;
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fuzzy/web/models/e621/tag_d_b.dart';
 import 'package:fuzzy/web/site.dart';
@@ -49,3 +52,33 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
         .then((value) => compute(_androidCallback, value));
   }
 });
+FutureOr<T> onErrorPrintAndRethrow<T>(Object? e, StackTrace stackTrace) {
+  print(e);
+  throw e!;
+}
+T defaultOnError<T>(Object? error, StackTrace trace) => print(error) as T;
+
+final List<SnackBar> snackbarMessageQueue = <SnackBar>[];
+final List<SnackBar Function(BuildContext context)> snackbarBuilderMessageQueue = <SnackBar Function(BuildContext context)>[];
+
+VoidCallback generateAlertDialog<DialogOutput>(
+    BuildContext context, {
+    Widget? content,
+    List<Widget>? actions,
+    FutureOr<void> Function(DialogOutput? value)? onOutputCallback,
+  }) {
+    return () {
+      var t = showDialog<DialogOutput>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            content: content,
+            actions: actions,
+          );
+        },
+      );
+      if (onOutputCallback != null) {
+        t.then<void>(onOutputCallback);
+      }
+    };
+  }

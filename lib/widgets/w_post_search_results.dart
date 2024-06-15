@@ -1,5 +1,6 @@
 // import 'dart:html' as html;
 import 'package:flutter/material.dart';
+import 'package:fuzzy/app_settings.dart';
 import 'package:fuzzy/web/models/e621/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/j_util_full.dart';
@@ -18,7 +19,7 @@ class WPostSearchResults extends StatefulWidget {
     this.expectedCount = 50,
     this.searchText = "",
     this.onPostsSelected,
-    this.useLazyBuilding = true,
+    this.useLazyBuilding = false,
     JPureEvent? onSelectionCleared,
   }) : _onSelectionCleared = onSelectionCleared;
 
@@ -29,12 +30,31 @@ class WPostSearchResults extends StatefulWidget {
 class _WPostSearchResultsState extends State<WPostSearchResults> {
   Set<int> restrictedIndices = {};
   Set<int> selectedIndices = {};
+  int? trueCount;
+
+  E6PostsSync? get postSync => (widget.posts.runtimeType == E6PostsSync)
+      ? (widget.posts as E6PostsSync)
+      : null;
+  E6PostsLazy? get postLazy => (widget.posts.runtimeType == E6PostsLazy)
+      ? (widget.posts as E6PostsLazy)
+      : null;
 
   @override
   void initState() {
+    if (widget.posts.runtimeType == E6PostsSync) {
+      trueCount = postSync!.posts.length;
+    }
     widget._onSelectionCleared?.subscribe(() => setState(() {
-      selectedIndices.clear();
-    }));
+          selectedIndices.clear();
+        }));
+    if (widget.posts.runtimeType == E6PostsLazy) {
+      (widget.posts as E6PostsLazy)
+          .onFullyIterated
+          .subscribe((FullyIteratedArgs posts) => setState(() {
+                // widget.posts = E6PostsSync(posts: posts.posts);
+                trueCount = posts.posts.length;
+              }));
+    }
     super.initState();
   }
 
@@ -44,9 +64,10 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
       children: [
         // TODO: Make this work lazy
         if (widget.posts.restrictedIndices.isNotEmpty)
-          Text("${widget.posts.restrictedIndices.length} hidden by global"
-              " blacklist."
-              " https://e621.net/help/global_blacklist"),
+          Text(
+            "${widget.posts.restrictedIndices.length} hidden by global"
+            " blacklist. https://e621.net/help/global_blacklist",
+          ),
         Expanded(child: _makeGridView(widget.posts)),
       ],
     );
@@ -54,20 +75,27 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
 
   @widgetFactory
   GridView _makeGridView(E6Posts posts) {
-    return widget.useLazyBuilding && posts.runtimeType == E6PostsSync
+    return widget.useLazyBuilding /*  && posts.runtimeType == E6PostsSync */
         ? GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: AppSettings.i.searchView.postsPerRow,
               crossAxisSpacing: 4,
               mainAxisSpacing: 4,
             ),
             itemCount: widget.posts.runtimeType == E6PostsSync
                 ? widget.posts.count
-                : widget.expectedCount,
+                : trueCount ?? widget.expectedCount,
             itemBuilder: (context, index) {
+              if (/* !postLazy!.isFullyProcessed &&
+                  widget.posts.runtimeType == E6PostsLazy */
+                  trueCount == null && widget.expectedCount - 1 == index) {
+                posts.tryGet(index + 3);
+              }
               var data = posts.tryGet(index);
               // print("i: $index, url = ${data?.file.url}");
-              return (data == null)
+              return (data ==
+                      null) /*  ||
+                      index >= widget.expectedCount - restrictedIndices.length */
                   ? null
                   : WImageResult(
                       imageListing: data,
@@ -85,30 +113,37 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
             },
           )
         : GridView.count(
-            crossAxisCount: 3,
+            crossAxisCount: AppSettings.i.searchView.postsPerRow,
             crossAxisSpacing: 4,
             mainAxisSpacing: 4,
-            children: ((posts as E6PostsSync).posts).reduceUntilTrue(
-                (accumulator, _, index, __) => posts.tryGet(index) != null
-                    ? (
-                        accumulator
-                          ..add(WImageResult(
-                            imageListing: posts.tryGet(index)!,
-                            index: index,
-                            searchText: widget.searchText,
-                            isSelected: selectedIndices.contains(index),
-                            onSelectionToggle: (i) => setState(() {
-                              selectedIndices.contains(i)
-                                  ? selectedIndices.remove(i)
-                                  : selectedIndices.add(i);
-                              widget.onPostsSelected?.call(selectedIndices, i);
-                            }),
-                            areAnySelected: selectedIndices.isNotEmpty,
-                          )),
-                        false
-                      )
-                    : (accumulator, true),
-                []),
+            children: (Iterable<int>.generate(
+                    widget.expectedCount /*  - restrictedIndices.length */))
+                .reduceUntilTrue(
+                    (accumulator, _, index,
+                            __) => /* index <
+                                widget.expectedCount -
+                                    restrictedIndices.length && */
+                        posts.tryGet(index) != null
+                            ? (
+                                accumulator
+                                  ..add(WImageResult(
+                                    imageListing: posts.tryGet(index)!,
+                                    index: index,
+                                    searchText: widget.searchText,
+                                    isSelected: selectedIndices.contains(index),
+                                    onSelectionToggle: (i) => setState(() {
+                                      selectedIndices.contains(i)
+                                          ? selectedIndices.remove(i)
+                                          : selectedIndices.add(i);
+                                      widget.onPostsSelected
+                                          ?.call(selectedIndices, i);
+                                    }),
+                                    areAnySelected: selectedIndices.isNotEmpty,
+                                  )),
+                                false
+                              )
+                            : (accumulator, true),
+                    []),
           );
   }
 }

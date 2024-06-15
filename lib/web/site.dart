@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart' as service;
 import 'package:fuzzy/web/models/e621/tag_d_b.dart';
+import 'package:http/http.dart' as http;
 import 'package:j_util/j_util_full.dart';
 import 'package:fuzzy/util/util.dart';
 
@@ -28,27 +29,14 @@ abstract base class PersistentSite extends Site {
 final class E621AccessData {
   // static final devData = E621AccessData(
   //     apiKey: devApiKey, username: devUsername, userAgent: devUserAgent);
-  static final devData = LazyInitializer<E621AccessData>(() async {
-    try {
-      return E621AccessData.fromJson(
-        (jsonDecode(
-          await (
-            service.rootBundle.loadString("assets/devData.json")..onError(
-              (e, st) {
-                print(e);
-                throw e!;
-              }
-            )
-          )
-        ) as JsonOut)["e621"] as JsonOut);
-    } catch (e) {
-      print(e);
-      rethrow;
-    }
-  });
-  String? get devApiKey => devData.itemSafe?.apiKey;
-  String? get devUsername => devData.itemSafe?.username;
-  String? get devUserAgent => devData.itemSafe?.userAgent;
+  static final devData = LazyInitializer<E621AccessData>(() async =>
+      E621AccessData.fromJson((jsonDecode(
+              await (service.rootBundle.loadString("assets/devData.json")
+                ..onError(defaultOnError /* onErrorPrintAndRethrow */)))
+          as JsonOut)["e621"] as JsonOut));
+  static String? get devApiKey => devData.itemSafe?.apiKey;
+  static String? get devUsername => devData.itemSafe?.username;
+  static String? get devUserAgent => devData.itemSafe?.userAgent;
   // static get devData => _devData;
   static final userData = LateFinal<E621AccessData>();
   final String apiKey;
@@ -89,8 +77,157 @@ sealed class E621 extends Site {
   static const String rootUrl = "https://e621.net/";
   static final Uri rootUri = Uri.parse(rootUrl);
   static final accessData = LateFinal<E621AccessData>();
+  static const int hardRateLimit = 1;
+  static const int softRateLimit = 2;
+  static const int idealRateLimit = 3;
+  static final http.Client client = http.Client();
+  static const maxPostsPerSearch = 320;
+  static DateTime timeOfLastRequest =
+      DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   E621();
   // static final String filePath = ;
+  static Stream<Future<http.StreamedResponse>> sendRequests(
+      Iterable<http.Request> requests) async* {
+    for (var request in requests) {
+      yield sendRequest(request);
+      await Future.delayed(const Duration(seconds: idealRateLimit));
+    }
+  }
+
+  /// Won't blow the rate limit
+  static Future<http.StreamedResponse> sendRequest(
+    http.Request request,
+  ) async {
+    var t = DateTime.timestamp().difference(timeOfLastRequest);
+    if (t.inSeconds < softRateLimit) {
+      return Future.delayed(const Duration(seconds: softRateLimit) - t, () {
+        timeOfLastRequest = DateTime.timestamp();
+        return client.send(request);
+      });
+    }
+    timeOfLastRequest = DateTime.timestamp();
+    return client.send(request);
+  }
+
+  static http.Request initDeleteFavoriteRequest(
+    int postId, {
+    String? username,
+    String? apiKey,
+  }) =>
+      E621ApiEndpoints.deleteFavorite.getMoreData().genRequest(
+        uriModifierParam: {"Post_ID": postId},
+        headers: getAuthHeaders(username, apiKey),
+      );
+
+  static http.Request initAddFavoriteRequest(
+    int postId, {
+    String? username,
+    String? apiKey,
+  }) =>
+      E621ApiEndpoints.favoritePost.getMoreData().genRequest(query: {
+        "post_id": (0, {"POST_ID": postId}),
+      }, headers: getAuthHeaders(username, apiKey));
+  static http.Request initSearchRequest({
+    String? tags = "jun_kobayashi",
+    int limit = 50,
+    String? pageModifier, //pageModifier.contains(RegExp(r'a|b'))
+    int? postId,
+    int? pageNumber,
+    String? username,
+    String? apiKey,
+  }) =>
+      E621ApiEndpoints.searchPosts.getMoreData().genRequest(query: {
+        "limit": (0, {"LIMIT": limit}),
+        "tags": (0, {"SEARCH_STRING": tags}),
+        if (postId != null && (pageModifier == 'a' || pageModifier == 'b'))
+          "page": (0, {"MODIFIER": pageModifier, "ID": postId}),
+        if (pageNumber != null) "page": (1, {"PAGE_NUMBER": pageNumber}),
+      }, headers: getAuthHeaders(username, apiKey));
+  static http.Request initSearchForLastPageRequest({
+    String? tags = "jun_kobayashi",
+    int limit = 50,
+    String? username,
+    String? apiKey,
+  }) =>
+      initSearchRequest(
+        tags: tags,
+        limit: limit,
+        apiKey: apiKey,
+        username: username,
+        postId: 0,
+        pageModifier: 'a',
+      );
+  static http.Request initSearchForLastPostRequest({
+    String? tags = "jun_kobayashi",
+    String? username,
+    String? apiKey,
+  }) =>
+      initSearchRequest(
+        tags: tags,
+        limit: 1,
+        apiKey: apiKey,
+        username: username,
+        postId: 0,
+        pageModifier: 'a',
+      );
+
+  static RequestParameterValues? getAuthHeaders(
+    String? username,
+    String? apiKey,
+  ) =>
+      (username?.isNotEmpty ?? false) && (apiKey?.isNotEmpty ?? false)
+          ? {
+              "Authorization": (0, {"USERNAME": username, "API_KEY": apiKey}),
+            }
+          : accessData.isAssigned
+              ? {
+                  "Authorization": (
+                    0,
+                    {
+                      "USERNAME": accessData.item.username,
+                      "API_KEY": accessData.item.apiKey,
+                    }
+                  ),
+                }
+              : null;
+  // static Future<({int firstIdLastPage, int lastId, int pages})>
+  //     findPagesOfResults({
+  //   required String tags,
+  //   required int limit,
+  //   // String? pageModifier,//pageModifier.contains(RegExp(r'a|b'))
+  //   // int? postId,
+  //   // int? pageNumber,
+  //   String? username,
+  //   String? apiKey,
+  // }) async {
+  //   var response = await initSearchRequest(
+  //           tags: tags, limit: limit + 1, username: username, apiKey: apiKey)
+  //       .send();
+  //   var results = jsonDecode(await response.stream.bytesToString());
+  //   if (results["posts"].isEmpty) {
+  //     return (pages: 0, lastId: 0, firstIdLastPage: 0);
+  //   } else if (results["posts"].length <
+  //       int.parse(response.request?.url.queryParameters["limit"] ?? "0")) {
+  //     var first = (results["posts"][0].id as int);
+  //     var last = (results["posts"].last.id as int);
+  //     return (pages: 1, lastId: last, firstIdLastPage: first);
+  //   } else {
+  //     // UNFINISHED
+  //     return (pages: -1, lastId: 0, firstIdLastPage: 0);
+  //   }
+  // }
+  // static http.Request initSearchRequest({
+  //   String? tags = "jun_kobayashi",
+  //   int limit = 50,
+  //   String? page,
+  //   String? username,
+  //   String? apiKey,
+  // }) =>
+  //     E621ApiEndpoints.searchPosts.getMoreData().genRequest(query: {
+  //       "limit": (0, {"LIMIT": limit}),
+  //       "tags": (0, {"SEARCH_STRING": tags}),
+  //       if (page != null) "page": (page.contains(RegExp(r'a|b')) ? 0 : 1, page.contains(RegExp(r'a|b')) ? {"MODIFIER": page[0], "ID" : page.substring(1)}:{"PAGE_NUMBER":page}),
+  //     }, headers: getAuthHeaders(username, apiKey));
 }
 
 enum PostRating {
@@ -134,6 +271,14 @@ enum E621ApiEndpoints {
   createNewFlag,
 
   /// PARAMS:
+  /// QUERY: USER_ID
+  /// Response:
+  /// HTTP 403 if the user has hidden their favorites.
+  /// HTTP 404 if the specified user_id does not exist or user_id is not specified and the user is not authorized.
+  /// 200 otherwise
+  favoritesView,
+
+  /// PARAMS:
   /// URL: Post_ID
   voteOnPost,
 
@@ -143,6 +288,7 @@ enum E621ApiEndpoints {
 
   /// PARAMS:
   /// URL: Post_ID
+  /// Response: none
   deleteFavorite,
 
   /// PARAMS:
@@ -236,7 +382,7 @@ enum E621ApiEndpoints {
                                 "map?[\"MODIFIER\"]",
                                 "Should be either an 'a' or a 'b'.",
                               )),
-                          id = int.tryParse(map?["ID"] ??
+                          id = int.tryParse(map?["ID"].toString() ??
                                   (throw ArgumentError.value(
                                     map?["ID"],
                                     "map?[\"ID\"]",
@@ -306,6 +452,12 @@ enum E621ApiEndpoints {
             queryParameters: null,
             headers: E621ApiEndpoints.baseHeadersAuthRequired,
           ),
+        favoritesView => ApiEndpoint(
+            uri: Uri.parse("${E621.rootUrl}favorites.json"),
+            method: HttpMethod.get.nameUpper,
+            queryParameters: E621ApiEndpoints.userIdParamOptional,
+            headers: E621ApiEndpoints.baseHeadersAuthRequired,
+          ),
         voteOnPost => ApiEndpoint.parameterizedUri(
             // uri: Uri.parse("${E621.rootUrl}posts/<Post_ID>/votes.json"),
             uriString: "${E621.rootUrl}posts/<Post_ID>/votes.json",
@@ -318,7 +470,7 @@ enum E621ApiEndpoints {
         favoritePost => ApiEndpoint(
             uri: Uri.parse("${E621.rootUrl}favorites.json"),
             method: HttpMethod.post.nameUpper,
-            queryParameters: null,
+            queryParameters: E621ApiEndpoints.postIdParam,
             headers: E621ApiEndpoints.baseHeadersAuthRequired,
           ),
         deleteFavorite => ApiEndpoint.parameterizedUri(
@@ -544,7 +696,8 @@ enum E621ApiEndpoints {
   ) =>
       Uri.parse(matcher == null
           ? baseUri
-          : baseUri.replaceAllMapped(matcher, (match) => map[match.group(1)]));
+          : baseUri.replaceAllMapped(
+              matcher, (match) => map[match.group(1)].toString()));
 
   static final _angleBracketDelimited = RegExp(r'<(.*)>');
   @Deprecated("Use _getDbExportDate")
@@ -566,6 +719,7 @@ enum E621ApiEndpoints {
         updatePost => ("/posts/<Post_ID>.json", HttpMethod.patch),
         searchFlags => ("/post_flags.json", HttpMethod.get),
         createNewFlag => ("/post_flags.json", HttpMethod.post),
+        favoritesView => ("/favorites.json", HttpMethod.get),
         voteOnPost => ("/posts/<Post_ID>/votes.json", HttpMethod.post),
         favoritePost => ("/favorites.json", HttpMethod.post),
         deleteFavorite => ("/favorites/<Post_ID>.json", HttpMethod.delete),
@@ -625,6 +779,48 @@ enum E621ApiEndpoints {
     ...authHeaderOptionalParamMap,
     //...accessControlAllowOriginAll,
   };
+  static const Map<String, RequestParameter> postIdParam = {
+    "post_id": RequestParameter(
+      required: true,
+      validValueGenerators: [
+        RequestValue(
+          baseString: "*POST_ID*",
+          validator: _postIdValidator,
+        ),
+      ],
+    )
+  };
+  static const Map<String, RequestParameter> userIdParamOptional = {
+    "user_id": RequestParameter(
+      required: false,
+      validValueGenerators: [
+        RequestValue(
+          baseString: "*USER_ID*",
+          validator: _postIdValidator,
+        ),
+      ],
+    )
+  };
+  static const Map<String, RequestParameter> userIdParamRequired = {
+    "user_id": RequestParameter(
+      required: true,
+      validValueGenerators: [
+        RequestValue(
+          baseString: "*USER_ID*",
+          validator: _postIdValidator,
+        ),
+      ],
+    )
+  };
+  static String _postIdValidator(String replacedParam, dynamic proposedValue) =>
+      (int.tryParse(proposedValue.toString()) == null &&
+              proposedValue.runtimeType != int)
+          ? (throw ArgumentError.value(
+              proposedValue,
+              'proposedValue',
+              "The value must be an integer or string.",
+            ))
+          : proposedValue!.toString();
   static String _userAgentGenerator(
           Map<String, dynamic>? variableToProposedValue) =>
       variableToProposedValue?["VERSION"]?.toString() ??
