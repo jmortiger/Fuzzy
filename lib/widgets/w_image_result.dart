@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:fuzzy/models/search_view_model.dart';
 import 'package:j_util/platform_finder.dart' as ui_web;
-import 'package:fuzzy/web/models/e621/e6_models.dart';
-import 'package:fuzzy/widgets/w_post_view.dart';
+import 'package:fuzzy/web/e621/models/e6_models.dart';
+import 'package:fuzzy/pages/post_view_page.dart';
 import 'package:j_util/platform_finder.dart';
+import 'package:provider/provider.dart';
 
 import '../web/models/image_listing.dart';
 
@@ -15,18 +17,18 @@ class WImageResult extends StatelessWidget {
   final bool isSelected;
   final bool areAnySelected;
 
-  final String searchText;
+  // final String searchText;
 
   final void Function(int index)? onSelectionToggle;
 
   String get _buildTooltipString =>
-      "$searchText[$index]: ${(imageListing as E6PostResponse).id.toString()}";
+      /* $searchText */"[$index]: ${(imageListing as E6PostResponse).id.toString()}";
 
   const WImageResult({
     super.key,
     required this.imageListing,
     this.index = -1,
-    this.searchText = "",
+    // this.searchText = "",
     this.onSelectionToggle,
     this.isSelected = false,
     this.areAnySelected = false,
@@ -45,10 +47,11 @@ class WImageResult extends StatelessWidget {
     } else {
       IImageInfo(width: w, height: h, url: url) = imageListing.file;
     }
-    print("$searchText[$index]: w: $w, "
+    print(/* $searchText */"[$index]: w: $w, "
         "h: $h, "
         "sampleWidth: ${imageListing.sample.width}, "
-        "fileWidth: ${imageListing.file.width}");
+        "fileWidth: ${imageListing.file.width}, "
+        "url: $url");
     return Stack(
       children: [
         // _buildActionChip(context, w, h, url),
@@ -78,8 +81,7 @@ class WImageResult extends StatelessWidget {
     );
   }
 
-  Widget _buildInputDetector(
-      BuildContext context, int w, int h, String url) {
+  Widget _buildInputDetector(BuildContext context, int w, int h, String url) {
     return Positioned.fill(
       child: Material(
         color: Colors.transparent,
@@ -103,7 +105,12 @@ class WImageResult extends StatelessWidget {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => WPostView(postListing: imageListing),
+                    builder: (_) => PostViewPage(
+                      postListing: imageListing,
+                      onAddToSearch: (addition) =>
+                          Provider.of<SearchViewModel>(context, listen: false)
+                              .searchText += " $addition",
+                    ),
                   ));
             }
           },
@@ -114,55 +121,10 @@ class WImageResult extends StatelessWidget {
     );
   }
 
-  // #region Nested Image & Interaction
-  InkWell _buildWithInputDetector(
-      BuildContext context, int w, int h, String url) {
-    return InkWell(
-      // onHover: (value) {
-      //   // tooltip: _buildTooltipString,
-      // },
-      onLongPress: () {
-        print("OnLongPress");
-        /* if (!isSelected)  */ onSelectionToggle?.call(index);
-      },
-      // onDoubleTap: () {
-      //   print("onDoubleTap");
-      //   /* if (!isSelected)  */onSelectionToggle?.call(index);
-      // },
-      onTap: () {
-        print("OnTap");
-        if (isSelected || areAnySelected) {
-          onSelectionToggle?.call(index);
-        } else {
-          Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => WPostView(postListing: imageListing),
-              ));
-        }
-      },
-      // TODO: Fix vertical image offset
-      child: _buildPane(w, h, url),
-    );
-  }
-
-  ActionChip _buildActionChip(BuildContext context, int w, int h, String url) {
-    return ActionChip(
-      tooltip: _buildTooltipString,
-      onPressed: () {
-        print("OnPressed");
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: ((context) => WPostView(postListing: imageListing))));
-      },
-      // TODO: Fix vertical image offset
-      label: _buildPane(w, h, url),
-    );
-  }
-  // #endregion Nested Image & Interaction
-
   Center _buildPane(int w, int h, String url) {
+    if (url == "") {
+      print("NO URL");
+    }
     return Center(
       child: AspectRatio(
         aspectRatio: w / h,

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 
-import 'package:fuzzy/web/models/e621/e6_models.dart';
+import 'package:fuzzy/web/e621/models/e6_models.dart';
 
 void main() {
   test("Posts dejsonification", () async {

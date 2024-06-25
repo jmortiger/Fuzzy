@@ -1,66 +1,79 @@
 import 'package:flutter/material.dart';
-import 'package:fuzzy/app_settings.dart';
-import 'package:fuzzy/web/models/e621/tag_d_b.dart';
-import 'package:fuzzy/web/site.dart';
+import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
-import 'package:http/http.dart' as http;
 import 'package:j_util/j_util_widgets.dart';
 import 'package:j_util/platform_finder.dart' as ui_web;
-import 'package:fuzzy/web/models/e621/e6_models.dart';
+import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
 import 'package:j_util/platform_finder.dart';
 
-class WPostView extends StatelessWidget {
+import '../web/e621/e621.dart';
+
+class PostViewPage extends StatelessWidget {
+  final List<PostListing>? next20;
+  final List<PostListing>? prev20;
   final PostListing postListing;
-  const WPostView({
+  final void Function(String addition)? onAddToSearch;
+  const PostViewPage({
     super.key,
     required this.postListing,
+    this.onAddToSearch,
+    this.next20,
+    this.prev20,
   });
   E6PostResponse get e6Post => postListing as E6PostResponse;
-  PostView get pvs => AppSettings.i.postView;
+  PostView get pvs => AppSettings.i!.postView;
   @override
   Widget build(BuildContext context) {
     var IImageInfo(width: w, height: h, url: url) = postListing.file;
-    return Scaffold(
-      // appBar: AppBar(title: const Text("Fuzzy")),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            ListView(
-              // padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
-              children: [
-                Container(
-                  constraints: BoxConstraints(
-                    maxWidth: pvs.allowOverflow
-                        ? MediaQuery.of(context).size.width
-                        : (MediaQuery.of(context).size.height / h) * w.toDouble(),
-                    maxHeight: pvs.allowOverflow
-                        ? (MediaQuery.of(context).size.width / w) * h.toDouble()
-                        : MediaQuery.of(context).size.height,
+    return NavigatorPopHandler(
+      onPop: () => Navigator.pop(
+        context,
+      ),
+      child: Scaffold(
+        // appBar: AppBar(title: const Text("Fuzzy")),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              ListView(
+                // padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
+                children: [
+                  Container(
+                    constraints: BoxConstraints(
+                      maxWidth: pvs.allowOverflow
+                          ? MediaQuery.of(context).size.width
+                          : (MediaQuery.of(context).size.height / h) *
+                              w.toDouble(),
+                      maxHeight: pvs.allowOverflow
+                          ? (MediaQuery.of(context).size.width / w) *
+                              h.toDouble()
+                          : MediaQuery.of(context).size.height,
+                    ),
+                    child: AspectRatio(
+                      aspectRatio: w / h,
+                      child: _buildMainContent(url, w, h),
+                    ),
                   ),
-                  child: AspectRatio(
-                    aspectRatio: w / h,
-                    child: _buildMainContent(url, w, h),
+                  SelectableText(e6Post.description),
+                  ..._buildTagsDisplay(context),
+                ],
+              ),
+              Align(
+                alignment: AlignmentDirectional.topStart,
+                child: IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back),
+                  style: const ButtonStyle(
+                    backgroundColor: WidgetStateColor.transparent,
                   ),
-                ),
-                SelectableText(e6Post.description),
-                ..._buildTagsDisplay(context),
-              ],
-            ),
-            Align(
-              alignment: AlignmentDirectional.topStart,
-              child: IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back),
-                style: const ButtonStyle(
-                  backgroundColor: WidgetStateColor.transparent,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        floatingActionButton: _buildFab(context),
       ),
-      floatingActionButton: _buildFab(context),
     );
   }
 
@@ -70,7 +83,7 @@ class WPostView extends StatelessWidget {
       children: [
         ActionButton(
           icon: const Icon(Icons.add),
-          tooltip: "Add to pool",
+          tooltip: "Add to set",
           onPressed: () {
             print("To Be Implemented");
             ScaffoldMessenger.of(context).showSnackBar(
@@ -139,7 +152,7 @@ class WPostView extends StatelessWidget {
         ),
         ActionButton(
           icon: const Icon(Icons.delete),
-          tooltip: "Remove selected from pool",
+          tooltip: "Remove selected from set",
           onPressed: () {
             print("To Be Implemented");
             ScaffoldMessenger.of(context).showSnackBar(
@@ -322,7 +335,14 @@ class WPostView extends StatelessWidget {
   Iterable<Widget> _buildTagDisplayList(
       BuildContext context, TextStyle headerStyle, TagCategory category) {
     if (!pvs.colorTags) headerStyle.copyWith(color: null);
-    return e6Post.tags.getByCategory(category).map((e) => SelectableText(e));
+    return e6Post.tags.getByCategory(category).map((e) => Align(
+          widthFactor: 1,
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton(
+            onPressed: () => onAddToSearch?.call(e),
+            child: SelectableText(e),
+          ),
+        ));
     // ListView.builder(
     //   itemBuilder: (BuildContext context, int index) {
     //     return e6Post.tags.getByCategory(category).length > index
@@ -350,30 +370,30 @@ class WPostView extends StatelessWidget {
     );
   }
 
-  @widgetFactory
-  HtmlElementView _oldImg(String url, int w, int h) {
-    return HtmlElementView.fromTagName(
-      tagName: "img",
-      onElementCreated: (element) {
-        // https://api.flutter.dev/flutter/dart-html/ImageElement-class.html
-        var e = element as dynamic; //ImageElement
-        e.attributes["src"] = url;
-        // https://api.flutter.dev/flutter/dart-html/CssStyleDeclaration-class.html
-        if (w > h) {
-          e.style.width = "100%";
-          e.style.height = "auto";
-        } else if (w == h) {
-          e.style.width = "100%";
-          e.style.height = "100%";
-        } else {
-          e.style.width = "auto";
-          e.style.height = "100%";
-        }
-        // e.style.maxWidth = "100%";
-        // e.style.maxHeight = "100%";
-        e.style.objectFit = "contain";
-        // e.style.aspectRatio = "${w / h}";
-      },
-    );
-  }
+  // @widgetFactory
+  // HtmlElementView _oldImg(String url, int w, int h) {
+  //   return HtmlElementView.fromTagName(
+  //     tagName: "img",
+  //     onElementCreated: (element) {
+  //       // https://api.flutter.dev/flutter/dart-html/ImageElement-class.html
+  //       var e = element as dynamic; //ImageElement
+  //       e.attributes["src"] = url;
+  //       // https://api.flutter.dev/flutter/dart-html/CssStyleDeclaration-class.html
+  //       if (w > h) {
+  //         e.style.width = "100%";
+  //         e.style.height = "auto";
+  //       } else if (w == h) {
+  //         e.style.width = "100%";
+  //         e.style.height = "100%";
+  //       } else {
+  //         e.style.width = "auto";
+  //         e.style.height = "100%";
+  //       }
+  //       // e.style.maxWidth = "100%";
+  //       // e.style.maxHeight = "100%";
+  //       e.style.objectFit = "contain";
+  //       // e.style.aspectRatio = "${w / h}";
+  //     },
+  //   );
+  // }
 }

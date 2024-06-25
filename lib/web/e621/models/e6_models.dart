@@ -1,15 +1,16 @@
 // https://www.liquid-technologies.com/online-json-to-schema-converter
 // https://app.quicktype.io/
-import 'package:fuzzy/web/models/e621/tag_d_b.dart';
+import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:j_util/j_util_full.dart';
 
-import '../image_listing.dart';
+import '../../models/image_listing.dart';
 
 typedef JsonOut = Map<String, dynamic>;
 
 abstract class E6Posts {
   Iterable<E6PostResponse> get posts;
 
+  E6PostResponse operator [](int index);
   int get count;
   // E6Posts fromJsonConstructor(JsonOut json);
   E6PostResponse? tryGet(
@@ -18,11 +19,13 @@ abstract class E6Posts {
   });
   Set<int> get restrictedIndices;
 }
+
 class FullyIteratedArgs extends JEventArgs {
   final List<E6PostResponse> posts;
 
   const FullyIteratedArgs(this.posts);
 }
+
 final class E6PostsLazy extends E6Posts {
   final onFullyIterated = JEvent<FullyIteratedArgs>();
   final _postList = <E6PostResponse>[];
@@ -55,6 +58,7 @@ final class E6PostsLazy extends E6Posts {
     }
   }
 
+  @override
   E6PostResponse operator [](int index) {
     // bool advance() {
     //   try {
@@ -86,6 +90,9 @@ final class E6PostsLazy extends E6Posts {
   factory E6PostsLazy.fromJson(JsonOut json) => E6PostsLazy(
       posts:
           (json["posts"] as Iterable).map((e) => E6PostResponse.fromJson(e)));
+  static Iterable<E6PostResponse> lazyConvertFromJson(JsonOut json) =>
+      ((json["posts"] ?? json) as Iterable)
+          .map((e) => E6PostResponse.fromJson(e));
 }
 
 final class E6PostsSync implements E6Posts {
@@ -111,6 +118,7 @@ final class E6PostsSync implements E6Posts {
     }
   }
 
+  @override
   E6PostResponse operator [](int index) {
     return posts[index];
   }
@@ -258,6 +266,56 @@ final class E6PostResponse implements PostListing {
         hasNotes: json["has_notes"] as bool,
         duration: json["duration"] as num?,
       );
+  E6PostResponse copyWith({
+    int? id,
+    String? createdAt,
+    String? updatedAt,
+    E6FileResponse? file,
+    E6Preview? preview,
+    E6Sample? sample,
+    E6Score? score,
+    E6PostTags? tags,
+    List<String>? lockedTags,
+    int? changeSeq,
+    E6Flags? flags,
+    String? rating,
+    int? favCount,
+    List<String>? sources,
+    List<String>? pools,
+    E6Relationships? relationships,
+    int? approverId = -1,
+    int? uploaderId,
+    String? description,
+    int? commentCount,
+    bool? isFavorited,
+    bool? hasNotes,
+    num? duration = -1,
+  }) =>
+      E6PostResponse(
+        id: id ?? this.id,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        file: file ?? this.file,
+        preview: preview ?? this.preview,
+        sample: sample ?? this.sample,
+        score: score ?? this.score,
+        tags: tags ?? this.tags,
+        lockedTags: lockedTags ?? this.lockedTags,
+        changeSeq: changeSeq ?? this.changeSeq,
+        flags: flags ?? this.flags,
+        rating: rating ?? this.rating,
+        favCount: favCount ?? this.favCount,
+        sources: sources ?? this.sources,
+        pools: pools ?? this.pools,
+        relationships: relationships ?? this.relationships,
+        approverId: (approverId ?? 1) < 0 ? approverId : this.approverId,
+        uploaderId: uploaderId ?? this.uploaderId,
+        description: description ?? this.description,
+        commentCount: commentCount ?? this.commentCount,
+        isFavorited: isFavorited ?? this.isFavorited,
+        hasNotes: hasNotes ?? this.hasNotes,
+        duration: (duration ?? 1) < 0 ? duration : this.duration,
+      );
 }
 
 /// TODO: Extend [E6Preview]?
@@ -334,11 +392,14 @@ class E6Preview implements IImageInfo {
   /// {@template E6Preview.url}
   ///
   /// The URL where the preview file is hosted on E6
+  /// 
+  /// If the post is a video, this is a preview image from the video
   ///
-  /// If auth is not provided, this may be null. This is currently replaced
+  /// If auth is not provided, [this may be null][1]. This is currently replaced
   /// with an empty string in from json.
-  /// https://e621.net/help/global_blacklist
-  ///
+  /// 
+  /// [1]: https://e621.net/help/global_blacklist
+  /// 
   /// {@endtemplate}
   @override
   final String url;
@@ -351,7 +412,9 @@ class E6Preview implements IImageInfo {
 
   final _address = LateFinal<Uri>();
   @override
-  Uri get address => Uri.parse(url);
+  Uri get address => _address.isAssigned
+          ? _address.$
+          : _address.itemSafe = Uri.parse(url);
 
   E6Preview({
     required this.width,
@@ -359,8 +422,8 @@ class E6Preview implements IImageInfo {
     required this.url,
   });
   factory E6Preview.fromJson(JsonOut json) => E6Preview(
-        width: json["width"] as int,
-        height: json["height"] as int,
+        width: json["width"],
+        height: json["height"],
         url: json["url"] as String? ?? "",
       );
 }
@@ -369,18 +432,6 @@ class E6Sample extends E6Preview implements ISampleInfo {
   /// If the post has a sample/thumbnail or not. (True/False)
   @override
   final bool has;
-
-  /* /// The width of the post sample.
-  final int width;
-  /// The height of the post sample.
-  final int height; */
-
-  /// {@macro E6Preview.url}
-  ///
-  /// If the post is a video, this is a preview image from the video
-  @override
-  /* final String url; */
-  String get url => super.url;
 
   @override
   bool get isAVideo => extension == "webm" || extension == "mp4";
@@ -392,9 +443,9 @@ class E6Sample extends E6Preview implements ISampleInfo {
     required super.url,
   });
   factory E6Sample.fromJson(JsonOut json) => E6Sample(
-        has: json["has"] as bool,
-        width: json["width"] as int,
-        height: json["height"] as int,
+        has: json["has"],
+        width: json["width"],
+        height: json["height"],
         url: json["url"] as String? ?? "",
       );
 }

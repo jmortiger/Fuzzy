@@ -3,19 +3,20 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:fuzzy/app_settings.dart';
+import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/models/cached_favorites.dart';
+import 'package:fuzzy/pages/saved_searches_page.dart';
 import 'package:fuzzy/pages/settings_page.dart';
-import 'package:fuzzy/search_view_model.dart';
+import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:http/http.dart' as http;
-import 'package:fuzzy/web/models/e621/e6_models.dart';
-import 'package:fuzzy/web/models/e621/tag_d_b.dart';
-import 'package:fuzzy/web/site.dart';
+import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
 
+import '../web/e621/e621.dart';
 import '../widgets/w_search_result_page_navigation.dart';
 
 class HomePage extends StatefulWidget {
@@ -49,13 +50,33 @@ class _HomePageState extends State<HomePage> {
   //     );
   //   }
   // }
-
+  bool fillTextBarWithSearchString = false;
   @override
   Widget build(BuildContext context) {
     // workThroughSnackbarQueue();
     return Scaffold(
       appBar: AppBar(
-        title: _buildSearchBar(context),//const Text("Fuzzy"),
+        title: _buildSearchBar(context), //const Text("Fuzzy"),
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () {
+            Navigator.push<String>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SavedSearchesPageProvider(),
+                )).then(
+              (value) => value == null
+                  ? null
+                  : setState(() {
+                      searchText = value;
+                      fillTextBarWithSearchString = true;
+                      (searchText.isNotEmpty)
+                          ? _sendSearchAndUpdateState(tags: searchText)
+                          : _sendSearchAndUpdateState();
+                    }),
+            );
+          },
+        ),
       ),
       body: SafeArea(child: buildSearchView(context)),
       endDrawer: _buildDrawer(context),
@@ -94,43 +115,68 @@ class _HomePageState extends State<HomePage> {
                         content: Text(
                             "Adding ${selectedIndices.length} posts to favorites...")),
                   );
-                  _sendRequestBatch(
-                    () =>
-                        selectedIndices.map((e) => E621.initAddFavoriteRequest(
-                              posts!.tryGet(e)!.id,
+                  E621.sendAddFavoriteRequestBatch(
+                    // () =>
+                        selectedIndices.map((e) => //E621.initAddFavoriteRequest(
+                              posts!.tryGet(e)!.id),
                               username: E621AccessData.devUsername,
                               apiKey: E621AccessData.devApiKey,
-                            )),
-                    onComplete: (responses) =>
-                        ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            "${responses.where((element) => element.statusCodeInfo.isSuccessful).length}/${responses.length} posts added to favorites!"),
-                        action: SnackBarAction(
-                          label: "Undo",
-                          onPressed: () async {
-                            _sendRequestBatch(
-                              () => responses.map(
-                                (e) => E621.initDeleteFavoriteRequest(
-                                  int.parse(
-                                    e.request!.url.queryParameters["post_id"]!,
+                            // )),
+                    onComplete: (responses) {
+                      var sbs =
+                          "${responses.where((element) => element.statusCodeInfo.isSuccessful).length}/${responses.length} posts added to favorites!";
+                      responses
+                          .where((r) => r.statusCode == 422)
+                          .forEach((r) async {
+                        var rBody = await http.ByteStream(r.stream.asBroadcastStream()).bytesToString(),
+                            pId = int.parse(
+                                r.request!.url.queryParameters["post_id"]!);
+                        // E621.favFailed.invoke(
+                        //   PostActionArgs(
+                        //     post: posts![
+                        //         selectedIndices.firstWhere((e) => posts![e].id == pId)],
+                        //     responseBody: rBody,
+                        //     statusCode: r.statusCodeInfo,
+                        //   ),
+                        // );
+                        if (mounted &&
+                            Provider.of<CachedFavorites>(this.context,
+                                    listen: false)
+                                .postIds
+                                .contains(pId)) {
+                          sbs += " $pId Cached";
+                        }
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(sbs),
+                          action: SnackBarAction(
+                            label: "Undo",
+                            onPressed: () async {
+                              E621.sendDeleteFavoriteRequestBatch(
+                                /* () =>  */responses.map(
+                                  (e) => //E621.initDeleteFavoriteRequest(
+                                    int.parse(
+                                      e.request!.url
+                                          .queryParameters["post_id"]!,
+                                    )),
+                                    username: E621AccessData.devUsername,
+                                    apiKey: E621AccessData.devApiKey,
+                                  // ),
+                                // ),
+                                onComplete: (responses) =>
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        "${responses.where((element) => element.statusCodeInfo.isSuccessful).length}/${responses.length} posts removed from favorites!"),
                                   ),
-                                  username: E621AccessData.devUsername,
-                                  apiKey: E621AccessData.devApiKey,
                                 ),
-                              ),
-                              onComplete: (responses) =>
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                      "${responses.where((element) => element.statusCodeInfo.isSuccessful).length}/${responses.length} posts removed from favorites!"),
-                                ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   );
                 },
               ),
@@ -157,7 +203,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   );
                   var postIds = <int>[];
-                  _sendRequestBatch(
+                  E621.sendRequestBatch(
                     () => selectedIndices.map(
                       (e) {
                         var id = posts!.tryGet(e)!.id;
@@ -180,7 +226,7 @@ class _HomePageState extends State<HomePage> {
                         action: SnackBarAction(
                           label: "Undo",
                           onPressed: () async {
-                            _sendRequestBatch(
+                            E621.sendRequestBatch(
                               () => responses.map(
                                 (e) => E621.initAddFavoriteRequest(
                                   int.parse(
@@ -190,13 +236,31 @@ class _HomePageState extends State<HomePage> {
                                   apiKey: E621AccessData.devApiKey,
                                 ),
                               ),
-                              onComplete: (responses) =>
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                      "${responses.where((element) => element.statusCodeInfo.isSuccessful).length}/${responses.length} posts removed from favorites!"),
-                                ),
-                              ),
+                              onComplete: (responses) {
+                                responses
+                                    .where((r) => r.statusCode == 422)
+                                    .forEach((r) async {
+                                  var rBody = await r.stream.bytesToString();
+                                  E621.favFailed.invoke(
+                                    PostActionArgs(
+                                      post: posts![selectedIndices.firstWhere(
+                                          (e) =>
+                                              posts![e].id ==
+                                              int.parse(r.request!.url
+                                                      .queryParameters[
+                                                  "post_id"]!))],
+                                      responseBody: rBody,
+                                      statusCode: r.statusCodeInfo,
+                                    ),
+                                  );
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        "${responses.where((element) => element.statusCodeInfo.isSuccessful).length}/${responses.length} posts removed from favorites!"),
+                                  ),
+                                );
+                              },
                             );
                           },
                         ),
@@ -210,25 +274,25 @@ class _HomePageState extends State<HomePage> {
         : null;
   }
 
-  Future<void> _sendRequestBatch(
-    Iterable<http.Request> Function() requestGenerator, {
-    FutureOr<void> Function(List<http.StreamedResponse> responses)? onComplete,
-    void Function(Object? error, StackTrace trace)? onError =
-        util.defaultOnError,
-  }) async {
-    var responses = <http.StreamedResponse>[],
-        stream = E621
-            .sendRequests(requestGenerator())
-            .asyncMap((event) => event)
-            .asyncMap((event) async {
-          await event.stream.length;
-          return event;
-        }).handleError(onError as Function);
-    await for (final srf in stream) {
-      responses.add(srf);
-    }
-    onComplete?.call(responses);
-  }
+  // static Future<void> _sendRequestBatch(
+  //   Iterable<http.Request> Function() requestGenerator, {
+  //   FutureOr<void> Function(List<http.StreamedResponse> responses)? onComplete,
+  //   void Function(Object? error, StackTrace trace)? onError =
+  //       util.defaultOnError,
+  // }) async {
+  //   var responses = <http.StreamedResponse>[],
+  //       stream = E621
+  //           .sendRequests(requestGenerator())
+  //           .asyncMap((event) => event)
+  //           .asyncMap((event) async {
+  //         await event.stream.length;
+  //         return event;
+  //       }).handleError(onError as Function);
+  //   await for (final srf in stream) {
+  //     responses.add(srf);
+  //   }
+  //   onComplete?.call(responses);
+  // }
 
   Drawer _buildDrawer(BuildContext context) {
     return Drawer(
@@ -240,61 +304,63 @@ class _HomePageState extends State<HomePage> {
           ListTile(
             title: const Text("Go to settings"),
             onTap: () {
-              // Navigator.pop(context);
+              Navigator.pop(context);
               Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const SettingsPage(),
-                  ));
+                  )).then(
+                (value) => AppSettings.writeSettingsToFile(),
+              );
             },
           ),
           ListTile(
             title: const Text("Toggle Lazy Loading"),
-            leading: lazyLoad
+            leading: svm.lazyLoad
                 ? const Icon(Icons.check_box)
                 : const Icon(Icons.check_box_outline_blank),
             onTap: () {
-              print("Before: $lazyLoad");
-              setState(() => toggleLazyLoad());
-              print("After: $lazyLoad");
+              print("Before: $svm.lazyLoad");
+              setState(() => svm.toggleLazyLoad());
+              print("After: $svm.lazyLoad");
               // Navigator.pop(context);
             },
           ),
           ListTile(
             title: const Text("Toggle Lazy Building"),
-            leading: lazyBuilding
+            leading: svm.lazyBuilding
                 ? const Icon(Icons.check_box)
                 : const Icon(Icons.check_box_outline_blank),
             onTap: () {
-              print("Before: $lazyBuilding");
-              setState(() => toggleLazyBuilding());
-              print("After: $lazyBuilding");
+              print("Before: $svm.lazyBuilding");
+              setState(() => svm.toggleLazyBuilding());
+              print("After: $svm.lazyBuilding");
               // Navigator.pop(context);
             },
           ),
           ListTile(
             title: const Text("Toggle Auth headers"),
-            leading: sendAuthHeaders
+            leading: svm.sendAuthHeaders
                 ? const Icon(Icons.check_box)
                 : const Icon(Icons.check_box_outline_blank),
             onTap: () {
-              print("Before: $sendAuthHeaders");
+              print("Before: $svm.sendAuthHeaders");
               setState(
                 () => svm.toggleSendAuthHeaders(),
               );
-              print("After: $sendAuthHeaders");
+              print("After: $svm.sendAuthHeaders");
               // Navigator.pop(context);
             },
           ),
           ListTile(
             title: const Text("Toggle Force Safe"),
-            leading: forceSafe
+            leading: svm.forceSafe
                 ? const Icon(Icons.check_box)
                 : const Icon(Icons.check_box_outline_blank),
             onTap: () {
-              print("Before: $forceSafe");
-              setState(() => toggleForceSafe());
-              print("After: $forceSafe");
+              print("Before: $svm.forceSafe");
+              setState(() => svm.toggleForceSafe());
+              print("After: $svm.forceSafe");
               // Navigator.pop(context);
             },
           ),
@@ -317,42 +383,43 @@ class _HomePageState extends State<HomePage> {
   // #region From WSearchView
   SearchViewModel get svm =>
       Provider.of<SearchViewModel>(context, listen: false);
-  bool get lazyLoad => svm.lazyLoad;
-  bool toggleLazyLoad() => svm.toggleLazyLoad();
-  bool get lazyBuilding => svm.lazyBuilding;
-  bool toggleLazyBuilding() => svm.toggleLazyBuilding();
-  bool get forceSafe => svm.forceSafe;
-  bool toggleForceSafe() => svm.toggleForceSafe();
-  bool get sendAuthHeaders => svm.sendAuthHeaders;
-  bool toggleSendAuthHeaders() => svm.toggleSendAuthHeaders();
 
-  E6Posts? posts;
   Set<int> selectedIndices = {};
   JPureEvent onSelectionCleared = JPureEvent();
   String priorSearchText = "";
-  int? _firstPostIdCached;
-  int? get firstPostOnPageId => posts?.tryGet(0)?.id;
-  int? _lastPostIdCached;
-  int? _lastPostOnPageIdCached;
-  bool? _hasNextPageCached;
-  bool? get hasPriorPage =>
-      _firstPostIdCached != null &&
-      _firstPostIdCached! > (firstPostOnPageId ?? _firstPostIdCached!);
+  // #region SearchCache
+  SearchCache get sc => Provider.of<SearchCache>(context, listen: false);
+  E6Posts? get posts => sc.posts;
+  int? get firstPostOnPageId => sc.firstPostOnPageId;
+  set posts(E6Posts? value) => sc.posts = value;
+  int? get firstPostIdCached => sc.firstPostIdCached;
+  set firstPostIdCached(int? value) => sc.firstPostIdCached = value;
+  int? get lastPostIdCached => sc.lastPostIdCached;
+  set lastPostIdCached(int? value) => sc.lastPostIdCached = value;
+  int? get lastPostOnPageIdCached => sc.lastPostOnPageIdCached;
+  set lastPostOnPageIdCached(int? value) => sc.lastPostOnPageIdCached = value;
+  bool? get hasNextPageCached => sc.hasNextPageCached;
+  set hasNextPageCached(bool? value) => sc.hasNextPageCached = value;
+  bool? get hasPriorPage => sc.hasPriorPage;
+  // #endregion SearchCache
 
   // #region Only Needed in search view
-  String searchText = "";
-  Future<http.StreamedResponse>? pr;
+  String get searchText => svm.searchText;
+  set searchText(String value) {
+    svm.searchText = value;
+  }
+
+  Future< /* http.StreamedResponse */ SearchResultArgs>? pr;
   int? currentPostCollectionExpectedSize;
-  // bool buildNavigator = false;
   // #endregion Only Needed in search view
 
   @widgetFactory
   Padding _buildSearchBar(BuildContext context) {
     return Padding(
-        padding: const EdgeInsets.all(8.0),
-        // child: simpleTextField(),
-        child: autoCompleteTextField(),
-      );
+      padding: const EdgeInsets.all(8.0),
+      // child: simpleTextField(),
+      child: autoCompleteTextField(),
+    );
   }
 
   @widgetFactory
@@ -381,17 +448,17 @@ class _HomePageState extends State<HomePage> {
               child: WPostSearchResults(
                 key: ObjectKey(posts!),
                 posts: posts!,
-                expectedCount: lazyLoad
+                expectedCount: svm.lazyLoad
                     ? (currentPostCollectionExpectedSize ?? 50)
                     : posts!.count,
-                searchText: searchText,
+                // searchText: searchText,
                 onPostsSelected: (indices, newest) {
                   setState(() {
                     selectedIndices = indices;
                   });
                 },
                 onSelectionCleared: onSelectionCleared,
-                useLazyBuilding: lazyBuilding,
+                useLazyBuilding: svm.lazyBuilding,
               ),
             );
           })(),
@@ -407,11 +474,11 @@ class _HomePageState extends State<HomePage> {
             //   lastPostId: posts?.tryGet(posts!.count - 1)?.id,
             // );
             return WSearchResultPageNavigation(
-              onNextPage: _hasNextPageCached ?? false
+              onNextPage: hasNextPageCached ?? false
                   ? () => _sendSearchAndUpdateState(
                         limit: SearchView.i.postsPerPage,
                         pageModifier: 'b',
-                        postId: _lastPostOnPageIdCached,
+                        postId: lastPostOnPageIdCached,
                         tags: priorSearchText,
                       )
                   : null,
@@ -438,29 +505,32 @@ class _HomePageState extends State<HomePage> {
         TextEditingController textEditingController,
         FocusNode focusNode,
         void Function() onFieldSubmitted,
-      ) =>
-          TextField(
-        controller: textEditingController,
-        focusNode: focusNode,
-        onSubmitted: (s) => setState(() {
-          // onFieldSubmitted();
-          searchText = textEditingController.text;
-          if (searchText.isNotEmpty) {
-            _sendSearchAndUpdateState(tags: searchText);
-          } else {
-            _sendSearchAndUpdateState();
-          }
-        }),
-      ),
+      ) {
+        if (fillTextBarWithSearchString) {
+          fillTextBarWithSearchString = false;
+          textEditingController.text = searchText;
+        }
+        return TextField(
+          controller: textEditingController,
+          focusNode: focusNode,
+          onSubmitted: (s) => setState(() {
+            // onFieldSubmitted();
+            searchText = textEditingController.text;
+            (searchText.isNotEmpty)
+                ? _sendSearchAndUpdateState(tags: searchText)
+                : _sendSearchAndUpdateState();
+          }),
+        );
+      },
       optionsBuilder: (TextEditingValue textEditingValue) {
         var db = !util.DO_NOT_USE_TAG_DB ? util.tagDbLazy.itemSafe : null;
         if (db == null || textEditingValue.text.isEmpty) {
-          if (AppSettings.i.favoriteTags.isEmpty) {
+          if (AppSettings.i?.favoriteTags.isEmpty ?? true) {
             return const Iterable<String>.empty();
           } else {
             return [
               textEditingValue.text,
-              ...AppSettings.i.favoriteTags.where(
+              ...AppSettings.i!.favoriteTags.where(
                 (element) => !textEditingValue.text.contains(element),
               )
             ];
@@ -541,17 +611,16 @@ class _HomePageState extends State<HomePage> {
     if (lastPostId == null) {
       throw StateError("Couldn't determine current page's last post's id.");
     }
-    if (_lastPostOnPageIdCached == lastPostId && _hasNextPageCached != null) {
-      return _hasNextPageCached!;
+    if (lastPostOnPageIdCached == lastPostId && hasNextPageCached != null) {
+      return hasNextPageCached!;
     }
     try {
       setState(() {
-        _lastPostOnPageIdCached = lastPostId;
+        lastPostOnPageIdCached = lastPostId;
       });
-    } /* on Exception  */ catch (e) {
+    } catch (e) {
       print(e);
-      // print(e);
-      _lastPostOnPageIdCached = lastPostId;
+      lastPostOnPageIdCached = lastPostId;
     }
     var (:username, :apiKey) = devGetAuth();
     if (tags == "fav:***REMOVED***) {
@@ -573,31 +642,31 @@ class _HomePageState extends State<HomePage> {
     if (out.posts.isEmpty) {
       try {
         setState(() {
-          _hasNextPageCached = false;
+          hasNextPageCached = false;
         });
       } /* on Exception */ catch (e) {
         print(e);
-        _hasNextPageCached = false;
+        hasNextPageCached = false;
       }
-      return _hasNextPageCached = false;
+      return hasNextPageCached = false;
     }
     if (out.posts.length != 1) {
       // TODO: Warn, shouldn't be possible.
     }
     try {
       setState(() {
-        _lastPostIdCached = out.posts.last.id;
-        _hasNextPageCached = (lastPostId != _lastPostIdCached);
+        lastPostIdCached = out.posts.last.id;
+        hasNextPageCached = (lastPostId != lastPostIdCached);
       });
     } catch (e) {
-      _lastPostIdCached = out.posts.last.id;
-      return _hasNextPageCached = (lastPostId != out.posts.last.id);
+      lastPostIdCached = out.posts.last.id;
+      return hasNextPageCached = (lastPostId != out.posts.last.id);
     }
     return (lastPostId != out.posts.last.id);
   }
 
   ({String? username, String? apiKey}) devGetAuth() =>
-      sendAuthHeaders && E621AccessData.devData.isAssigned
+      svm.sendAuthHeaders && E621AccessData.devData.isAssigned
           ? (
               username: E621AccessData.devData.item.username,
               apiKey: E621AccessData.devData.item.apiKey,
@@ -638,8 +707,8 @@ class _HomePageState extends State<HomePage> {
           "pageModifier = $pageModifier, "
           "postId = $postId, "
           "pageNumber = $pageNumber)");
-      _lastPostIdCached = null;
-      _firstPostIdCached = null;
+      lastPostIdCached = null;
+      firstPostIdCached = null;
       priorSearchText = tags;
     } else {
       print("Request For Same Terms: $priorSearchText ("
@@ -647,10 +716,43 @@ class _HomePageState extends State<HomePage> {
           "postId = $postId, "
           "pageNumber = $pageNumber)");
     }
-    _hasNextPageCached = null;
-    _lastPostOnPageIdCached = null;
-    pr = initSearchRequest(
-      tags: forceSafe ? "$tags rating:safe" : tags,
+    hasNextPageCached = null;
+    lastPostOnPageIdCached = null;
+    var (:username, :apiKey) = devGetAuth();
+    pr = E621.performPostSearch(
+      tags: svm.forceSafe ? "$tags rating:safe" : tags,
+      limit: limit,
+      pageModifier: pageModifier,
+      pageNumber: pageNumber,
+      postId: postId,
+      apiKey: apiKey,
+      username: username,
+    ) /* .send() */;
+    pr!.then((v) {
+      setState(() {
+        pr = null;
+        posts = svm.lazyLoad
+            ? E6PostsLazy.fromJson(
+                json.decode(v.responseBody) as Map<String, dynamic>)
+            : E6PostsSync.fromJson(
+                json.decode(v.responseBody) as Map<String, dynamic>);
+        if (posts.runtimeType == E6PostsLazy) {
+          (posts as E6PostsLazy)
+              .onFullyIterated
+              .subscribe((a) => getHasNextPage(
+                    tags: priorSearchText,
+                    lastPostId: a.posts.last.id,
+                  ));
+        } else {
+          getHasNextPage(
+              tags: priorSearchText,
+              lastPostId: (posts as E6PostsSync).posts.last.id);
+        }
+        if (isNewRequest) firstPostIdCached = firstPostOnPageId;
+      });
+    });
+    /* pr = initSearchRequest(
+      tags: svm.forceSafe ? "$tags rating:safe" : tags,
       limit: limit,
       pageModifier: pageModifier,
       pageNumber: pageNumber,
@@ -660,30 +762,24 @@ class _HomePageState extends State<HomePage> {
       value.stream.bytesToString().then((v) {
         setState(() {
           pr = null;
-          posts = lazyLoad
+          posts = svm.lazyLoad
               ? E6PostsLazy.fromJson(json.decode(v) as Map<String, dynamic>)
               : E6PostsSync.fromJson(json.decode(v) as Map<String, dynamic>);
           if (posts.runtimeType == E6PostsLazy) {
             (posts as E6PostsLazy).onFullyIterated.subscribe((a) =>
                     getHasNextPage(
                         tags: priorSearchText, lastPostId: a.posts.last.id)
-                /* .then((v) => setState(() {
-                          buildNavigator = v;
-                        })) */
                 );
           } else {
             getHasNextPage(
                     tags: priorSearchText,
                     lastPostId: (posts as E6PostsSync).posts.last.id)
-                /* .then((v) => setState(() {
-                      buildNavigator = v;
-                    })) */
                 ;
           }
-          if (isNewRequest) _firstPostIdCached = posts?.tryGet(0)?.id;
+          if (isNewRequest) firstPostIdCached = posts?.tryGet(0)?.id;
         });
       });
-    });
+    }); */
   }
   // #endregion From WSearchView
 }

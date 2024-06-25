@@ -3,14 +3,16 @@ import 'dart:async' show FutureOr;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fuzzy/web/models/e621/tag_d_b.dart';
-import 'package:fuzzy/web/site.dart';
+import 'package:fuzzy/web/e621/e621.dart';
+import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:http/http.dart' as http;
 import 'package:j_util/j_util_full.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart' as path;
 import 'package:archive/archive.dart' as archive
   if (dart.library.io) 'package:archive/archive_io.dart';
+
+import 'package:j_util/e621.dart' as e621;
 
 typedef JsonMap = Map<String, dynamic>;
 final LazyInitializer<PackageInfo> packageInfo = LazyInitializer(
@@ -20,9 +22,11 @@ final LazyInitializer<String> version = LazyInitializer(
   () async => (await packageInfo.getItem()).version,
   defaultValue: "VERSION_NUMBER",
 );
-
-final LazyInitializer<String> appDataPath =
-    LazyInitializer(() => path.getApplicationDocumentsDirectory().then(
+/// The absolute path to user-accessible data.
+final appDataPath =
+    LazyInitializer(() => (Platform.isWeb) 
+      ? Future.sync(() => "") 
+      : path.getApplicationDocumentsDirectory().then(
           (value) => value.absolute.path,
         ));
 
@@ -46,10 +50,13 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
     print("Tag Database Loaded!");
     return compute(_webCallback, data);
   } else {
-    return E621ApiEndpoints.dbExportTags
-        .getMoreData()
-        .sendRequest()
+    return 
+        E621.sendRequest(e621.Api.initDbExportRequest())
         .then((value) => compute(_androidCallback, value));
+        // E621ApiEndpoints.dbExportTags
+        // .getMoreData()
+        // .sendRequest()
+        // .then((value) => compute(_androidCallback, value));
   }
 });
 FutureOr<T> onErrorPrintAndRethrow<T>(Object? e, StackTrace stackTrace) {
@@ -82,3 +89,22 @@ VoidCallback generateAlertDialog<DialogOutput>(
       }
     };
   }
+
+dynamic colorToJson(Color c) => c.value;
+Color colorFromJson(json) => Color(json as int);
+extension StringPrint on String {
+  String printMe() {
+    print(this);
+    return this;
+  }
+}
+T castMap<T>(dynamic e, int i, Iterable<dynamic> l) => e as T;
+final nonNumeric = RegExp(r'[^1234567890]');
+TextInputFormatter numericFormatter = TextInputFormatter.withFunction(
+  (oldValue, newValue) => (RegExp(r'[^1234567890]').hasMatch(newValue.text)) ? oldValue : newValue,
+  );
+
+const event = Event();
+class Event {
+  const Event();
+}

@@ -1,14 +1,14 @@
 // import 'dart:html' as html;
 import 'package:flutter/material.dart';
-import 'package:fuzzy/app_settings.dart';
-import 'package:fuzzy/web/models/e621/e6_models.dart';
+import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/j_util_full.dart';
 
 class WPostSearchResults extends StatefulWidget {
   final E6Posts posts;
   final int expectedCount;
-  final String searchText;
+  // final String searchText;
   final void Function(Set<int> indices, int newest)? onPostsSelected;
 
   final JPureEvent? _onSelectionCleared;
@@ -17,7 +17,7 @@ class WPostSearchResults extends StatefulWidget {
     super.key,
     required this.posts,
     this.expectedCount = 50,
-    this.searchText = "",
+    // this.searchText = "",
     this.onPostsSelected,
     this.useLazyBuilding = false,
     JPureEvent? onSelectionCleared,
@@ -44,9 +44,15 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
     if (widget.posts.runtimeType == E6PostsSync) {
       trueCount = postSync!.posts.length;
     }
-    widget._onSelectionCleared?.subscribe(() => setState(() {
+    widget._onSelectionCleared?.subscribe(() {
+      if (mounted) {
+        setState(() {
           selectedIndices.clear();
-        }));
+        });
+      } else {
+        print("_WPostSearchResultsState: Dismounted?");
+      }
+    });
     if (widget.posts.runtimeType == E6PostsLazy) {
       (widget.posts as E6PostsLazy)
           .onFullyIterated
@@ -78,7 +84,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
     return widget.useLazyBuilding /*  && posts.runtimeType == E6PostsSync */
         ? GridView.builder(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: AppSettings.i.searchView.postsPerRow,
+              crossAxisCount: AppSettings.i!.searchView.postsPerRow,
               crossAxisSpacing: 4,
               mainAxisSpacing: 4,
             ),
@@ -100,7 +106,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
                   : WImageResult(
                       imageListing: data,
                       index: index,
-                      searchText: widget.searchText,
+                      // searchText: widget.searchText,
                       isSelected: selectedIndices.contains(index),
                       onSelectionToggle: (i) => setState(() {
                         selectedIndices.contains(i)
@@ -113,7 +119,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
             },
           )
         : GridView.count(
-            crossAxisCount: AppSettings.i.searchView.postsPerRow,
+            crossAxisCount: AppSettings.i!.searchView.postsPerRow,
             crossAxisSpacing: 4,
             mainAxisSpacing: 4,
             children: (Iterable<int>.generate(
@@ -129,7 +135,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
                                   ..add(WImageResult(
                                     imageListing: posts.tryGet(index)!,
                                     index: index,
-                                    searchText: widget.searchText,
+                                    // searchText: widget.searchText,
                                     isSelected: selectedIndices.contains(index),
                                     onSelectionToggle: (i) => setState(() {
                                       selectedIndices.contains(i)

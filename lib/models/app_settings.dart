@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'dart:io' as io;
+
 import 'package:flutter/material.dart';
-import 'package:fuzzy/web/models/e621/e6_models.dart';
-import 'package:fuzzy/web/models/e621/tag_d_b.dart';
+import 'package:fuzzy/web/e621/models/e6_models.dart';
+import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:j_util/j_util_full.dart';
 
@@ -27,29 +30,72 @@ class AppSettingsRecord {
   factory AppSettingsRecord.fromJson(JsonOut json) => AppSettingsRecord(
         postView: PostViewData.fromJson(json["postView"] as JsonOut),
         searchView: SearchViewData.fromJson(json["searchView"] as JsonOut),
-        favoriteTags:
-            (json["favoriteTags"] as Set<String>) /* .cast<String>() */,
+        favoriteTags: (json["favoriteTags"] as List).cast<String>().toSet(),
         blacklistedTags:
-            (json["blacklistedTags"] as Set<String>) /* .cast<String>() */,
+            (json["blacklistedTags"] as List).cast<String>().toSet(),
       );
   JsonOut toJson() => {
         "postView": postView,
         "searchView": searchView,
-        "favoriteTags": favoriteTags,
-        "blacklistedTags": blacklistedTags,
+        "favoriteTags": favoriteTags.toList(),
+        "blacklistedTags": blacklistedTags.toList(),
       };
 }
 
 class AppSettings implements AppSettingsRecord {
+  // #region FileIO
+  static const fileName = "settings.json";
+  static final _fileFullPath = LazyInitializer(
+      () async => "${await util.appDataPath.getItem()}/$fileName");
+  static final _file = (Platform.isWeb)
+      ? null
+      : LazyInitializer(() async {
+          var t = io.File(await _fileFullPath.getItem());
+          return (await t.exists())
+              ? t
+              : await (await t.create(recursive: true, exclusive: true))
+                  .writeAsString(
+                      jsonEncode(AppSettings.defaultSettings.toJson()));
+        });
+  static LazyInitializer<io.File> get myFile => _file!;
+  static Future<AppSettings> loadSettingsFromFile() async => (Platform.isWeb)
+      ? defaultSettings
+      : AppSettings.fromJson(
+          jsonDecode((await (await myFile.getItem()).readAsString()).printMe()),
+        );
+  Future<AppSettings> loadFromFile() async {
+    return switch (Platform.getPlatform()) {
+      Platform.web => defaultSettings,
+      Platform.android || Platform.iOS => this
+        ..overwriteWithRecord(AppSettings.fromJson(
+            jsonDecode(await (await myFile.getItem()).readAsString()))),
+      _ => throw UnsupportedError("platform not supported"),
+    };
+  }
+
+  static Future<io.File?> writeSettingsToFile([AppSettings? a]) async =>
+      switch (Platform.getPlatform()) {
+        Platform.web => null,
+        Platform.android ||
+        Platform.iOS =>
+          (await myFile.getItem()).writeAsString(
+            jsonEncode(a ?? i ?? defaultSettings)..printMe(),
+            flush: true,
+          ),
+        _ => throw UnsupportedError("platform not supported"),
+      };
+  Future<io.File?> writeToFile() async => writeSettingsToFile(this);
+  // #endregion FileIO
+
   static final defaultSettings =
       AppSettings.fromRecord(AppSettingsRecord.defaultSettings);
+  static final priorSettings = LazyInitializer(loadSettingsFromFile);
+
   // #region Singleton
-  static final _instance = LateFinal<AppSettings>();
-  static AppSettings get instance => _instance.isAssigned
-      ? _instance.item
-      : (_instance.item =
-          AppSettings.fromRecord(AppSettingsRecord.defaultSettings));
-  static AppSettings get i => instance;
+  static final _instance = LazyInitializer<AppSettings>(loadSettingsFromFile);
+  static Future<AppSettings> get instance async =>
+      _instance.isAssigned ? _instance.item : await _instance.getItem();
+  static AppSettings? get i => _instance.itemSafe;
   // #endregion Singleton
   // #region JSON (indirect, don't need updating w/ new fields)
   @override
@@ -60,8 +106,8 @@ class AppSettings implements AppSettingsRecord {
   factory AppSettings.fromRecord(AppSettingsRecord r) => AppSettings.all(
         postView: PostView.fromData(r.postView),
         searchView: SearchView.fromData(r.searchView),
-        favoriteTags: Set.from(r.favoriteTags),
-        blacklistedTags: Set.from(r.favoriteTags),
+        favoriteTags: Set<String>.from(r.favoriteTags),
+        blacklistedTags: Set<String>.from(r.blacklistedTags),
       );
   AppSettingsRecord toRecord() => AppSettingsRecord(
         postView: _postView.toData(),
@@ -78,9 +124,9 @@ class AppSettings implements AppSettingsRecord {
         _searchView = searchView ?? defaultSettings.searchView,
         _favoriteTags = favoriteTags ?? defaultSettings._favoriteTags,
         _blacklistedTags = blacklistedTags ?? defaultSettings._blacklistedTags;
-  void overwriteWithRecord({
+  void overwriteWithRecord([
     AppSettingsRecord r = AppSettingsRecord.defaultSettings,
-  }) {
+  ]) {
     _postView.overwriteWithData(r.postView);
     _searchView.overwriteWithData(r.searchView);
     _favoriteTags = Set.of(r.favoriteTags);
@@ -111,7 +157,9 @@ class AppSettings implements AppSettingsRecord {
   Set<String> _blacklistedTags;
   @override
   Set<String> get blacklistedTags => _blacklistedTags;
-  set blacklistedTags(Set<String> value) => _blacklistedTags = value;
+  set blacklistedTags(Set<String> value) {
+    _blacklistedTags = value;
+  }
 }
 
 class PostViewData {
@@ -152,16 +200,18 @@ class PostViewData {
     required this.allowOverflow,
   });
   factory PostViewData.fromJson(JsonOut json) => PostViewData(
-        tagOrder:
-            (json["tagOrder"] as List).mapAsList((e, i, l) => e as TagCategory),
-        tagColors: (json["tagColors"] as Map<TagCategory, Color>),
+        tagOrder: (json["tagOrder"] as List).mapAsList(
+            (e, i, l) => TagCategory.fromJson(e) /*  as TagCategory */),
+        tagColors: (json["tagColors"] /*  as Map<String, int> */)
+            .map<TagCategory, Color>(
+                (k, v) => MapEntry(TagCategory.fromJson(k), Color(v))),
         colorTags: (json["colorTags"] as bool),
         colorTagHeaders: (json["colorTagHeaders"] as bool),
         allowOverflow: (json["allowOverflow"] as bool),
       );
   JsonOut toJson() => {
         "tagOrder": tagOrder,
-        "tagColors": tagColors,
+        "tagColors": tagColors.map((k, v) => MapEntry(k.toJson(), v.value)),
         "colorTags": colorTags,
         "colorTagHeaders": colorTagHeaders,
         "allowOverflow": allowOverflow,
@@ -228,8 +278,9 @@ class PostView implements PostViewData {
   // #region JSON (indirect, don't need updating w/ new fields)
   @override
   JsonOut toJson() => toData().toJson();
-  factory PostView.fromJson(JsonOut json) =>
-      PostView.fromData(PostViewData.fromJson(json));
+  factory PostView.fromJson(JsonOut json) => _instance.isAssigned
+      ? PostView.fromData(PostViewData.fromJson(json))
+      : PostView.fromData(PostViewData.fromJson(json));
   // #endregion JSON (indirect, don't need updating w/ new fields)
   // #region Singleton
   static final _instance = LateFinal<PostView>();
