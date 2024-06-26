@@ -95,56 +95,58 @@ class _SavedSearchesPageSingletonState extends State<SavedSearchesPageSingleton>
             ListTile(
               title: const Text("Add Saved Search"),
               onTap: () {
-                showSavedElementEditDialogue(context).then((value) {
+                showSavedElementEditDialogue(context,).then((value) {
                   if (value != null) {
                     data.$.addAndSaveSearch(
                       SavedSearchData.fromTagsString(
                         tags: value.mainData,
                         title: value.title,
+                        uniqueId: value.uniqueId ?? "",
+                        parent: value.parent ?? "",
                       ),
                     );
                   }
                 });
               },
             ),
-            ListTile(
-              title: const Text("Add Saved Pool"),
-              onTap: () {
-                showSavedElementEditDialogue(
-                  context,
-                  mainDataName: "Pool Id",
-                  isNumeric: true,
-                ).then((value) {
-                  if (value != null) {
-                    data.$.addAndSavePool(
-                      SavedPoolData(
-                        id: int.parse(value.mainData),
-                        title: value.title,
-                      ),
-                    );
-                  }
-                });
-              },
-            ),
-            ListTile(
-              title: const Text("Add Saved Set"),
-              onTap: () {
-                showSavedElementEditDialogue(
-                  context,
-                  mainDataName: "Set Id",
-                  isNumeric: true,
-                ).then((value) {
-                  if (value != null) {
-                    data.$.addAndSaveSet(
-                      SavedSetData(
-                        id: int.parse(value.mainData),
-                        title: value.title,
-                      ),
-                    );
-                  }
-                });
-              },
-            ),
+            // ListTile(
+            //   title: const Text("Add Saved Pool"),
+            //   onTap: () {
+            //     showSavedElementEditDialogue(
+            //       context,
+            //       mainDataName: "Pool Id",
+            //       isNumeric: true,
+            //     ).then((value) {
+            //       if (value != null) {
+            //         data.$.addAndSavePool(
+            //           SavedPoolData(
+            //             id: int.parse(value.mainData),
+            //             title: value.title,
+            //           ),
+            //         );
+            //       }
+            //     });
+            //   },
+            // ),
+            // ListTile(
+            //   title: const Text("Add Saved Set"),
+            //   onTap: () {
+            //     showSavedElementEditDialogue(
+            //       context,
+            //       mainDataName: "Set Id",
+            //       isNumeric: true,
+            //     ).then((value) {
+            //       if (value != null) {
+            //         data.$.addAndSaveSet(
+            //           SavedSetData(
+            //             id: int.parse(value.mainData),
+            //             title: value.title,
+            //           ),
+            //         );
+            //       }
+            //     });
+            //   },
+            // ),
           ],
         ),
       ),
@@ -168,32 +170,26 @@ class _SavedSearchesPageSingletonState extends State<SavedSearchesPageSingleton>
     );
   }
 
-  Future<({String mainData, String title})?> showSavedElementEditDialogue(
+  Future<({String mainData, String title, String? parent, String? uniqueId})?> showSavedElementEditDialogue(
     BuildContext context, {
     String initialTitle = "",
     String initialData = "",
     String mainDataName = "Tags",
+    String initialParent = "",
+    String initialUniqueId = "",
     bool isNumeric = false,
   }) {
-    return showDialog<({String title, String mainData})>(
+    return showDialog<({String mainData, String title, String? parent, String? uniqueId})>(
       context: context,
       builder: (context) {
-        var title = initialTitle, mainData = initialData;
+        var title = initialTitle, mainData = initialData, parent = initialParent, uniqueId = initialUniqueId;
         return AlertDialog(
           content: Column(
             children: [
               const Text("Title:"),
               TextField(
                 onChanged: (value) => title = value,
-                controller: initialTitle.isEmpty
-                    ? null
-                    : TextEditingController.fromValue(TextEditingValue(
-                        text: initialTitle,
-                        selection: TextSelection(
-                          baseOffset: 0,
-                          extentOffset: initialTitle.length,
-                        ),
-                      )),
+                controller: util.defaultSelection(initialTitle),
               ),
               Text("$mainDataName:"),
               TextField(
@@ -203,16 +199,18 @@ class _SavedSearchesPageSingletonState extends State<SavedSearchesPageSingleton>
                 //    : mainData,
                 inputFormatters: isNumeric ? [util.numericFormatter] : null,
                 onChanged: (value) => mainData = value,
-                controller: initialData.isEmpty
-                    ? null
-                    : TextEditingController.fromValue(TextEditingValue(
-                        text: initialData,
-                        selection: TextSelection(
-                          baseOffset: 0,
-                          extentOffset: initialData.length,
-                        ),
-                      )),
+                controller: util.defaultSelection(initialData),
                 keyboardType: isNumeric ? TextInputType.number : null,
+              ),
+              const Text("Parent:"),
+              TextField(
+                onChanged: (value) => parent = value,
+                controller: util.defaultSelection(initialParent),
+              ),
+              const Text("UniqueId:"),
+              TextField(
+                onChanged: (value) => uniqueId = value,
+                controller: util.defaultSelection(initialUniqueId),
               ),
             ],
           ),
@@ -220,7 +218,7 @@ class _SavedSearchesPageSingletonState extends State<SavedSearchesPageSingleton>
             TextButton(
               onPressed: () => Navigator.pop(
                 context,
-                (title: title, mainData: mainData),
+                (title: title, mainData: mainData, parent: parent, uniqueId: uniqueId),
               ),
               child: const Text("Accept"),
             ),
@@ -281,6 +279,8 @@ class _SavedSearchesPageSingletonState extends State<SavedSearchesPageSingleton>
               "Edit" => showSavedElementEditDialogue(context,
                         initialTitle: entry.title,
                         initialData: entry.searchString,
+                        initialParent: entry.parent,
+                        initialUniqueId: entry.uniqueId,
                         mainDataName: "Data")
                     .then((value) {
                   if (value != null) {
@@ -299,6 +299,8 @@ class _SavedSearchesPageSingletonState extends State<SavedSearchesPageSingleton>
                         SavedSearchData => SavedSearchData.fromSearchString(
                             searchString: value.mainData,
                             title: value.title,
+                            parent: value.parent ?? "",
+                            uniqueId: value.uniqueId ?? "",
                           ),
                         _ => throw UnsupportedError("type not supported"),
                       },

@@ -20,7 +20,14 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
     if (_instance.isAssigned) {
       return _instance.$;
     } else {
-      SavedDataE6.loadFromStorageAsync();
+      switch (SavedDataE6.loadFromStorageAsync()) {
+        case Future<SavedDataE6> t:
+          t.then((v) => _instance.$ = v);
+          break;
+        case SavedDataE6 t:
+          _instance.$ = t;
+          break;
+      }
       return null;
     }
   }
@@ -35,7 +42,8 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
   static Future<String> fileFullPathInit() async {
     print("fileFullPathInit called");
     try {
-      return Platform.isWeb ? "" : "${await appDataPath.getItem()}/$fileName";
+      return (Platform.isWeb ? "" : "${await appDataPath.getItem()}/$fileName")
+        ..printMe();
     } catch (e) {
       print("Error in SavedDataE6.fileFullPathInit():\n$e");
       return "";
@@ -45,7 +53,33 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
   List<SavedPoolData> pools;
   List<SavedSetData> sets;
   List<SavedSearchData> searches;
-  int get length => pools.length + sets.length + searches.length;
+  List<SavedEntry> get all => /* [... */ searches /* , ...pools, ...sets ]*/;
+  int get length => /* pools.length + sets.length +  */ searches.length;
+  List<List<SavedEntry>> get parented => searches.fold(
+        <List<SavedEntry>>[],
+        (previousValue, element) {
+          try {
+            return previousValue
+              ..singleWhere((e) => e.firstOrNull?.parent == element.parent)
+                  .add(element);
+          } catch (e) {
+            return previousValue..add([element]);
+          }
+        },
+      )..sort(
+          (a, b) => a.first.parent.compareTo(b.first.parent),
+        );
+  /* static const delimiter = "♥";
+  SavedEntry operator [](String uniqueId) => all.singleWhere(
+        (element) => element.uniqueId == uniqueId,
+      );
+
+  void operator []=(String uniqueId, SavedEntry e) {
+    all[all.indexOf(all.singleWhere(
+      (element) => element.uniqueId == uniqueId,
+    ))] = e;
+    _save();
+  } */
   SavedEntry operator [](int index) {
     if (index >= 0 && searches.length > index) {
       return searches[index];
@@ -101,17 +135,26 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
       ? SavedDataE6()
       : Storable.tryLoadToInstanceSync(fileFullPath.$) ?? SavedDataE6();
 
-  static async_lib.FutureOr<SavedDataE6> loadFromStorageAsync() async =>
-      // (await Storable.tryLoadToInstanceAsync<SavedDataE6>(
-      SavedDataE6.fromJson(jsonDecode(await Storable.tryLoadStringAsync/* <SavedDataE6> */(
-        await fileFullPath.getItem(),
-      ) ?? jsonEncode(SavedDataE6().toJson()))) ??
-      SavedDataE6();
+  static async_lib.FutureOr<SavedDataE6> loadFromStorageAsync() async {
+    print(Storable.tryLoadStringSync(
+      await fileFullPath.getItem(),
+    ));
+    return SavedDataE6.fromJson(jsonDecode(await Storable.tryLoadStringAsync(
+          await fileFullPath.getItem(),
+        ) ??
+        jsonEncode(SavedDataE6().toJson())));
+  }
 
   factory SavedDataE6.fromJson(Map<String, dynamic> json) => SavedDataE6(
-        pools: (json["pools"] as List).mapAsList((e, index, list) => SavedPoolData.fromJson(e),),
-        sets: (json["sets"] as List).mapAsList((e, index, list) => SavedSetData.fromJson(e),),
-        searches: (json["searches"] as List).mapAsList((e, index, list) => SavedSearchData.fromJson(e),),
+        pools: (json["pools"] as List).mapAsList(
+          (e, index, list) => SavedPoolData.fromJson(e),
+        ),
+        sets: (json["sets"] as List).mapAsList(
+          (e, index, list) => SavedSetData.fromJson(e),
+        ),
+        searches: (json["searches"] as List).mapAsList(
+          (e, index, list) => SavedSearchData.fromJson(e),
+        ),
       );
   Map<String, dynamic> toJson() => {
         "pools": pools,
@@ -120,9 +163,11 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
       };
   void _save() {
     notifyListeners();
-    tryWriteAsync().then(
-      (value) => print("Write ${value ? "successful" : "failed"}"),
-    );
+    writeAsync()
+        .then(
+          (value) => print("Write ${true ? "successful" : "failed"}"),
+        )
+        .catchError(onErrorPrintAndRethrow);
   }
 
   void _modify(void Function(SavedDataE6 instance) modifier) {
@@ -139,7 +184,7 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
     _save();
   }
 
-  void addAndSavePool(SavedPoolData p) {
+  /* void addAndSavePool(SavedPoolData p) {
     _modify((i) => i.pools.add(p));
     _save();
   }
@@ -148,7 +193,7 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
     _modify((i) => i.sets.add(s));
     _save();
   }
-
+ */
   // void editAndSave({required SavedEntry original, required SavedEntry edited}) {
   //   switch ((edited, original)) {
   //     case (SavedSearchData o, SavedSearchData orig):
@@ -184,9 +229,153 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
   }
 }
 
+/* /// Stuff like searches and sets
+/// "searches": searches,
+class SavedDataV2 extends ChangeNotifier with Storable<SavedDataV2> {
+  // #region Singleton
+  static final _instance = LateFinal<SavedDataV2>();
+  static SavedDataV2 get $ =>
+      _instance.isAssigned ? _instance.$ : SavedDataV2.fromStorageSync();
+  static SavedDataV2 get $Copy => _instance.isAssigned
+      ? _instance.$.copyWith()
+      : SavedDataV2.fromStorageSync();
+  static SavedDataV2? get $Safe {
+    if (_instance.isAssigned) {
+      return _instance.$;
+    } else {
+      switch (SavedDataV2.loadFromStorageAsync()) {
+        case Future<SavedDataV2> t:
+          t.then((v) => _instance.$ = v);
+          break;
+        case SavedDataV2 t:
+          _instance.$ = t;
+          break;
+      }
+      return null;
+    }
+  }
+
+  static async_lib.FutureOr<SavedDataV2> get $Async =>
+      _instance.isAssigned ? _instance.$ : SavedDataV2.loadFromStorageAsync();
+  // #endregion Singleton
+
+  static const fileName = "savedSearchesV2.json";
+  static final fileFullPath = LazyInitializer.immediate(fileFullPathInit);
+
+  static Future<String> fileFullPathInit() async {
+    print("fileFullPathInit called");
+    try {
+      return Platform.isWeb ? "" : "${await appDataPath.getItem()}/$fileName";
+    } catch (e) {
+      print("Error in SavedDataV2.fileFullPathInit():\n$e");
+      return "";
+    }
+  }
+
+  factory SavedDataV2.fromStorageSync() => Platform.isWeb
+      ? SavedDataV2._()
+      : Storable.tryLoadToInstanceSync(fileFullPath.$) ?? SavedDataV2._();
+
+  static async_lib.FutureOr<SavedDataV2> loadFromStorageAsync() async =>
+      SavedDataV2.fromJson(jsonDecode(await Storable.tryLoadStringAsync(
+            await fileFullPath.getItem(),
+          ) ??
+          jsonEncode(SavedDataV2._().toJson())));
+  void _save() {
+    notifyListeners();
+    tryWriteAsync().then(
+      (value) => print("Write ${value ? "successful" : "failed"}"),
+    );
+  }
+  List<String> ids;
+  List<SavedEntry> searches;
+  int get length => searches.length;
+  // int get searchCount => searches.fold(0, (acc, e) => acc += e.length);
+  SavedEntry operator [](int index) {
+    return searches[index];
+  }
+
+  void operator []=(int index, SavedEntry e) {
+    searches[index] = e;
+  }
+
+  SavedDataV2._({
+    List<SavedEntry>? searches,
+  }) : searches = searches ?? List<SavedEntry>.empty(growable: true),
+      ids = searches?.mapAsList((e, index, list) => e.uniqueId) ?? [] {
+    _instance.itemSafe ??= this;
+    if (!Platform.isWeb) {
+      fileFullPath.getItem().then((value) {
+        initStorageAsync(value);
+      });
+    }
+  }
+  SavedDataV2 copyWith({
+    List<SavedEntry>? searches,
+  }) =>
+      SavedDataV2._(
+        searches: searches ?? this.searches.toList(),
+      );
+
+  factory SavedDataV2.fromJson(Map<String, dynamic> json) => SavedDataV2(
+        searches: (json["searches"] as List).mapAsList(
+          (e, index, list) => SavedSearchData.fromJson(e),
+        ),
+      );
+  Map<String, dynamic> toJson() => {
+        "searches": searches,
+      };
+
+  void _modify(void Function(SavedDataV2 instance) modifier) {
+    modifier(this);
+    if (this != $) {
+      modifier($);
+    }
+    notifyListeners();
+    $._save();
+  }
+
+  void addAndSaveSearch(SavedSearchData s) {
+    _modify((i) => i.searches.add(s));
+    _save();
+  }
+  
+  void editAndSave<T extends SavedEntry>(
+      {required T original, required T edited}) {
+    switch ((edited, original)) {
+      case (SavedSearchData o, SavedSearchData orig):
+        _modify((i) => i.searches[i.searches.indexOf(orig)] = o);
+        break;
+      case (SavedPoolData o, SavedPoolData orig):
+        _modify((i) => i.pools[i.pools.indexOf(orig)] = o);
+        break;
+      case (SavedSetData o, SavedSetData orig):
+        _modify((i) => i.sets[i.sets.indexOf(orig)] = o);
+        break;
+      default:
+        throw UnsupportedError("not supported");
+    }
+    // _save();
+  }
+}
+
+final class SavedRecord implements Comparable<SavedRecord> with UniqueIdGenerator<SavedEntry> {
+  final SavedEntry entry;
+  final String myId;
+  SavedRecord({
+    required this.entry,
+    String? myId,
+  }) : myId = myId ?? ;
+  static String getUniqueId(String proposed) {}
+} */
+
 abstract base class SavedEntry implements Comparable<SavedEntry> {
   String get searchString;
   String get title;
+  String get parent;
+
+  /// Allows for composed searches
+  String get uniqueId;
   const SavedEntry();
 }
 
@@ -195,45 +384,39 @@ abstract base class SavedListData
     implements Comparable<SavedEntry>, SavedEntry {
   @override
   final String title;
+
+  @override
+  final String uniqueId;
   final int id;
-  final String subtitle;
+  @override
+  final String parent;
 
   const SavedListData({
     required this.title,
     required this.id,
-    this.subtitle = "",
+    this.parent = "",
+    this.uniqueId = "",
   });
 
   SavedListData copyWith({
     String? title,
     int? id,
-    String? subtitle,
-  }) /* =>
-      SavedListData(
-        title: title ?? this.title,
-        id: id ?? this.id,
-        subtitle: subtitle ?? this.subtitle,
-      ) */
-  ;
+    String? parent,
+    String? uniqueId,
+  });
 
-  // factory SavedListData.fromJson(Map<String, dynamic> json) => SavedListData(
-  //       id: json["id"],
-  //       title: json["title"],
-  //       subtitle: json["subtitle"],
-  //     );
   Map<String, dynamic> toJson() => {
         "id": id,
         "title": title,
-        "subtitle": subtitle,
+        "parent": parent,
+        "uniqueId": uniqueId,
       };
 
   @override
   int compareTo(SavedEntry other) => switch (other) {
-        SavedListData o =>
-          // (id == o.id) ? title.compareTo(o.title) : id.compareTo(o.id),
-          (title.compareTo(o.title) != 0)
-              ? title.compareTo(o.title)
-              : id.compareTo(o.id),
+        SavedListData o => (title.compareTo(o.title) != 0)
+            ? title.compareTo(o.title)
+            : id.compareTo(o.id),
         _ => other.compareTo(this) * -1,
       };
 }
@@ -247,12 +430,14 @@ final class SavedSetData extends SavedListData {
   const SavedSetData({
     String? title,
     required super.id,
-    super.subtitle = "",
+    super.parent = "",
+    super.uniqueId = "",
   }) : super(title: title ?? "$searchStringBase$id");
   SavedSetData.fromSearchString({
     String? title,
     required String searchString,
-    super.subtitle = "",
+    super.parent = "",
+    super.uniqueId = "",
   }) : super(
             title: title ?? searchString,
             id: int.parse(searchString.replaceAll(searchStringBase, "")));
@@ -261,18 +446,21 @@ final class SavedSetData extends SavedListData {
   SavedSetData copyWith({
     String? title,
     int? id,
-    String? subtitle,
+    String? parent,
+    String? uniqueId,
   }) =>
       SavedSetData(
         title: title ?? this.title,
         id: id ?? this.id,
-        subtitle: subtitle ?? this.subtitle,
+        parent: parent ?? this.parent,
+        uniqueId: uniqueId ?? this.uniqueId,
       );
 
   factory SavedSetData.fromJson(Map<String, dynamic> json) => SavedSetData(
         id: json["id"],
         title: json["title"],
-        subtitle: json["subtitle"],
+        parent: json["parent"],
+        uniqueId: json["uniqueId"],
       );
 }
 
@@ -285,12 +473,14 @@ final class SavedPoolData extends SavedListData {
   const SavedPoolData({
     String? title,
     required super.id,
-    super.subtitle = "",
+    super.parent = "",
+    super.uniqueId = "",
   }) : super(title: title ?? "$searchStringBase$id");
   SavedPoolData.fromSearchString({
     String? title,
     required String searchString,
-    super.subtitle = "",
+    super.parent = "",
+    super.uniqueId = "",
   }) : super(
             title: title ?? searchString,
             id: int.parse(searchString.replaceAll(searchStringBase, "")));
@@ -299,18 +489,21 @@ final class SavedPoolData extends SavedListData {
   SavedPoolData copyWith({
     String? title,
     int? id,
-    String? subtitle,
+    String? parent,
+    String? uniqueId,
   }) =>
       SavedPoolData(
         title: title ?? this.title,
         id: id ?? this.id,
-        subtitle: subtitle ?? this.subtitle,
+        parent: parent ?? this.parent,
+        uniqueId: uniqueId ?? this.uniqueId,
       );
 
   factory SavedPoolData.fromJson(Map<String, dynamic> json) => SavedPoolData(
         id: json["id"],
         title: json["title"],
-        subtitle: json["subtitle"],
+        parent: json["parent"],
+        uniqueId: json["uniqueId"],
       );
 }
 
@@ -322,23 +515,28 @@ final class SavedSearchData extends SavedEntry {
   final String delimiter;
   @override
   final String title;
+  @override
+  final String uniqueId;
   final Set<String> tags;
   @override
   String get searchString => tagListToString(tags, delimiter);
-  final String subtitle;
+  @override
+  final String parent;
   final bool isFavorite;
 
   const SavedSearchData({
     required this.tags,
     this.title = "",
-    this.subtitle = "",
+    this.parent = "",
+    this.uniqueId = "",
     this.isFavorite = false,
     this.delimiter = e621Delimiter,
   });
   SavedSearchData.withDefaults({
     required this.tags,
     String title = "",
-    this.subtitle = "",
+    this.parent = "",
+    this.uniqueId = "",
     this.isFavorite = false,
     this.delimiter = e621Delimiter,
   }) : title = title.isEmpty ? tagListToString(tags, delimiter) : title;
@@ -346,7 +544,8 @@ final class SavedSearchData extends SavedEntry {
   SavedSearchData.fromTagsString({
     required String tags,
     String title = "",
-    this.subtitle = "",
+    this.parent = "",
+    this.uniqueId = "",
     this.isFavorite = false,
     this.delimiter = e621Delimiter,
   })  : title = title.isNotEmpty ? title : tags,
@@ -355,52 +554,52 @@ final class SavedSearchData extends SavedEntry {
   SavedSearchData.fromSearchString({
     required String searchString,
     String title = "",
-    String subtitle = "",
+    String parent = "",
+    String uniqueId = "",
     String delimiter = e621Delimiter,
     bool isFavorite = false,
   }) : this.fromTagsString(
             tags: searchString,
             delimiter: delimiter,
             isFavorite: isFavorite,
-            subtitle: subtitle,
+            parent: parent,
             title: title);
 
   SavedSearchData copyWith({
-    String? title = "",
+    String? title,
     Set<String>? tags,
-    String? subtitle = "",
-    bool? isFavorite = false,
-    String? delimiter = "",
+    String? parent,
+    String? uniqueId,
+    bool? isFavorite,
+    String? delimiter,
   }) =>
       SavedSearchData(
         tags: tags ?? this.tags,
         title: title ?? this.title,
-        subtitle: subtitle ?? this.subtitle,
+        parent: parent ?? this.parent,
         isFavorite: isFavorite ?? this.isFavorite,
         delimiter: delimiter ?? this.delimiter,
       );
 
   @override
-  int compareTo(SavedEntry other) =>
-      // (searchString != other.searchString)
-      //   ? title.compareTo(other.title)
-      //   : searchString.compareTo(other.searchString);
-      (title.compareTo(other.title) != 0)
-          ? title.compareTo(other.title)
-          : searchString.compareTo(other.searchString);
+  int compareTo(SavedEntry other) => (title.compareTo(other.title) != 0)
+      ? title.compareTo(other.title)
+      : searchString.compareTo(other.searchString);
 
   factory SavedSearchData.fromJson(Map<String, dynamic> json) =>
       SavedSearchData(
         title: json["title"],
-        subtitle: json["subtitle"],
+        parent: json["parent"],
+        uniqueId: json["uniqueId"],
         isFavorite: json["isFavorite"],
         delimiter: json["delimiter"],
-        tags: (json["tags"] as Set).cast<String>(),
+        tags: (json["tags"] as List).cast<String>().toSet(),
       );
   Map<String, dynamic> toJson() => {
-        "tags": tags,
+        "tags": tags.toList(),
         "title": title,
-        "subtitle": subtitle,
+        "parent": parent,
+        "uniqueId": uniqueId,
         "isFavorite": isFavorite,
         "delimiter": delimiter,
       };

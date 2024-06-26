@@ -24,7 +24,7 @@ class SearchViewModel extends ChangeNotifier {
     return _lazyBuilding;
   }
 
-  bool _forceSafe = false;
+  bool _forceSafe = true;
   bool get forceSafe => _forceSafe;
   bool toggleForceSafe() {
     _forceSafe = !_forceSafe;
@@ -52,6 +52,20 @@ class SearchViewModel extends ChangeNotifier {
   String get searchText => _searchText;
   set searchText(String value) {
     _searchText = value;
+    notifyListeners();
+  }
+
+  Future<SearchResultArgs>? _pr;
+  Future<SearchResultArgs>? get pr => _pr;
+  set pr(Future<SearchResultArgs>? value) {
+    _pr = value;
+    notifyListeners();
+  }
+
+  String _priorSearchText = "";
+  String get priorSearchText => _priorSearchText;
+  set priorSearchText(String value) {
+    _priorSearchText = value;
     notifyListeners();
   }
 }

@@ -26,8 +26,8 @@ final LazyInitializer<String> version = LazyInitializer(
 final appDataPath =
     LazyInitializer(() => (Platform.isWeb) 
       ? Future.sync(() => "") 
-      : path.getApplicationDocumentsDirectory().then(
-          (value) => value.absolute.path,
+      : path.getDownloadsDirectory/* getApplicationDocumentsDirectory */().then(
+          (value) => value!.absolute.path,
         ));
 
 final tagDb = LateFinal<TagDB>();
@@ -104,7 +104,18 @@ TextInputFormatter numericFormatter = TextInputFormatter.withFunction(
   (oldValue, newValue) => (RegExp(r'[^1234567890]').hasMatch(newValue.text)) ? oldValue : newValue,
   );
 
+TextEditingController? defaultSelection(String? defaultValue) => defaultValue?.isEmpty ?? true
+                    ? null
+                    : TextEditingController.fromValue(TextEditingValue(
+                        text: defaultValue!,
+                        selection: TextSelection(
+                          baseOffset: 0,
+                          extentOffset: defaultValue.length,
+                        ),
+                      ));
+
 const event = Event();
+
 class Event {
   const Event();
 }

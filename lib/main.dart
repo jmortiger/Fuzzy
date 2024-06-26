@@ -16,7 +16,7 @@ void main() {
     (value) => print("Can Use AppSettings singleton"),
   );
   CachedFavorites.fileFullPath.getItem();
-  SavedDataE6.$Async;
+  SavedDataE6.$Safe;
   runApp(
     MaterialApp(
       theme: ThemeData.dark(),

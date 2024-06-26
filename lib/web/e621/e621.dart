@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart' as service;
+import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/site.dart';
@@ -315,25 +316,58 @@ sealed class E621 extends Site {
               return v;
             }).toList()));
   }
-// e621.Api.initSearchSetsRequest(
-//       searchName: widget.initialSearchName,
-//       searchShortname: widget.initialSearchShortname,
-//       searchCreatorName: widget.initialSearchCreatorName,
-//       searchOrder: widget.initialSearchOrder,
-//       limit: widget.initialLimit,
-//       page: widget.initialPage,
-//     ).send().then((v) async {
-//       var t = await ByteStream(v.stream.asBroadcastStream()).bytesToString();
-//       return Response(
-//         t,
-//         v.statusCode,
-//         headers: v.headers,
-//         isRedirect: v.isRedirect,
-//         persistentConnection: v.persistentConnection,
-//         reasonPhrase: v.reasonPhrase,
-//         request: v.request,
-//       );
-//     });
+
+  static String fillTagTemplate(String tags) {
+    print(SavedDataE6.$Safe?.all.map((e) => (e as dynamic).toJson()));
+    print(tags);
+    tags = tags.replaceAllMapped(
+      RegExp(r"\#(.+)\#"),
+      (match) {
+        try {
+          return SavedDataE6.$Safe?.all
+                  .singleWhere((element) => element.uniqueId == match.group(1))
+                  .searchString ??
+              "";
+        } catch (e) {
+          return "";
+        }
+      },
+    );
+    print(tags);
+    return tags;
+  }
+
+  static const initSearchSetsRequest = e621.Api.initSearchSetsRequest;
+  static Future<http.BaseResponse> sendSearchSetsRequest({
+    String? searchName,
+    String? searchShortname,
+    String? searchCreatorName,
+    String? searchCreatorId,
+    e621.SetOrder? searchOrder,
+    int? limit = 75,
+    String? page,
+    e621.BaseCredentials? credentials,
+  }) =>
+      sendRequest(e621.Api.initSearchSetsRequest(
+        searchName: searchName,
+        searchShortname: searchShortname,
+        searchCreatorName: searchCreatorName,
+        searchOrder: searchOrder,
+        limit: limit,
+        page: page,
+      )).toResponse() /* .then((v) async {
+      var t = await http.ByteStream(v.stream.asBroadcastStream()).bytesToString();
+      return http.Response(
+        t,
+        v.statusCode,
+        headers: v.headers,
+        isRedirect: v.isRedirect,
+        persistentConnection: v.persistentConnection,
+        reasonPhrase: v.reasonPhrase,
+        request: v.request,
+      );
+    }) */
+      ;
   static http.Request initSearchRequest({
     String tags = "", //"jun_kobayashi",
     int limit = 50,
@@ -345,13 +379,15 @@ sealed class E621 extends Site {
   }) =>
       e621.Api.initSearchPostsRequest(
         credentials: getAuth(username, apiKey),
-        tags: tags,
+        tags: fillTagTemplate(tags),
         limit: limit,
         page: (postId != null && (pageModifier == 'a' || pageModifier == 'b'))
-            ? "pageModifier$postId"
-            : "$pageNumber",
+            ? "$pageModifier$postId"
+            : pageNumber != null
+                ? "$pageNumber"
+                : null,
       );
-      /* E621ApiEndpoints.searchPosts.getMoreData().genRequest(query: {
+  /* E621ApiEndpoints.searchPosts.getMoreData().genRequest(query: {
         "limit": (0, {"LIMIT": limit}),
         "tags": (0, {"SEARCH_STRING": tags}),
         if (postId != null && (pageModifier == 'a' || pageModifier == 'b'))

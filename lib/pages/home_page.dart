@@ -5,19 +5,24 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
+import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/pages/saved_searches_page.dart';
 import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
+import 'package:fuzzy/widgets/w_search_set.dart';
+import 'package:fuzzy/widgets/w_search_pool.dart';
 import 'package:http/http.dart' as http;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:fuzzy/util/util.dart' as util;
+import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart' as path;
 
-import '../web/e621/e621.dart';
-import '../widgets/w_search_result_page_navigation.dart';
+import 'package:fuzzy/web/e621/e621.dart';
+import 'package:fuzzy/widgets/w_search_result_page_navigation.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -29,6 +34,14 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   @override
   void initState() {
+    try{path.getApplicationCacheDirectory().then((v) => print("getApplicationCacheDirectory: ${v.absolute.path}"));}catch (e){}
+    try{path.getApplicationDocumentsDirectory().then((v) => print("getApplicationDocumentsDirectory: ${v.absolute.path}"));}catch (e){}
+    try{path.getApplicationSupportDirectory().then((v) => print("getApplicationSupportDirectory: ${v.absolute.path}"));}catch (e){}
+    try{path.getDownloadsDirectory().then((v) => print("getDownloadsDirectory: ${v?.absolute.path}"));}catch (e){}
+    try{path.getExternalCacheDirectories().then((v) => print("getExternalCacheDirectories: ${v?.fold("", (previousValue, element) => "$previousValue${element.absolute.path}")}"));}catch (e){}
+    try{path.getTemporaryDirectory().then((v) => print("getTemporaryDirectory: ${v.absolute.path}"));}catch (e){}
+    path.getApplicationCacheDirectory().then((v) => print("getApplicationCacheDirectory: ${v.absolute.path}"));
+    path.getApplicationCacheDirectory().then((v) => print("getApplicationCacheDirectory: ${v.absolute.path}"));
     onSelectionCleared.subscribe(() {
       setState(() => selectedIndices.clear());
     });
@@ -79,7 +92,15 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       body: SafeArea(child: buildSearchView(context)),
-      endDrawer: _buildDrawer(context),
+      endDrawer: WHomeEndDrawer(
+        onSearchRequested: (searchText) {
+          svm.searchText = searchText;
+          fillTextBarWithSearchString = true;
+          setState(() {
+            _sendSearchAndUpdateState(tags: searchText);
+          });
+        },
+      ), //_buildDrawer(context),
       floatingActionButton: _buildFab(context),
     );
   }
@@ -117,18 +138,18 @@ class _HomePageState extends State<HomePage> {
                   );
                   E621.sendAddFavoriteRequestBatch(
                     // () =>
-                        selectedIndices.map((e) => //E621.initAddFavoriteRequest(
-                              posts!.tryGet(e)!.id),
-                              username: E621AccessData.devUsername,
-                              apiKey: E621AccessData.devApiKey,
-                            // )),
+                    selectedIndices.map((e) => //E621.initAddFavoriteRequest(
+                        posts!.tryGet(e)!.id),
+                    username: E621AccessData.devUsername,
+                    apiKey: E621AccessData.devApiKey,
+                    // )),
                     onComplete: (responses) {
                       var sbs =
                           "${responses.where((element) => element.statusCodeInfo.isSuccessful).length}/${responses.length} posts added to favorites!";
                       responses
                           .where((r) => r.statusCode == 422)
                           .forEach((r) async {
-                        var rBody = await http.ByteStream(r.stream.asBroadcastStream()).bytesToString(),
+                        var //rBody = await http.ByteStream(r.stream.asBroadcastStream()).bytesToString(),
                             pId = int.parse(
                                 r.request!.url.queryParameters["post_id"]!);
                         // E621.favFailed.invoke(
@@ -154,15 +175,15 @@ class _HomePageState extends State<HomePage> {
                             label: "Undo",
                             onPressed: () async {
                               E621.sendDeleteFavoriteRequestBatch(
-                                /* () =>  */responses.map(
-                                  (e) => //E621.initDeleteFavoriteRequest(
-                                    int.parse(
-                                      e.request!.url
-                                          .queryParameters["post_id"]!,
-                                    )),
-                                    username: E621AccessData.devUsername,
-                                    apiKey: E621AccessData.devApiKey,
-                                  // ),
+                                /* () =>  */ responses.map(
+                                    (e) => //E621.initDeleteFavoriteRequest(
+                                        int.parse(
+                                          e.request!.url
+                                              .queryParameters["post_id"]!,
+                                        )),
+                                username: E621AccessData.devUsername,
+                                apiKey: E621AccessData.devApiKey,
+                                // ),
                                 // ),
                                 onComplete: (responses) =>
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -294,99 +315,15 @@ class _HomePageState extends State<HomePage> {
   //   onComplete?.call(responses);
   // }
 
-  Drawer _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: ListView(
-        children: [
-          const DrawerHeader(
-            child: Text("Menu"),
-          ),
-          ListTile(
-            title: const Text("Go to settings"),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsPage(),
-                  )).then(
-                (value) => AppSettings.writeSettingsToFile(),
-              );
-            },
-          ),
-          ListTile(
-            title: const Text("Toggle Lazy Loading"),
-            leading: svm.lazyLoad
-                ? const Icon(Icons.check_box)
-                : const Icon(Icons.check_box_outline_blank),
-            onTap: () {
-              print("Before: $svm.lazyLoad");
-              setState(() => svm.toggleLazyLoad());
-              print("After: $svm.lazyLoad");
-              // Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            title: const Text("Toggle Lazy Building"),
-            leading: svm.lazyBuilding
-                ? const Icon(Icons.check_box)
-                : const Icon(Icons.check_box_outline_blank),
-            onTap: () {
-              print("Before: $svm.lazyBuilding");
-              setState(() => svm.toggleLazyBuilding());
-              print("After: $svm.lazyBuilding");
-              // Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            title: const Text("Toggle Auth headers"),
-            leading: svm.sendAuthHeaders
-                ? const Icon(Icons.check_box)
-                : const Icon(Icons.check_box_outline_blank),
-            onTap: () {
-              print("Before: $svm.sendAuthHeaders");
-              setState(
-                () => svm.toggleSendAuthHeaders(),
-              );
-              print("After: $svm.sendAuthHeaders");
-              // Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            title: const Text("Toggle Force Safe"),
-            leading: svm.forceSafe
-                ? const Icon(Icons.check_box)
-                : const Icon(Icons.check_box_outline_blank),
-            onTap: () {
-              print("Before: $svm.forceSafe");
-              setState(() => svm.toggleForceSafe());
-              print("After: $svm.forceSafe");
-              // Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            title: const Text("Toggle Image Display Method"),
-            // leading: lazyLoad ? const Icon(Icons.check_box) :const Icon(Icons.check_box_outline_blank),
-            onTap: () {
-              print("Before: ${imageFit.name}");
-              imageFit =
-                  imageFit == BoxFit.contain ? BoxFit.cover : BoxFit.contain;
-              print("After: ${imageFit.name}");
-              // Navigator.pop(context);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
   // #region From WSearchView
   SearchViewModel get svm =>
       Provider.of<SearchViewModel>(context, listen: false);
 
   Set<int> selectedIndices = {};
   JPureEvent onSelectionCleared = JPureEvent();
-  String priorSearchText = "";
+
+  String get priorSearchText => svm.priorSearchText;
+  set priorSearchText(String value) => svm.priorSearchText = value;
   // #region SearchCache
   SearchCache get sc => Provider.of<SearchCache>(context, listen: false);
   E6Posts? get posts => sc.posts;
@@ -409,7 +346,9 @@ class _HomePageState extends State<HomePage> {
     svm.searchText = value;
   }
 
-  Future< /* http.StreamedResponse */ SearchResultArgs>? pr;
+  Future<SearchResultArgs>? get pr => svm.pr;
+  set pr(Future<SearchResultArgs>? value) =>
+      svm.pr = value;
   int? currentPostCollectionExpectedSize;
   // #endregion Only Needed in search view
 
@@ -441,8 +380,8 @@ class _HomePageState extends State<HomePage> {
           (() {
             if (pr != null) {
               print("Results Came back: $priorSearchText");
-              // priorSearchText = searchText;
-              pr = null;
+              // print("371: pr: $pr");
+              // pr = null;
             }
             return Expanded(
               child: WPostSearchResults(
@@ -451,7 +390,6 @@ class _HomePageState extends State<HomePage> {
                 expectedCount: svm.lazyLoad
                     ? (currentPostCollectionExpectedSize ?? 50)
                     : posts!.count,
-                // searchText: searchText,
                 onPostsSelected: (indices, newest) {
                   setState(() {
                     selectedIndices = indices;
@@ -462,6 +400,11 @@ class _HomePageState extends State<HomePage> {
               ),
             );
           })(),
+        if (posts?.posts.firstOrNull == null)
+          const Align(
+            alignment: AlignmentDirectional.topCenter,
+            child: Text("No Results"),
+          ),
         if (posts != null &&
             (posts.runtimeType == E6PostsSync ||
                 (posts as E6PostsLazy).isFullyProcessed))
@@ -604,6 +547,7 @@ class _HomePageState extends State<HomePage> {
     if (posts == null) throw StateError("No current posts");
     if (lastPostId == null) {
       if (posts.runtimeType == E6PostsLazy) {
+        // Advance to the end, fully load the list
         posts?.tryGet(E621.maxPostsPerSearch + 5);
       }
       lastPostId ??= posts!.tryGet(posts!.count - 1)?.id;
@@ -727,29 +671,39 @@ class _HomePageState extends State<HomePage> {
       postId: postId,
       apiKey: apiKey,
       username: username,
-    ) /* .send() */;
+    );
     pr!.then((v) {
       setState(() {
+        print("pr reset");
         pr = null;
-        posts = svm.lazyLoad
-            ? E6PostsLazy.fromJson(
-                json.decode(v.responseBody) as Map<String, dynamic>)
-            : E6PostsSync.fromJson(
-                json.decode(v.responseBody) as Map<String, dynamic>);
-        if (posts.runtimeType == E6PostsLazy) {
-          (posts as E6PostsLazy)
-              .onFullyIterated
-              .subscribe((a) => getHasNextPage(
-                    tags: priorSearchText,
-                    lastPostId: a.posts.last.id,
-                  ));
+        var json = jsonDecode(v.responseBody);
+        if (json["success"] == false) {
+          print(json);
+          posts = E6PostsSync(posts: []);
         } else {
-          getHasNextPage(
-              tags: priorSearchText,
-              lastPostId: (posts as E6PostsSync).posts.last.id);
+          posts = svm.lazyLoad
+              ? E6PostsLazy.fromJson(json as Map<String, dynamic>)
+              : E6PostsSync.fromJson(json as Map<String, dynamic>);
+        }
+        if (posts?.posts.firstOrNull != null) {
+          if (posts.runtimeType == E6PostsLazy) {
+            (posts as E6PostsLazy)
+                .onFullyIterated
+                .subscribe((a) => getHasNextPage(
+                      tags: priorSearchText,
+                      lastPostId: a.posts.last.id,
+                    ));
+          } else {
+            getHasNextPage(
+                tags: priorSearchText,
+                lastPostId: (posts as E6PostsSync).posts.last.id);
+          }
         }
         if (isNewRequest) firstPostIdCached = firstPostOnPageId;
       });
+    }).catchError((err, st) {
+      print(err);
+      print(st);
     });
     /* pr = initSearchRequest(
       tags: svm.forceSafe ? "$tags rating:safe" : tags,
@@ -782,4 +736,190 @@ class _HomePageState extends State<HomePage> {
     }); */
   }
   // #endregion From WSearchView
+}
+
+class WHomeEndDrawer extends StatefulWidget {
+  final void Function(String searchText)? onSearchRequested;
+
+  const WHomeEndDrawer({super.key, this.onSearchRequested});
+
+  @override
+  State<WHomeEndDrawer> createState() => _WHomeEndDrawerState();
+}
+
+class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
+  SearchViewModel get svm =>
+      Provider.of<SearchViewModel>(context, listen: false);
+  // #region SearchCache
+  SearchCache get sc => Provider.of<SearchCache>(context, listen: false);
+  E6Posts? get posts => sc.posts;
+  int? get firstPostOnPageId => sc.firstPostOnPageId;
+  set posts(E6Posts? value) => sc.posts = value;
+  int? get firstPostIdCached => sc.firstPostIdCached;
+  set firstPostIdCached(int? value) => sc.firstPostIdCached = value;
+  int? get lastPostIdCached => sc.lastPostIdCached;
+  set lastPostIdCached(int? value) => sc.lastPostIdCached = value;
+  int? get lastPostOnPageIdCached => sc.lastPostOnPageIdCached;
+  set lastPostOnPageIdCached(int? value) => sc.lastPostOnPageIdCached = value;
+  bool? get hasNextPageCached => sc.hasNextPageCached;
+  set hasNextPageCached(bool? value) => sc.hasNextPageCached = value;
+  bool? get hasPriorPage => sc.hasPriorPage;
+  // #endregion SearchCache
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        children: [
+          const DrawerHeader(
+            child: Text("Menu"),
+          ),
+          ListTile(
+            title: const Text("Go to settings"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsPage(),
+                  )).then(
+                (value) => AppSettings.writeSettingsToFile(),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text("Toggle Lazy Loading"),
+            leading:
+                Provider.of<SearchViewModel>(context, listen: false).lazyLoad
+                    ? const Icon(Icons.check_box)
+                    : const Icon(Icons.check_box_outline_blank),
+            onTap: () {
+              print(
+                  "Before: ${Provider.of<SearchViewModel>(context, listen: false)}.lazyLoad");
+              setState(() =>
+                  Provider.of<SearchViewModel>(context, listen: false)
+                      .toggleLazyLoad());
+              print(
+                  "After: ${Provider.of<SearchViewModel>(context, listen: false)}.lazyLoad");
+              // Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text("Toggle Lazy Building"),
+            leading: Provider.of<SearchViewModel>(context, listen: false)
+                    .lazyBuilding
+                ? const Icon(Icons.check_box)
+                : const Icon(Icons.check_box_outline_blank),
+            onTap: () {
+              print(
+                  "Before: ${Provider.of<SearchViewModel>(context, listen: false)}.lazyBuilding");
+              setState(() =>
+                  Provider.of<SearchViewModel>(context, listen: false)
+                      .toggleLazyBuilding());
+              print(
+                  "After: ${Provider.of<SearchViewModel>(context, listen: false)}.lazyBuilding");
+              // Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text("Toggle Auth headers"),
+            leading: Provider.of<SearchViewModel>(context, listen: false)
+                    .sendAuthHeaders
+                ? const Icon(Icons.check_box)
+                : const Icon(Icons.check_box_outline_blank),
+            onTap: () {
+              print(
+                  "Before: ${Provider.of<SearchViewModel>(context, listen: false)}.sendAuthHeaders");
+              setState(() =>
+                  Provider.of<SearchViewModel>(context, listen: false)
+                      .toggleSendAuthHeaders());
+              print(
+                  "After: ${Provider.of<SearchViewModel>(context, listen: false)}.sendAuthHeaders");
+              // Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text("Toggle Force Safe"),
+            leading:
+                Provider.of<SearchViewModel>(context, listen: false).forceSafe
+                    ? const Icon(Icons.check_box)
+                    : const Icon(Icons.check_box_outline_blank),
+            onTap: () {
+              print(
+                  "Before: ${Provider.of<SearchViewModel>(context, listen: false)}.forceSafe");
+              setState(() =>
+                  Provider.of<SearchViewModel>(context, listen: false)
+                      .toggleForceSafe());
+              print(
+                  "After: ${Provider.of<SearchViewModel>(context, listen: false)}.forceSafe");
+              // Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text("Toggle Image Display Method"),
+            // leading: lazyLoad ? const Icon(Icons.check_box) :const Icon(Icons.check_box_outline_blank),
+            onTap: () {
+              print("Before: ${imageFit.name}");
+              imageFit =
+                  imageFit == BoxFit.contain ? BoxFit.cover : BoxFit.contain;
+              print("After: ${imageFit.name}");
+              // Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text("Search sets"),
+            leading: const Icon(Icons.search),
+            onTap: () {
+              print("_WHomeEndDrawerState.build: Search Set activated");
+              Navigator.pop(context);
+              showDialog<e621.Set>(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    content: WSearchSet(
+                      initialLimit: 10,
+                      initialPage: null,
+                      initialSearchCreatorName: "***REMOVED***,
+                      initialSearchOrder: e621.SetOrder.updatedAt,
+                      initialSearchName: null,
+                      initialSearchShortname: null,
+                      onSelected: (e621.Set set) => Navigator.pop(context, set),
+                    ),
+                    // scrollable: true,
+                  );
+                },
+              ).then((v) => v != null
+                  ? widget.onSearchRequested?.call(v.searchById)
+                  : null);
+            },
+          ),
+          ListTile(
+            title: const Text("Search pools"),
+            leading: const Icon(Icons.search),
+            onTap: () {
+              print("_WHomeEndDrawerState.build: Search Pool activated");
+              Navigator.pop(context);
+              showDialog<e621.Pool>(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    content: WSearchPool(
+                      initialLimit: 10,
+                      // initialSearchCreatorName: "***REMOVED***,
+                      initialSearchOrder: e621.PoolOrder.updatedAt,
+                      initialSearchNameMatches: null,
+                      onSelected: (e621.Pool pool) => Navigator.pop(context, pool),
+                    ),
+                    // scrollable: true,
+                  );
+                },
+              ).then((v) => v != null
+                  ? widget.onSearchRequested?.call(v.searchById)
+                  : null);
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
