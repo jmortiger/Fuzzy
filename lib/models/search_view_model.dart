@@ -68,6 +68,13 @@ class SearchViewModel extends ChangeNotifier {
     _priorSearchText = value;
     notifyListeners();
   }
+
+  bool _fillTextBarWithSearchString = false;
+  bool get fillTextBarWithSearchString => _fillTextBarWithSearchString;
+  set fillTextBarWithSearchString(bool value) {
+    _fillTextBarWithSearchString = value;
+    notifyListeners();
+  }
 }
 
 class SearchCache extends ChangeNotifier {
