@@ -27,10 +27,12 @@ class SavedSearchesPageSingleton extends StatefulWidget {
   const SavedSearchesPageSingleton({super.key, this.data});
 
   @override
-  State<SavedSearchesPageSingleton> createState() => _SavedSearchesPageSingletonState();
+  State<SavedSearchesPageSingleton> createState() =>
+      _SavedSearchesPageSingletonState();
 }
 
-class _SavedSearchesPageSingletonState extends State<SavedSearchesPageSingleton> {
+class _SavedSearchesPageSingletonState
+    extends State<SavedSearchesPageSingleton> {
   var data = LateInstance<SavedDataE6>();
   @override
   void initState() {
@@ -95,7 +97,9 @@ class _SavedSearchesPageSingletonState extends State<SavedSearchesPageSingleton>
             ListTile(
               title: const Text("Add Saved Search"),
               onTap: () {
-                showSavedElementEditDialogue(context,).then((value) {
+                showSavedElementEditDialogue(
+                  context,
+                ).then((value) {
                   if (value != null) {
                     data.$.addAndSaveSearch(
                       SavedSearchData.fromTagsString(
@@ -153,24 +157,29 @@ class _SavedSearchesPageSingletonState extends State<SavedSearchesPageSingleton>
       body: SafeArea(
         child: !data.isAssigned
             ? const CircularProgressIndicator()
-            : ListView.builder(
-                itemCount: data.$.length,
-                itemBuilder: (context, index) {
-                  if (index >= 0 && data.$.length > index) {
-                    return _buildSavedEntry(
-                      entry: data.$[index],
-                      context: context,
-                    );
-                  } else {
-                    return null;
-                  }
-                },
-              ),
+            : _buildSingleLevelView(),
       ),
     );
   }
 
-  Future<({String mainData, String title, String? parent, String? uniqueId})?> showSavedElementEditDialogue(
+  ListView _buildSingleLevelView() {
+    return ListView.builder(
+      itemCount: data.$.length,
+      itemBuilder: (context, index) {
+        if (index >= 0 && data.$.length > index) {
+          return _buildSavedEntry(
+            entry: data.$[index],
+            context: context,
+          );
+        } else {
+          return null;
+        }
+      },
+    );
+  }
+
+  Future<({String mainData, String title, String? parent, String? uniqueId})?>
+      showSavedElementEditDialogue(
     BuildContext context, {
     String initialTitle = "",
     String initialData = "",
@@ -179,10 +188,14 @@ class _SavedSearchesPageSingletonState extends State<SavedSearchesPageSingleton>
     String initialUniqueId = "",
     bool isNumeric = false,
   }) {
-    return showDialog<({String mainData, String title, String? parent, String? uniqueId})>(
+    return showDialog<
+        ({String mainData, String title, String? parent, String? uniqueId})>(
       context: context,
       builder: (context) {
-        var title = initialTitle, mainData = initialData, parent = initialParent, uniqueId = initialUniqueId;
+        var title = initialTitle,
+            mainData = initialData,
+            parent = initialParent,
+            uniqueId = initialUniqueId;
         return AlertDialog(
           content: Column(
             children: [
@@ -218,7 +231,12 @@ class _SavedSearchesPageSingletonState extends State<SavedSearchesPageSingleton>
             TextButton(
               onPressed: () => Navigator.pop(
                 context,
-                (title: title, mainData: mainData, parent: parent, uniqueId: uniqueId),
+                (
+                  title: title,
+                  mainData: mainData,
+                  parent: parent,
+                  uniqueId: uniqueId
+                ),
               ),
               child: const Text("Accept"),
             ),
@@ -315,3 +333,55 @@ class _SavedSearchesPageSingletonState extends State<SavedSearchesPageSingleton>
     );
   }
 }
+
+// class ExpansionPanelListExample extends StatefulWidget {
+//   final List<List<SavedEntry>> data;
+//   const ExpansionPanelListExample({super.key, required this.data});
+
+//   @override
+//   State<ExpansionPanelListExample> createState() =>
+//       _ExpansionPanelListExampleState();
+// }
+
+// class _ExpansionPanelListExampleState extends State<ExpansionPanelListExample> {
+//   final List<Item> _data = generateItems(8);
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return SingleChildScrollView(
+//       child: Container(
+//         child: _buildPanel(),
+//       ),
+//     );
+//   }
+
+//   Widget _buildPanel() {
+//     return ExpansionPanelList(
+//       expansionCallback: (int index, bool isExpanded) {
+//         setState(() {
+//           _data[index].isExpanded = isExpanded;
+//         });
+//       },
+//       children: _data.map<ExpansionPanel>((Item item) {
+//         return ExpansionPanel(
+//           headerBuilder: (BuildContext context, bool isExpanded) {
+//             return ListTile(
+//               title: Text(item.headerValue),
+//             );
+//           },
+//           body: ListTile(
+//               title: Text(item.expandedValue),
+//               subtitle:
+//                   const Text('To delete this panel, tap the trash can icon'),
+//               trailing: const Icon(Icons.delete),
+//               onTap: () {
+//                 setState(() {
+//                   _data.removeWhere((Item currentItem) => item == currentItem);
+//                 });
+//               }),
+//           isExpanded: item.isExpanded,
+//         );
+//       }).toList(),
+//     );
+//   }
+// }

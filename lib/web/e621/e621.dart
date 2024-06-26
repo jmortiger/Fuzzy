@@ -129,10 +129,15 @@ class PostActionArgs extends JEventArgs {
 }
 
 sealed class E621 extends Site {
+  @event
   static final favDeleted = JPureEvent();
+  @event
   static final favFailed = JEvent<PostActionArgs>();
+  @event
   static final favAdded = JEvent<PostActionArgs>();
+  @event
   static final searchBegan = JEvent<SearchArgs>();
+  @event
   static final searchEnded = JEvent<SearchResultArgs>();
   static const String rootUrl = "https://e621.net/";
   static final Uri rootUri = Uri.parse(rootUrl);
@@ -145,6 +150,26 @@ sealed class E621 extends Site {
   static DateTime timeOfLastRequest =
       DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   E621();
+
+  static String fillTagTemplate(String tags) {
+    print("fillTagTemplate: SaveData = ${SavedDataE6.$Safe?.all.map((e) => (e as dynamic).toJson())}");
+    print("fillTagTemplate: Before: $tags");
+    tags = tags.replaceAllMapped(
+      savedSearchInsertion,
+      (match) {
+        try {
+          return SavedDataE6.$Safe?.all
+                  .singleWhere((element) => element.uniqueId == match.group(1))
+                  .searchString ??
+              "";
+        } catch (e) {
+          return "";
+        }
+      },
+    );
+    print("fillTagTemplate: After: $tags");
+    return tags;
+  }
   // static final String filePath = ;
   static Future<void> sendRequestBatch(
     Iterable<http.Request> Function() requestGenerator, {
@@ -315,26 +340,6 @@ sealed class E621 extends Site {
               });
               return v;
             }).toList()));
-  }
-
-  static String fillTagTemplate(String tags) {
-    print(SavedDataE6.$Safe?.all.map((e) => (e as dynamic).toJson()));
-    print(tags);
-    tags = tags.replaceAllMapped(
-      RegExp(r"\#(.+)\#"),
-      (match) {
-        try {
-          return SavedDataE6.$Safe?.all
-                  .singleWhere((element) => element.uniqueId == match.group(1))
-                  .searchString ??
-              "";
-        } catch (e) {
-          return "";
-        }
-      },
-    );
-    print(tags);
-    return tags;
   }
 
   static const initSearchSetsRequest = e621.Api.initSearchSetsRequest;

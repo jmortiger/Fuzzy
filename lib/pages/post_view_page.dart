@@ -11,16 +11,16 @@ import 'package:j_util/platform_finder.dart';
 import '../web/e621/e621.dart';
 
 class PostViewPage extends StatelessWidget {
-  final List<PostListing>? next20;
-  final List<PostListing>? prev20;
+  // final List<PostListing>? next20;
+  // final List<PostListing>? prev20;
   final PostListing postListing;
   final void Function(String addition)? onAddToSearch;
   const PostViewPage({
     super.key,
     required this.postListing,
     this.onAddToSearch,
-    this.next20,
-    this.prev20,
+    // this.next20,
+    // this.prev20,
   });
   E6PostResponse get e6Post => postListing as E6PostResponse;
   PostView get pvs => AppSettings.i!.postView;

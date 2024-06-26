@@ -6,7 +6,6 @@ import 'package:fuzzy/web/e621/e621.dart';
 import 'package:http/http.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
-import 'package:provider/provider.dart';
 
 class WSearchSet extends StatefulWidget {
   final String? initialSearchName;

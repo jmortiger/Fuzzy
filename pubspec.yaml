@@ -16,6 +16,7 @@ dependencies:
     #https://dart.dev/tools/pub/dependencies#git-packages
     #git: https://github.com/***REMOVED***/j_util.git
     path: ../j_util/
+  logging: ^1.2.0
   oauth2: ^2.0.2
   package_info_plus: ^5.0.1
   path_provider: ^2.1.3

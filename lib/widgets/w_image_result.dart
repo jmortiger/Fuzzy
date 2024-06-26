@@ -93,10 +93,10 @@ class WImageResult extends StatelessWidget {
             print("OnLongPress");
             /* if (!isSelected)  */ onSelectionToggle?.call(index);
           },
-          // onDoubleTap: () {
-          //   print("onDoubleTap");
-          //   /* if (!isSelected)  */onSelectionToggle?.call(index);
-          // },
+          onDoubleTap: () {
+            print("onDoubleTap");
+            /* if (!isSelected)  */onSelectionToggle?.call(index);
+          },
           onTap: () {
             print("OnTap");
             if (isSelected || areAnySelected) {

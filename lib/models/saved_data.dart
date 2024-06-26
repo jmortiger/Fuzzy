@@ -7,6 +7,7 @@ import 'package:j_util/j_util_full.dart';
 import 'package:j_util/serialization.dart';
 
 /// Stuff like searches and sets
+/// TODO: Redo to a completely static, no instance implementation.
 /// "searches": searches,
 class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
   // #region Singleton
