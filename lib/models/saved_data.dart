@@ -137,13 +137,19 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
       : Storable.tryLoadToInstanceSync(fileFullPath.$) ?? SavedDataE6();
 
   static async_lib.FutureOr<SavedDataE6> loadFromStorageAsync() async {
-    print(Storable.tryLoadStringSync(
+    var str = await Storable.tryLoadStringAsync(
       await fileFullPath.getItem(),
-    ));
-    return SavedDataE6.fromJson(jsonDecode(await Storable.tryLoadStringAsync(
-          await fileFullPath.getItem(),
-        ) ??
-        jsonEncode(SavedDataE6().toJson())));
+    );
+    if (str == null) {
+      try {
+        return SavedDataE6.fromJson(
+            (await devData.getItem())["e621"]["savedData"]);
+      } catch (e) {
+        return SavedDataE6();
+      }
+    } else {
+      return SavedDataE6.fromJson(jsonDecode(str));
+    }
   }
 
   factory SavedDataE6.fromJson(Map<String, dynamic> json) => SavedDataE6(
