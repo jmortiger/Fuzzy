@@ -1,4 +1,5 @@
 import 'dart:async' show FutureOr;
+import 'dart:convert' as dc;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -29,7 +30,9 @@ final appDataPath =
       : path.getDownloadsDirectory/* getApplicationDocumentsDirectory */().then(
           (value) => value!.absolute.path,
         ));
-
+final devDataString = LazyInitializer<String>(() => (rootBundle.loadString("assets/devData.json")
+                ..onError(defaultOnError /* onErrorPrintAndRethrow */)));
+final devData = LazyInitializer<JsonMap>(() async => dc.jsonDecode(await devDataString.getItem()));
 final tagDb = LateFinal<TagDB>();
 Future<TagDB> _androidCallback(http.StreamedResponse value) => decompressGzPlainTextStream(value).then((vf) {
               print("Tag Database Decompressed!");
