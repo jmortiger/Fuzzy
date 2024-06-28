@@ -24,7 +24,7 @@ class SearchViewModel extends ChangeNotifier {
     return _lazyBuilding;
   }
 
-  bool _forceSafe = true;
+  bool _forceSafe = false;
   bool get forceSafe => _forceSafe;
   bool toggleForceSafe() {
     _forceSafe = !_forceSafe;
@@ -32,13 +32,13 @@ class SearchViewModel extends ChangeNotifier {
     return _forceSafe;
   }
 
-  bool _sendAuthHeaders = false;
+  bool _sendAuthHeaders = true;
   bool get sendAuthHeaders => _sendAuthHeaders;
   bool toggleSendAuthHeaders() {
     _sendAuthHeaders = !_sendAuthHeaders;
     notifyListeners();
-    if (_sendAuthHeaders && !E621AccessData.devData.isAssigned) {
-      E621AccessData.devData
+    if (_sendAuthHeaders && !E621AccessData.devAccessData.isAssigned) {
+      E621AccessData.devAccessData
           .getItem(); /* .then(
             (v) => util.snackbarMessageQueue.add(const SnackBar(
               content: Text("Dev e621 Auth Loaded"),

@@ -106,16 +106,6 @@ final nonNumeric = RegExp(r'[^1234567890]');
 TextInputFormatter numericFormatter = TextInputFormatter.withFunction(
   (oldValue, newValue) => (RegExp(r'[^1234567890]').hasMatch(newValue.text)) ? oldValue : newValue,
   );
-// TODO: move to library
-/// https://e621.net/help/tags
-/// 1 tag w/ 0 posts w/ `%` (`%82%b5%82%cc%82%e8%82%a8%82%f1_short_hair`), 0 tags w/ `#`.
-const disallowedInTagName = '%,#\\*';
-const alphabetLowerAndUpper = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const numerals = "0123456789";
-const e6ValidMetaTagCharacters = "$alphabetLowerAndUpper$numerals:_!.-/*\"\"<>=~";
-
-/// Used to inject a saved search entry into a search using the entry's unique ID.
-final savedSearchInsertion = RegExp(r"\#(.+)\#");
 
 TextEditingController? defaultSelection(String? defaultValue) => defaultValue?.isEmpty ?? true
                     ? null
@@ -132,4 +122,11 @@ const event = Event();
 /// Annotation
 class Event {
   const Event();
+}
+
+mixin Returns<T> {
+  T? returnValue;
+}
+mixin ReturnsList<T> {
+  final List<T> returnValue = <T>[];
 }

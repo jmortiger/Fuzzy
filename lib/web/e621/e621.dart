@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/services.dart' as service;
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
@@ -10,14 +9,11 @@ import 'package:j_util/j_util_full.dart';
 import 'package:j_util/e621.dart' as e621;
 
 final class E621AccessData {
-  static final devData = LazyInitializer<E621AccessData>(() async =>
-      E621AccessData.fromJson((jsonDecode(
-              await (service.rootBundle.loadString("assets/devData.json")
-                ..onError(defaultOnError /* onErrorPrintAndRethrow */)))
-          as JsonOut)["e621"] as JsonOut));
-  static String? get devApiKey => devData.itemSafe?.apiKey;
-  static String? get devUsername => devData.itemSafe?.username;
-  static String? get devUserAgent => devData.itemSafe?.userAgent;
+  static final devAccessData = LazyInitializer<E621AccessData>(() async =>
+      E621AccessData.fromJson((await devData.getItem())["e621"] as JsonOut));
+  static String? get devApiKey => devAccessData.itemSafe?.apiKey;
+  static String? get devUsername => devAccessData.itemSafe?.username;
+  static String? get devUserAgent => devAccessData.itemSafe?.userAgent;
   // static get devData => _devData;
   static final userData = LateFinal<E621AccessData>();
   final String apiKey;
@@ -149,10 +145,23 @@ sealed class E621 extends Site {
   static const maxPostsPerSearch = 320;
   static DateTime timeOfLastRequest =
       DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+  /// The (escaped) character used to delimit saved search insertion.
+  static const savedSearchInsertionDelimiter = r"#";
+  /// The (escaped) character used to delimit saved search insertion.
+  static const delimiter = savedSearchInsertionDelimiter;
+  /// Used to inject a saved search entry into a search using the entry's unique ID.
+  /// 
+  /// Lazily expands
+  static final savedSearchInsertion = RegExp("$delimiter(.+?)$delimiter");
+  /// Used to inject a saved search entry into a search using the entry's unique ID.
+  /// 
+  /// Matches all characters other than [delimiter]
+  static final savedSearchInsertionAlt = RegExp("$delimiter([^$delimiter]+)$delimiter");
   E621();
 
   static String fillTagTemplate(String tags) {
-    print("fillTagTemplate: SaveData = ${SavedDataE6.$Safe?.all.map((e) => (e as dynamic).toJson())}");
+    print(
+        "fillTagTemplate: SaveData = ${SavedDataE6.$Safe?.all.map((e) => (e as dynamic).toJson())}");
     print("fillTagTemplate: Before: $tags");
     tags = tags.replaceAllMapped(
       savedSearchInsertion,
@@ -170,6 +179,7 @@ sealed class E621 extends Site {
     print("fillTagTemplate: After: $tags");
     return tags;
   }
+
   // static final String filePath = ;
   static Future<void> sendRequestBatch(
     Iterable<http.Request> Function() requestGenerator, {
@@ -234,7 +244,7 @@ sealed class E621 extends Site {
       // );
       e621.Api.initDeleteFavoriteRequest(
         postId: postId,
-        credentials: E621AccessData.devData.$.cred,
+        credentials: E621AccessData.devAccessData.$.cred,
       );
   static Future<http.StreamedResponse> sendDeleteFavoriteRequest(
     int postId, {
