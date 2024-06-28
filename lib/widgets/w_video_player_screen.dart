@@ -57,6 +57,7 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
     });
     return isVolumeOn;
   }
+
   @override
   void initState() {
     super.initState();
@@ -170,11 +171,10 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
                       top: 0,
                       end: 0,
                       child: IconButton(
+                        iconSize: 24.0 * 2,
                         tooltip:
                             isVolumeOn ? "Turn off sound" : "Turn on sound",
-                        onPressed: () => setState(() {
-                          volume = volume == 0 ? 1 : 0;
-                        }),
+                        onPressed: toggleMute,
                         icon: Icon(
                           volume != 0 ? Icons.volume_off : Icons.volume_up,
                         ),
@@ -201,54 +201,250 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
       end: 0,
       textDirection: TextDirection.ltr,
       child: Container(
-        color: const Color.fromRGBO(0, 0, 0, .5),//colorAnim.value,
+        color: const Color.fromRGBO(0, 0, 0, .5), //colorAnim.value,
         child: InkWell(
           // hoverColor: colorAnim.value,
           onHover: (value) => setState(() {
             isHoveringInControlsInkWell = value;
             print("isHoveringInControlsInkWell: $value");
           }),
-          child: _buildOldControls(),
+          child: _buildNewControls(),
         ),
       ),
     );
   }
 
-  Row _buildOldControls() {
+  /* Row _buildOldControls() {
     return Row(
-          // mainAxisSize: MainAxisSize.max,
-          children: [
-            IconButton(
-              onPressed: togglePlayState,
-              icon: const Icon(Icons.play_arrow),
+      // mainAxisSize: MainAxisSize.max,
+      children: [
+        IconButton(
+          onPressed: togglePlayState,
+          icon: Icon(
+            _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+          ),
+          iconSize: 24.0 * 2,
+        ),
+        Text(
+          _controller.value.position.toFormattedString(fillZeros: false),
+        ),
+        WTimeline(controller: _controller),
+        Text(
+          (PostView.i.showTimeLeft
+                  ? _controller.value.duration - _controller.value.position
+                  : _controller.value.duration)
+              .toFormattedString(fillZeros: false),
+        ),
+        SizedBox.shrink(
+          child: TextField(
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
             ),
-            Text(
-                _controller.value.position.toFormattedString(fillZeros: false)),
-            WTimeline(controller: _controller),
-            Text(
-              (PostView.i.showTimeLeft
-                      ? _controller.value.duration - _controller.value.position
-                      : _controller.value.duration)
-                  .toFormattedString(fillZeros: false),
-            ),
-            SizedBox.shrink(
-              child: TextField(
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
+            controller: TextEditingController(text: "1.00"),
+            maxLength: 4,
+            maxLines: 1,
+            inputFormatters: [numericFormatter],
+            onChanged: (value) => num.tryParse(value)?.isFinite ?? false
+                ? _controller.setPlaybackSpeed(
+                    num.parse(value).abs().toDouble(),
+                  )
+                : "",
+          ),
+        ),
+      ],
+    );
+  } */
+
+  final iconSize = 24.0 * 2;
+  Widget _buildNewControls() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          fit: FlexFit.loose,
+          flex: 100,
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              IconButton(
+                onPressed: togglePlayState,
+                icon: Icon(
+                  _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
                 ),
-                controller: TextEditingController(text: "1.00"),
-                maxLength: 4,
-                maxLines: 1,
-                inputFormatters: [numericFormatter],
-                onChanged: (value) => num.tryParse(value)?.isFinite ?? false
-                    ? _controller.setPlaybackSpeed(
-                        num.parse(value).abs().toDouble(),
-                      )
-                    : "",
+                iconSize: iconSize,
               ),
+              WVideoTimeCodeUnit(
+                controller: _controller,
+              ),
+              WVideoSpeed(height: iconSize, controller: _controller),
+              // WVideoSpeedOld(height: iconSize, controller: _controller),
+            ],
+          ),
+        ),
+        WTimeline(
+          controller: _controller,
+        ),
+      ],
+    );
+  }
+}
+
+class WVideoSpeed extends StatelessWidget {
+  const WVideoSpeed({
+    super.key,
+    required this.height,
+    required VideoPlayerController controller,
+  }) : _controller = controller;
+
+  final double height;
+  final VideoPlayerController _controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Flexible(
+      flex: 1,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 100),
+        child: Align(
+          alignment: AlignmentDirectional.centerEnd,
+          child: SizedBox.fromSize(
+            size: Size(
+                calculateTextSize(
+                  text: "0.000",
+                  style: DefaultTextStyle.of(context).style,
+                ).width,
+                height),
+            child: WNewSpeed(
+              onValueChanged: (v) => _controller.setPlaybackSpeed(v),
             ),
-          ],
-        );
+          ),
+        ),
+      ),
+    );
+  }
+}
+class WNewSpeed extends StatefulWidget {
+  const WNewSpeed({
+    super.key,
+    required this.onValueChanged,
+  });
+  final void Function(double) onValueChanged;
+
+  @override
+  State<WNewSpeed> createState() => _WNewSpeedState();
+}
+
+class _WNewSpeedState extends State<WNewSpeed> {
+  @override
+  void initState() {
+    control = TextEditingController(text: "1.00")..addListener(listener);
+    super.initState();
+  }
+
+  void listener() => widget.onValueChanged(double.parse(control.value.text));
+
+  @override
+  void dispose() {
+    control
+      ..removeListener(listener)
+      ..dispose();
+    super.dispose();
+  }
+
+  late TextEditingController control;
+  @override
+  Widget build(BuildContext context) {
+    return DropdownMenu<double>(
+      dropdownMenuEntries: const [
+        DropdownMenuEntry(value: .25, label: ".25"),
+        DropdownMenuEntry(value: .5, label: ".5"),
+        DropdownMenuEntry(value: .75, label: ".75"),
+        DropdownMenuEntry(value: 1, label: "1"),
+        DropdownMenuEntry(value: 1.25, label: "1.25"),
+        DropdownMenuEntry(value: 1.5, label: "1.5"),
+        DropdownMenuEntry(value: 1.75, label: "1.75"),
+        DropdownMenuEntry(value: 2, label: "2"),
+        DropdownMenuEntry(value: 2.5, label: "2.5"),
+        DropdownMenuEntry(value: 5, label: "5"),
+      ],
+      initialSelection: 1,
+      inputFormatters: [getParsableDecimalFormatter((p0) => p0 > 0)],
+      controller: control,
+    );
+  }
+}
+
+class WVideoTimeCodeUnit extends StatefulWidget {
+  final VideoPlayerController controller;
+  const WVideoTimeCodeUnit({
+    super.key,
+    required this.controller,
+  });
+
+  @override
+  State<WVideoTimeCodeUnit> createState() => _WVideoTimeCodeUnitState();
+}
+
+class _WVideoTimeCodeUnitState extends State<WVideoTimeCodeUnit> {
+  bool showTimeLeft = PostView.i.showTimeLeft;
+  Duration currTime = Duration.zero;
+  Duration get trueCurrTime => widget.controller.value.position;
+  void assignCurrTime() => setState(() {
+        currTime = trueCurrTime;
+      });
+  Duration compareTime = Duration.zero;
+  Duration get trueCompareTime => showTimeLeft
+      ? widget.controller.value.duration - widget.controller.value.position
+      : widget.controller.value.duration;
+  void assignCompareTime() => setState(() {
+        compareTime = trueCompareTime;
+      });
+
+  late final String durationString;
+  @override
+  void initState() {
+    currTime = trueCurrTime;
+    compareTime = trueCompareTime;
+    durationString = widget.controller.value.duration
+        .toFormattedString(fillZeros: false, discardMilliseconds: true);
+    widget.controller.addListener(listener);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(listener);
+    super.dispose();
+  }
+
+  void listener() {
+    if (currTime.inSeconds != trueCurrTime.inSeconds) {
+      assignCurrTime();
+    }
+    // Uncomment to allow dynamic changing of settings
+    /* if (showTimeLeft != PostView.i.showTimeLeft) {
+      setState(() {
+        showTimeLeft = PostView.i.showTimeLeft;
+        assignCompareTime();
+      });
+    } else  */
+    if (showTimeLeft && compareTime.inSeconds != trueCompareTime.inSeconds) {
+      assignCompareTime();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      "${currTime.toFormattedString(
+        fillZeros: false,
+        discardMilliseconds: true,
+      )}/"
+      "${showTimeLeft ? compareTime.toFormattedString(
+          fillZeros: false,
+          discardMilliseconds: true,
+        ) : durationString}",
+    );
   }
 }
 
@@ -275,6 +471,12 @@ class _WTimelineState extends State<WTimeline> {
     widget._controller.addListener(onValueChanged);
   }
 
+  @override
+  void dispose() {
+    widget._controller.removeListener(onValueChanged);
+    super.dispose();
+  }
+
   void onValueChanged() {
     double t;
     if ((t = widget._controller.value.position.inMilliseconds /
@@ -288,10 +490,62 @@ class _WTimelineState extends State<WTimeline> {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: LinearProgressIndicator(
-        value: value,
+    return Flexible(
+      fit: FlexFit.loose,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: LinearProgressIndicator(
+          value: value,
+        ),
       ),
     );
   }
 }
+
+/* class WVideoSpeedOld extends StatelessWidget {
+  const WVideoSpeedOld({
+    super.key,
+    required this.height,
+    required VideoPlayerController controller,
+  }) : _controller = controller;
+
+  final double height;
+  final VideoPlayerController _controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Flexible(
+      flex: 1,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: Align(
+          alignment: AlignmentDirectional.centerEnd,
+          child: SizedBox.fromSize(
+            size: Size(
+                calculateTextSize(
+                  text: "0.000",
+                  style: DefaultTextStyle.of(context).style,
+                ).width,
+                height),
+            child: TextField(
+      keyboardType: const TextInputType.numberWithOptions(
+        decimal: true,
+      ),
+      controller: TextEditingController(
+          text: _controller.value.playbackSpeed.toString(),
+      ),
+      maxLength: 4,
+      maxLines: 1,
+      inputFormatters: [getParsableDecimalFormatter((p0) => p0 > 0)],
+      onChanged: (value) => num.tryParse(value)?.isFinite ?? false
+          ? _controller.setPlaybackSpeed(
+              num.parse(value).abs().toDouble(),
+            )
+          : "",
+    ),
+          ),
+        ),
+      ),
+    );
+  }
+} */
