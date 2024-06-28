@@ -1,7 +1,10 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
-import 'package:fuzzy/pages/post_swipe_page.dart';
+import 'package:fuzzy/pages/post_swipe_page.dart' as old;
+import 'package:fuzzy/pages/post_swipe_page_redux.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
@@ -13,6 +16,7 @@ import '../web/models/image_listing.dart';
 
 BoxFit imageFit = BoxFit.contain;
 const bool allowPostViewNavigation = true;
+const bool useLinkedList = false;
 
 // TODO: Fade in images https://docs.flutter.dev/cookbook/images/fading-in-images
 class WImageResult extends StatelessWidget {
@@ -20,6 +24,7 @@ class WImageResult extends StatelessWidget {
   final int index;
   final bool isSelected;
   final bool areAnySelected;
+  final bool disallowSelections;
 
   // final String searchText;
 
@@ -33,6 +38,7 @@ class WImageResult extends StatelessWidget {
     this.onSelectionToggle,
     this.isSelected = false,
     this.areAnySelected = false,
+    this.disallowSelections = false,
   });
 
   String get _buildTooltipString =>
@@ -96,7 +102,8 @@ class WImageResult extends StatelessWidget {
 
   Widget _buildInputDetector(BuildContext context, int w, int h, String url) {
     // SearchResults sr() => Provider.of<SearchResults>(context, listen: false);
-    SearchResults srl = Provider.of<SearchResults>(context);
+    SearchResults? srl;
+    if (!disallowSelections) srl = Provider.of<SearchResults>(context);
     return Positioned.fill(
       child: Material(
         color: Colors.transparent,
@@ -107,7 +114,7 @@ class WImageResult extends StatelessWidget {
           onLongPress: () {
             print("OnLongPress");
             onSelectionToggle?.call(index);
-            srl.toggleSelection(
+            srl?.toggleSelection(
               index: index,
               postId: imageListing.id,
             );
@@ -115,7 +122,7 @@ class WImageResult extends StatelessWidget {
           onDoubleTap: () {
             print("onDoubleTap");
             onSelectionToggle?.call(index);
-            srl.toggleSelection(
+            srl?.toggleSelection(
               index: index,
               postId: imageListing.id,
             );
@@ -123,42 +130,31 @@ class WImageResult extends StatelessWidget {
           onTap: () {
             print("OnTap");
             if ((isSelected || areAnySelected) ||
-                (srl.getIsSelected(index) || srl.areAnySelected)) {
+                ((srl?.getIsSelected(index) ?? false) ||
+                    (srl?.areAnySelected ?? false))) {
               onSelectionToggle?.call(index);
-              srl.toggleSelection(
+              srl?.toggleSelection(
                 index: index,
                 postId: imageListing.id,
               );
             } else {
-              onAddToSearch(String addition) {
-                print("WImageResult: onAddToSearch:");
-                print("Before: ${Provider.of<SearchViewModel>(
-                  context,
-                  listen: false,
-                ).searchText}");
-                Provider.of<SearchViewModel>(
-                  context,
-                  listen: false,
-                ).fillTextBarWithSearchString = true;
-                print(
-                    "After: ${Provider.of<SearchViewModel>(context, listen: false).searchText += " $addition"}");
-              }
-
               Navigator.push<IReturnsTags>(
                   context,
                   MaterialPageRoute(
                     builder: (_) => allowPostViewNavigation
-                        ? PostSwipePage(
-                            initialIndex: index,
-                            posts:
-                                Provider.of<SearchCache>(context, listen: false)
+                        ? useLinkedList
+                            ? const Placeholder()//_buildLinkedSwiper(context)
+                            : old.PostSwipePage(
+                                initialIndex: index,
+                                posts: Provider.of<SearchCache>(context,
+                                        listen: false)
                                     .posts!,
-                            onAddToSearch: onAddToSearch,
-                            tagsToAdd: [],
-                          )
+                                onAddToSearch: getOnAddToSearch(context),
+                                tagsToAdd: [],
+                              )
                         : PostViewPage(
                             postListing: imageListing,
-                            onAddToSearch: onAddToSearch,
+                            onAddToSearch: getOnAddToSearch(context),
                             tagsToAdd: [],
                           ),
                   )).then<void>((v) {
@@ -175,6 +171,21 @@ class WImageResult extends StatelessWidget {
       ),
     );
   }
+
+  getOnAddToSearch(BuildContext context) => /* onAddToSearch */
+      (String addition) {
+        print("WImageResult: onAddToSearch:");
+        print("Before: ${Provider.of<SearchViewModel>(
+          context,
+          listen: false,
+        ).searchText}");
+        Provider.of<SearchViewModel>(
+          context,
+          listen: false,
+        ).fillTextBarWithSearchString = true;
+        print(
+            "After: ${Provider.of<SearchViewModel>(context, listen: false).searchText += " $addition"}");
+      };
 
   @widgetFactory
   Center _buildPane(int w, int h, String url) {
@@ -247,6 +258,25 @@ class WImageResult extends StatelessWidget {
       },
     );
   }
+
+  // @widgetFactory
+  // PostSwipePage _buildLinkedSwiper(BuildContext context) {
+  //   PostLle t = PostLle(
+  //     post: imageListing as E6PostResponse,
+  //   );
+  //   LinkedList<PostLle>().addAll(
+  //       Provider.of<SearchCache>(context, listen: false).posts!.posts.map((e) {
+  //     return e == (imageListing as E6PostResponse) ? t : PostLle(post: e);
+  //   }));
+  //   return PostSwipePage(
+  //     length:
+  //         Provider.of<SearchCache>(context, listen: false).posts!.posts.length,
+  //     initialIndex: index,
+  //     post: t,
+  //     onAddToSearch: getOnAddToSearch(context),
+  //     tagsToAdd: [],
+  //   );
+  // }
 }
 
 class PostInfoPane extends StatelessWidget {

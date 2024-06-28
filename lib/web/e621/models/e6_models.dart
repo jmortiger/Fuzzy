@@ -1,6 +1,9 @@
 // https://www.liquid-technologies.com/online-json-to-schema-converter
 // https://app.quicktype.io/
 // import 'package:fuzzy/web/e621/models/tag_d_b.dart';
+import 'dart:convert';
+
+import 'package:fuzzy/web/e621/e621.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
@@ -136,7 +139,7 @@ final class E6PostsSync implements E6Posts {
           .mapAsList((e, i, l) => E6PostResponse.fromJson(e)));
 }
 
-final class E6PostResponse implements PostListing, e621.Post  {
+final class E6PostResponse implements PostListing, e621.Post {
   // #region Json Fields
   /// The ID number of the post.
   @override
@@ -166,7 +169,7 @@ final class E6PostResponse implements PostListing, e621.Post  {
   /// (array group)
   @override
   final E6PostTags tags;
-  
+
   @override
   ITagData get tagData => tags;
 
@@ -462,7 +465,7 @@ class E6Score extends e621.Score {
       };
 }
 
-class E6PostTags extends e621.PostTags implements ITagData{
+class E6PostTags extends e621.PostTags implements ITagData {
   List<String> get allTags => [
         ...general,
         ...species,
@@ -753,4 +756,100 @@ enum PostType {
   video,
   flash,
   ;
+}
+
+class PoolModel extends e621.Pool {
+  PoolModel({
+    required super.id,
+    required super.name,
+    required super.createdAt,
+    required super.updatedAt,
+    required super.creatorId,
+    required super.description,
+    required super.isActive,
+    required super.category,
+    required super.postIds,
+    required super.creatorName,
+    required super.postCount,
+  }) {
+    posts = LazyInitializer<List<E6PostResponse>>(
+      () async {
+        var t1 = (jsonDecode(
+          (await E621.performPostSearch(
+            tags: postIds.fold(
+              "order:id_asc",
+              (previousValue, element) => "$previousValue ~id:$element",
+            ),
+            limit: E621.maxPostsPerSearch,
+          ))
+              .responseBody,
+        )["posts"] as List),
+            t2 = postIds.fold(
+          <E6PostResponse>[],
+          (previousValue, element) {
+            return previousValue..add(
+              E6PostResponse.fromJson(t1.firstWhere(
+                (t) => element == (t["id"] as int),
+              )),
+            );
+          },
+        );
+        return t2;
+      },
+    );
+  }
+  factory PoolModel.fromRawJson(String json) =>
+      PoolModel.fromJson(jsonDecode(json));
+  PoolModel.fromJson(Map<String, dynamic> json)
+      : this(
+          id: json["id"],
+          name: json["name"],
+          createdAt: DateTime.parse(json["created_at"]),
+          updatedAt: DateTime.parse(json["updated_at"]),
+          creatorId: json["creator_id"],
+          description: json["description"],
+          isActive: json["is_active"],
+          category: e621.PoolCategory.fromJsonString(json["category"]),
+          postIds: (json["post_ids"] as List)
+              .mapAsList((e, index, list) => e as int),
+          creatorName: json["creator_name"],
+          postCount: json["post_count"],
+        );
+  late final LazyInitializer<List<E6PostResponse>> posts;
+  static Future<List<E6PostResponse>> getOrderedPosts(List<int> postIds) async {
+    var t1 = (jsonDecode(
+      (await E621.performPostSearch(
+        tags: postIds.fold(
+          "order:id_asc",
+          (previousValue, element) => "$previousValue ~$element",
+        ),
+        limit: E621.maxPostsPerSearch,
+      ))
+          .responseBody,
+    )["posts"] as List)
+        .fold(
+      <E6PostResponse>[],
+      (previousValue, element) {
+        previousValue[previousValue.indexOf(
+          previousValue.firstWhere(
+            (t) => (t as int) == (element["id"] as int),
+          ),
+        )] = E6PostResponse.fromJson(element);
+        return previousValue;
+      },
+    );
+    return t1; /* .then((v) {
+        (jsonDecode(v.responseBody)["posts"] as List).fold(
+          <E6PostResponse>[],
+          (previousValue, element) {
+            previousValue[previousValue.indexOf(
+              previousValue.firstWhere(
+                (t) => (t as int) == (element["id"] as int),
+              ),
+            )] = E6PostResponse.fromJson(element);
+            return previousValue;
+          },
+        );
+      }) */
+  }
 }
