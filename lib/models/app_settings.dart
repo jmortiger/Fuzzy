@@ -3,7 +3,7 @@ import 'dart:io' as io;
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
-import 'package:fuzzy/web/e621/models/tag_d_b.dart';
+import 'package:j_util/e621.dart' show TagCategory;
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:j_util/j_util_full.dart';
 
@@ -28,11 +28,15 @@ class AppSettingsRecord {
     },
   );
   factory AppSettingsRecord.fromJson(JsonOut json) => AppSettingsRecord(
-        postView: PostViewData.fromJson(json["postView"] as JsonOut),
-        searchView: SearchViewData.fromJson(json["searchView"] as JsonOut),
-        favoriteTags: (json["favoriteTags"] as List).cast<String>().toSet(),
+        postView: PostViewData.fromJson(
+            json["postView"] ?? defaultSettings.postView.toJson()),
+        searchView: SearchViewData.fromJson(
+            json["searchView"] ?? defaultSettings.searchView.toJson()),
+        favoriteTags: (json["favoriteTags"] as List?)?.cast<String>().toSet() ??
+            defaultSettings.favoriteTags,
         blacklistedTags:
-            (json["blacklistedTags"] as List).cast<String>().toSet(),
+            (json["blacklistedTags"] as List?)?.cast<String>().toSet() ??
+                defaultSettings.blacklistedTags,
       );
   JsonOut toJson() => {
         "postView": postView,
@@ -60,6 +64,17 @@ class AppSettings implements AppSettingsRecord {
   static LazyInitializer<io.File> get myFile => _file!;
   static Future<AppSettings> loadSettingsFromFile() async => (Platform.isWeb)
       ? defaultSettings
+      // : await (myFile
+      //     .getItem()
+      //     .then((v) => v.readAsString())
+      //     .then((v2) => AppSettings.fromJson(
+      //           jsonDecode((v2).printMe()),
+      //         ))
+      //   ..then((v) {
+      //     PostView._instance.itemSafe ??= v.postView;
+      //     SearchView._instance.itemSafe ??= v.searchView;
+      //     return v;
+      //   }));
       : AppSettings.fromJson(
           jsonDecode((await (await myFile.getItem()).readAsString()).printMe()),
         );
@@ -186,28 +201,49 @@ class PostViewData {
     colorTags: true,
     colorTagHeaders: false,
     allowOverflow: true,
+    forceHighQualityImage: true,
+    autoplayVideo: true,
+    startVideoMuted: true,
+    showTimeLeft: true,
   );
   final List<TagCategory> tagOrder;
   final Map<TagCategory, Color> tagColors;
   final bool colorTags;
   final bool colorTagHeaders;
   final bool allowOverflow;
+  final bool forceHighQualityImage;
+  final bool autoplayVideo;
+  final bool startVideoMuted;
+
+  /// When playing a video, show the time remaining
+  /// instead of the total duration?
+  final bool showTimeLeft;
   const PostViewData({
     required this.tagOrder,
     required this.tagColors,
     required this.colorTags,
     required this.colorTagHeaders,
     required this.allowOverflow,
+    required this.forceHighQualityImage,
+    required this.autoplayVideo,
+    required this.startVideoMuted,
+    required this.showTimeLeft,
   });
   factory PostViewData.fromJson(JsonOut json) => PostViewData(
-        tagOrder: (json["tagOrder"] as List).mapAsList(
-            (e, i, l) => TagCategory.fromJson(e) /*  as TagCategory */),
-        tagColors: (json["tagColors"] /*  as Map<String, int> */)
-            .map<TagCategory, Color>(
-                (k, v) => MapEntry(TagCategory.fromJson(k), Color(v))),
-        colorTags: (json["colorTags"] as bool),
-        colorTagHeaders: (json["colorTagHeaders"] as bool),
-        allowOverflow: (json["allowOverflow"] as bool),
+        tagOrder: (json["tagOrder"] as List?)
+                ?.mapAsList((e, i, l) => TagCategory.fromJson(e)) ??
+            defaultData.tagOrder,
+        tagColors: (json["tagColors"])?.map<TagCategory, Color>(
+                (k, v) => MapEntry(TagCategory.fromJson(k), Color(v))) ??
+            defaultData.tagColors,
+        colorTags: json["colorTags"] ?? defaultData.colorTags,
+        colorTagHeaders: json["colorTagHeaders"] ?? defaultData.colorTagHeaders,
+        allowOverflow: json["allowOverflow"] ?? defaultData.allowOverflow,
+        forceHighQualityImage:
+            json["forceHighQualityImage"] ?? defaultData.forceHighQualityImage,
+        autoplayVideo: json["autoplayVideo"] ?? defaultData.autoplayVideo,
+        startVideoMuted: json["startVideoMuted"] ?? defaultData.startVideoMuted,
+        showTimeLeft: json["showTimeLeft"] ?? defaultData.showTimeLeft,
       );
   JsonOut toJson() => {
         "tagOrder": tagOrder,
@@ -215,6 +251,10 @@ class PostViewData {
         "colorTags": colorTags,
         "colorTagHeaders": colorTagHeaders,
         "allowOverflow": allowOverflow,
+        "forceHighQualityImage": forceHighQualityImage,
+        "autoplayVideo": autoplayVideo,
+        "startVideoMuted": startVideoMuted,
+        "showTimeLeft": showTimeLeft,
       };
 }
 
@@ -239,32 +279,64 @@ class PostView implements PostViewData {
   @override
   bool get allowOverflow => _allowOverflow;
   set allowOverflow(bool v) => _allowOverflow = v;
+  bool _forceHighQualityImage;
+  @override
+  bool get forceHighQualityImage => _forceHighQualityImage;
+  set forceHighQualityImage(bool v) => _forceHighQualityImage = v;
+  bool _autoplayVideo;
+  @override
+  bool get autoplayVideo => _autoplayVideo;
+  set autoplayVideo(bool v) => _autoplayVideo = v;
+  bool _startVideoMuted;
+  @override
+  bool get startVideoMuted => _startVideoMuted;
+  set startVideoMuted(bool v) => _startVideoMuted = v;
+  bool _showTimeLeft;
+  @override
+  bool get showTimeLeft => _showTimeLeft;
+  set showTimeLeft(bool v) => _showTimeLeft = v;
   PostView({
     required List<TagCategory> tagOrder,
     required Map<TagCategory, Color> tagColors,
     required bool colorTags,
     required bool colorTagHeaders,
     required bool allowOverflow,
+    required bool forceHighQualityImage,
+    required bool autoplayVideo,
+    required bool startVideoMuted,
+    required bool showTimeLeft,
   })  : _tagOrder = tagOrder,
         _tagColors = tagColors,
         _colorTags = colorTags,
         _colorTagHeaders = colorTagHeaders,
-        _allowOverflow = allowOverflow;
+        _allowOverflow = allowOverflow,
+        _forceHighQualityImage = forceHighQualityImage,
+        _autoplayVideo = autoplayVideo,
+        _startVideoMuted = startVideoMuted,
+        _showTimeLeft = showTimeLeft;
 
   factory PostView.fromData(PostViewData postView) => PostView(
-        tagOrder: List.from(postView.tagOrder.toList()),
+        tagOrder: List.from(postView.tagOrder),
         tagColors: Map.from(postView.tagColors),
         colorTags: postView.colorTags,
         colorTagHeaders: postView.colorTagHeaders,
         allowOverflow: postView.allowOverflow,
+        forceHighQualityImage: postView.forceHighQualityImage,
+        autoplayVideo: postView.autoplayVideo,
+        startVideoMuted: postView.startVideoMuted,
+        showTimeLeft: postView.showTimeLeft,
       );
 
   void overwriteWithData(PostViewData postView) {
-    tagOrder = List.from(postView.tagOrder.toList());
+    tagOrder = List.from(postView.tagOrder);
     tagColors = Map.from(postView.tagColors);
     colorTags = postView.colorTags;
     colorTagHeaders = postView.colorTagHeaders;
     allowOverflow = postView.allowOverflow;
+    forceHighQualityImage = postView.forceHighQualityImage;
+    autoplayVideo = postView.autoplayVideo;
+    startVideoMuted = postView.startVideoMuted;
+    showTimeLeft = postView.showTimeLeft;
   }
 
   PostViewData toData() => PostViewData(
@@ -273,20 +345,20 @@ class PostView implements PostViewData {
         colorTags: colorTags,
         colorTagHeaders: colorTagHeaders,
         allowOverflow: allowOverflow,
+        forceHighQualityImage: forceHighQualityImage,
+        autoplayVideo: autoplayVideo,
+        startVideoMuted: startVideoMuted,
+        showTimeLeft: showTimeLeft,
       );
 
   // #region JSON (indirect, don't need updating w/ new fields)
   @override
   JsonOut toJson() => toData().toJson();
-  factory PostView.fromJson(JsonOut json) => _instance.isAssigned
-      ? PostView.fromData(PostViewData.fromJson(json))
-      : PostView.fromData(PostViewData.fromJson(json));
+  factory PostView.fromJson(JsonOut json) =>
+      PostView.fromData(PostViewData.fromJson(json));
   // #endregion JSON (indirect, don't need updating w/ new fields)
   // #region Singleton
-  static final _instance = LateFinal<PostView>();
-  static PostView get instance => _instance.isAssigned
-      ? _instance.item
-      : (_instance.item = PostView.fromData(PostViewData.defaultData));
+  static PostView get instance => AppSettings.i!.postView;
   static PostView get i => instance;
   // #endregion Singleton
 }
@@ -303,8 +375,8 @@ class SearchViewData {
     required this.postsPerRow,
   });
   factory SearchViewData.fromJson(JsonOut json) => SearchViewData(
-        postsPerPage: (json["postsPerPage"] as int),
-        postsPerRow: (json["postsPerRow"] as int),
+        postsPerPage: json["postsPerPage"] ?? defaultData.postsPerPage,
+        postsPerRow: json["postsPerRow"] ?? defaultData.postsPerRow,
       );
   JsonOut toJson() => {
         "postsPerPage": postsPerPage,
@@ -348,10 +420,7 @@ class SearchView implements SearchViewData {
       SearchView.fromData(SearchViewData.fromJson(json));
   // #endregion JSON (indirect, don't need updating w/ new fields)
   // #region Singleton (don't need updating w/ new fields)
-  static final _instance = LateFinal<SearchView>();
-  static SearchView get instance => _instance.isAssigned
-      ? _instance.item
-      : (_instance.item = SearchView.fromData(SearchViewData.defaultData));
+  static SearchView get instance => AppSettings.i!.searchView;
   static SearchView get i => instance;
   // #endregion Singleton (don't need updating w/ new fields)
 }

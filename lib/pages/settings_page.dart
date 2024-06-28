@@ -91,45 +91,71 @@ class SettingsPage extends StatelessWidget {
             title: const Text("General Settings"),
             titleTextStyle: SettingsPage.titleStyle,
           ),
-          // _constructStringSetField(
-          // context,
           SetStringField(
             name: "Favorite Tags",
-            // getVal: () => settings.favoriteTags,
-            getVal: settings.favoriteTags,
-            setVal: (Set<String> v) => settings.favoriteTags = v,
-            // validateVal: (Set<String> v) => settings.favoriteTags = v,
+            getVal: AppSettings.i!.favoriteTags,
+            setVal: (Set<String> v) => AppSettings.i!.favoriteTags = v,
           ),
-          // _constructStringSetField(
-          //   context,
-          //   getVal: () => settings.blacklistedTags,
           SetStringField(
-            getVal: settings.blacklistedTags,
+            getVal: AppSettings.i!.blacklistedTags,
             name: "Blacklisted Tags",
-            setVal: (Set<String> v) => settings.blacklistedTags = v,
-            // validateVal: (Set<String> v) => settings.blacklistedTags = v,
+            setVal: (Set<String> v) => AppSettings.i!.blacklistedTags = v,
           ),
           ListTile(
             title: const Text("Search View Settings"),
             titleTextStyle: SettingsPage.titleStyle,
           ),
           WIntegerField(
-            // _constructIntegerField(
-            //   context,
-            getVal: () => settings.searchView.postsPerRow,
-            // getVal: settings.searchView.postsPerRow,
+            getVal: () => AppSettings.i!.searchView.postsPerRow,
             name: "Posts per row",
-            setVal: (int val) => settings.searchView.postsPerRow = val,
+            setVal: (int val) => AppSettings.i!.searchView.postsPerRow = val,
             validateVal: (int? val) => (val ?? -1) >= 0,
           ),
           WIntegerField(
-            // _constructIntegerField(
-            //   context,
-            getVal: () => settings.searchView.postsPerPage,
-            // getVal: settings.searchView.postsPerPage,
+            getVal: () => AppSettings.i!.searchView.postsPerPage,
             name: "Posts per page",
-            setVal: (int val) => settings.searchView.postsPerPage = val,
+            setVal: (int val) => AppSettings.i!.searchView.postsPerPage = val,
             validateVal: (int? val) => (val ?? -1) >= 0,
+          ),
+          ListTile(
+            title: const Text("Post View Settings"),
+            titleTextStyle: SettingsPage.titleStyle,
+          ),
+          WBooleanField(
+            name: "Force High Quality Image",
+            getVal: () => settings.postView.forceHighQualityImage,
+            setVal: (p1) => AppSettings.i!.postView.forceHighQualityImage = p1,
+          ),
+          WBooleanField(
+            name: "Allow Overflow",
+            getVal: () => settings.postView.allowOverflow,
+            setVal: (p1) => AppSettings.i!.postView.allowOverflow = p1,
+          ),
+          WBooleanField(
+            name: "Color Tag Headers",
+            getVal: () => settings.postView.colorTagHeaders,
+            setVal: (p1) => AppSettings.i!.postView.colorTagHeaders = p1,
+          ),
+          WBooleanField(
+            name: "Color Tags",
+            getVal: () => settings.postView.colorTags,
+            setVal: (p1) => AppSettings.i!.postView.colorTags = p1,
+          ),
+          WBooleanField(
+            name: "Autoplay Video",
+            getVal: () => settings.postView.autoplayVideo,
+            setVal: (p1) => AppSettings.i!.postView.autoplayVideo = p1,
+          ),
+          WBooleanField(
+            name: "Start video muted",
+            getVal: () => settings.postView.startVideoMuted,
+            setVal: (p1) => AppSettings.i!.postView.startVideoMuted = p1,
+          ),
+          WBooleanField(
+            name: "Show time left",
+            subtitle: "When playing a video, show the time remaining instead of the total duration?",
+            getVal: () => settings.postView.showTimeLeft,
+            setVal: (p1) => AppSettings.i!.postView.showTimeLeft = p1,
           ),
         ],
       ),
@@ -275,6 +301,50 @@ class SettingsPage extends StatelessWidget {
       },
     );
   } */
+}
+
+class WBooleanField extends StatefulWidget {
+  final String name;
+  final String? subtitle;
+
+  final bool Function() getVal;
+
+  final void Function(bool p1) setVal;
+
+  final bool Function(bool? p1)? validateVal;
+
+  const WBooleanField({
+    super.key,
+    required this.name,
+    this.subtitle,
+    required this.getVal,
+    required this.setVal,
+    // required this.settings,
+    this.validateVal,
+  });
+
+  // final AppSettings settings;
+
+  @override
+  State<WBooleanField> createState() => _WBooleanFieldState();
+}
+
+class _WBooleanFieldState extends State<WBooleanField> {
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Text(widget.name),
+      subtitle: widget.subtitle != null ? Text(widget.subtitle!) : null,
+      trailing: Checkbox(
+        onChanged: (value) => widget.validateVal?.call(value) ?? true
+            ? setState(() {
+              widget.setVal(value!);
+            })
+            : null,
+        value: widget.getVal(),
+      ),
+    );
+  }
 }
 
 class SetStringField extends StatefulWidget {
