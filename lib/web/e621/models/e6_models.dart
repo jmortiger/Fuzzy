@@ -1,6 +1,7 @@
 // https://www.liquid-technologies.com/online-json-to-schema-converter
 // https://app.quicktype.io/
-import 'package:fuzzy/web/e621/models/tag_d_b.dart';
+// import 'package:fuzzy/web/e621/models/tag_d_b.dart';
+import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
 import '../../models/image_listing.dart';
@@ -135,85 +136,105 @@ final class E6PostsSync implements E6Posts {
           .mapAsList((e, i, l) => E6PostResponse.fromJson(e)));
 }
 
-final class E6PostResponse implements PostListing {
+final class E6PostResponse implements PostListing, e621.Post  {
   // #region Json Fields
   /// The ID number of the post.
   @override
   final int id;
 
   /// The time the post was created in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.
-  final String createdAt;
+  @override
+  final DateTime createdAt;
 
   /// The time the post was last updated in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.
-  final String updatedAt;
+  @override
+  final DateTime updatedAt;
 
   /// (array group)
-  @override
   final E6FileResponse file;
 
   /// (array group)
-  @override
   final E6Preview preview;
 
   /// (array group)
-  @override
   final E6Sample sample;
 
   /// (array group)
+  @override
   final E6Score score;
 
   /// (array group)
+  @override
   final E6PostTags tags;
+  
+  @override
+  ITagData get tagData => tags;
 
   /// A JSON array of tags that are locked on the post.
+  @override
   final List<String> lockedTags;
 
   /// An ID that increases for every post alteration on E6 (explained below)
+  @override
   final int changeSeq;
 
   /// (array group)
+  @override
   final E6Flags flags;
 
   /// The post’s rating. Either s, q or e.
+  @override
   final String rating;
 
   /// How many people have favorited the post.
+  @override
   final int favCount;
 
   /// The source field of the post.
+  @override
   final List<String> sources;
 
   /// An array of Pool IDs that the post is a part of.
-  final List<String> pools;
+  @override
+  final List<int> pools;
 
   /// (array group)
+  @override
   final E6Relationships relationships;
 
   /// The ID of the user that approved the post, if available.
+  @override
   final int? approverId;
 
   /// The ID of the user that uploaded the post.
+  @override
   final int uploaderId;
 
   /// The post’s description.
+  @override
   final String description;
 
   /// The count of comments on the post.
+  @override
   final int commentCount;
 
   /// If provided auth credentials, will return if the authenticated user has
   /// favorited the post or not. If not provided, will be false.
+  @override
   final bool isFavorited;
 
   // #region Not Documented
   /// Guess
+  @override
   final bool hasNotes;
 
   /// If post is a video, the video length. Otherwise, null.
+  @override
   final num? duration;
   // #endregion Not Documented
   // #endregion Json Fields
-
+  @override
+  List<String> get tagList => tags.allTags;
   E6PostResponse({
     required this.id,
     required this.createdAt,
@@ -242,22 +263,21 @@ final class E6PostResponse implements PostListing {
 
   factory E6PostResponse.fromJson(JsonOut json) => E6PostResponse(
         id: json["id"] as int,
-        createdAt: json["created_at"] as String,
-        updatedAt: json["updated_at"] as String,
-        file: E6FileResponse.fromJson(json["file"] as JsonOut),
-        preview: E6Preview.fromJson(json["preview"] as JsonOut),
-        sample: E6Sample.fromJson(json["sample"] as JsonOut),
-        score: E6Score.fromJson(json["score"] as JsonOut),
-        tags: E6PostTags.fromJson(json["tags"] as JsonOut),
+        createdAt: DateTime.parse(json["created_at"]),
+        updatedAt: DateTime.parse(json["updated_at"]),
+        file: E6FileResponse.fromJson(json["file"]),
+        preview: E6Preview.fromJson(json["preview"]),
+        sample: E6Sample.fromJson(json["sample"]),
+        score: E6Score.fromJson(json["score"]),
+        tags: E6PostTags.fromJson(json["tags"]),
         lockedTags: (json["locked_tags"] as List).cast<String>(),
         changeSeq: json["change_seq"] as int,
-        flags: E6FlagsBit.fromJson(json["flags"] as JsonOut),
+        flags: E6FlagsBit.fromJson(json["flags"]),
         rating: json["rating"] as String,
         favCount: json["fav_count"] as int,
         sources: (json["sources"] as List).cast<String>(),
-        pools: (json["pools"] as List).cast<String>(),
-        relationships:
-            E6Relationships.fromJson(json["relationships"] as JsonOut),
+        pools: (json["pools"] as List).cast<int>(),
+        relationships: E6Relationships.fromJson(json["relationships"]),
         approverId: json["approver_id"] as int?,
         uploaderId: json["uploader_id"] as int,
         description: json["description"] as String,
@@ -266,23 +286,24 @@ final class E6PostResponse implements PostListing {
         hasNotes: json["has_notes"] as bool,
         duration: json["duration"] as num?,
       );
+  @override
   E6PostResponse copyWith({
     int? id,
-    String? createdAt,
-    String? updatedAt,
-    E6FileResponse? file,
-    E6Preview? preview,
-    E6Sample? sample,
-    E6Score? score,
-    E6PostTags? tags,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    e621.File? file,
+    e621.Preview? preview,
+    e621.Sample? sample,
+    e621.Score? score,
+    e621.PostTags? tags,
     List<String>? lockedTags,
     int? changeSeq,
-    E6Flags? flags,
+    e621.PostFlags? flags,
     String? rating,
     int? favCount,
     List<String>? sources,
-    List<String>? pools,
-    E6Relationships? relationships,
+    List<int>? pools,
+    e621.PostRelationships? relationships,
     int? approverId = -1,
     int? uploaderId,
     String? description,
@@ -295,19 +316,19 @@ final class E6PostResponse implements PostListing {
         id: id ?? this.id,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
-        file: file ?? this.file,
-        preview: preview ?? this.preview,
-        sample: sample ?? this.sample,
-        score: score ?? this.score,
-        tags: tags ?? this.tags,
+        file: file as E6FileResponse? ?? this.file,
+        preview: preview as E6Preview? ?? this.preview,
+        sample: sample as E6Sample? ?? this.sample,
+        score: score as E6Score? ?? this.score,
+        tags: tags as E6PostTags? ?? this.tags,
         lockedTags: lockedTags ?? this.lockedTags,
         changeSeq: changeSeq ?? this.changeSeq,
-        flags: flags ?? this.flags,
+        flags: flags as E6Flags? ?? this.flags,
         rating: rating ?? this.rating,
         favCount: favCount ?? this.favCount,
         sources: sources ?? this.sources,
         pools: pools ?? this.pools,
-        relationships: relationships ?? this.relationships,
+        relationships: relationships as E6Relationships? ?? this.relationships,
         approverId: (approverId ?? 1) < 0 ? approverId : this.approverId,
         uploaderId: uploaderId ?? this.uploaderId,
         description: description ?? this.description,
@@ -318,25 +339,19 @@ final class E6PostResponse implements PostListing {
       );
 }
 
-/// TODO: Extend [E6Preview]?
-class E6FileResponse extends E6Preview {
-  /* /// The width of the post.
-  @override
-  final int width;
-
-  /// The height of the post.
-  @override
-  final int height; */
-
+class E6FileResponse extends E6Preview implements e621.File {
   /// The file’s extension.
+  @override
   final String ext;
   @override
   String get extension => ext;
 
   /// The size of the file in bytes.
+  @override
   final int size;
 
   /// The md5 of the file.
+  @override
   final String md5;
 
   /* /// The URL where the file is hosted on E6.
@@ -374,35 +389,13 @@ class E6FileResponse extends E6Preview {
       );
 }
 
-class E6Preview implements IImageInfo {
-  /// The width of the post preview.
-  @override
-  final int width;
-
-  /// The height of the post preview.
-  @override
-  final int height;
-
+class E6Preview extends e621.Preview implements IImageInfo {
   @override
   String get extension => url.substring(url.lastIndexOf(".") + 1);
 
   @override
   bool get isAVideo => extension == "webm" || extension == "mp4";
 
-  /// {@template E6Preview.url}
-  ///
-  /// The URL where the preview file is hosted on E6
-  /// 
-  /// If the post is a video, this is a preview image from the video
-  ///
-  /// If auth is not provided, [this may be null][1]. This is currently replaced
-  /// with an empty string in from json.
-  /// 
-  /// [1]: https://e621.net/help/global_blacklist
-  /// 
-  /// {@endtemplate}
-  @override
-  final String url;
   @override
   bool get hasValidUrl =>
       url.isNotEmpty &&
@@ -412,14 +405,13 @@ class E6Preview implements IImageInfo {
 
   final _address = LateFinal<Uri>();
   @override
-  Uri get address => _address.isAssigned
-          ? _address.$
-          : _address.itemSafe = Uri.parse(url);
+  Uri get address =>
+      _address.isAssigned ? _address.$ : _address.itemSafe = Uri.parse(url);
 
   E6Preview({
-    required this.width,
-    required this.height,
-    required this.url,
+    required super.width,
+    required super.height,
+    required super.url,
   });
   factory E6Preview.fromJson(JsonOut json) => E6Preview(
         width: json["width"],
@@ -428,7 +420,7 @@ class E6Preview implements IImageInfo {
       );
 }
 
-class E6Sample extends E6Preview implements ISampleInfo {
+class E6Sample extends E6Preview implements ISampleInfo, e621.Sample {
   /// If the post has a sample/thumbnail or not. (True/False)
   @override
   final bool has;
@@ -450,20 +442,11 @@ class E6Sample extends E6Preview implements ISampleInfo {
       );
 }
 
-class E6Score {
-  /// The number of times voted up.
-  final int up;
-
-  /// A negative number representing the number of times voted down.
-  final int down;
-
-  /// The total score (up + down).
-  final int total;
-
+class E6Score extends e621.Score {
   E6Score({
-    required this.up,
-    required this.down,
-    required this.total,
+    required super.up,
+    required super.down,
+    required super.total,
   });
   factory E6Score.fromJson(JsonOut json) => E6Score(
         up: json["up"] as int,
@@ -471,6 +454,7 @@ class E6Score {
         total: json["total"] as int,
       );
 
+  @override
   Map<String, dynamic> toJson() => {
         "up": up,
         "down": down,
@@ -478,57 +462,42 @@ class E6Score {
       };
 }
 
-class E6PostTags {
-  /// A JSON array of all the general tags on the post.
-  final List<String> general;
-
-  /// A JSON array of all the species tags on the post.
-  final List<String> species;
-
-  /// A JSON array of all the character tags on the post.
-  final List<String> character;
-
-  /// A JSON array of all the artist tags on the post.
-  final List<String> artist;
-
-  /// A JSON array of all the invalid tags on the post.
-  final List<String> invalid;
-
-  /// A JSON array of all the lore tags on the post.
-  final List<String> lore;
-
-  /// A JSON array of all the meta tags on the post.
-  final List<String> meta;
-
-  // #region Undocumented
-  /// A JSON array of all the copyright tags on the post.
-  final List<String> copyright;
-  // #endregion Undocumented
-
-  List<String> getByCategory(TagCategory c) =>
+class E6PostTags extends e621.PostTags implements ITagData{
+  List<String> get allTags => [
+        ...general,
+        ...species,
+        ...character,
+        ...artist,
+        ...invalid,
+        ...lore,
+        ...meta
+      ];
+  @override
+  List<String> getByCategory(e621.TagCategory c) =>
       getByCategorySafe(c) ??
       (throw ArgumentError.value(c, "c", "Can't be TagCategory._error"));
-  List<String>? getByCategorySafe(TagCategory c) => switch (c) {
-        TagCategory.general => general,
-        TagCategory.species => species,
-        TagCategory.character => character,
-        TagCategory.artist => artist,
-        TagCategory.invalid => invalid,
-        TagCategory.lore => lore,
-        TagCategory.meta => meta,
-        TagCategory.copyright => copyright,
+  @override
+  List<String>? getByCategorySafe(e621.TagCategory c) => switch (c) {
+        e621.TagCategory.general => general,
+        e621.TagCategory.species => species,
+        e621.TagCategory.character => character,
+        e621.TagCategory.artist => artist,
+        e621.TagCategory.invalid => invalid,
+        e621.TagCategory.lore => lore,
+        e621.TagCategory.meta => meta,
+        e621.TagCategory.copyright => copyright,
         _ => null,
       };
 
   E6PostTags({
-    required this.general,
-    required this.species,
-    required this.character,
-    required this.artist,
-    required this.invalid,
-    required this.lore,
-    required this.meta,
-    required this.copyright,
+    required super.general,
+    required super.species,
+    required super.character,
+    required super.artist,
+    required super.invalid,
+    required super.lore,
+    required super.meta,
+    required super.copyright,
   });
   factory E6PostTags.fromJson(JsonOut json) => E6PostTags(
         general: (json["general"] as List).cast<String>(),
@@ -541,6 +510,7 @@ class E6PostTags {
         copyright: (json["copyright"] as List).cast<String>(),
       );
 
+  @override
   Map<String, dynamic> toJson() => {
         "general": List<dynamic>.from(general.map((x) => x)),
         "species": List<dynamic>.from(species.map((x) => x)),
@@ -553,32 +523,14 @@ class E6PostTags {
       };
 }
 
-class E6Flags {
-  /// If the post is pending approval. (True/False)
-  final bool pending;
-
-  /// If the post is flagged for deletion. (True/False)
-  final bool flagged;
-
-  /// If the post has it’s notes locked. (True/False)
-  final bool noteLocked;
-
-  /// If the post’s status has been locked. (True/False)
-  final bool statusLocked;
-
-  /// If the post’s rating has been locked. (True/False)
-  final bool ratingLocked;
-
-  /// If the post has been deleted. (True/False)
-  final bool deleted;
-
+class E6Flags extends e621.PostFlags {
   E6Flags({
-    required this.pending,
-    required this.flagged,
-    required this.noteLocked,
-    required this.statusLocked,
-    required this.ratingLocked,
-    required this.deleted,
+    required super.pending,
+    required super.flagged,
+    required super.noteLocked,
+    required super.statusLocked,
+    required super.ratingLocked,
+    required super.deleted,
   });
   factory E6Flags.fromJson(JsonOut json) => E6Flags(
         pending: json["pending"] as bool,
@@ -707,38 +659,22 @@ class E6FlagsBit implements E6Flags {
   static const int deletedFlag = 32; //int.parse("100000", radix: 2);
 }
 
-class E6Relationships {
-  /// The ID of the post’s parent, if it has one.
-  final int? parentId;
-
-  /// If the post has child posts (True/False)
-  final bool hasChildren;
-
-  /// If the post has active child posts (True/False)
-  ///
-  /// J's Note: I assume "active" means not deleted
-  final bool hasActiveChildren;
-
-  /// A list of child post IDs that are linked to the post, if it has any.
-  final List<String> children;
-
-  bool get hasParent => parentId != null;
-
+class E6Relationships extends e621.PostRelationships {
   E6Relationships({
-    required this.parentId,
-    required this.hasChildren,
-    required this.hasActiveChildren,
-    required this.children,
+    required super.parentId,
+    required super.hasChildren,
+    required super.hasActiveChildren,
+    required super.children,
   });
   factory E6Relationships.fromJson(JsonOut json) => E6Relationships(
         parentId: json["parent_id"] as int?,
         hasChildren: json["has_children"] as bool,
         hasActiveChildren: json["has_active_children"] as bool,
-        children: (json["children"] as List).cast<String>(),
+        children: (json["children"] as List).cast<int>(),
       );
 }
 
-class Alternates {
+/* class Alternates {
   Alternate? the480P;
   Alternate? the720P;
   Alternate? original;
@@ -797,7 +733,7 @@ class Alternate {
         "urls": List<dynamic>.from(urls.map((x) => x)),
         "width": width,
       };
-}
+} */
 
 enum PostDataType {
   png,
