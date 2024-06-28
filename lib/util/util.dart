@@ -103,9 +103,17 @@ extension StringPrint on String {
 }
 T castMap<T>(dynamic e, int i, Iterable<dynamic> l) => e as T;
 final nonNumeric = RegExp(r'[^1234567890]');
-TextInputFormatter numericFormatter = TextInputFormatter.withFunction(
-  (oldValue, newValue) => (RegExp(r'[^1234567890]').hasMatch(newValue.text)) ? oldValue : newValue,
+final TextInputFormatter numericFormatter = TextInputFormatter.withFunction(
+  (oldValue, newValue) => (nonNumeric.hasMatch(newValue.text)) ? oldValue : newValue,
   );
+final TextInputFormatter parsableDecimal = getParsableDecimalFormatter();
+
+TextInputFormatter getParsableDecimalFormatter([bool Function(double)? test]) => TextInputFormatter.withFunction(
+  (oldValue, newValue) {
+    var t = double.tryParse(newValue.text);
+    return t != null && (test?.call(t) ?? true) ? newValue : oldValue;
+  },
+);
 
 TextEditingController? defaultSelection(String? defaultValue) => defaultValue?.isEmpty ?? true
                     ? null
@@ -122,6 +130,27 @@ const event = Event();
 /// Annotation
 class Event {
   const Event();
+}
+
+Size calculateTextSize({
+  required String text,
+  required TextStyle style,
+  BuildContext? context,
+}) {
+  final textScaler = context != null
+      ? MediaQuery.of(context).textScaler
+      : TextScaler.linear(WidgetsBinding.instance.platformDispatcher.textScaleFactor);
+
+  final TextDirection textDirection =
+      context != null ? Directionality.of(context) : TextDirection.ltr;
+
+  final TextPainter textPainter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: textDirection,
+    textScaler: textScaler,
+  )..layout(minWidth: 0, maxWidth: double.infinity);
+
+  return textPainter.size;
 }
 
 mixin Returns<T> {
