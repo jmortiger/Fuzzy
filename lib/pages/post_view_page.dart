@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
 import 'package:http/http.dart';
 import 'package:j_util/e621.dart';
@@ -132,22 +133,28 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
                                           searchId: [e]))
                                       .toResponse()
                                       .then((v) =>
-                                          jsonDecode((v as Response).body)),
+                                          jsonDecode((v as Response).body))
+                                      .then(
+                                        (v) => PoolViewPage(
+                                          pool: PoolModel.fromJson(
+                                            v[0],
+                                          ),
+                                        ),
+                                      )/* .catchError((element) => Scaffold(
+                                          body: Text("$e\n${element}"),
+                                        )) */,
                                   builder: (context, snapshot) {
                                     if (snapshot.hasData) {
                                       try {
-                                        return PostViewPage(
-                                            postListing:
-                                                E6PostResponse.fromJson(
-                                                    snapshot.data));
-                                      } catch (e) {
+                                        return snapshot.data!;
+                                      } catch (e, s) {
                                         return Scaffold(
-                                          body: Text("$e\n${snapshot.data}"),
+                                          body: Text("$e\n$s\n${snapshot.data}\n${snapshot.error}\n${snapshot.stackTrace}"),
                                         );
                                       }
                                     } else if (snapshot.hasError) {
                                       return Scaffold(
-                                        body: Text("${snapshot.error}"),
+                                        body: Text("${snapshot.error}\n${snapshot.stackTrace}"),
                                       );
                                     } else {
                                       return const Scaffold(
@@ -163,7 +170,9 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
                     ),
                   ]),
                 if (e6Post.description.isNotEmpty)
-                  WFoldoutDescription(bodyText: e6Post.description, descriptionTheme: descriptionTheme.$),
+                  WFoldoutDescription(
+                      bodyText: e6Post.description,
+                      descriptionTheme: descriptionTheme.$),
                 ..._buildTagsDisplay(context),
               ],
             ),
@@ -178,8 +187,11 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
                   }
                 },
                 icon: const Icon(Icons.arrow_back),
+                iconSize: 36,
                 style: const ButtonStyle(
                   backgroundColor: WidgetStateColor.transparent,
+                  elevation: WidgetStatePropertyAll(15),
+                  shadowColor: WidgetStatePropertyAll(Colors.black),
                 ),
               ),
             ),
