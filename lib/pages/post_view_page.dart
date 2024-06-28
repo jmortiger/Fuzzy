@@ -1,79 +1,192 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
-import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
+import 'package:http/http.dart';
+import 'package:j_util/e621.dart';
+import 'package:j_util/j_util_full.dart';
+import 'package:j_util/web.dart';
 import 'package:j_util/j_util_widgets.dart';
 import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
-import 'package:j_util/platform_finder.dart';
 
 import '../web/e621/e621.dart';
 
-class PostViewPage extends StatelessWidget {
-  // final List<PostListing>? next20;
-  // final List<PostListing>? prev20;
+abstract interface class IReturnsTags {
+  List<String>? get tagsToAdd;
+}
+
+class PostViewPage extends StatelessWidget implements IReturnsTags {
   final PostListing postListing;
   final void Function(String addition)? onAddToSearch;
+  final void Function()? onPop;
+  @override
+  final List<String>? tagsToAdd;
   const PostViewPage({
     super.key,
     required this.postListing,
     this.onAddToSearch,
-    // this.next20,
-    // this.prev20,
+    this.onPop,
+    this.tagsToAdd,
   });
   E6PostResponse get e6Post => postListing as E6PostResponse;
   PostView get pvs => AppSettings.i!.postView;
+  static final descriptionTheme = LateFinal<TextStyle>();
   @override
   Widget build(BuildContext context) {
-    var IImageInfo(width: w, height: h, url: url) = postListing.file;
-    return NavigatorPopHandler(
-      onPop: () => Navigator.pop(
-        context,
-      ),
-      child: Scaffold(
-        // appBar: AppBar(title: const Text("Fuzzy")),
-        body: SafeArea(
-          child: Stack(
-            children: [
-              ListView(
-                // padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
-                children: [
-                  Container(
-                    constraints: BoxConstraints(
-                      maxWidth: pvs.allowOverflow
-                          ? MediaQuery.of(context).size.width
-                          : (MediaQuery.of(context).size.height / h) *
-                              w.toDouble(),
-                      maxHeight: pvs.allowOverflow
-                          ? (MediaQuery.of(context).size.width / w) *
-                              h.toDouble()
-                          : MediaQuery.of(context).size.height,
-                    ),
-                    child: AspectRatio(
-                      aspectRatio: w / h,
-                      child: _buildMainContent(url, w, h),
-                    ),
+    descriptionTheme.itemSafe ??= const DefaultTextStyle.fallback()
+        .style
+        .copyWith(
+          fontWeight: FontWeight.bold,
+          fontSize:
+              (const DefaultTextStyle.fallback().style.fontSize ?? 12) * 1.5,
+        );
+    var horizontalPixels = MediaQuery.of(context).size.width *
+        MediaQuery.of(context).devicePixelRatio;
+    var IImageInfo(width: w, height: h, url: url) = postListing.sample;
+    if (postListing.sample.width < horizontalPixels ||
+        pvs.forceHighQualityImage) {
+      IImageInfo(width: w, height: h, url: url) = postListing.file;
+    }
+    return Scaffold(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            ListView(
+              // padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
+              children: [
+                Container(
+                  constraints: BoxConstraints(
+                    maxWidth: pvs.allowOverflow
+                        ? MediaQuery.of(context).size.width
+                        : (MediaQuery.of(context).size.height / h) *
+                            w.toDouble(),
+                    maxHeight: pvs.allowOverflow
+                        ? (MediaQuery.of(context).size.width / w) * h.toDouble()
+                        : MediaQuery.of(context).size.height,
                   ),
-                  SelectableText(e6Post.description),
-                  ..._buildTagsDisplay(context),
-                ],
-              ),
-              Align(
-                alignment: AlignmentDirectional.topStart,
-                child: IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back),
-                  style: const ButtonStyle(
-                    backgroundColor: WidgetStateColor.transparent,
+                  child: AspectRatio(
+                    aspectRatio: w / h,
+                    child: _buildMainContent(url, w, h),
                   ),
                 ),
+                if (e6Post.relationships.hasActiveChildren)
+                  Row(children: [
+                    const Text("Children: "),
+                    ...e6Post.relationships.children.map(
+                      (e) => TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => FutureBuilder(
+                                  future: E621
+                                      .sendRequest(Api.initSearchPostRequest(e))
+                                      .toResponse()
+                                      .then((v) =>
+                                          jsonDecode((v as Response).body)),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.hasData) {
+                                      try {
+                                        return PostViewPage(
+                                            postListing:
+                                                E6PostResponse.fromJson(
+                                                    snapshot.data));
+                                      } catch (e) {
+                                        return Scaffold(
+                                          body: Text("$e\n${snapshot.data}"),
+                                        );
+                                      }
+                                    } else if (snapshot.hasError) {
+                                      return Scaffold(
+                                        body: Text("${snapshot.error}"),
+                                      );
+                                    } else {
+                                      return const Scaffold(
+                                        body: CircularProgressIndicator(),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                          child: Text(e.toString())),
+                    ),
+                  ]),
+                if (e6Post.pools.firstOrNull != null)
+                  // Text("Pools: ${e6Post.pools.fold("", (acc, e) => "$acc $e")}"),
+                  Row(children: [
+                    const Text("Pools: "),
+                    ...e6Post.pools.map(
+                      (e) => TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => FutureBuilder(
+                                  future: E621
+                                      .sendRequest(Api.initSearchPoolsRequest(
+                                          searchId: [e]))
+                                      .toResponse()
+                                      .then((v) =>
+                                          jsonDecode((v as Response).body)),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.hasData) {
+                                      try {
+                                        return PostViewPage(
+                                            postListing:
+                                                E6PostResponse.fromJson(
+                                                    snapshot.data));
+                                      } catch (e) {
+                                        return Scaffold(
+                                          body: Text("$e\n${snapshot.data}"),
+                                        );
+                                      }
+                                    } else if (snapshot.hasError) {
+                                      return Scaffold(
+                                        body: Text("${snapshot.error}"),
+                                      );
+                                    } else {
+                                      return const Scaffold(
+                                        body: CircularProgressIndicator(),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                          child: Text(e.toString())),
+                    ),
+                  ]),
+                if (e6Post.description.isNotEmpty)
+                  WFoldoutDescription(bodyText: e6Post.description, descriptionTheme: descriptionTheme.$),
+                ..._buildTagsDisplay(context),
+              ],
+            ),
+            Align(
+              alignment: AlignmentDirectional.topStart,
+              child: IconButton(
+                onPressed: () {
+                  if (onPop != null) {
+                    onPop!();
+                  } else {
+                    Navigator.pop(context, this);
+                  }
+                },
+                icon: const Icon(Icons.arrow_back),
+                style: const ButtonStyle(
+                  backgroundColor: WidgetStateColor.transparent,
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-        floatingActionButton: _buildFab(context),
       ),
+      floatingActionButton: _buildFab(context),
     );
   }
 
@@ -253,57 +366,58 @@ class PostViewPage extends StatelessWidget {
               );
   }
 
+  static final headerStyle = LateFinal<TextStyle>();
   @widgetFactory
   Iterable<Widget> _buildTagsDisplay(BuildContext context) {
-    final headerStyle = const DefaultTextStyle.fallback().style.copyWith(
-          fontWeight: FontWeight.bold,
-          color: Colors.amber,
-          decoration: TextDecoration.underline,
-          decorationStyle: TextDecorationStyle.solid,
-          fontSize:
-              (const DefaultTextStyle.fallback().style.fontSize ?? 12) * 1.5,
-        );
+    // headerStyle.itemSafe ??= const DefaultTextStyle.fallback().style.copyWith(
+    headerStyle.itemSafe ??= descriptionTheme.$.copyWith(
+      fontWeight: FontWeight.bold,
+      color: Colors.amber,
+      decoration: TextDecoration.underline,
+      decorationStyle: TextDecorationStyle.solid,
+      fontSize: 12 * 1.5,
+    );
     var tagOrder = pvs.tagOrder;
     return [
       ...?_buildTagDisplay(
           context,
-          headerStyle.copyWith(
+          headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(0)],
           ),
           tagOrder.elementAtOrNull(0)),
       ...?_buildTagDisplay(
           context,
-          headerStyle.copyWith(
+          headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(1)],
           ),
           tagOrder.elementAtOrNull(1)),
       ...?_buildTagDisplay(
           context,
-          headerStyle.copyWith(
+          headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(2)],
           ),
           tagOrder.elementAtOrNull(2)),
       ...?_buildTagDisplay(
           context,
-          headerStyle.copyWith(
+          headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(3)],
           ),
           tagOrder.elementAtOrNull(3)),
       ...?_buildTagDisplay(
           context,
-          headerStyle.copyWith(
+          headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(4)],
           ),
           tagOrder.elementAtOrNull(4)),
       ...?_buildTagDisplay(
           context,
-          headerStyle.copyWith(
+          headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(5)],
           ),
           tagOrder.elementAtOrNull(5)),
       ...?_buildTagDisplay(
           context,
-          headerStyle.copyWith(
+          headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(6)],
           ),
           tagOrder.elementAtOrNull(6)),
@@ -339,7 +453,10 @@ class PostViewPage extends StatelessWidget {
           widthFactor: 1,
           alignment: AlignmentDirectional.centerStart,
           child: TextButton(
-            onPressed: () => onAddToSearch?.call(e),
+            onPressed: () {
+              onAddToSearch?.call(e);
+              tagsToAdd?.add(e);
+            },
             child: SelectableText(e),
           ),
         ));
@@ -369,31 +486,57 @@ class PostViewPage extends StatelessWidget {
       },
     );
   }
+}
 
-  // @widgetFactory
-  // HtmlElementView _oldImg(String url, int w, int h) {
-  //   return HtmlElementView.fromTagName(
-  //     tagName: "img",
-  //     onElementCreated: (element) {
-  //       // https://api.flutter.dev/flutter/dart-html/ImageElement-class.html
-  //       var e = element as dynamic; //ImageElement
-  //       e.attributes["src"] = url;
-  //       // https://api.flutter.dev/flutter/dart-html/CssStyleDeclaration-class.html
-  //       if (w > h) {
-  //         e.style.width = "100%";
-  //         e.style.height = "auto";
-  //       } else if (w == h) {
-  //         e.style.width = "100%";
-  //         e.style.height = "100%";
-  //       } else {
-  //         e.style.width = "auto";
-  //         e.style.height = "100%";
-  //       }
-  //       // e.style.maxWidth = "100%";
-  //       // e.style.maxHeight = "100%";
-  //       e.style.objectFit = "contain";
-  //       // e.style.aspectRatio = "${w / h}";
-  //     },
-  //   );
-  // }
+class WFoldoutDescription extends StatefulWidget {
+  final bool startExpanded;
+
+  const WFoldoutDescription({
+    super.key,
+    required this.bodyText,
+    required this.descriptionTheme,
+    this.startExpanded = false,
+  });
+
+  final String bodyText;
+  final TextStyle descriptionTheme;
+
+  @override
+  State<WFoldoutDescription> createState() => _WFoldoutDescriptionState();
+}
+
+class _WFoldoutDescriptionState extends State<WFoldoutDescription> {
+  bool isExpanded = false;
+  @override
+  void initState() {
+    super.initState();
+    isExpanded = widget.startExpanded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ExpansionPanelList(
+      expansionCallback: (panelIndex, isExpanded) => setState(() {
+        this.isExpanded = isExpanded;
+      }),
+      children: [
+        ExpansionPanel(
+          body: SelectableText(widget.bodyText),
+          isExpanded: isExpanded,
+          canTapOnHeader: true,
+          headerBuilder: (
+            BuildContext context,
+            bool isExpanded,
+          ) {
+            return ListTile(
+              title: Text(
+                "Description",
+                style: widget.descriptionTheme,
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
 }

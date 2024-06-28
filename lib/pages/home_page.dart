@@ -2,21 +2,20 @@
 
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
-import 'package:fuzzy/pages/saved_searches_page.dart';
 import 'package:fuzzy/models/search_view_model.dart';
-import 'package:http/http.dart' as http;
+import 'package:fuzzy/pages/saved_searches_page.dart';
+import 'package:fuzzy/util/util.dart' as util;
+import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
-import 'package:fuzzy/util/util.dart' as util;
+import 'package:fuzzy/widgets/w_search_result_page_navigation.dart';
+import 'package:http/http.dart' as http;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
-import 'package:path_provider/path_provider.dart' as path;
-
-import 'package:fuzzy/web/e621/e621.dart';
-import 'package:fuzzy/widgets/w_search_result_page_navigation.dart';
 
 import '../widgets/w_home_end_drawer.dart';
 
@@ -30,19 +29,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   @override
   void initState() {
-    try{path.getApplicationCacheDirectory().then((v) => print("getApplicationCacheDirectory: ${v.absolute.path}"));}catch (e){}
-    try{path.getApplicationDocumentsDirectory().then((v) => print("getApplicationDocumentsDirectory: ${v.absolute.path}"));}catch (e){}
-    try{path.getApplicationSupportDirectory().then((v) => print("getApplicationSupportDirectory: ${v.absolute.path}"));}catch (e){}
-    try{path.getDownloadsDirectory().then((v) => print("getDownloadsDirectory: ${v?.absolute.path}"));}catch (e){}
-    try{path.getExternalCacheDirectories().then((v) => print("getExternalCacheDirectories: ${v?.fold("", (previousValue, element) => "$previousValue${element.absolute.path}")}"));}catch (e){}
-    try{path.getTemporaryDirectory().then((v) => print("getTemporaryDirectory: ${v.absolute.path}"));}catch (e){}
-    path.getApplicationCacheDirectory().then((v) => print("getApplicationCacheDirectory: ${v.absolute.path}"));
-    path.getApplicationCacheDirectory().then((v) => print("getApplicationCacheDirectory: ${v.absolute.path}"));
     onSelectionCleared.subscribe(() {
       setState(() => selectedIndices.clear());
     });
-    if (!E621AccessData.devData.isAssigned) {
-      E621AccessData.devData.getItem();
+    if (!E621AccessData.devAccessData.isAssigned) {
+      E621AccessData.devAccessData.getItem();
     }
     super.initState();
   }
@@ -64,7 +55,7 @@ class _HomePageState extends State<HomePage> {
     // workThroughSnackbarQueue();
     return Scaffold(
       appBar: AppBar(
-        title: _buildSearchBar(context), //const Text("Fuzzy"),
+        title: _buildSearchBar(context),
         leading: IconButton(
           icon: const Icon(Icons.menu),
           onPressed: () {
@@ -112,7 +103,7 @@ class _HomePageState extends State<HomePage> {
               ),
               ActionButton(
                 icon: const Icon(Icons.add),
-                tooltip: "Add selected to pool",
+                tooltip: "Add selected to set",
                 onPressed: () {
                   print("To Be Implemented");
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -198,7 +189,7 @@ class _HomePageState extends State<HomePage> {
               ),
               ActionButton(
                 icon: const Icon(Icons.delete),
-                tooltip: "Remove selected from pool",
+                tooltip: "Remove selected from set",
                 onPressed: () {
                   print("To Be Implemented");
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -342,8 +333,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<SearchResultArgs>? get pr => svm.pr;
-  set pr(Future<SearchResultArgs>? value) =>
-      svm.pr = value;
+  set pr(Future<SearchResultArgs>? value) => svm.pr = value;
   int? currentPostCollectionExpectedSize;
   // #endregion Only Needed in search view
 
@@ -378,6 +368,9 @@ class _HomePageState extends State<HomePage> {
               // print("371: pr: $pr");
               // pr = null;
             }
+            // if (posts!.posts.firstOrNull == null) {
+            //   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No Results. Did you mean to login?")));
+            // }
             return Expanded(
               child: WPostSearchResults(
                 key: ObjectKey(posts!),
@@ -605,10 +598,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   ({String? username, String? apiKey}) devGetAuth() =>
-      svm.sendAuthHeaders && E621AccessData.devData.isAssigned
+      svm.sendAuthHeaders && E621AccessData.devAccessData.isAssigned
           ? (
-              username: E621AccessData.devData.item.username,
-              apiKey: E621AccessData.devData.item.apiKey,
+              username: E621AccessData.devAccessData.item.username,
+              apiKey: E621AccessData.devAccessData.item.apiKey,
             )
           : (username: null, apiKey: null);
 
@@ -641,20 +634,19 @@ class _HomePageState extends State<HomePage> {
     int? pageNumber,
   }) {
     bool isNewRequest = false;
-    if (isNewRequest = (priorSearchText != tags)) {
-      print("Request For New Terms: $priorSearchText -> $tags ("
-          "pageModifier = $pageModifier, "
+    var out = "pageModifier = $pageModifier, "
           "postId = $postId, "
-          "pageNumber = $pageNumber)");
+          "pageNumber = $pageNumber,"
+          "projectedTrueTags = ${E621.fillTagTemplate(tags)})";
+    if (isNewRequest = (priorSearchText != tags)) {
+      out = "Request For New Terms: $priorSearchText -> $tags ($out";
       lastPostIdCached = null;
       firstPostIdCached = null;
       priorSearchText = tags;
     } else {
-      print("Request For Same Terms: $priorSearchText ("
-          "pageModifier = $pageModifier, "
-          "postId = $postId, "
-          "pageNumber = $pageNumber)");
+      out = "Request For Same Terms: $priorSearchText ($out";
     }
+    print(out);
     hasNextPageCached = null;
     lastPostOnPageIdCached = null;
     var (:username, :apiKey) = devGetAuth();
@@ -673,7 +665,12 @@ class _HomePageState extends State<HomePage> {
         pr = null;
         var json = jsonDecode(v.responseBody);
         if (json["success"] == false) {
-          print(json);
+          print("_sendSearchAndUpdateState: Response failed: $json");
+          if (json["reason"].contains("Access Denied")) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text("Access Denied. Did you mean to login?"),
+            ));
+          }
           posts = E6PostsSync(posts: []);
         } else {
           posts = svm.lazyLoad
@@ -700,35 +697,6 @@ class _HomePageState extends State<HomePage> {
       print(err);
       print(st);
     });
-    /* pr = initSearchRequest(
-      tags: svm.forceSafe ? "$tags rating:safe" : tags,
-      limit: limit,
-      pageModifier: pageModifier,
-      pageNumber: pageNumber,
-      postId: postId,
-    ).send();
-    pr!.then((value) {
-      value.stream.bytesToString().then((v) {
-        setState(() {
-          pr = null;
-          posts = svm.lazyLoad
-              ? E6PostsLazy.fromJson(json.decode(v) as Map<String, dynamic>)
-              : E6PostsSync.fromJson(json.decode(v) as Map<String, dynamic>);
-          if (posts.runtimeType == E6PostsLazy) {
-            (posts as E6PostsLazy).onFullyIterated.subscribe((a) =>
-                    getHasNextPage(
-                        tags: priorSearchText, lastPostId: a.posts.last.id)
-                );
-          } else {
-            getHasNextPage(
-                    tags: priorSearchText,
-                    lastPostId: (posts as E6PostsSync).posts.last.id)
-                ;
-          }
-          if (isNewRequest) firstPostIdCached = posts?.tryGet(0)?.id;
-        });
-      });
-    }); */
   }
   // #endregion From WSearchView
 }

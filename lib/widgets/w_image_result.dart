@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
+import 'package:fuzzy/pages/post_swipe_page.dart';
+import 'package:j_util/j_util_full.dart';
 import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/pages/post_view_page.dart';
@@ -9,6 +12,7 @@ import 'package:provider/provider.dart';
 import '../web/models/image_listing.dart';
 
 BoxFit imageFit = BoxFit.contain;
+const bool allowPostViewNavigation = true;
 
 // TODO: Fade in images https://docs.flutter.dev/cookbook/images/fading-in-images
 class WImageResult extends StatelessWidget {
@@ -21,18 +25,18 @@ class WImageResult extends StatelessWidget {
 
   final void Function(int index)? onSelectionToggle;
 
-  String get _buildTooltipString =>
-      /* $searchText */"[$index]: ${(imageListing as E6PostResponse).id.toString()}";
-
   const WImageResult({
     super.key,
     required this.imageListing,
-    this.index = -1,
+    required this.index,
     // this.searchText = "",
     this.onSelectionToggle,
     this.isSelected = false,
     this.areAnySelected = false,
   });
+
+  String get _buildTooltipString =>
+      /* $searchText */ "[$index]: ${(imageListing as E6PostResponse).id.toString()}";
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +51,7 @@ class WImageResult extends StatelessWidget {
     } else {
       IImageInfo(width: w, height: h, url: url) = imageListing.file;
     }
-    print(/* $searchText */"[$index]: w: $w, "
+    print(/* $searchText */ "[$index]: w: $w, "
         "h: $h, "
         "sampleWidth: ${imageListing.sample.width}, "
         "fileWidth: ${imageListing.file.width}, "
@@ -64,6 +68,7 @@ class WImageResult extends StatelessWidget {
     );
   }
 
+  @widgetFactory
   Widget _buildCheckmark(BuildContext context) {
     return IgnorePointer(
       ignoring: true,
@@ -81,7 +86,17 @@ class WImageResult extends StatelessWidget {
     );
   }
 
+  SearchResults sr(BuildContext context) =>
+      Provider.of<SearchResults>(context, listen: false);
+
+  SearchResults srl(BuildContext context) =>
+      Provider.of<SearchResults>(context);
+
+  // bool returnedFromPosts = false;
+
   Widget _buildInputDetector(BuildContext context, int w, int h, String url) {
+    // SearchResults sr() => Provider.of<SearchResults>(context, listen: false);
+    SearchResults srl = Provider.of<SearchResults>(context);
     return Positioned.fill(
       child: Material(
         color: Colors.transparent,
@@ -91,36 +106,77 @@ class WImageResult extends StatelessWidget {
           // },
           onLongPress: () {
             print("OnLongPress");
-            /* if (!isSelected)  */ onSelectionToggle?.call(index);
+            onSelectionToggle?.call(index);
+            srl.toggleSelection(
+              index: index,
+              postId: imageListing.id,
+            );
           },
           onDoubleTap: () {
             print("onDoubleTap");
-            /* if (!isSelected)  */onSelectionToggle?.call(index);
+            onSelectionToggle?.call(index);
+            srl.toggleSelection(
+              index: index,
+              postId: imageListing.id,
+            );
           },
           onTap: () {
             print("OnTap");
-            if (isSelected || areAnySelected) {
+            if ((isSelected || areAnySelected) ||
+                (srl.getIsSelected(index) || srl.areAnySelected)) {
               onSelectionToggle?.call(index);
+              srl.toggleSelection(
+                index: index,
+                postId: imageListing.id,
+              );
             } else {
-              Navigator.push(
+              onAddToSearch(String addition) {
+                print("WImageResult: onAddToSearch:");
+                print("Before: ${Provider.of<SearchViewModel>(
+                  context,
+                  listen: false,
+                ).searchText}");
+                Provider.of<SearchViewModel>(
+                  context,
+                  listen: false,
+                ).fillTextBarWithSearchString = true;
+                print(
+                    "After: ${Provider.of<SearchViewModel>(context, listen: false).searchText += " $addition"}");
+              }
+
+              Navigator.push<IReturnsTags>(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => PostViewPage(
-                      postListing: imageListing,
-                      onAddToSearch: (addition) =>
-                          Provider.of<SearchViewModel>(context, listen: false)
-                              .searchText += " $addition",
-                    ),
-                  ));
+                    builder: (_) => allowPostViewNavigation
+                        ? PostSwipePage(
+                            initialIndex: index,
+                            posts:
+                                Provider.of<SearchCache>(context, listen: false)
+                                    .posts!,
+                            onAddToSearch: onAddToSearch,
+                            tagsToAdd: [],
+                          )
+                        : PostViewPage(
+                            postListing: imageListing,
+                            onAddToSearch: onAddToSearch,
+                            tagsToAdd: [],
+                          ),
+                  )).then<void>((v) {
+                if (v?.tagsToAdd?.firstOrNull != null) {
+                  Provider.of<SearchViewModel>(
+                    context,
+                    listen: false,
+                  ).searchText += v!.tagsToAdd!.foldToString();
+                }
+              });
             }
           },
-          // TODO: Fix vertical image offset
-          // child: _buildPane(w, h, url),
         ),
       ),
     );
   }
 
+  @widgetFactory
   Center _buildPane(int w, int h, String url) {
     if (url == "") {
       print("NO URL");
@@ -262,6 +318,12 @@ class PostInfoPane extends StatelessWidget {
                       style: const TextStyle(
                         color: Colors.amber,
                         decoration: TextDecoration.underline,
+                      )),
+                if (e6PostSafe?.isFavorited ?? false)
+                  const TextSpan(
+                      text: " ♥",
+                      style: TextStyle(
+                        color: Colors.red,
                       )),
               ],
             ),

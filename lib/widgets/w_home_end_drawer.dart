@@ -145,7 +145,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             onTap: () {
               print("_WHomeEndDrawerState.build: Search Set activated");
               Navigator.pop(context);
-              showDialog<e621.Set>(
+              showDialog<e621.PostSet>(
                 context: context,
                 builder: (context) {
                   return AlertDialog(
@@ -156,7 +156,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                       initialSearchOrder: e621.SetOrder.updatedAt,
                       initialSearchName: null,
                       initialSearchShortname: null,
-                      onSelected: (e621.Set set) => Navigator.pop(context, set),
+                      onSelected: (e621.PostSet set) => Navigator.pop(context, set),
                     ),
                     // scrollable: true,
                   );

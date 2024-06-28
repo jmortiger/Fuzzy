@@ -46,7 +46,8 @@ class _WSearchPoolState extends State<WSearchPool> {
   List<int>? get searchId => p.searchId;
   set searchId(List<int>? value) => p.searchId = value;
   String? get searchDescriptionMatches => p.searchDescriptionMatches;
-  set searchDescriptionMatches(String? value) => p.searchDescriptionMatches = value;
+  set searchDescriptionMatches(String? value) =>
+      p.searchDescriptionMatches = value;
   String? get searchCreatorName => p.searchCreatorName;
   set searchCreatorName(String? value) => p.searchCreatorName = value;
   int? get searchCreatorId => p.searchCreatorId;
@@ -83,7 +84,7 @@ class _WSearchPoolState extends State<WSearchPool> {
       searchCategory: searchCategory,
       searchOrder: searchOrder,
       limit: limit,
-      credentials: E621AccessData.devData.$.cred,
+      credentials: E621AccessData.devAccessData.$.cred,
     ).send().then((v) async {
       var t = await ByteStream(v.stream.asBroadcastStream()).bytesToString();
       var step = jsonDecode(t);
@@ -181,7 +182,8 @@ class WPoolTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       title: Text("${pool.id}: ${pool.name}"),
-      subtitle: Text("Posts: ${pool.postCount}, Last Updated: ${pool.updatedAt}"),
+      subtitle:
+          Text("Posts: ${pool.postCount}, Last Updated: ${pool.updatedAt}"),
       onTap: () => onSelected(pool),
     );
   }
@@ -189,97 +191,94 @@ class WPoolTile extends StatelessWidget {
 
 class PoolSearchParameterModel extends ChangeNotifier {
   String? _searchNameMatches;
-
   String? get searchNameMatches => _searchNameMatches;
-
   set searchNameMatches(String? value) {
     _searchNameMatches = value;
     notifyListeners();
   }
 
   List<int>? _searchId;
-
   List<int>? get searchId => _searchId;
-
   set searchId(List<int>? value) {
     _searchId = value;
     notifyListeners();
   }
+
   String? _searchDescriptionMatches;
-
   String? get searchDescriptionMatches => _searchDescriptionMatches;
-
   set searchDescriptionMatches(String? value) {
     _searchDescriptionMatches = value;
     notifyListeners();
   }
+
   String? _searchCreatorName;
-
   String? get searchCreatorName => _searchCreatorName;
-
   set searchCreatorName(String? value) {
     _searchCreatorName = value;
     notifyListeners();
   }
+
   int? _searchCreatorId;
-
   int? get searchCreatorId => _searchCreatorId;
-
   set searchCreatorId(int? value) {
     _searchCreatorId = value;
     notifyListeners();
   }
+
   bool? _searchIsActive;
-
   bool? get searchIsActive => _searchIsActive;
-
   set searchIsActive(bool? value) {
     _searchIsActive = value;
     notifyListeners();
   }
+
   e621.PoolCategory? _searchCategory;
-
   e621.PoolCategory? get searchCategory => _searchCategory;
-
   set searchCategory(e621.PoolCategory? value) {
     _searchCategory = value;
     notifyListeners();
   }
+
   e621.PoolOrder? _searchOrder;
-
   e621.PoolOrder? get searchOrder => _searchOrder;
-
   set searchOrder(e621.PoolOrder? value) {
     _searchOrder = value;
     notifyListeners();
   }
+
   int? _limit;
-
   int? get limit => _limit;
-
   set limit(int? value) {
     _limit = value;
     notifyListeners();
   }
+
   String? _page;
-
   String? get page => _page;
-
   set page(String? value) {
     _page = value;
     notifyListeners();
   }
 
   PoolSearchParameterModel({
-    /* required  */String? searchNameMatches,
-    /* required  */List<int>? searchId,
-    /* required  */String? searchDescriptionMatches,
-    /* required  */String? searchCreatorName,
-    /* required  */int? searchCreatorId,
-    /* required  */bool? searchIsActive,
-    /* required  */e621.PoolCategory? searchCategory,
-    /* required  */e621.PoolOrder? searchOrder,
-    /* required  */int? limit,
-    /* required  */String? page,
-  }) : _page = page, _limit = limit, _searchOrder = searchOrder, _searchCategory = searchCategory, _searchIsActive = searchIsActive, _searchCreatorId = searchCreatorId, _searchCreatorName = searchCreatorName, _searchDescriptionMatches = searchDescriptionMatches, _searchNameMatches = searchNameMatches, _searchId = searchId;
+    String? searchNameMatches,
+    List<int>? searchId,
+    String? searchDescriptionMatches,
+    String? searchCreatorName,
+    int? searchCreatorId,
+    bool? searchIsActive,
+    e621.PoolCategory? searchCategory,
+    e621.PoolOrder? searchOrder,
+    int? limit,
+    String? page,
+  })  : _page = page,
+        _limit = limit,
+        _searchOrder = searchOrder,
+        _searchCategory = searchCategory,
+        _searchIsActive = searchIsActive,
+        _searchCreatorId = searchCreatorId,
+        _searchCreatorName = searchCreatorName,
+        _searchDescriptionMatches = searchDescriptionMatches,
+        _searchNameMatches = searchNameMatches,
+        _searchId = searchId;
 }

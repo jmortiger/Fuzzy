@@ -15,7 +15,7 @@ class WSearchSet extends StatefulWidget {
   final int? initialLimit;
   final String? initialPage;
 
-  final void Function(e621.Set set) onSelected;
+  final void Function(e621.PostSet set) onSelected;
   const WSearchSet({
     super.key,
     required this.onSelected,
@@ -49,8 +49,8 @@ class _WSearchSetState extends State<WSearchSet> {
   String? get page => p.page;
   set page(String? value) => p.page = value;
 
-  Future<List<e621.Set>>? loadingSets;
-  List<e621.Set>? sets;
+  Future<List<e621.PostSet>>? loadingSets;
+  List<e621.PostSet>? sets;
   @override
   void initState() {
     super.initState();
@@ -67,16 +67,16 @@ class _WSearchSetState extends State<WSearchSet> {
       searchOrder: widget.initialSearchOrder,
       limit: widget.initialLimit,
       page: widget.initialPage,
-      credentials: E621AccessData.devData.$.cred,
+      credentials: E621AccessData.devAccessData.$.cred,
     ).send().then((v) async {
       var t = await ByteStream(v.stream.asBroadcastStream()).bytesToString();
       var step = jsonDecode(t);
       try {
         return (step as List).mapAsList(
-          (e, index, list) => e621.Set.fromJson(e),
+          (e, index, list) => e621.PostSet.fromJson(e),
         );
       } catch (e) {
-        return <e621.Set>[];
+        return <e621.PostSet>[];
       }
     })
       ..then((v) {
@@ -303,7 +303,7 @@ class _WSearchSetState extends State<WSearchSet> {
     );
   }
 
-  Future<List<e621.Set>> sendSearch() =>
+  Future<List<e621.PostSet>> sendSearch() =>
       loadingSets = e621.Api.initSearchSetsRequest(
         searchName: searchName,
         searchShortname: searchShortname,
@@ -326,7 +326,7 @@ class _WSearchSetState extends State<WSearchSet> {
         // );
         loadingSets = null;
         return sets = (jsonDecode(t) as List).mapAsList(
-          (e, index, list) => e621.Set.fromJson(e),
+          (e, index, list) => e621.PostSet.fromJson(e),
         );
       }).onError(onErrorPrintAndRethrow);
 }
@@ -338,9 +338,9 @@ class WSetTile extends StatelessWidget {
     required this.onSelected,
   });
 
-  final e621.Set set;
+  final e621.PostSet set;
 
-  final void Function(e621.Set set) onSelected;
+  final void Function(e621.PostSet set) onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -368,54 +368,42 @@ class SetSearchParameterModel extends ChangeNotifier {
         _page = page;
 
   String? _searchName;
-
   String? get searchName => _searchName;
-
   set searchName(String? value) {
     _searchName = value;
     notifyListeners();
   }
 
   String? _searchShortname;
-
   String? get searchShortname => _searchShortname;
-
   set searchShortname(String? value) {
     _searchShortname = value;
     notifyListeners();
   }
 
   String? _searchCreatorName;
-
   String? get searchCreatorName => _searchCreatorName;
-
   set searchCreatorName(String? value) {
     _searchCreatorName = value;
     notifyListeners();
   }
 
   e621.SetOrder? _searchOrder;
-
   e621.SetOrder? get searchOrder => _searchOrder;
-
   set searchOrder(e621.SetOrder? value) {
     _searchOrder = value;
     notifyListeners();
   }
 
   int? _limit;
-
   int? get limit => _limit;
-
   set limit(int? value) {
     _limit = value;
     notifyListeners();
   }
 
   String? _page;
-
   String? get page => _page;
-
   set page(String? value) {
     _page = value;
     notifyListeners();

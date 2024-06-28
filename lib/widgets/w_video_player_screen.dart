@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/util/util.dart';
-import 'package:j_util/events.dart';
+import 'package:j_util/j_util_full.dart';
 import 'package:video_player/video_player.dart';
 
 class WVideoPlayerScreen extends StatefulWidget {
@@ -19,16 +19,26 @@ class WVideoPlayerScreen extends StatefulWidget {
 
 class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
     with TickerProviderStateMixin {
-  static const fadeInTime = Duration(seconds: 2);
+  static const fadeInTime = Duration(milliseconds: 750);
   late AnimationController _fadeInController;
   late VideoPlayerController _controller;
   late Future<void> _initializeVideoPlayerFuture;
 
   double volumeLastNonZeroValue = 1;
+  bool showControlsRequest = false;
+  bool isHoveringInRootInkWell = false;
+  bool isHoveringInControlsInkWell = false;
+  // late Animation<Color?> colorAnim;
   double get volume => _controller.value.volume;
   set volume(double v) => setState(() {
         _controller.setVolume(v);
       });
+
+  bool get isVolumeOn => volume > 0;
+  bool get showControls =>
+      showControlsRequest ||
+      isHoveringInRootInkWell ||
+      isHoveringInControlsInkWell;
   double setVolume([double level = 1]) {
     if (level >= 0 && level <= 1) {
       setState(() {
@@ -47,16 +57,6 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
     });
     return isVolumeOn;
   }
-
-  bool get isVolumeOn => volume > 0;
-  bool get showControls =>
-      showControlsRequest ||
-      isHoveringInRootInkWell ||
-      isHoveringInControlsInkWell;
-  bool showControlsRequest = false;
-  bool isHoveringInRootInkWell = false;
-  bool isHoveringInControlsInkWell = false;
-
   @override
   void initState() {
     super.initState();
@@ -64,10 +64,11 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
       vsync: this,
       duration: fadeInTime,
     );
-
-    // Create and store the VideoPlayerController. The VideoPlayerController
-    // offers several different constructors to play videos from assets, files,
-    // or the internet.
+    // var colorTween = ColorTween(
+    //     begin: const Color.fromRGBO(0, 0, 0, 0),
+    //     end: const Color.fromRGBO(0, 0, 0, 1));
+    // var middleMan = Tween<double>(begin: 1,end:  0);
+    // colorAnim = colorTween.animate(_fadeInController.drive(middleMan));
     _controller = VideoPlayerController.networkUrl(
       widget.resourceUri,
       // httpHeaders: ,
@@ -82,6 +83,7 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
     }
     volume = PostView.i.startVideoMuted ? 0 : 1;
     _controller.setVolume(volume);
+    _controller.addListener(listener);
   }
 
   void togglePlayState() {
@@ -102,6 +104,15 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
     _controller.dispose();
     _fadeInController.dispose();
     super.dispose();
+  }
+
+  bool isBuffering = false;
+  void listener() {
+    if (_controller.value.isBuffering != isBuffering) {
+      setState(() {
+        isBuffering = _controller.value.isBuffering;
+      });
+    }
   }
 
   @override
@@ -169,21 +180,11 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
                         ),
                       ),
                     ),
-                  // Positioned.fill(
-                  //   child: InkWell(
-                  //     onHover: (value) => setState(() {
-                  //       print("HigherInkWell onHover");
-                  //       showControls = value;
-                  //     }),
-                  //   ),
-                  // ),
                 ],
               ),
             ),
           );
         } else {
-          // If the VideoPlayerController is still initializing, show a
-          // loading spinner.
           return const Center(
             child: CircularProgressIndicator(),
           );
@@ -199,26 +200,36 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
       start: 0,
       end: 0,
       textDirection: TextDirection.ltr,
-      child: InkWell(
-        hoverColor: Colors.black,
-        onHover: (value) => setState(() {
-          isHoveringInControlsInkWell = value;
-          print("isHoveringInControlsInkWell: $value");
-        }),
-        child: Row(
+      child: Container(
+        color: const Color.fromRGBO(0, 0, 0, .5),//colorAnim.value,
+        child: InkWell(
+          // hoverColor: colorAnim.value,
+          onHover: (value) => setState(() {
+            isHoveringInControlsInkWell = value;
+            print("isHoveringInControlsInkWell: $value");
+          }),
+          child: _buildOldControls(),
+        ),
+      ),
+    );
+  }
+
+  Row _buildOldControls() {
+    return Row(
           // mainAxisSize: MainAxisSize.max,
           children: [
             IconButton(
               onPressed: togglePlayState,
               icon: const Icon(Icons.play_arrow),
             ),
-            Text(_controller.value.position.toString()),
+            Text(
+                _controller.value.position.toFormattedString(fillZeros: false)),
             WTimeline(controller: _controller),
             Text(
               (PostView.i.showTimeLeft
                       ? _controller.value.duration - _controller.value.position
                       : _controller.value.duration)
-                  .toString(),
+                  .toFormattedString(fillZeros: false),
             ),
             SizedBox.shrink(
               child: TextField(
@@ -237,9 +248,7 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
               ),
             ),
           ],
-        ),
-      ),
-    );
+        );
   }
 }
 
