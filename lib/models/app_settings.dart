@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io' as io;
 
 import 'package:flutter/material.dart';
+import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
+import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/e621.dart' show TagCategory;
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:j_util/j_util_full.dart';
@@ -62,22 +64,28 @@ class AppSettings implements AppSettingsRecord {
                       jsonEncode(AppSettings.defaultSettings.toJson()));
         });
   static LazyInitializer<io.File> get myFile => _file!;
-  static Future<AppSettings> loadSettingsFromFile() async => (Platform.isWeb)
-      ? defaultSettings
-      // : await (myFile
-      //     .getItem()
-      //     .then((v) => v.readAsString())
-      //     .then((v2) => AppSettings.fromJson(
-      //           jsonDecode((v2).printMe()),
-      //         ))
-      //   ..then((v) {
-      //     PostView._instance.itemSafe ??= v.postView;
-      //     SearchView._instance.itemSafe ??= v.searchView;
-      //     return v;
-      //   }));
-      : AppSettings.fromJson(
-          jsonDecode((await (await myFile.getItem()).readAsString()).printMe()),
-        );
+  static Future<AppSettings> loadSettingsFromFile() async {
+    return (Platform.isWeb)
+        ? ((await devData.getItem())["settings"] == null
+            ? defaultSettings
+            : AppSettings.fromJson(devData.$["settings"]))
+        // : await (myFile
+        //     .getItem()
+        //     .then((v) => v.readAsString())
+        //     .then((v2) => AppSettings.fromJson(
+        //           jsonDecode((v2).printMe()),
+        //         ))
+        //   ..then((v) {
+        //     PostView._instance.itemSafe ??= v.postView;
+        //     SearchView._instance.itemSafe ??= v.searchView;
+        //     return v;
+        //   }));
+        : AppSettings.fromJson(
+            jsonDecode(
+                (await (await myFile.getItem()).readAsString()).printMe()),
+          );
+  }
+
   Future<AppSettings> loadFromFile() async {
     return switch (Platform.getPlatform()) {
       Platform.web => defaultSettings,
@@ -367,20 +375,33 @@ class SearchViewData {
   static const defaultData = SearchViewData(
     postsPerPage: 50,
     postsPerRow: 3,
+    postInfoBannerItems: PostInfoPaneItem.values,
   );
   final int postsPerPage;
   final int postsPerRow;
+  final List<PostInfoPaneItem> postInfoBannerItems;
   const SearchViewData({
     required this.postsPerPage,
     required this.postsPerRow,
+    required this.postInfoBannerItems,
   });
   factory SearchViewData.fromJson(JsonOut json) => SearchViewData(
         postsPerPage: json["postsPerPage"] ?? defaultData.postsPerPage,
         postsPerRow: json["postsPerRow"] ?? defaultData.postsPerRow,
+        postInfoBannerItems: (json["postInfoBannerItems"] as List?)?.mapAsList(
+              (e, i, l) => PostInfoPaneItem.fromJson(e),
+            ) ??
+            defaultData.postInfoBannerItems,
       );
   JsonOut toJson() => {
         "postsPerPage": postsPerPage,
         "postsPerRow": postsPerRow,
+        "postInfoBannerItems": "[${postInfoBannerItems.fold(
+          "",
+          (previousValue, element) =>
+              "${previousValue.isNotEmpty ? '$previousValue,' : previousValue}"
+              "${element.name}",
+        )}]",
       };
 }
 
@@ -393,24 +414,33 @@ class SearchView implements SearchViewData {
   @override
   int get postsPerRow => _postsPerRow;
   set postsPerRow(int v) => _postsPerRow = v;
+  List<PostInfoPaneItem> _postInfoBannerItems;
+  @override
+  List<PostInfoPaneItem> get postInfoBannerItems => _postInfoBannerItems;
+  set postInfoBannerItems(List<PostInfoPaneItem> v) => _postInfoBannerItems = v;
   SearchView({
     required int postsPerPage,
     required int postsPerRow,
+    required List<PostInfoPaneItem> postInfoBannerItems,
   })  : _postsPerPage = postsPerPage,
-        _postsPerRow = postsPerRow;
+        _postsPerRow = postsPerRow,
+        _postInfoBannerItems = postInfoBannerItems;
 
   factory SearchView.fromData(SearchViewData postView) => SearchView(
         postsPerPage: postView.postsPerPage,
         postsPerRow: postView.postsPerRow,
+        postInfoBannerItems: postView.postInfoBannerItems,
       );
   void overwriteWithData(SearchViewData searchView) {
     _postsPerPage = searchView.postsPerPage;
     _postsPerRow = searchView.postsPerRow;
+    _postInfoBannerItems = searchView.postInfoBannerItems;
   }
 
   SearchViewData toData() => SearchViewData(
         postsPerPage: postsPerPage,
         postsPerRow: postsPerRow,
+        postInfoBannerItems: postInfoBannerItems,
       );
 
   // #region JSON (indirect, don't need updating w/ new fields)

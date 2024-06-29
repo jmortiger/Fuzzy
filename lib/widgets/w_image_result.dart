@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
+import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/post_swipe_page.dart' as old;
@@ -143,7 +144,7 @@ class WImageResult extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => allowPostViewNavigation
                         ? useLinkedList
-                            ? const Placeholder()//_buildLinkedSwiper(context)
+                            ? const Placeholder() //_buildLinkedSwiper(context)
                             : old.PostSwipePage(
                                 initialIndex: index,
                                 posts: Provider.of<SearchCache>(context,
@@ -291,75 +292,157 @@ class PostInfoPane extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: AlignmentDirectional.bottomStart,
-      child: ConstrainedBox(
+      child: Container(
         constraints: const BoxConstraints(
           /* minWidth: 70,
-          minHeight: 20, */
+        minHeight: 20, */
           maxWidth: 150,
           maxHeight: 150,
         ),
-        child: Container(
-          height: 20,
-          color: const Color.fromARGB(149, 46, 46, 46),
-          child: Text.rich(
-            TextSpan(
-              text: " ",
-              children: [
-                TextSpan(
-                    text: "${e6Post.rating.toUpperCase()} ",
-                    style: TextStyle(
-                      color: switch (e6Post.rating) {
-                        "s" => Colors.green,
-                        "q" => Colors.amber,
-                        "e" => Colors.red,
-                        _ => throw UnsupportedError("type not supported"),
-                      },
-                      fontWeight: FontWeight.bold,
-                    )),
-                TextSpan(
-                  text: "${e6Post.file.ext} ${e6Post.score.total} (",
+        height: 20,
+        color: const Color.fromARGB(149, 46, 46, 46),
+        child: Text.rich(
+          TextSpan(
+            text: " ",
+            children: SearchView.i.postInfoBannerItems.mapAsList(
+              (e, i, l) => e.getMyTextSpan(e6Post),
+            ), /* [
+              TextSpan(
+                  text: "${e6Post.rating.toUpperCase()} ",
+                  style: TextStyle(
+                    color: switch (e6Post.rating) {
+                      "s" => Colors.green,
+                      "q" => Colors.amber,
+                      "e" => Colors.red,
+                      _ => throw UnsupportedError("type not supported"),
+                    },
+                    fontWeight: FontWeight.bold,
+                  )),
+              TextSpan(text: "${e6Post.file.ext} "),
+              TextSpan(text: "${e6Post.score.total} "),
+              TextSpan(children: [
+                const TextSpan(
+                  text: "(",
                 ),
-                // const TextSpan(text: "U: "),
                 TextSpan(
                     text: "${e6Post.score.up}",
                     style: const TextStyle(
                       color: Colors.green,
                       decoration: TextDecoration.underline,
                     )),
-                const TextSpan(text: ", "),
-                // const TextSpan(text: " D: "),
+                const TextSpan(text: "/"),
                 TextSpan(
                     text: "${e6Post.score.down}",
                     style: const TextStyle(
                       color: Colors.red,
                       decoration: TextDecoration.underline,
                     )),
-                const TextSpan(text: ")"),
-                if (e6PostSafe?.relationships.hasParent ?? false)
-                  const TextSpan(
-                      text: " P",
-                      style: TextStyle(
-                        color: Colors.amber,
-                        decoration: TextDecoration.underline,
-                      )),
-                if (e6PostSafe?.relationships.hasChildren ?? false)
-                  TextSpan(
-                      text: " C(${e6Post.relationships.children.length})",
-                      style: const TextStyle(
-                        color: Colors.amber,
-                        decoration: TextDecoration.underline,
-                      )),
-                if (e6PostSafe?.isFavorited ?? false)
-                  const TextSpan(
-                      text: " ♥",
-                      style: TextStyle(
-                        color: Colors.red,
-                      )),
-              ],
-            ),
+                const TextSpan(text: ") "),
+              ]),
+              if (e6Post.relationships.hasParent)
+                const TextSpan(
+                    text: "P ",
+                    style: TextStyle(
+                      color: Colors.amber,
+                      decoration: TextDecoration.underline,
+                    )),
+              if (e6Post.relationships.hasChildren)
+                TextSpan(
+                    text: "C${e6Post.relationships.children.length} ",
+                    style: const TextStyle(
+                      color: Colors.amber,
+                      decoration: TextDecoration.underline,
+                    )),
+              if (e6Post.isFavorited)
+                const TextSpan(
+                    text: "♥ ",
+                    style: TextStyle(
+                      color: Colors.red,
+                    )),
+            ], */
           ),
         ),
       ),
     );
   }
+}
+
+enum PostInfoPaneItem {
+  rating,
+  fileExtension,
+  scoreTotal,
+  scoreUpAndDown,
+  hasParent,
+  hasChildren,
+  isFavorited,
+  ;
+
+  String toJson() => name;
+  factory PostInfoPaneItem.fromJson(json) => switch (json) {
+    String j when j == rating.name => rating,
+    String j when j == fileExtension.name => fileExtension,
+    String j when j == scoreTotal.name => scoreTotal,
+    String j when j == scoreUpAndDown.name => scoreUpAndDown,
+    String j when j == hasParent.name => hasParent,
+    String j when j == hasChildren.name => hasChildren,
+    String j when j == isFavorited.name => isFavorited,
+    _ => throw UnsupportedError("type not supported"),
+  };
+  InlineSpan getMyTextSpan(E6PostResponse e6Post) => switch (this) {
+        rating => TextSpan(
+            text: "${e6Post.rating.toUpperCase()} ",
+            style: TextStyle(
+              color: switch (e6Post.rating) {
+                "s" => Colors.green,
+                "q" => Colors.amber,
+                "e" => Colors.red,
+                _ => throw UnsupportedError("type not supported"),
+              },
+              fontWeight: FontWeight.bold,
+            )),
+        fileExtension => TextSpan(text: "${e6Post.file.ext} "),
+        scoreTotal => TextSpan(text: "${e6Post.score.total} "),
+        scoreUpAndDown => TextSpan(children: [
+            const TextSpan(
+              text: "(",
+            ),
+            TextSpan(
+                text: "${e6Post.score.up}",
+                style: const TextStyle(
+                  color: Colors.green,
+                  decoration: TextDecoration.underline,
+                )),
+            const TextSpan(text: "/"),
+            TextSpan(
+                text: "${e6Post.score.down}",
+                style: const TextStyle(
+                  color: Colors.red,
+                  decoration: TextDecoration.underline,
+                )),
+            const TextSpan(text: ") "),
+          ]),
+        hasParent => (e6Post.relationships.hasParent)
+            ? const TextSpan(
+                text: "P ",
+                style: TextStyle(
+                  color: Colors.amber,
+                  decoration: TextDecoration.underline,
+                ))
+            : const TextSpan(),
+        hasChildren => (e6Post.relationships.hasChildren)
+            ? TextSpan(
+                text: "C${e6Post.relationships.children.length} ",
+                style: const TextStyle(
+                  color: Colors.amber,
+                  decoration: TextDecoration.underline,
+                ))
+            : const TextSpan(),
+        isFavorited => (e6Post.isFavorited)
+            ? const TextSpan(
+                text: "♥ ",
+                style: TextStyle(
+                  color: Colors.red,
+                ))
+            : const TextSpan(),
+      };
 }
