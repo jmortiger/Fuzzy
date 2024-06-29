@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
+import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/saved_searches_page.dart';
 import 'package:fuzzy/util/util.dart' as util;
@@ -16,6 +17,7 @@ import 'package:fuzzy/widgets/w_search_result_page_navigation.dart';
 import 'package:http/http.dart' as http;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
+import 'package:string_similarity/string_similarity.dart';
 
 import '../widgets/w_home_end_drawer.dart';
 
@@ -454,61 +456,124 @@ class _HomePageState extends State<HomePage> {
         );
       },
       optionsBuilder: (TextEditingValue textEditingValue) {
+        final currText = textEditingValue.text;
+        var lastTermIndex = currText.lastIndexOf(RegExpExt.whitespace);
+        lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
+        final currSubString = currText.substring(lastTermIndex);
+        final currPrefix = currText.substring(0, lastTermIndex/*  == 0 ? currText.length : lastTermIndex */);
         var db = !util.DO_NOT_USE_TAG_DB ? util.tagDbLazy.itemSafe : null;
-        if (db == null || textEditingValue.text.isEmpty) {
-          if (AppSettings.i?.favoriteTags.isEmpty ?? true) {
+        if (db == null || currText.isEmpty) {
+          if ((AppSettings.i?.favoriteTags.isEmpty ?? true) &&
+              SavedDataE6.$Safe == null) {
             return const Iterable<String>.empty();
-          } else {
-            return [
-              textEditingValue.text,
-              ...AppSettings.i!.favoriteTags.where(
-                (element) => !textEditingValue.text.contains(element),
-              )
-            ];
           }
-        }
-        var (s, e) = db.getCharStartAndEnd(textEditingValue.text[0]);
-        print("range For ${textEditingValue.text[0]}: $s - $e");
-        if (textEditingValue.text.length == 1) {
           return [
-            textEditingValue.text,
+            currText,
+            if (SavedDataE6.$Safe != null)
+              ...SavedDataE6.$.all
+                  .where(
+                    (v) => !currText.contains(
+                      "${E621.delimiter}${v.uniqueId}",
+                    ),
+                  )
+                  .map((v) => "$currPrefix ${E621.delimiter}${v.uniqueId}"),
+            if (AppSettings.i?.favoriteTags.isNotEmpty ?? false)
+              ...AppSettings.i!.favoriteTags
+                  .where(
+                    (element) => !currText.contains(element),
+                  )
+                  .map((e) => "$currPrefix$e"),
+          ]..sort(
+              (a, b) {
+                return (b.similarityTo(currText /* SubString */) * 1000000 -
+                        a.similarityTo(currText /* SubString */) * 1000000)
+                    .truncate();
+              },
+            );
+        }
+        var (s, e) = db.getCharStartAndEnd(currText[0]);
+        print("range For ${currText[0]}: $s - $e");
+        if (currText.length == 1) {
+          return [
+            currText,
             ...(db.tagsByString.queue.getRange(s, e).toList(growable: false)
-                  ..sort((a, b) => b.postCount - a.postCount))
-                .map((e) => e.name),
+                  //..sort((a, b) => b.postCount - a.postCount))
+                  ..sort(
+                    (a, b) {
+                      return (b.name.similarityTo(currSubString) * 1000000 -
+                              a.name.similarityTo(currSubString) * 1000000)
+                          .truncate();
+                    },
+                  ))
+                .map((e) => "$currPrefix ${e.name}"),
           ];
         }
         var t = db.tagsByString.queue.getRange(s, e).toList(growable: false),
-            s1 = t.indexWhere(
-                (element) => element.name.startsWith(textEditingValue.text));
+            s1 = t.indexWhere((element) => element.name.startsWith(currText));
         if (s1 == -1) {
           s1 = t.indexWhere((element) => element.name.startsWith(
-                textEditingValue.text.substring(
+                currText.substring(
                   0,
-                  textEditingValue.text.length - 1,
+                  currText.length - 1,
                 ),
               ));
         }
         if (s1 == -1) return const Iterable<String>.empty();
-        var e1 = t.lastIndexWhere(
-            (element) => element.name.startsWith(textEditingValue.text));
+        var e1 =
+            t.lastIndexWhere((element) => element.name.startsWith(currText));
         if (e1 == -1) {
-          e1 = t.lastIndexWhere((element) =>
-              element.name.startsWith(textEditingValue.text.substring(
-                0,
-                textEditingValue.text.length - 1,
-              )));
+          e1 = t.lastIndexWhere(
+              (element) => element.name.startsWith(currText.substring(
+                    0,
+                    currText.length - 1,
+                  )));
         }
         if (e1 == -1) return const Iterable<String>.empty();
         return [
-          textEditingValue.text,
+          currText,
           ...(t.getRange(s1, e1).toList(growable: false)
-                ..sort((a, b) => b.postCount - a.postCount))
-              .map((e) => e.name),
+                //..sort((a, b) => b.postCount - a.postCount))
+                ..sort(
+                  (a, b) {
+                    return (b.name.similarityTo(currSubString) * 1000000 -
+                            a.name.similarityTo(currSubString) * 1000000)
+                        .truncate();
+                  },
+                ))
+              .map((e) => "$currPrefix ${e.name}"),
         ];
       },
       displayStringForOption: (option) => option,
+      // optionsViewBuilder: (context, onSelected, options) {
+      //   var opt = <Widget>[];
+      //   final selectedIndex = AutocompleteHighlightedOption.of(context);
+      //   for (var i = 0, element = options.first, iter = options.iterator; iter.moveNext(); i++) {
+      //     element = iter.current;
+      //     var lastTermIndex = element.lastIndexOf(RegExpExt.whitespace);
+      //     lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
+      //     final currSubString = element.substring(lastTermIndex);
+      //     opt.add(
+      //       ListTile(
+      //         selected: (selectedIndex == i),
+      //         title: Text(currSubString),
+      //         subtitle: Text(element),
+      //         trailing: IconButton(
+      //           icon: const Icon(Icons.arrow_outward),
+      //           onPressed: () => onSelected(element),
+      //         ),
+      //       ),
+      //     );
+      //   }
+      //   return SizedBox(
+      //     height: 200,
+      //     child: ListView(
+      //       children: opt,
+      //     ),
+      //   );
+      // },
       onSelected: (option) => setState(() {
-        searchText += option;
+        // searchText += option;
+        searchText = option;
       }),
     );
   }
@@ -635,9 +700,9 @@ class _HomePageState extends State<HomePage> {
   }) {
     bool isNewRequest = false;
     var out = "pageModifier = $pageModifier, "
-          "postId = $postId, "
-          "pageNumber = $pageNumber,"
-          "projectedTrueTags = ${E621.fillTagTemplate(tags)})";
+        "postId = $postId, "
+        "pageNumber = $pageNumber,"
+        "projectedTrueTags = ${E621.fillTagTemplate(tags)})";
     if (isNewRequest = (priorSearchText != tags)) {
       out = "Request For New Terms: $priorSearchText -> $tags ($out";
       lastPostIdCached = null;
