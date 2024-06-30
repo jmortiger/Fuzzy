@@ -102,149 +102,10 @@ class SettingsPage extends StatelessWidget {
         ],
       ),
       // body: const WExpandingSettings(),
-      body: const WNonFoldOutSettings(),
+      // body: const WNonFoldOutSettings(),
+      body: const WFoldoutSettings(),
     );
   }
-
-  /* ListTile _constructIntegerField(
-    BuildContext context, {
-    required String name,
-    required int Function() getVal,
-    required void Function(int) setVal,
-    bool Function(int?)? validateVal,
-  }) {
-    return ListTile(
-      key: ValueKey(getVal()),
-      title: Text(name),
-      trailing: Text(getVal().toString()),
-      leadingAndTrailingTextStyle:
-          const DefaultTextStyle.fallback().style.copyWith(
-                fontSize: 20,
-                color: Colors.white,
-              ),
-      onTap: () {
-        final before = getVal();
-        var t = before.toString();
-        validation(String value) {
-          (validateVal?.call(int.tryParse(value)) ?? true) ? t = value : null;
-        }
-
-        showDialog<int>(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              content: TextField(
-                keyboardType: TextInputType.number,
-                maxLines: null,
-                onChanged: validation,
-                onSubmitted: validation,
-                controller: TextEditingController.fromValue(
-                  TextEditingValue(
-                    text: t,
-                    selection: TextSelection(
-                      baseOffset: 0,
-                      extentOffset: t.length - 1,
-                    ),
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, int.parse(t)),
-                  child: const Text("Accept"),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, null),
-                  child: const Text("Cancel"),
-                ),
-              ],
-            );
-          },
-        ).then<void>((value) {
-          if (validateVal?.call(value) ?? value != null) {
-            print("Before: ${getVal()}");
-            setVal(value!);
-            print("After: ${getVal()}");
-          }
-        }).onError((error, stackTrace) => print(error));
-      },
-    );
-  } */
-
-  /* ListTile _constructStringSetField(
-    BuildContext context, {
-    required String name,
-    required Set<String> Function() getVal,
-    required void Function(Set<String>) setVal,
-    bool Function(Set<String>?)? validateVal,
-  }) {
-    return ListTile(
-      key: ValueKey(getVal()),
-      title: Text(name),
-      subtitle: Text(getVal().toString()),
-      onTap: () {
-        final before = getVal().fold(
-          "",
-          (previousValue, element) => "$previousValue$element\n",
-        );
-        var t = before;
-        validation(String value) {
-          validateVal?.call(
-                    value.split(RegExpExt.whitespace).toSet(),
-                  ) ??
-                  true
-              ? t = value
-              : null;
-        }
-
-        showDialog<String>(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              content: TextField(
-                maxLines: null,
-                onChanged: validation,
-                onSubmitted: validation,
-                controller: TextEditingController.fromValue(
-                  TextEditingValue(
-                    text: t,
-                    selection: TextSelection(
-                      baseOffset: 0,
-                      extentOffset: t.length - 1,
-                    ),
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, t),
-                  child: const Text("Accept"),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, null),
-                  child: const Text("Cancel"),
-                ),
-              ],
-            );
-          },
-        ).then<void>(
-          (value) {
-            if (value != null) {
-              print("Before: ${getVal().toString()}");
-              if (getVal().isNotEmpty) {
-                getVal().clear();
-              }
-              setVal(getVal()
-                ..addAll(value
-                    .split(RegExpExt.whitespace)
-                    .where((s) => s.isNotEmpty)));
-              print("After: ${getVal().toString()}");
-            }
-          },
-        ).onError((error, stackTrace) => print(error));
-      },
-    );
-  } */
 }
 
 class WNonFoldOutSettings extends StatelessWidget {
@@ -290,12 +151,12 @@ class WNonFoldOutSettings extends StatelessWidget {
           setVal: (int val) => AppSettings.i!.searchView.postsPerPage = val,
           validateVal: (int? val) => (val ?? -1) >= 0,
         ),
-        WEnumListField<PostInfoPaneItem>.value(
+        WEnumListField<PostInfoPaneItem>.getter(
           name: "Posts per page",
-          getVal: AppSettings.i!.searchView.postInfoBannerItems,
-          setVal: (val) => AppSettings.i!.searchView.postInfoBannerItems = val,
+          getter: () => AppSettings.i!.searchView.postInfoBannerItems,
+          setVal: (/* List<PostInfoPaneItem>  */ val) => AppSettings
+              .i!.searchView.postInfoBannerItems = val.cast<PostInfoPaneItem>(),
           values: PostInfoPaneItem.values,
-          // validateVal: (int? val) => (val ?? -1) >= 0,
         ),
         ListTile(
           title: const Text("Post View Settings"),
@@ -343,11 +204,16 @@ class WNonFoldOutSettings extends StatelessWidget {
   }
 }
 
-/* class WPageLaunchSettings extends StatelessWidget {
-  const WPageLaunchSettings({
+class WFoldoutSettings extends StatefulWidget {
+  const WFoldoutSettings({
     super.key,
   });
 
+  @override
+  State<WFoldoutSettings> createState() => _WFoldoutSettingsState();
+}
+
+class _WFoldoutSettingsState extends State<WFoldoutSettings> {
   TextStyle get titleStyle => SettingsPage.titleStyle;
 
   AppSettings get settings => AppSettings.i!;
@@ -356,231 +222,106 @@ class WNonFoldOutSettings extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: [
-        ListTile(
-          title: const Text("General Settings"),
-          titleTextStyle: SettingsPage.titleStyle,
+        ExpansionTile(
+          title: Text(
+            "General Settings",
+            style: SettingsPage.titleStyle,
+          ),
+          children: [
+            WSetStringField(
+              name: "Favorite Tags",
+              getVal: AppSettings.i!.favoriteTags,
+              setVal: (Set<String> v) => AppSettings.i!.favoriteTags = v,
+            ),
+            WSetStringField(
+              getVal: AppSettings.i!.blacklistedTags,
+              name: "Blacklisted Tags",
+              setVal: (Set<String> v) => AppSettings.i!.blacklistedTags = v,
+            ),
+          ],
         ),
-        WSetStringField(
-          name: "Favorite Tags",
-          getVal: AppSettings.i!.favoriteTags,
-          setVal: (Set<String> v) => AppSettings.i!.favoriteTags = v,
-        ),
-        WSetStringField(
-          getVal: AppSettings.i!.blacklistedTags,
-          name: "Blacklisted Tags",
-          setVal: (Set<String> v) => AppSettings.i!.blacklistedTags = v,
-        ),
-        ListTile(
-          title: const Text("Search View Settings"),
-          titleTextStyle: SettingsPage.titleStyle,
-        ),
-        WIntegerField(
-          getVal: () => AppSettings.i!.searchView.postsPerRow,
-          name: "Posts per row",
-          setVal: (int val) => AppSettings.i!.searchView.postsPerRow = val,
-          validateVal: (int? val) => (val ?? -1) >= 0,
-        ),
-        WIntegerField(
-          getVal: () => AppSettings.i!.searchView.postsPerPage,
-          name: "Posts per page",
-          setVal: (int val) => AppSettings.i!.searchView.postsPerPage = val,
-          validateVal: (int? val) => (val ?? -1) >= 0,
-        ),
-        WEnumListField<PostInfoPaneItem>.value(
-          name: "Posts per page",
-          getVal: AppSettings.i!.searchView.postInfoBannerItems,
-          setVal: (val) => AppSettings.i!.searchView.postInfoBannerItems = val,
-          values: PostInfoPaneItem.values,
-          // validateVal: (int? val) => (val ?? -1) >= 0,
-        ),
-        ListTile(
-          title: const Text("Post View Settings"),
-          titleTextStyle: SettingsPage.titleStyle,
-        ),
-        WBooleanField(
-          name: "Force High Quality Image",
-          getVal: () => settings.postView.forceHighQualityImage,
-          setVal: (p1) => AppSettings.i!.postView.forceHighQualityImage = p1,
-        ),
-        WBooleanField(
-          name: "Allow Overflow",
-          getVal: () => settings.postView.allowOverflow,
-          setVal: (p1) => AppSettings.i!.postView.allowOverflow = p1,
-        ),
-        WBooleanField(
-          name: "Color Tag Headers",
-          getVal: () => settings.postView.colorTagHeaders,
-          setVal: (p1) => AppSettings.i!.postView.colorTagHeaders = p1,
-        ),
-        WBooleanField(
-          name: "Color Tags",
-          getVal: () => settings.postView.colorTags,
-          setVal: (p1) => AppSettings.i!.postView.colorTags = p1,
-        ),
-        WBooleanField(
-          name: "Autoplay Video",
-          getVal: () => settings.postView.autoplayVideo,
-          setVal: (p1) => AppSettings.i!.postView.autoplayVideo = p1,
-        ),
-        WBooleanField(
-          name: "Start video muted",
-          getVal: () => settings.postView.startVideoMuted,
-          setVal: (p1) => AppSettings.i!.postView.startVideoMuted = p1,
-        ),
-        WBooleanField(
-          name: "Show time left",
-          subtitle:
-              "When playing a video, show the time remaining instead of the total duration?",
-          getVal: () => settings.postView.showTimeLeft,
-          setVal: (p1) => AppSettings.i!.postView.showTimeLeft = p1,
+        ExpansionTile(
+            title: Text(
+              "Search View Settings",
+              style: SettingsPage.titleStyle,
+            ),
+            children: [
+              WIntegerField(
+                getVal: () => AppSettings.i!.searchView.postsPerRow,
+                name: "Posts per row",
+                setVal: (int val) =>
+                    AppSettings.i!.searchView.postsPerRow = val,
+                validateVal: (int? val) => (val ?? -1) >= 0,
+              ),
+              WIntegerField(
+                getVal: () => AppSettings.i!.searchView.postsPerPage,
+                name: "Posts per page",
+                setVal: (int val) =>
+                    AppSettings.i!.searchView.postsPerPage = val,
+                validateVal: (int? val) => (val ?? -1) >= 0,
+              ),
+              WEnumListField<PostInfoPaneItem>.getter(
+                name: "Posts per page",
+                getter: () => AppSettings.i!.searchView.postInfoBannerItems,
+                setVal: (/* List<PostInfoPaneItem>  */ val) => AppSettings
+                    .i!
+                    .searchView
+                    .postInfoBannerItems = val.cast<PostInfoPaneItem>(),
+                values: PostInfoPaneItem.values,
+              ),
+            ]),
+        ExpansionTile(
+          title: Text(
+            "Post View Settings",
+            style: SettingsPage.titleStyle,
+          ),
+          children: [
+            WBooleanField(
+              name: "Force High Quality Image",
+              getVal: () => settings.postView.forceHighQualityImage,
+              setVal: (p1) =>
+                  AppSettings.i!.postView.forceHighQualityImage = p1,
+            ),
+            WBooleanField(
+              name: "Allow Overflow",
+              getVal: () => settings.postView.allowOverflow,
+              setVal: (p1) => AppSettings.i!.postView.allowOverflow = p1,
+            ),
+            WBooleanField(
+              name: "Color Tag Headers",
+              getVal: () => settings.postView.colorTagHeaders,
+              setVal: (p1) => AppSettings.i!.postView.colorTagHeaders = p1,
+            ),
+            WBooleanField(
+              name: "Color Tags",
+              getVal: () => settings.postView.colorTags,
+              setVal: (p1) => AppSettings.i!.postView.colorTags = p1,
+            ),
+            WBooleanField(
+              name: "Autoplay Video",
+              getVal: () => settings.postView.autoplayVideo,
+              setVal: (p1) => AppSettings.i!.postView.autoplayVideo = p1,
+            ),
+            WBooleanField(
+              name: "Start video muted",
+              getVal: () => settings.postView.startVideoMuted,
+              setVal: (p1) => AppSettings.i!.postView.startVideoMuted = p1,
+            ),
+            WBooleanField(
+              name: "Show time left",
+              subtitle:
+                  "When playing a video, show the time remaining instead of the total duration?",
+              getVal: () => settings.postView.showTimeLeft,
+              setVal: (p1) => AppSettings.i!.postView.showTimeLeft = p1,
+            ),
+          ],
         ),
       ],
     );
   }
 }
- */
-class WExpandingSettings extends StatefulWidget {
-  const WExpandingSettings({
-    super.key,
-  });
 
-  @override
-  State<WExpandingSettings> createState() => _WExpandingSettingsState();
-}
-
-class _WExpandingSettingsState extends State<WExpandingSettings> {
-  TextStyle get titleStyle => SettingsPage.titleStyle;
-
-  AppSettings get settings => AppSettings.i!;
-
-  List<bool> expansionState = [];
-
-  @override
-  void initState() {
-    super.initState();
-    expansionState = [false, false, false];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: ExpansionPanelList(
-        children: [
-          ExpansionPanel(
-            headerBuilder: (_, __) => ListTile(
-              title: const Text("General Settings"),
-              titleTextStyle: SettingsPage.titleStyle,
-            ),
-            isExpanded: expansionState[0],
-            body: ListView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                WSetStringField(
-                  name: "Favorite Tags",
-                  getVal: AppSettings.i!.favoriteTags,
-                  setVal: (Set<String> v) => AppSettings.i!.favoriteTags = v,
-                ),
-                WSetStringField(
-                  getVal: AppSettings.i!.blacklistedTags,
-                  name: "Blacklisted Tags",
-                  setVal: (Set<String> v) => AppSettings.i!.blacklistedTags = v,
-                ),
-              ],
-            ),
-          ),
-          ExpansionPanel(
-            headerBuilder: (_, __) => ListTile(
-              title: const Text("Search View Settings"),
-              titleTextStyle: SettingsPage.titleStyle,
-            ),
-            isExpanded: expansionState[1],
-            body: ListView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                WIntegerField(
-                  getVal: () => AppSettings.i!.searchView.postsPerRow,
-                  name: "Posts per row",
-                  setVal: (int val) =>
-                      AppSettings.i!.searchView.postsPerRow = val,
-                  validateVal: (int? val) => (val ?? -1) >= 0,
-                ),
-                WIntegerField(
-                  getVal: () => AppSettings.i!.searchView.postsPerPage,
-                  name: "Posts per page",
-                  setVal: (int val) =>
-                      AppSettings.i!.searchView.postsPerPage = val,
-                  validateVal: (int? val) => (val ?? -1) >= 0,
-                ),
-                WEnumListField<PostInfoPaneItem>.value(
-                  name: "Posts per page",
-                  getVal: AppSettings.i!.searchView.postInfoBannerItems,
-                  setVal: (val) =>
-                      AppSettings.i!.searchView.postInfoBannerItems = val,
-                  values: PostInfoPaneItem.values,
-                  // validateVal: (int? val) => (val ?? -1) >= 0,
-                ),
-              ],
-            ),
-          ),
-          ExpansionPanel(
-            headerBuilder: (_, __) => ListTile(
-              title: const Text("Post View Settings"),
-              titleTextStyle: SettingsPage.titleStyle,
-            ),
-            isExpanded: expansionState[2],
-            body: ListView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                WBooleanField(
-                  name: "Force High Quality Image",
-                  getVal: () => settings.postView.forceHighQualityImage,
-                  setVal: (p1) =>
-                      AppSettings.i!.postView.forceHighQualityImage = p1,
-                ),
-                WBooleanField(
-                  name: "Allow Overflow",
-                  getVal: () => settings.postView.allowOverflow,
-                  setVal: (p1) => AppSettings.i!.postView.allowOverflow = p1,
-                ),
-                WBooleanField(
-                  name: "Color Tag Headers",
-                  getVal: () => settings.postView.colorTagHeaders,
-                  setVal: (p1) => AppSettings.i!.postView.colorTagHeaders = p1,
-                ),
-                WBooleanField(
-                  name: "Color Tags",
-                  getVal: () => settings.postView.colorTags,
-                  setVal: (p1) => AppSettings.i!.postView.colorTags = p1,
-                ),
-                WBooleanField(
-                  name: "Autoplay Video",
-                  getVal: () => settings.postView.autoplayVideo,
-                  setVal: (p1) => AppSettings.i!.postView.autoplayVideo = p1,
-                ),
-                WBooleanField(
-                  name: "Start video muted",
-                  getVal: () => settings.postView.startVideoMuted,
-                  setVal: (p1) => AppSettings.i!.postView.startVideoMuted = p1,
-                ),
-                WBooleanField(
-                  name: "Show time left",
-                  subtitle:
-                      "When playing a video, show the time remaining instead of the total duration?",
-                  getVal: () => settings.postView.showTimeLeft,
-                  setVal: (p1) => AppSettings.i!.postView.showTimeLeft = p1,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
+// #region Fields
 class WBooleanField extends StatefulWidget {
   final String name;
   final String? subtitle;
@@ -738,7 +479,7 @@ class WEnumListField<T extends Enum> extends StatefulWidget {
   /// Either this or [getVal] are required.
   final List<T> Function()? getter;
 
-  final void Function(List<T> p1) setVal;
+  final void Function(List /* <T> */ p1) setVal;
 
   final bool Function(List<T>? p1)? validateVal;
 
@@ -791,9 +532,10 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
       widget.getVal ??
       widget.getter?.call() ??
       (throw StateError(
-          "Either widget.getVal or widget.getter must be a non-null value"));
+        "Either widget.getVal or widget.getter must be a non-null value",
+      ));
 
-  void Function(List<T> p1) get setVal => widget.setVal;
+  Function get setVal => widget.setVal;
 
   bool Function(List<T>? p1)? get validateVal => widget.validateVal;
 
@@ -919,10 +661,7 @@ class _WIntegerFieldState extends State<WIntegerField> {
       title: Text(name),
       trailing: Text(getVal.toString()),
       leadingAndTrailingTextStyle:
-          const DefaultTextStyle.fallback().style.copyWith(
-                fontSize: 20,
-                color: Colors.white,
-              ),
+          SettingsPage.titleStyle.copyWith(fontSize: 20),
       onTap: () {
         final before = getVal;
         var t = before.toString();
@@ -937,8 +676,12 @@ class _WIntegerFieldState extends State<WIntegerField> {
               content: TextField(
                 keyboardType: TextInputType.number,
                 maxLines: null,
+                autofocus: true,
                 onChanged: validation,
-                onSubmitted: validation,
+                onSubmitted: (v) {
+                  validation(v);
+                  Navigator.pop(context, int.parse(t));
+                },
                 controller: TextEditingController.fromValue(
                   TextEditingValue(
                     text: t,
@@ -975,3 +718,5 @@ class _WIntegerFieldState extends State<WIntegerField> {
     );
   }
 }
+
+// #endregion Fields
