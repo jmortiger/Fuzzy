@@ -205,9 +205,7 @@ class WNonFoldOutSettings extends StatelessWidget {
 }
 
 class WFoldoutSettings extends StatefulWidget {
-  const WFoldoutSettings({
-    super.key,
-  });
+  const WFoldoutSettings({super.key});
 
   @override
   State<WFoldoutSettings> createState() => _WFoldoutSettingsState();
@@ -309,10 +307,21 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
             ),
             WBooleanField(
               name: "Show time left",
-              subtitle:
-                  "When playing a video, show the time remaining instead of the total duration?",
+              subtitle: "When playing a video, show the time "
+                  "remaining instead of the total duration?",
               getVal: () => settings.postView.showTimeLeft,
               setVal: (p1) => AppSettings.i!.postView.showTimeLeft = p1,
+            ),
+            WBooleanField(
+              name: "Start With Tags Expanded",
+              getVal: () => settings.postView.startWithTagsExpanded,
+              setVal: (p) => AppSettings.i!.postView.startWithTagsExpanded = p,
+            ),
+            WBooleanField(
+              name: "Start With Description Expanded",
+              getVal: () => settings.postView.startWithDescriptionExpanded,
+              setVal: (p) =>
+                  AppSettings.i!.postView.startWithDescriptionExpanded = p,
             ),
           ],
         ),
