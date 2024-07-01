@@ -1,6 +1,8 @@
-// import 'dart:html' as html;
+import 'dart:convert' as dc;
+
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/j_util_full.dart';
@@ -28,6 +30,70 @@ class WPostSearchResults extends StatefulWidget {
 
   @override
   State<WPostSearchResults> createState() => _WPostSearchResultsState();
+
+  static Widget directResults(List<int> postIds) => FutureBuilder(
+        future: (E621
+            .performPostSearch(
+              tags: postIds.fold(
+                "order:id_asc",
+                (previousValue, element) => "$previousValue ~id:$element",
+              ),
+              limit: E621.maxPostsPerSearch,
+            )
+            .then((v) => E6PostsSync.fromJson(dc.jsonDecode(v.responseBody)))),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            try {
+              return WPostSearchResults(
+                posts: snapshot.data!,
+                disallowSelections: true,
+              );
+            } catch (e, s) {
+              return Scaffold(
+                body: Text("$e\n$s\n${snapshot.data}\n${snapshot.stackTrace}"),
+              );
+            }
+          } else if (snapshot.hasError) {
+            return Scaffold(
+              body: Text("${snapshot.error}\n${snapshot.stackTrace}"),
+            );
+          } else {
+            return const Scaffold(
+              body: CircularProgressIndicator(),
+            );
+          }
+        },
+      );
+  static Widget directResultFromSearch(String tags) => FutureBuilder(
+        future: (E621
+            .performPostSearch(
+              tags: tags,
+              limit: E621.maxPostsPerSearch,
+            )
+            .then((v) => E6PostsSync.fromJson(dc.jsonDecode(v.responseBody)))),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            try {
+              return WPostSearchResults(
+                posts: snapshot.data!,
+                disallowSelections: true,
+              );
+            } catch (e, s) {
+              return Scaffold(
+                body: Text("$e\n$s\n${snapshot.data}\n${snapshot.stackTrace}"),
+              );
+            }
+          } else if (snapshot.hasError) {
+            return Scaffold(
+              body: Text("${snapshot.error}\n${snapshot.stackTrace}"),
+            );
+          } else {
+            return const Scaffold(
+              body: CircularProgressIndicator(),
+            );
+          }
+        },
+      );
 }
 
 class _WPostSearchResultsState extends State<WPostSearchResults> {
@@ -58,10 +124,10 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
     });
     if (widget.posts.runtimeType == E6PostsLazy) {
       postLazy!.onFullyIterated.subscribe(
-            (FullyIteratedArgs posts) => setState(() {
-              trueCount = posts.posts.length;
-            }),
-          );
+        (FullyIteratedArgs posts) => setState(() {
+          trueCount = posts.posts.length;
+        }),
+      );
     }
     super.initState();
   }
@@ -79,7 +145,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
               }
             },
             text: "${widget.posts.restrictedIndices.length} hidden by global"
-            " blacklist. https://e621.net/help/global_blacklist",
+                " blacklist. https://e621.net/help/global_blacklist",
             // style: TextStyle(color: Colors.yellow),
             linkStyle: const TextStyle(color: Colors.yellow),
           ),
