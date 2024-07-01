@@ -64,9 +64,13 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
 });
 FutureOr<T> onErrorPrintAndRethrow<T>(Object? e, StackTrace stackTrace) {
   print(e);
+  print(stackTrace);
   throw e!;
 }
-T defaultOnError<T>(Object? error, StackTrace trace) => print(error) as T;
+T defaultOnError<T>(Object? error, StackTrace trace) {
+  print(error);
+  return print(trace) as T;
+}
 
 final List<SnackBar> snackbarMessageQueue = <SnackBar>[];
 final List<SnackBar Function(BuildContext context)> snackbarBuilderMessageQueue = <SnackBar Function(BuildContext context)>[];
@@ -124,13 +128,6 @@ TextEditingController? defaultSelection(String? defaultValue) => defaultValue?.i
                           extentOffset: defaultValue.length,
                         ),
                       ));
-/// Annotation
-const event = Event();
-
-/// Annotation
-class Event {
-  const Event();
-}
 
 Size calculateTextSize({
   required String text,
