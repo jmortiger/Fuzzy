@@ -3,22 +3,25 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
+import 'package:fuzzy/widgets/w_post_search_results.dart';
+import 'package:fuzzy/widgets/w_search_set.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
 import 'package:http/http.dart';
 import 'package:j_util/e621.dart';
+import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
-import 'package:j_util/web.dart';
-import 'package:j_util/j_util_widgets.dart';
 import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
 
 import '../web/e621/e621.dart';
+import '../widgets/w_fab_builder.dart';
 
 abstract interface class IReturnsTags {
   List<String>? get tagsToAdd;
 }
 
+/// TODO: Expansion State Preservation on scroll
 class PostViewPage extends StatelessWidget implements IReturnsTags {
   final PostListing postListing;
   final void Function(String addition)? onAddToSearch;
@@ -92,12 +95,15 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
                                     if (snapshot.hasData) {
                                       try {
                                         return PostViewPage(
-                                            postListing:
-                                                E6PostResponse.fromJson(
-                                                    snapshot.data));
+                                          postListing: E6PostResponse.fromJson(
+                                            snapshot.data["posts"],
+                                          ),
+                                        );
                                       } catch (e) {
                                         return Scaffold(
-                                          body: Text("$e\n${snapshot.data}"),
+                                          body: Text(
+                                            "$e\n${snapshot.data}",
+                                          ),
                                         );
                                       }
                                     } else if (snapshot.hasError) {
@@ -118,7 +124,6 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
                     ),
                   ]),
                 if (e6Post.pools.firstOrNull != null)
-                  // Text("Pools: ${e6Post.pools.fold("", (acc, e) => "$acc $e")}"),
                   Row(children: [
                     const Text("Pools: "),
                     ...e6Post.pools.map(
@@ -140,21 +145,24 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
                                             v[0],
                                           ),
                                         ),
-                                      )/* .catchError((element) => Scaffold(
+                                      ) /* .catchError((element) => Scaffold(
                                           body: Text("$e\n${element}"),
-                                        )) */,
+                                        )) */
+                                  ,
                                   builder: (context, snapshot) {
                                     if (snapshot.hasData) {
                                       try {
                                         return snapshot.data!;
                                       } catch (e, s) {
                                         return Scaffold(
-                                          body: Text("$e\n$s\n${snapshot.data}\n${snapshot.error}\n${snapshot.stackTrace}"),
+                                          body: Text(
+                                              "$e\n$s\n${snapshot.data}\n${snapshot.error}\n${snapshot.stackTrace}"),
                                         );
                                       }
                                     } else if (snapshot.hasError) {
                                       return Scaffold(
-                                        body: Text("${snapshot.error}\n${snapshot.stackTrace}"),
+                                        body: Text(
+                                            "${snapshot.error}\n${snapshot.stackTrace}"),
                                       );
                                     } else {
                                       return const Scaffold(
@@ -170,9 +178,16 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
                     ),
                   ]),
                 if (e6Post.description.isNotEmpty)
-                  WFoldoutDescription(
-                      bodyText: e6Post.description,
-                      descriptionTheme: descriptionTheme.$),
+                  ExpansionTile(
+                    title: ListTile(
+                      title: Text(
+                        "Description",
+                        style: descriptionTheme.$,
+                      ),
+                    ),
+                    initiallyExpanded: PostView.i.startWithDescriptionExpanded,
+                    children: [SelectableText(e6Post.description)],
+                  ),
                 ..._buildTagsDisplay(context),
               ],
             ),
@@ -198,7 +213,7 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
           ],
         ),
       ),
-      floatingActionButton: _buildFab(context),
+      floatingActionButton: WFabBuilder.singlePost(post: e6Post),//_buildFab(context),
     );
   }
 
@@ -209,72 +224,136 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
         ActionButton(
           icon: const Icon(Icons.add),
           tooltip: "Add to set",
-          onPressed: () {
-            print("To Be Implemented");
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("To Be Implemented")),
-            );
-          },
-        ),
-        ActionButton(
-          icon: const Icon(Icons.favorite),
-          tooltip: "Add to favorites",
           onPressed: () async {
-            print("Adding ${e6Post.id} to favorites...");
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Adding ${e6Post.id} to favorites...")),
+            print("Adding ${postListing.id} to a set");
+            // ScaffoldMessenger.of(context).showSnackBar(
+            //   const SnackBar(content: Text("To Be Implemented")),
+            // );
+            var v = await showDialog<e621.PostSet>(
+              context: context,
+              builder: (context) {
+                return AlertDialog(
+                  content: WSearchSet(
+                    initialLimit: 10,
+                    initialPage: null,
+                    initialSearchCreatorName: "***REMOVED***,
+                    initialSearchOrder: e621.SetOrder.updatedAt,
+                    initialSearchName: null,
+                    initialSearchShortname: null,
+                    onSelected: (e621.PostSet set) =>
+                        Navigator.pop(context, set),
+                  ),
+                  // scrollable: true,
+                );
+              },
             );
-            var t = E621.sendRequest(
-              E621.initAddFavoriteRequest(
-                e6Post.id,
-                username: E621AccessData.devUsername,
-                apiKey: E621AccessData.devApiKey,
-              ),
-            );
-            t.then(
-              (v) => v.stream.listen(
-                null,
-                onDone: () {
+            if (v != null) {
+              print("Adding ${postListing.id} to set ${v.id}");
+              var res = await E621
+                  .sendRequest(e621.Api.initAddToSetRequest(
+                    v.id,
+                    [postListing.id],
+                    credentials: (E621.accessData.itemSafe ??=
+                            await E621AccessData.devAccessData.getItem())
+                        .cred,
+                  ))
+                  .toResponse() as Response;
+              if (res.statusCode == 201) {
+                print("${postListing.id} successfully added to set ${v.id}");
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text("${v.statusCode}: ${v.reasonPhrase}"),
+                      content: Text(
+                          "${postListing.id} successfully added to set ${v.id}"),
                       action: SnackBarAction(
-                        label: "Undo",
-                        onPressed: () async {
-                          try {
-                            var newStream = E621.sendRequest(
-                              E621.initDeleteFavoriteRequest(
-                                int.parse(
-                                  v.request!.url.queryParameters["post_id"]!,
-                                ),
-                                username: E621AccessData.devUsername,
-                                apiKey: E621AccessData.devApiKey,
+                        label: "See Set",
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => Scaffold(
+                              appBar: AppBar(),
+                              body: WPostSearchResults.directResultFromSearch(
+                                "set:${v.shortname}",
                               ),
-                            );
-                            newStream.then(
-                              (value2) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      "${value2.statusCode}: ${value2.reasonPhrase}",
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          } catch (e) {
-                            print(e);
-                            rethrow;
-                          }
-                        },
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   );
-                },
-              ),
-            );
+                }
+              }
+              return;
+            } else if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("No Set Selected, canceling.")),
+              );
+              return;
+            } else {
+              return;
+            }
           },
         ),
+        if (!e6Post.isFavorited)
+          ActionButton(
+            icon: const Icon(Icons.favorite),
+            tooltip: "Add to favorites",
+            onPressed: () async {
+              print("Adding ${e6Post.id} to favorites...");
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Adding ${e6Post.id} to favorites...")),
+              );
+              var t = E621.sendRequest(
+                E621.initAddFavoriteRequest(
+                  e6Post.id,
+                  username: E621AccessData.devUsername,
+                  apiKey: E621AccessData.devApiKey,
+                ),
+              );
+              t.then(
+                (v) => v.stream.listen(
+                  null,
+                  onDone: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("${v.statusCode}: ${v.reasonPhrase}"),
+                        action: SnackBarAction(
+                          label: "Undo",
+                          onPressed: () async {
+                            try {
+                              var newStream = E621.sendRequest(
+                                E621.initDeleteFavoriteRequest(
+                                  int.parse(
+                                    v.request!.url.queryParameters["post_id"]!,
+                                  ),
+                                  username: E621AccessData.devUsername,
+                                  apiKey: E621AccessData.devApiKey,
+                                ),
+                              );
+                              newStream.then(
+                                (value2) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        "${value2.statusCode}: ${value2.reasonPhrase}",
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            } catch (e) {
+                              print(e);
+                              rethrow;
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
         ActionButton(
           icon: const Icon(Icons.delete),
           tooltip: "Remove selected from set",
@@ -285,77 +364,75 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
             );
           },
         ),
-        ActionButton(
-          icon: const Icon(Icons.heart_broken_outlined),
-          tooltip: "Remove selected from favorites",
-          onPressed: () async {
-            print("Removing ${e6Post.id} from favorites...");
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("Removing ${e6Post.id} from favorites..."),
-              ),
-            );
-            var t = E621.sendRequest(
-              E621.initDeleteFavoriteRequest(
-                e6Post.id,
-                username: E621AccessData.devUsername,
-                apiKey: E621AccessData.devApiKey,
-              ),
-            );
-            t
-                .then(
-              (value) => value.stream.listen(
-                null,
-                onDone: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        "${value.statusCode}: ${value.reasonPhrase}",
-                      ),
-                      action: SnackBarAction(
-                        label: "Undo",
-                        onPressed: () async {
-                          var newStream = E621
-                              .sendRequest(
-                            E621.initAddFavoriteRequest(
-                              int.parse(
-                                value.request!.url.pathSegments.last.substring(
-                                  0,
+        if (e6Post.isFavorited)
+          ActionButton(
+            icon: const Icon(Icons.heart_broken_outlined),
+            tooltip: "Remove selected from favorites",
+            onPressed: () async {
+              print("Removing ${e6Post.id} from favorites...");
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text("Removing ${e6Post.id} from favorites..."),
+                ),
+              );
+              E621
+                  .sendRequest(
+                    E621.initDeleteFavoriteRequest(
+                      e6Post.id,
+                      username: E621AccessData.devUsername,
+                      apiKey: E621AccessData.devApiKey,
+                    ),
+                  )
+                  .toResponse()
+                  .then(
+                    (value) => ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          "${value.statusCode}: ${value.reasonPhrase}",
+                        ),
+                        action: SnackBarAction(
+                          label: "Undo",
+                          onPressed: () async {
+                            var newStream = E621
+                                .sendRequest(
+                              E621.initAddFavoriteRequest(
+                                int.parse(
                                   value.request!.url.pathSegments.last
-                                      .indexOf("."),
+                                      .substring(
+                                    0,
+                                    value.request!.url.pathSegments.last
+                                        .indexOf("."),
+                                  ),
                                 ),
+                                username: E621AccessData.devUsername,
+                                apiKey: E621AccessData.devApiKey,
                               ),
-                              username: E621AccessData.devUsername,
-                              apiKey: E621AccessData.devApiKey,
-                            ),
-                          )
-                              .onError((error, stackTrace) {
-                            print(error);
-                            throw error!;
-                          });
-                          newStream.then(
-                            (value2) {
-                              ScaffoldMessenger.of(context)
-                                  .showSnackBar(SnackBar(
-                                content: Text(
-                                  "${value2.statusCode}: ${value2.reasonPhrase}",
-                                ),
-                              ));
-                            },
-                          );
-                        },
+                            )
+                                .onError((error, stackTrace) {
+                              print(error);
+                              throw error!;
+                            });
+                            newStream.then(
+                              (value2) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text(
+                                    "${value2.statusCode}: ${value2.reasonPhrase}",
+                                  ),
+                                ));
+                              },
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  );
-                },
-              ),
-            )
-                .onError((error, stackTrace) {
-              print(error);
-              throw error!;
-            });
-          },
-        ),
+                  )
+                  .onError((error, stackTrace) {
+                print(error);
+                throw error!;
+              });
+            },
+          ),
       ],
     );
   }
@@ -381,69 +458,100 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
   static final headerStyle = LateFinal<TextStyle>();
   @widgetFactory
   Iterable<Widget> _buildTagsDisplay(BuildContext context) {
-    // headerStyle.itemSafe ??= const DefaultTextStyle.fallback().style.copyWith(
     headerStyle.itemSafe ??= descriptionTheme.$.copyWith(
-      fontWeight: FontWeight.bold,
       color: Colors.amber,
       decoration: TextDecoration.underline,
       decorationStyle: TextDecorationStyle.solid,
-      fontSize: 12 * 1.5,
     );
     var tagOrder = pvs.tagOrder;
     return [
-      ...?_buildTagDisplay(
+      if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(0)))
+        _buildTagDisplayFoldout(
           context,
           headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(0)],
           ),
-          tagOrder.elementAtOrNull(0)),
-      ...?_buildTagDisplay(
+          tagOrder.elementAtOrNull(0),
+        )!,
+      if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(1)))
+        _buildTagDisplayFoldout(
           context,
           headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(1)],
           ),
-          tagOrder.elementAtOrNull(1)),
-      ...?_buildTagDisplay(
+          tagOrder.elementAtOrNull(1),
+        )!,
+      if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(2)))
+        _buildTagDisplayFoldout(
           context,
           headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(2)],
           ),
-          tagOrder.elementAtOrNull(2)),
-      ...?_buildTagDisplay(
+          tagOrder.elementAtOrNull(2),
+        )!,
+      if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(3)))
+        _buildTagDisplayFoldout(
           context,
           headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(3)],
           ),
-          tagOrder.elementAtOrNull(3)),
-      ...?_buildTagDisplay(
+          tagOrder.elementAtOrNull(3),
+        )!,
+      if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(4)))
+        _buildTagDisplayFoldout(
           context,
           headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(4)],
           ),
-          tagOrder.elementAtOrNull(4)),
-      ...?_buildTagDisplay(
+          tagOrder.elementAtOrNull(4),
+        )!,
+      if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(5)))
+        _buildTagDisplayFoldout(
           context,
           headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(5)],
           ),
-          tagOrder.elementAtOrNull(5)),
-      ...?_buildTagDisplay(
+          tagOrder.elementAtOrNull(5),
+        )!,
+      if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(6)))
+        _buildTagDisplayFoldout(
           context,
           headerStyle.$.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(6)],
           ),
-          tagOrder.elementAtOrNull(6)),
+          tagOrder.elementAtOrNull(6),
+        )!,
     ];
   }
 
   @widgetFactory
   Iterable<Widget>? _buildTagDisplay(
       BuildContext context, TextStyle headerStyle, TagCategory? category) {
-    return category != null && e6Post.tags.getByCategory(category).isNotEmpty
+    return _willTagDisplayBeNonNull(category)
         ? [
-            _buildTagDisplayHeader(context, headerStyle, category),
+            _buildTagDisplayHeader(context, headerStyle, category!),
             ..._buildTagDisplayList(context, headerStyle, category),
           ]
+        : null;
+  }
+
+  bool _willTagDisplayBeNonNull(TagCategory? category) =>
+      category != null && e6Post.tags.getByCategory(category).isNotEmpty;
+  @widgetFactory
+  Widget? _buildTagDisplayFoldout(
+      BuildContext context, TextStyle headerStyle, TagCategory? category) {
+    return _willTagDisplayBeNonNull(category)
+        ? ExpansionTile(
+            initiallyExpanded: PostView.i.startWithTagsExpanded,
+            title: _buildTagDisplayHeader(context, headerStyle, category!),
+            dense: true,
+            expandedAlignment: Alignment.centerLeft,
+            children: _buildTagDisplayList(
+              context,
+              headerStyle,
+              category,
+            ).toList(growable: false),
+          )
         : null;
   }
 
@@ -496,59 +604,6 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
         e.style.maxWidth = "100%";
         e.style.maxHeight = "100%";
       },
-    );
-  }
-}
-
-class WFoldoutDescription extends StatefulWidget {
-  final bool startExpanded;
-
-  const WFoldoutDescription({
-    super.key,
-    required this.bodyText,
-    required this.descriptionTheme,
-    this.startExpanded = false,
-  });
-
-  final String bodyText;
-  final TextStyle descriptionTheme;
-
-  @override
-  State<WFoldoutDescription> createState() => _WFoldoutDescriptionState();
-}
-
-class _WFoldoutDescriptionState extends State<WFoldoutDescription> {
-  bool isExpanded = false;
-  @override
-  void initState() {
-    super.initState();
-    isExpanded = widget.startExpanded;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ExpansionPanelList(
-      expansionCallback: (panelIndex, isExpanded) => setState(() {
-        this.isExpanded = isExpanded;
-      }),
-      children: [
-        ExpansionPanel(
-          body: SelectableText(widget.bodyText),
-          isExpanded: isExpanded,
-          canTapOnHeader: true,
-          headerBuilder: (
-            BuildContext context,
-            bool isExpanded,
-          ) {
-            return ListTile(
-              title: Text(
-                "Description",
-                style: widget.descriptionTheme,
-              ),
-            );
-          },
-        ),
-      ],
     );
   }
 }

@@ -12,6 +12,7 @@ import 'package:fuzzy/pages/saved_searches_page.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
+import 'package:fuzzy/widgets/w_fab_builder.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:fuzzy/widgets/w_search_result_page_navigation.dart';
 import 'package:http/http.dart' as http;
@@ -89,7 +90,9 @@ class _HomePageState extends State<HomePage> {
           });
         },
       ), //_buildDrawer(context),
-      floatingActionButton: _buildFab(context),
+      floatingActionButton: WFabBuilder.multiplePosts(posts: 
+                    selectedIndices.mapAsList((e, i, l) => 
+                        posts!.tryGet(e)!), onClearSelections: () => onSelectionCleared.invoke()),//_buildFab(context),
     );
   }
 
@@ -692,7 +695,7 @@ class _HomePageState extends State<HomePage> {
 
   /// Call inside of setState
   void _sendSearchAndUpdateState({
-    String tags = "jun_kobayashi",
+    String tags = "",
     int limit = 50,
     String? pageModifier,
     int? postId,
