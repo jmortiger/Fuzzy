@@ -11,6 +11,10 @@ import 'package:fuzzy/widgets/w_search_set.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:provider/provider.dart';
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+final print = lm.genPrint("main");
+
 class WHomeEndDrawer extends StatefulWidget {
   final void Function(String searchText)? onSearchRequested;
 

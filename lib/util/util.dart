@@ -15,6 +15,10 @@ import 'package:archive/archive.dart' as archive
 
 import 'package:j_util/e621.dart' as e621;
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+final print = lm.genPrint("main");
+
 typedef JsonMap = Map<String, dynamic>;
 final LazyInitializer<PackageInfo> packageInfo = LazyInitializer(
   () => PackageInfo.fromPlatform(),

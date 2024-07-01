@@ -6,6 +6,10 @@ import 'package:fuzzy/util/util.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/serialization.dart';
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+final print = lm.genPrint("main");
+
 /// Stuff like searches and sets
 /// TODO: Redo to a completely static, no instance implementation.
 /// "searches": searches,

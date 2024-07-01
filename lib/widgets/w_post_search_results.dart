@@ -12,6 +12,10 @@ import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+final print = lm.genPrint("main");
+
 class WPostSearchResults extends StatefulWidget {
   final E6Posts posts;
   final int expectedCount;

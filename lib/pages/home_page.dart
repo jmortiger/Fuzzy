@@ -23,6 +23,10 @@ import 'package:string_similarity/string_similarity.dart';
 
 import '../widgets/w_home_end_drawer.dart';
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+final print = lm.genPrint("main");
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 

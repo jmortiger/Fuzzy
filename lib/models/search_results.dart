@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:j_util/j_util_full.dart';
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+final print = lm.genPrint("main");
+
 class SearchResultsNotifier with ChangeNotifier {
   SearchResultsNotifier({
     Set<int>? selectedIndices,

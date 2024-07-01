@@ -7,6 +7,10 @@ import 'package:j_util/serialization.dart';
 
 import '../web/e621/e621.dart';
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+final print = lm.genPrint("main");
+
 class CachedSearches {
   static const fileName = "CachedSearches.json";
   static final fileFullPath = LazyInitializer.immediate(fileFullPathInit);

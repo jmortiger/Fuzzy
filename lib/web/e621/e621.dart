@@ -13,6 +13,10 @@ import 'package:http/http.dart' as http;
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/e621.dart' as e621;
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+final print = lm.genPrint("main");
+
 final class E621AccessData {
   static final devAccessData = LazyInitializer<E621AccessData>(() async =>
       E621AccessData.fromJson((await devData.getItem())["e621"] as JsonOut));

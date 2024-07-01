@@ -6,6 +6,10 @@ import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/j_util_full.dart';
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+final print = lm.genPrint("main");
+
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
   AppSettings get settings => AppSettings.i!;

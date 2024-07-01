@@ -6,14 +6,15 @@ import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/log_management.dart' as lm;
 import 'package:j_util/platform_finder.dart';
 import 'package:path_provider/path_provider.dart' as path;
 import 'package:provider/provider.dart';
 
 import 'pages/home_page.dart';
-
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await lm.init().then((v) => print = lm.genPrint("main"));
   if (Platform.isWeb) registerImgElement();
   pathSoundOff();
   appDataPath.getItem();
@@ -41,6 +42,7 @@ void main() {
   );
 }
 
+late final print;
 void pathSoundOff() {
   path
       .getApplicationCacheDirectory()

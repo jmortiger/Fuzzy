@@ -14,6 +14,10 @@ import 'package:provider/provider.dart';
 
 import '../web/models/image_listing.dart';
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+final print = lm.genPrint("WImageResult");
+
 BoxFit imageFit = BoxFit.contain;
 const bool allowPostViewNavigation = true;
 const bool useLinkedList = false;

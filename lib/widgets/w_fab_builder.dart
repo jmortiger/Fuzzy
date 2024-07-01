@@ -11,6 +11,10 @@ import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+final print = lm.genPrint("main");
+
 class WFabBuilder extends StatelessWidget {
   final List<E6PostResponse>? posts;
   final E6PostResponse? post;

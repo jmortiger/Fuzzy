@@ -17,6 +17,10 @@ import 'package:fuzzy/web/models/image_listing.dart';
 import '../web/e621/e621.dart';
 import '../widgets/w_fab_builder.dart';
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+final print = lm.genPrint("main");
+
 abstract interface class IReturnsTags {
   List<String>? get tagsToAdd;
 }

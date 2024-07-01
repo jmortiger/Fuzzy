@@ -8,6 +8,10 @@ import 'package:j_util/serialization.dart';
 
 import '../web/e621/e621.dart';
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+final print = lm.genPrint("main");
+
 class CachedFavorites extends ChangeNotifier with Storable<CachedFavorites> {
   static const fileName = "cachedFavorites.json";
   static final fileFullPath = LazyInitializer.immediate(fileFullPathInit);
