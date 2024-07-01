@@ -213,6 +213,8 @@ class PostViewData {
     autoplayVideo: true,
     startVideoMuted: true,
     showTimeLeft: true,
+    startWithTagsExpanded: true,
+    startWithDescriptionExpanded: false,
   );
   final List<TagCategory> tagOrder;
   final Map<TagCategory, Color> tagColors;
@@ -226,6 +228,8 @@ class PostViewData {
   /// When playing a video, show the time remaining
   /// instead of the total duration?
   final bool showTimeLeft;
+  final bool startWithTagsExpanded;
+  final bool startWithDescriptionExpanded;
   const PostViewData({
     required this.tagOrder,
     required this.tagColors,
@@ -236,6 +240,8 @@ class PostViewData {
     required this.autoplayVideo,
     required this.startVideoMuted,
     required this.showTimeLeft,
+    required this.startWithTagsExpanded,
+    required this.startWithDescriptionExpanded,
   });
   factory PostViewData.fromJson(JsonOut json) => PostViewData(
         tagOrder: (json["tagOrder"] as List?)
@@ -252,6 +258,8 @@ class PostViewData {
         autoplayVideo: json["autoplayVideo"] ?? defaultData.autoplayVideo,
         startVideoMuted: json["startVideoMuted"] ?? defaultData.startVideoMuted,
         showTimeLeft: json["showTimeLeft"] ?? defaultData.showTimeLeft,
+        startWithTagsExpanded: json["startWithTagsExpanded"] ?? defaultData.startWithTagsExpanded,
+        startWithDescriptionExpanded: json["startWithDescriptionExpanded"] ?? defaultData.startWithDescriptionExpanded,
       );
   JsonOut toJson() => {
         "tagOrder": tagOrder,
@@ -263,10 +271,13 @@ class PostViewData {
         "autoplayVideo": autoplayVideo,
         "startVideoMuted": startVideoMuted,
         "showTimeLeft": showTimeLeft,
+        "startWithTagsExpanded": startWithTagsExpanded,
+        "startWithDescriptionExpanded": startWithDescriptionExpanded,
       };
 }
 
 class PostView implements PostViewData {
+  // #region Fields
   List<TagCategory> _tagOrder;
   @override
   List<TagCategory> get tagOrder => _tagOrder;
@@ -303,6 +314,15 @@ class PostView implements PostViewData {
   @override
   bool get showTimeLeft => _showTimeLeft;
   set showTimeLeft(bool v) => _showTimeLeft = v;
+  bool _startWithTagsExpanded;
+  @override
+  bool get startWithTagsExpanded => _startWithTagsExpanded;
+  set startWithTagsExpanded(bool v) => _startWithTagsExpanded = v;
+  bool _startWithDescriptionExpanded;
+  @override
+  bool get startWithDescriptionExpanded => _startWithDescriptionExpanded;
+  set startWithDescriptionExpanded(bool v) => _startWithDescriptionExpanded = v;
+  // #endregion Fields
   PostView({
     required List<TagCategory> tagOrder,
     required Map<TagCategory, Color> tagColors,
@@ -313,6 +333,8 @@ class PostView implements PostViewData {
     required bool autoplayVideo,
     required bool startVideoMuted,
     required bool showTimeLeft,
+    required bool startWithTagsExpanded,
+    required bool startWithDescriptionExpanded,
   })  : _tagOrder = tagOrder,
         _tagColors = tagColors,
         _colorTags = colorTags,
@@ -321,7 +343,10 @@ class PostView implements PostViewData {
         _forceHighQualityImage = forceHighQualityImage,
         _autoplayVideo = autoplayVideo,
         _startVideoMuted = startVideoMuted,
-        _showTimeLeft = showTimeLeft;
+        _showTimeLeft = showTimeLeft,
+        _startWithTagsExpanded = startWithTagsExpanded,
+        _startWithDescriptionExpanded = startWithDescriptionExpanded
+        ;
 
   factory PostView.fromData(PostViewData postView) => PostView(
         tagOrder: List.from(postView.tagOrder),
@@ -333,6 +358,8 @@ class PostView implements PostViewData {
         autoplayVideo: postView.autoplayVideo,
         startVideoMuted: postView.startVideoMuted,
         showTimeLeft: postView.showTimeLeft,
+        startWithTagsExpanded: postView.startWithTagsExpanded,
+        startWithDescriptionExpanded: postView.startWithDescriptionExpanded,
       );
 
   void overwriteWithData(PostViewData postView) {
@@ -357,6 +384,8 @@ class PostView implements PostViewData {
         autoplayVideo: autoplayVideo,
         startVideoMuted: startVideoMuted,
         showTimeLeft: showTimeLeft,
+        startWithTagsExpanded: startWithTagsExpanded,
+        startWithDescriptionExpanded: startWithDescriptionExpanded,
       );
 
   // #region JSON (indirect, don't need updating w/ new fields)
