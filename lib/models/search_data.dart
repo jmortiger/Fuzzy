@@ -16,10 +16,41 @@ class SearchData {
         tagSet = searchString.split(RegExpExt.whitespace).toSet();
   SearchData.fromList({
     required this.tagList,
-  }) : searchString = tagList.fold("", (acc, e) => "$acc$e"),
+  })  : searchString = tagList.fold("", (acc, e) => "$acc$e"),
         tagSet = tagList.toSet();
   factory SearchData.fromJson(String json) => SearchData.fromString(
-      searchString: json,
-    );
+        searchString: json,
+      );
   String toJson() => searchString;
+}
+
+class SearchMetrics extends SearchData {
+  final List<int> frequency;
+  const SearchMetrics.$const({
+    required this.frequency,
+    required String searchString,
+    required List<String> tagList,
+    required Set<String> tagSet,
+  }) : super.$const(
+          searchString: searchString,
+          tagList: tagList,
+          tagSet: tagSet,
+        );
+  SearchMetrics.fromString({
+    required this.frequency,
+    required String searchString,
+  }) : super.fromString(searchString: searchString);
+  SearchMetrics.fromList({
+    required this.frequency,
+    required List<String> tagList,
+  }) : super.fromList(tagList: tagList);
+  factory SearchMetrics.fromJson(Map<String, dynamic> json) => SearchMetrics.fromString(
+        frequency: (json["frequency"] as List).cast<int>(),
+        searchString: json["searchString"],
+      );
+  @override
+  /* Map<String, dynamic> */String toJson() => {
+    "frequency": frequency.toString(),
+    "searchString": searchString.toString(),
+  }.toString();
 }

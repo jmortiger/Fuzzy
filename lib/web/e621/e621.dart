@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
@@ -18,7 +19,6 @@ final class E621AccessData {
   static String? get devApiKey => devAccessData.itemSafe?.apiKey;
   static String? get devUsername => devAccessData.itemSafe?.username;
   static String? get devUserAgent => devAccessData.itemSafe?.userAgent;
-  // static get devData => _devData;
   static final userData = LateFinal<E621AccessData>();
   final String apiKey;
   final String username;
@@ -142,6 +142,10 @@ sealed class E621 extends Site {
   static final searchBegan = JEvent<SearchArgs>();
   @event
   static final searchEnded = JEvent<SearchResultArgs>();
+  @event
+  static final nonUserSearchBegan = JEvent<SearchArgs>();
+  @event
+  static final nonUserSearchEnded = JEvent<SearchResultArgs>();
   static const String rootUrl = "https://e621.net/";
   static final Uri rootUri = Uri.parse(rootUrl);
   static final accessData = LateFinal<E621AccessData>();
@@ -194,10 +198,11 @@ sealed class E621 extends Site {
       },
     );
     print("fillTagTemplate: After: $tags");
+    tags += AppSettings.i?.blacklistedTags.map((e) => "-$e").foldToString(" ") ?? "";
+    print("fillTagTemplate: After Blacklist: $tags");
     return tags;
   }
 
-  // static final String filePath = ;
   static Future<void> sendRequestBatch(
     Iterable<http.Request> Function() requestGenerator, {
     FutureOr<void> Function(List<http.StreamedResponse> responses)? onComplete,

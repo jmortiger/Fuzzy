@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
+import 'package:fuzzy/models/search_results.dart';
+import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
@@ -436,6 +438,37 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
+  static ActionButton getPrintSelectionsAction(
+    BuildContext context,
+    E6PostResponse? post,
+    List<E6PostResponse>? posts,
+  ) {
+    return ActionButton(
+      icon: const Icon(Icons.info_outline),
+      tooltip: "Print Selections",
+      onPressed: () async {
+        print("Printing selections...");
+        var s = "posts: ${posts?.fold(
+          "",
+          (previousValue, element) => "$previousValue, ${element.id}",
+        )}";
+        print(s);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(s),
+          ),
+        );
+        s = "post: ${post?.id}";
+        print(s);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(s),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ExpandableFab(
@@ -443,7 +476,7 @@ class WFabBuilder extends StatelessWidget {
       disabledTooltip: (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
           ? ""
           : "Long-press to select posts and perform bulk actions.",
-      children: (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
+      children: true || (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
           ? [
               if (!isSinglePost && onClearSelections != null)
                 WFabBuilder.getClearSelectionButton(
@@ -466,8 +499,36 @@ class WFabBuilder extends StatelessWidget {
                 getMultiplePostsRemoveFavAction(context, posts!),
               if (isSinglePost && post!.isFavorited)
                 getSinglePostRemoveFavAction(context, post!),
+              getPrintSelectionsAction(context, post, posts),
             ]
           : [],
     );
+  }
+}
+
+class WFabWrapper extends StatefulWidget {
+  final void Function()? onClearSelections;
+  const WFabWrapper({
+    super.key,
+    this.onClearSelections,
+  });
+
+  @override
+  State<WFabWrapper> createState() => _WFabWrapperState();
+}
+
+class _WFabWrapperState extends State<WFabWrapper> {
+  @override
+  Widget build(BuildContext context) {
+    return WFabBuilder.multiplePosts(
+        posts: Provider.of<SearchCache>(context, listen: true)
+            .posts
+            ?.posts
+            .where((e) =>
+                Provider.of<SearchResultsNotifier>(context, listen: true)
+                    .selectedPostIds
+                    .contains(e.id))
+            .toList() ?? [],
+            onClearSelections: widget.onClearSelections,);
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
+import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
@@ -20,6 +21,7 @@ void main() {
     (value) => print("Can Use AppSettings singleton"),
   );
   CachedFavorites.fileFullPath.getItem();
+  CachedSearches.file.getItem();
   SavedDataE6.$Safe;
   runApp(
     MaterialApp(
@@ -28,7 +30,7 @@ void main() {
         providers: [
           ChangeNotifierProvider(create: (context) => SearchViewModel()),
           ChangeNotifierProvider(create: (context) => SearchCache()),
-          ChangeNotifierProvider(create: (context) => SearchResults()),
+          ChangeNotifierProvider(create: (context) => SearchResultsNotifier()),
           ChangeNotifierProvider(
               create: (context) => CachedFavorites.loadFromStorageSync()),
           // ChangeNotifierProvider(create: (context) => SavedDataE6.$),

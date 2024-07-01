@@ -65,6 +65,7 @@ class _PostSwipePageState extends State<PostSwipePage>
         /// [PageView.scrollDirection] defaults to [Axis.horizontal].
         /// Use [Axis.vertical] to scroll vertically.
         controller: _pageViewController,
+        allowImplicitScrolling: true,
         // onPageChanged: _handlePageViewChanged,
         children: widget.posts.posts.mapAsList(
           (elem, index, list) => PostViewPage(
@@ -89,6 +90,7 @@ class _PostSwipePageState extends State<PostSwipePage>
           /// Use [Axis.vertical] to scroll vertically.
           controller: _pageViewController,
           onPageChanged: _handlePageViewChanged,
+          allowImplicitScrolling: true,
           children: widget.posts.posts.mapAsList(
             (elem, index, list) => PostViewPage(
               postListing: elem,

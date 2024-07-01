@@ -2,11 +2,14 @@ import 'dart:convert' as dc;
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/models/search_results.dart';
+import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class WPostSearchResults extends StatefulWidget {
@@ -97,8 +100,26 @@ class WPostSearchResults extends StatefulWidget {
 }
 
 class _WPostSearchResultsState extends State<WPostSearchResults> {
-  Set<int> restrictedIndices = {};
-  Set<int> selectedIndices = {};
+  // Set<int> restrictedIndices = {};
+  // #region Notifiers
+  Set<int> _selectedIndices = {};
+
+  SearchCache get sc => Provider.of<SearchCache>(context, listen: false);
+  SearchResultsNotifier get sr =>
+      Provider.of<SearchResultsNotifier>(context, listen: false);
+  SearchResultsNotifier get srl =>
+      Provider.of<SearchResultsNotifier>(context, listen: true);
+  Set<int> get selectedIndices =>
+      widget.disallowSelections ? _selectedIndices : sr.selectedIndices;
+
+  set selectedIndices(Set<int> value) => widget.disallowSelections
+      ? _selectedIndices = value
+      : srl.selectedIndices = SetNotifier.from(value);
+  bool getIsIndexSelected(int index) => widget.disallowSelections
+      ? _selectedIndices.contains(index)
+      : sr.getIsSelected(index);
+  // #endregion Notifiers
+
   int? trueCount;
 
   E6PostsSync? get postSync => (widget.posts.runtimeType == E6PostsSync)
@@ -107,21 +128,23 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
   E6PostsLazy? get postLazy => (widget.posts.runtimeType == E6PostsLazy)
       ? (widget.posts as E6PostsLazy)
       : null;
+  // SearchViewModel get svm => Provider.of<SearchViewModel>(context, listen: false);
+  void _clearSelectionsCallback() {
+    if (mounted) {
+      setState(() {
+        selectedIndices.clear();
+      });
+    } else {
+      print("_WPostSearchResultsState: Dismounted?");
+    }
+  }
 
   @override
   void initState() {
     if (widget.posts.runtimeType == E6PostsSync) {
       trueCount = postSync!.posts.length;
     }
-    widget._onSelectionCleared?.subscribe(() {
-      if (mounted) {
-        setState(() {
-          selectedIndices.clear();
-        });
-      } else {
-        print("_WPostSearchResultsState: Dismounted?");
-      }
-    });
+    widget._onSelectionCleared?.subscribe(_clearSelectionsCallback);
     if (widget.posts.runtimeType == E6PostsLazy) {
       postLazy!.onFullyIterated.subscribe(
         (FullyIteratedArgs posts) => setState(() {
@@ -130,6 +153,12 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
       );
     }
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    widget._onSelectionCleared?.unsubscribe(_clearSelectionsCallback);
+    super.dispose();
   }
 
   @override
@@ -176,21 +205,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
                 posts.tryGet(index + 3);
               }
               var data = posts.tryGet(index);
-              return (data == null)
-                  ? null
-                  : WImageResult(
-                      disallowSelections: widget.disallowSelections,
-                      imageListing: data,
-                      index: index,
-                      isSelected: selectedIndices.contains(index),
-                      onSelectionToggle: (i) => setState(() {
-                        selectedIndices.contains(i)
-                            ? selectedIndices.remove(i)
-                            : selectedIndices.add(i);
-                        widget.onPostsSelected?.call(selectedIndices, i);
-                      }),
-                      areAnySelected: selectedIndices.isNotEmpty,
-                    );
+              return (data == null) ? null : constructImageResult(data, index);
             },
           )
         : GridView.count(
@@ -202,24 +217,33 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
                     (accumulator, _, index, __) => posts.tryGet(index) != null
                         ? (
                             accumulator
-                              ..add(WImageResult(
-                                disallowSelections: widget.disallowSelections,
-                                imageListing: posts.tryGet(index)!,
-                                index: index,
-                                isSelected: selectedIndices.contains(index),
-                                onSelectionToggle: (i) => setState(() {
-                                  selectedIndices.contains(i)
-                                      ? selectedIndices.remove(i)
-                                      : selectedIndices.add(i);
-                                  widget.onPostsSelected
-                                      ?.call(selectedIndices, i);
-                                }),
-                                areAnySelected: selectedIndices.isNotEmpty,
-                              )),
+                              ..add(
+                                constructImageResult(
+                                    posts.tryGet(index)!, index),
+                              ),
                             false
                           )
                         : (accumulator, true),
                     []),
           );
   }
+
+  @widgetFactory
+  WImageResult constructImageResult(E6PostResponse data, int index) =>
+      WImageResult(
+        disallowSelections: widget.disallowSelections,
+        imageListing: data,
+        index: index,
+        isSelected: getIsIndexSelected(index),
+        // onSelectionToggle: (!widget.disallowSelections)
+        //     ? (i) => setState(() {
+        //           sr.toggleSelection(index: i, postId: data.id);
+        //           // selectedIndices.contains(i)
+        //           //     ? selectedIndices.remove(i)
+        //           //     : selectedIndices.add(i);
+        //           widget.onPostsSelected?.call(selectedIndices, i);
+        //         })
+        //     : null,
+        // areAnySelected: selectedIndices.isNotEmpty,
+      );
 }

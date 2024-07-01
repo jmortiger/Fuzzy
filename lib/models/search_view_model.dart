@@ -102,17 +102,27 @@ class SearchCache extends ChangeNotifier {
   bool? get hasPriorPage =>
       firstPostIdCached != null &&
       firstPostIdCached! > (firstPostOnPageId ?? firstPostIdCached!);
+  /* SetNotifier<int> _selectedIndices;
+  SetNotifier<int> get selectedIndices => _selectedIndices;
+  set selectedIndices(SetNotifier<int> v) => (this.._selectedIndices = v)..notifyListeners();
+  SetNotifier<int> _restrictedIndices;
+  SetNotifier<int> get restrictedIndices => _restrictedIndices;
+  set restrictedIndices(SetNotifier<int> v) => (this.._restrictedIndices = v)..notifyListeners(); */
   SearchCache({
     E6Posts? posts,
     int? firstPostIdCached,
     int? lastPostIdCached,
     int? lastPostOnPageIdCached,
     bool? hasNextPageCached,
+    // SetNotifier<int>? selectedIndices,
+    // SetNotifier<int>? restrictedIndices,
   })  : _posts = posts,
         _firstPostIdCached = firstPostIdCached,
         _lastPostIdCached = lastPostIdCached,
         _lastPostOnPageIdCached = lastPostOnPageIdCached,
-        _hasNextPageCached = hasNextPageCached;
+        _hasNextPageCached = hasNextPageCached/* ,
+        _selectedIndices = selectedIndices ?? SetNotifier(),
+        _restrictedIndices = restrictedIndices ?? SetNotifier() */;
 }
 
 class MultiSearch {

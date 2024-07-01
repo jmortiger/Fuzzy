@@ -10,7 +10,6 @@ import 'package:j_util/j_util_full.dart';
 import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/pages/post_view_page.dart';
-import 'package:j_util/platform_finder.dart';
 import 'package:provider/provider.dart';
 
 import '../web/models/image_listing.dart';
@@ -24,21 +23,17 @@ class WImageResult extends StatelessWidget {
   final PostListing imageListing;
   final int index;
   final bool isSelected;
-  final bool areAnySelected;
   final bool disallowSelections;
 
-  // final String searchText;
-
   final void Function(int index)? onSelectionToggle;
-
+  SearchCache getSc(BuildContext context, [bool listen = false]) =>
+      Provider.of<SearchCache>(context, listen: listen);
   const WImageResult({
     super.key,
     required this.imageListing,
     required this.index,
-    // this.searchText = "",
     this.onSelectionToggle,
     this.isSelected = false,
-    this.areAnySelected = false,
     this.disallowSelections = false,
   });
 
@@ -58,18 +53,21 @@ class WImageResult extends StatelessWidget {
     } else {
       IImageInfo(width: w, height: h, url: url) = imageListing.file;
     }
-    print(/* $searchText */ "[$index]: w: $w, "
-        "h: $h, "
-        "sampleWidth: ${imageListing.sample.width}, "
-        "fileWidth: ${imageListing.file.width}, "
-        "url: $url");
+    print(
+      "[$index/${imageListing.id}]: w: $w, "
+      "h: $h, "
+      "sampleWidth: ${imageListing.sample.width}, "
+      "fileWidth: ${imageListing.file.width}, "
+      "isSelected: $isSelected, "
+      "url: $url",
+    );
     return Stack(
       children: [
-        // _buildActionChip(context, w, h, url),
-        // _buildWithInputDetector(context, w, h, url),
         _buildPane(w, h, url),
         PostInfoPane(post: imageListing),
-        if (isSelected) _buildCheckmark(context),
+        if (isSelected ||
+            (!disallowSelections && sr(context).getIsSelected(index)))
+          _buildCheckmark(context),
         _buildInputDetector(context, w, h, url),
       ],
     );
@@ -93,18 +91,24 @@ class WImageResult extends StatelessWidget {
     );
   }
 
-  SearchResults sr(BuildContext context) =>
-      Provider.of<SearchResults>(context, listen: false);
+  SearchResultsNotifier sr(BuildContext context) =>
+      Provider.of<SearchResultsNotifier>(context, listen: false);
 
-  SearchResults srl(BuildContext context) =>
-      Provider.of<SearchResults>(context);
-
-  // bool returnedFromPosts = false;
+  SearchResultsNotifier srl(BuildContext context) =>
+      Provider.of<SearchResultsNotifier>(context);
 
   Widget _buildInputDetector(BuildContext context, int w, int h, String url) {
     // SearchResults sr() => Provider.of<SearchResults>(context, listen: false);
-    SearchResults? srl;
-    if (!disallowSelections) srl = Provider.of<SearchResults>(context);
+    SearchResultsNotifier? srl;
+    if (!disallowSelections) srl = Provider.of<SearchResultsNotifier>(context);
+    void toggle() {
+      onSelectionToggle?.call(index);
+      srl?.toggleSelection(
+        index: index,
+        postId: imageListing.id,
+      );
+    }
+
     return Positioned.fill(
       child: Material(
         color: Colors.transparent,
@@ -114,30 +118,16 @@ class WImageResult extends StatelessWidget {
           // },
           onLongPress: () {
             print("OnLongPress");
-            onSelectionToggle?.call(index);
-            srl?.toggleSelection(
-              index: index,
-              postId: imageListing.id,
-            );
+            toggle();
           },
           onDoubleTap: () {
             print("onDoubleTap");
-            onSelectionToggle?.call(index);
-            srl?.toggleSelection(
-              index: index,
-              postId: imageListing.id,
-            );
+            toggle();
           },
           onTap: () {
             print("OnTap");
-            if ((isSelected || areAnySelected) ||
-                ((srl?.getIsSelected(index) ?? false) ||
-                    (srl?.areAnySelected ?? false))) {
-              onSelectionToggle?.call(index);
-              srl?.toggleSelection(
-                index: index,
-                postId: imageListing.id,
-              );
+            if (isSelected || (srl?.areAnySelected ?? false)) {
+              toggle();
             } else {
               Navigator.push<IReturnsTags>(
                   context,
@@ -173,7 +163,7 @@ class WImageResult extends StatelessWidget {
     );
   }
 
-  getOnAddToSearch(BuildContext context) => /* onAddToSearch */
+  void Function(String) getOnAddToSearch(BuildContext context) =>
       (String addition) {
         print("WImageResult: onAddToSearch:");
         print("Before: ${Provider.of<SearchViewModel>(
@@ -185,7 +175,11 @@ class WImageResult extends StatelessWidget {
           listen: false,
         ).fillTextBarWithSearchString = true;
         print(
-            "After: ${Provider.of<SearchViewModel>(context, listen: false).searchText += " $addition"}");
+          "After: ${Provider.of<SearchViewModel>(
+            context,
+            listen: false,
+          ).searchText += " $addition"}",
+        );
       };
 
   @widgetFactory
@@ -294,8 +288,6 @@ class PostInfoPane extends StatelessWidget {
       alignment: AlignmentDirectional.bottomStart,
       child: Container(
         constraints: const BoxConstraints(
-          /* minWidth: 70,
-        minHeight: 20, */
           maxWidth: 150,
           maxHeight: 150,
         ),
@@ -306,60 +298,7 @@ class PostInfoPane extends StatelessWidget {
             text: " ",
             children: SearchView.i.postInfoBannerItems.mapAsList(
               (e, i, l) => e.getMyTextSpan(e6Post),
-            ), /* [
-              TextSpan(
-                  text: "${e6Post.rating.toUpperCase()} ",
-                  style: TextStyle(
-                    color: switch (e6Post.rating) {
-                      "s" => Colors.green,
-                      "q" => Colors.amber,
-                      "e" => Colors.red,
-                      _ => throw UnsupportedError("type not supported"),
-                    },
-                    fontWeight: FontWeight.bold,
-                  )),
-              TextSpan(text: "${e6Post.file.ext} "),
-              TextSpan(text: "${e6Post.score.total} "),
-              TextSpan(children: [
-                const TextSpan(
-                  text: "(",
-                ),
-                TextSpan(
-                    text: "${e6Post.score.up}",
-                    style: const TextStyle(
-                      color: Colors.green,
-                      decoration: TextDecoration.underline,
-                    )),
-                const TextSpan(text: "/"),
-                TextSpan(
-                    text: "${e6Post.score.down}",
-                    style: const TextStyle(
-                      color: Colors.red,
-                      decoration: TextDecoration.underline,
-                    )),
-                const TextSpan(text: ") "),
-              ]),
-              if (e6Post.relationships.hasParent)
-                const TextSpan(
-                    text: "P ",
-                    style: TextStyle(
-                      color: Colors.amber,
-                      decoration: TextDecoration.underline,
-                    )),
-              if (e6Post.relationships.hasChildren)
-                TextSpan(
-                    text: "C${e6Post.relationships.children.length} ",
-                    style: const TextStyle(
-                      color: Colors.amber,
-                      decoration: TextDecoration.underline,
-                    )),
-              if (e6Post.isFavorited)
-                const TextSpan(
-                    text: "♥ ",
-                    style: TextStyle(
-                      color: Colors.red,
-                    )),
-            ], */
+            ),
           ),
         ),
       ),
@@ -379,15 +318,15 @@ enum PostInfoPaneItem {
 
   String toJson() => name;
   factory PostInfoPaneItem.fromJson(json) => switch (json) {
-    String j when j == rating.name => rating,
-    String j when j == fileExtension.name => fileExtension,
-    String j when j == scoreTotal.name => scoreTotal,
-    String j when j == scoreUpAndDown.name => scoreUpAndDown,
-    String j when j == hasParent.name => hasParent,
-    String j when j == hasChildren.name => hasChildren,
-    String j when j == isFavorited.name => isFavorited,
-    _ => throw UnsupportedError("type not supported"),
-  };
+        String j when j == rating.name => rating,
+        String j when j == fileExtension.name => fileExtension,
+        String j when j == scoreTotal.name => scoreTotal,
+        String j when j == scoreUpAndDown.name => scoreUpAndDown,
+        String j when j == hasParent.name => hasParent,
+        String j when j == hasChildren.name => hasChildren,
+        String j when j == isFavorited.name => isFavorited,
+        _ => throw UnsupportedError("type not supported"),
+      };
   InlineSpan getMyTextSpan(E6PostResponse e6Post) => switch (this) {
         rating => TextSpan(
             text: "${e6Post.rating.toUpperCase()} ",

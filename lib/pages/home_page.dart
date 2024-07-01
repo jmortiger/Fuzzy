@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
 import 'package:fuzzy/models/saved_data.dart';
+import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/saved_searches_page.dart';
 import 'package:fuzzy/util/util.dart' as util;
@@ -90,9 +91,12 @@ class _HomePageState extends State<HomePage> {
           });
         },
       ), //_buildDrawer(context),
-      floatingActionButton: WFabBuilder.multiplePosts(posts: 
-                    selectedIndices.mapAsList((e, i, l) => 
-                        posts!.tryGet(e)!), onClearSelections: () => onSelectionCleared.invoke()),//_buildFab(context),
+      floatingActionButton: WFabWrapper(onClearSelections: () =>
+              onSelectionCleared.invoke(),),
+      // WFabBuilder.multiplePosts(
+      //     posts: selectedIndices.mapAsList((e, i, l) => posts!.tryGet(e)!),
+      //     onClearSelections: () =>
+      //         onSelectionCleared.invoke()), //_buildFab(context),
     );
   }
 
@@ -128,29 +132,19 @@ class _HomePageState extends State<HomePage> {
                             "Adding ${selectedIndices.length} posts to favorites...")),
                   );
                   E621.sendAddFavoriteRequestBatch(
-                    // () =>
-                    selectedIndices.map((e) => //E621.initAddFavoriteRequest(
+                    selectedIndices.map((e) => 
                         posts!.tryGet(e)!.id),
                     username: E621AccessData.devUsername,
                     apiKey: E621AccessData.devApiKey,
-                    // )),
                     onComplete: (responses) {
                       var sbs =
                           "${responses.where((element) => element.statusCodeInfo.isSuccessful).length}/${responses.length} posts added to favorites!";
                       responses
                           .where((r) => r.statusCode == 422)
                           .forEach((r) async {
-                        var //rBody = await http.ByteStream(r.stream.asBroadcastStream()).bytesToString(),
+                        var
                             pId = int.parse(
                                 r.request!.url.queryParameters["post_id"]!);
-                        // E621.favFailed.invoke(
-                        //   PostActionArgs(
-                        //     post: posts![
-                        //         selectedIndices.firstWhere((e) => posts![e].id == pId)],
-                        //     responseBody: rBody,
-                        //     statusCode: r.statusCodeInfo,
-                        //   ),
-                        // );
                         if (mounted &&
                             Provider.of<CachedFavorites>(this.context,
                                     listen: false)
@@ -166,16 +160,14 @@ class _HomePageState extends State<HomePage> {
                             label: "Undo",
                             onPressed: () async {
                               E621.sendDeleteFavoriteRequestBatch(
-                                /* () =>  */ responses.map(
-                                    (e) => //E621.initDeleteFavoriteRequest(
+                                responses.map(
+                                    (e) =>
                                         int.parse(
                                           e.request!.url
                                               .queryParameters["post_id"]!,
                                         )),
                                 username: E621AccessData.devUsername,
                                 apiKey: E621AccessData.devApiKey,
-                                // ),
-                                // ),
                                 onComplete: (responses) =>
                                     ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -286,31 +278,10 @@ class _HomePageState extends State<HomePage> {
         : null;
   }
 
-  // static Future<void> _sendRequestBatch(
-  //   Iterable<http.Request> Function() requestGenerator, {
-  //   FutureOr<void> Function(List<http.StreamedResponse> responses)? onComplete,
-  //   void Function(Object? error, StackTrace trace)? onError =
-  //       util.defaultOnError,
-  // }) async {
-  //   var responses = <http.StreamedResponse>[],
-  //       stream = E621
-  //           .sendRequests(requestGenerator())
-  //           .asyncMap((event) => event)
-  //           .asyncMap((event) async {
-  //         await event.stream.length;
-  //         return event;
-  //       }).handleError(onError as Function);
-  //   await for (final srf in stream) {
-  //     responses.add(srf);
-  //   }
-  //   onComplete?.call(responses);
-  // }
-
   // #region From WSearchView
   SearchViewModel get svm =>
       Provider.of<SearchViewModel>(context, listen: false);
 
-  Set<int> selectedIndices = {};
   JPureEvent onSelectionCleared = JPureEvent();
 
   String get priorSearchText => svm.priorSearchText;
@@ -330,6 +301,10 @@ class _HomePageState extends State<HomePage> {
   set hasNextPageCached(bool? value) => sc.hasNextPageCached = value;
   bool? get hasPriorPage => sc.hasPriorPage;
   // #endregion SearchCache
+  SearchResultsNotifier get sr => Provider.of<SearchResultsNotifier>(context, listen: false);
+  Set<int> get selectedIndices => sr.selectedIndices;
+  set selectedIndices(Set<int> value) => sr.selectedIndices =
+      value is SetNotifier<int> ? value : SetNotifier<int>.from(value);
 
   // #region Only Needed in search view
   String get searchText => svm.searchText;
@@ -383,11 +358,11 @@ class _HomePageState extends State<HomePage> {
                 expectedCount: svm.lazyLoad
                     ? (currentPostCollectionExpectedSize ?? 50)
                     : posts!.count,
-                onPostsSelected: (indices, newest) {
-                  setState(() {
-                    selectedIndices = indices;
-                  });
-                },
+                // onPostsSelected: (indices, newest) {
+                //   setState(() {
+                //     selectedIndices = indices;
+                //   });
+                // },
                 onSelectionCleared: onSelectionCleared,
                 useLazyBuilding: svm.lazyBuilding,
               ),
@@ -463,7 +438,8 @@ class _HomePageState extends State<HomePage> {
         var lastTermIndex = currText.lastIndexOf(RegExpExt.whitespace);
         lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
         final currSubString = currText.substring(lastTermIndex);
-        final currPrefix = currText.substring(0, lastTermIndex/*  == 0 ? currText.length : lastTermIndex */);
+        final currPrefix = currText.substring(
+            0, lastTermIndex /*  == 0 ? currText.length : lastTermIndex */);
         var db = !util.DO_NOT_USE_TAG_DB ? util.tagDbLazy.itemSafe : null;
         if (db == null || currText.isEmpty) {
           if ((AppSettings.i?.favoriteTags.isEmpty ?? true) &&
