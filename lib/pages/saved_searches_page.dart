@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/saved_data.dart';
+import 'package:fuzzy/web/e621/e621.dart' as mye6;
 import 'package:j_util/j_util_full.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:provider/provider.dart';
@@ -14,7 +15,6 @@ class SavedSearchesPageProvider extends StatelessWidget {
       builder: (context, child) => Consumer<SavedDataE6>(
         builder: (context, value, child) => SavedSearchesPageSingleton(
           data: value,
-          // key: ObjectKey(value),
         ),
       ),
     );
@@ -39,29 +39,6 @@ class _SavedSearchesPageSingletonState
     if (widget.data != null) {
       data.$ = widget.data!;
     } else {
-      // if (Platform.isWeb) {
-      //   switch (SavedDataE6.$Async) {
-      //     case Future<SavedDataE6> t:
-      //       print("async");
-      //       t.then(
-      //         (v) {
-      //           setState(() {
-      //             data.$ = v;
-      //           });
-      //         },
-      //       ).onError(util.defaultOnError);
-      //       break;
-      //     case SavedDataE6 t:
-      //       print("sync");
-      //       data.$ = t;
-      //       break;
-      //   }
-      // } else {
-      //   SavedDataE6.fileFullPath
-      //       .getItem()
-      //       .then((v) => Storable.loadToInstanceAsync<SavedDataE6>(v))
-      //       .then((v) => data.$ = v);
-      // }
       switch (SavedDataE6.$Async) {
         case Future<SavedDataE6> t:
           print("async");
@@ -157,7 +134,8 @@ class _SavedSearchesPageSingletonState
       body: SafeArea(
         child: !data.isAssigned
             ? const CircularProgressIndicator()
-            : _buildSingleLevelView(),
+            : _buildParentedView(),
+        // : _buildSingleLevelView(),
       ),
     );
   }
@@ -175,6 +153,34 @@ class _SavedSearchesPageSingletonState
           return null;
         }
       },
+    );
+  }
+
+  Widget _buildParentedView() {
+    return ListView(
+      children: data.$.parented.mapAsList(
+        (e, index, list) => ExpansionTile(
+          title: Text.rich(
+            TextSpan(
+              text: e.first.parent,
+              children: [
+                TextSpan(
+                    text: " (${e.length} entries)",
+                    style: const DefaultTextStyle.fallback().style.copyWith(
+                          color: const Color.fromARGB(255, 80, 80, 80),
+                        )),
+              ],
+            ),
+          ),
+          dense: true,
+          children: e.mapAsList(
+            (e2, i2, l2) => _buildSavedEntry(
+              entry: e2,
+              context: context,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -206,16 +212,13 @@ class _SavedSearchesPageSingletonState
               ),
               Text("$mainDataName:"),
               TextField(
-                // onChanged: (value) =>
-                //  mainData = isNumeric && int.tryParse(value) != null
-                //    ? value
-                //    : mainData,
                 inputFormatters: isNumeric ? [util.numericFormatter] : null,
                 onChanged: (value) => mainData = value,
                 controller: util.defaultSelection(initialData),
                 keyboardType: isNumeric ? TextInputType.number : null,
               ),
               const Text("Parent:"),
+              // TODO: Autocomplete
               TextField(
                 onChanged: (value) => parent = value,
                 controller: util.defaultSelection(initialParent),
@@ -254,10 +257,6 @@ class _SavedSearchesPageSingletonState
     required BuildContext context,
     required T entry,
   }) {
-    // var ret = () => Navigator.pop<String>(
-    //       context,
-    //       entry.searchString,
-    //     );
     return ListTile(
       leading: switch (entry.runtimeType) {
         SavedSearchData => const Text("S"),
@@ -293,6 +292,10 @@ class _SavedSearchesPageSingletonState
               "Search" => Navigator.pop<String>(
                   context,
                   entry.searchString,
+                ),
+              "Search w/ Unique id" => Navigator.pop<String>(
+                  context,
+                  "${mye6.E621.delimiter}${entry.uniqueId}",
                 ),
               "Edit" => showSavedElementEditDialogue(context,
                         initialTitle: entry.title,
@@ -333,55 +336,3 @@ class _SavedSearchesPageSingletonState
     );
   }
 }
-
-// class ExpansionPanelListExample extends StatefulWidget {
-//   final List<List<SavedEntry>> data;
-//   const ExpansionPanelListExample({super.key, required this.data});
-
-//   @override
-//   State<ExpansionPanelListExample> createState() =>
-//       _ExpansionPanelListExampleState();
-// }
-
-// class _ExpansionPanelListExampleState extends State<ExpansionPanelListExample> {
-//   final List<Item> _data = generateItems(8);
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return SingleChildScrollView(
-//       child: Container(
-//         child: _buildPanel(),
-//       ),
-//     );
-//   }
-
-//   Widget _buildPanel() {
-//     return ExpansionPanelList(
-//       expansionCallback: (int index, bool isExpanded) {
-//         setState(() {
-//           _data[index].isExpanded = isExpanded;
-//         });
-//       },
-//       children: _data.map<ExpansionPanel>((Item item) {
-//         return ExpansionPanel(
-//           headerBuilder: (BuildContext context, bool isExpanded) {
-//             return ListTile(
-//               title: Text(item.headerValue),
-//             );
-//           },
-//           body: ListTile(
-//               title: Text(item.expandedValue),
-//               subtitle:
-//                   const Text('To delete this panel, tap the trash can icon'),
-//               trailing: const Icon(Icons.delete),
-//               onTap: () {
-//                 setState(() {
-//                   _data.removeWhere((Item currentItem) => item == currentItem);
-//                 });
-//               }),
-//           isExpanded: item.isExpanded,
-//         );
-//       }).toList(),
-//     );
-//   }
-// }

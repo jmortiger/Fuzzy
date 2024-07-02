@@ -13,7 +13,7 @@ import 'package:provider/provider.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-final print = lm.genPrint("main");
+final print = lm.genPrint("WFabBuilder");
 
 class WFabBuilder extends StatelessWidget {
   final List<E6PostResponse>? posts;
@@ -126,8 +126,12 @@ class WFabBuilder extends StatelessWidget {
           username: E621AccessData.devUsername,
           apiKey: E621AccessData.devApiKey,
           onComplete: (responses) {
-            var sbs =
-                "${responses.where((element) => element.statusCodeInfo.isSuccessful).length}/${responses.length} posts added to favorites!";
+            var total = responses.length;
+            responses.removeWhere(
+              (element) => element.statusCodeInfo.isSuccessful,
+            );
+            var sbs = "${total - responses.length}/"
+                "$total posts added to favorites!";
             responses.where((r) => r.statusCode == 422).forEach((r) async {
               var pId = int.parse(r.request!.url.queryParameters["post_id"]!);
               if (context.mounted &&
@@ -476,6 +480,7 @@ class WFabBuilder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ExpandableFab(
+      useDefaultHeroTag: false,
       distance: 112,
       disabledTooltip: (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
           ? ""
@@ -525,14 +530,16 @@ class _WFabWrapperState extends State<WFabWrapper> {
   @override
   Widget build(BuildContext context) {
     return WFabBuilder.multiplePosts(
-        posts: Provider.of<SearchCache>(context, listen: true)
-            .posts
-            ?.posts
-            .where((e) =>
-                Provider.of<SearchResultsNotifier>(context, listen: true)
-                    .selectedPostIds
-                    .contains(e.id))
-            .toList() ?? [],
-            onClearSelections: widget.onClearSelections,);
+      posts: Provider.of<SearchCache>(context, listen: true)
+              .posts
+              ?.posts
+              .where((e) =>
+                  Provider.of<SearchResultsNotifier>(context, listen: true)
+                      .selectedPostIds
+                      .contains(e.id))
+              .toList() ??
+          [],
+      onClearSelections: widget.onClearSelections,
+    );
   }
 }

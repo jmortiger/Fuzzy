@@ -1,5 +1,6 @@
 import 'dart:async' as async_lib;
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:fuzzy/util/util.dart';
@@ -7,8 +8,9 @@ import 'package:j_util/j_util_full.dart';
 import 'package:j_util/serialization.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:logging/logging.dart';
 
-final print = lm.genPrint("main");
+final print = lm.genPrint("SavedDataE6");
 
 /// Stuff like searches and sets
 /// TODO: Redo to a completely static, no instance implementation.
@@ -62,18 +64,22 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
   int get length => /* pools.length + sets.length +  */ searches.length;
   List<List<SavedEntry>> get parented => searches.fold(
         <List<SavedEntry>>[],
-        (previousValue, element) {
+        (acc, element) {
           try {
-            return previousValue
+            return acc
               ..singleWhere((e) => e.firstOrNull?.parent == element.parent)
                   .add(element);
           } catch (e) {
-            return previousValue..add([element]);
+            return acc..add([element]);
           }
         },
-      )..sort(
+      )
+        ..sort(
           (a, b) => a.first.parent.compareTo(b.first.parent),
-        );
+        )
+        ..forEach((e) => e.sort(
+              (a, b) => a.compareTo(b),
+            ));
   /* static const delimiter = "♥";
   SavedEntry operator [](String uniqueId) => all.singleWhere(
         (element) => element.uniqueId == uniqueId,
@@ -125,6 +131,8 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
         initStorageAsync(value);
       });
     }
+    validateUniqueness();
+    $._save();
   }
   SavedDataE6 copyWith({
     List<SavedPoolData>? pools,
@@ -174,11 +182,41 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
       };
   void _save() {
     notifyListeners();
-    writeAsync()
-        .then(
-          (value) => print("Write ${true ? "successful" : "failed"}"),
-        )
-        .catchError(onErrorPrintAndRethrow);
+    if (!Platform.isWeb) {
+      writeAsync()
+          .catchError((e, s) => print(e, Level.WARNING, e, s))
+          .then(
+            (value) => print("Write ${true ? "successful" : "failed"}"),
+          )
+          .catchError(onErrorPrintAndRethrow);
+    } else {
+      print(jsonEncode(toJson()), Level.FINE);
+    }
+  }
+
+  static const validIdCharacters = [
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+  ];
+  bool validateUniqueness([bool resolve = true]) {
+    var ret = true;
+    for (var i = 0; i < searches.length; i++) {
+      for (var j = i; j < searches.length; j++) {
+        if (i == j) continue;
+        if (searches[i].uniqueId == searches[j].uniqueId) {
+          ret = false;
+          if (!resolve) {
+            return ret;
+          }
+          var store = searches[j];
+          store = store.copyWith(
+            uniqueId:
+                "${store.uniqueId}${validIdCharacters[Random().nextInt(validIdCharacters.length)]}",
+          );
+          searches[j] = store;
+        }
+      }
+    }
+    return ret;
   }
 
   void _modify(void Function(SavedDataE6 instance) modifier) {

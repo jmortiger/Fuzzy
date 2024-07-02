@@ -25,7 +25,7 @@ import '../widgets/w_home_end_drawer.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-final print = lm.genPrint("main");
+final print = lm.genPrint("HomePage");
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -38,7 +38,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     onSelectionCleared.subscribe(() {
-      setState(() => selectedIndices.clear());
+      setState(() {
+        sr.clearSelections();
+      });
     });
     if (!E621AccessData.devAccessData.isAssigned) {
       E621AccessData.devAccessData.getItem();
@@ -95,8 +97,18 @@ class _HomePageState extends State<HomePage> {
           });
         },
       ), //_buildDrawer(context),
-      floatingActionButton: WFabWrapper(onClearSelections: () =>
-              onSelectionCleared.invoke(),),
+      floatingActionButton: WFabBuilder.multiplePosts /* Wrapper */ (
+        posts: Provider.of<SearchCache>(context, listen: true)
+                .posts
+                ?.posts
+                .where((e) =>
+                    Provider.of<SearchResultsNotifier>(context, listen: true)
+                        .selectedPostIds
+                        .contains(e.id))
+                .toList() ??
+            [],
+        onClearSelections: () => onSelectionCleared.invoke(),
+      ),
       // WFabBuilder.multiplePosts(
       //     posts: selectedIndices.mapAsList((e, i, l) => posts!.tryGet(e)!),
       //     onClearSelections: () =>
@@ -136,8 +148,7 @@ class _HomePageState extends State<HomePage> {
                             "Adding ${selectedIndices.length} posts to favorites...")),
                   );
                   E621.sendAddFavoriteRequestBatch(
-                    selectedIndices.map((e) => 
-                        posts!.tryGet(e)!.id),
+                    selectedIndices.map((e) => posts!.tryGet(e)!.id),
                     username: E621AccessData.devUsername,
                     apiKey: E621AccessData.devApiKey,
                     onComplete: (responses) {
@@ -146,9 +157,8 @@ class _HomePageState extends State<HomePage> {
                       responses
                           .where((r) => r.statusCode == 422)
                           .forEach((r) async {
-                        var
-                            pId = int.parse(
-                                r.request!.url.queryParameters["post_id"]!);
+                        var pId = int.parse(
+                            r.request!.url.queryParameters["post_id"]!);
                         if (mounted &&
                             Provider.of<CachedFavorites>(this.context,
                                     listen: false)
@@ -164,12 +174,10 @@ class _HomePageState extends State<HomePage> {
                             label: "Undo",
                             onPressed: () async {
                               E621.sendDeleteFavoriteRequestBatch(
-                                responses.map(
-                                    (e) =>
-                                        int.parse(
-                                          e.request!.url
-                                              .queryParameters["post_id"]!,
-                                        )),
+                                responses.map((e) => int.parse(
+                                      e.request!.url
+                                          .queryParameters["post_id"]!,
+                                    )),
                                 username: E621AccessData.devUsername,
                                 apiKey: E621AccessData.devApiKey,
                                 onComplete: (responses) =>
@@ -305,7 +313,8 @@ class _HomePageState extends State<HomePage> {
   set hasNextPageCached(bool? value) => sc.hasNextPageCached = value;
   bool? get hasPriorPage => sc.hasPriorPage;
   // #endregion SearchCache
-  SearchResultsNotifier get sr => Provider.of<SearchResultsNotifier>(context, listen: false);
+  SearchResultsNotifier get sr =>
+      Provider.of<SearchResultsNotifier>(context, listen: false);
   Set<int> get selectedIndices => sr.selectedIndices;
   set selectedIndices(Set<int> value) => sr.selectedIndices =
       value is SetNotifier<int> ? value : SetNotifier<int>.from(value);
@@ -694,6 +703,7 @@ class _HomePageState extends State<HomePage> {
     } else {
       out = "Request For Same Terms: $priorSearchText ($out";
     }
+    selectedIndices.clear();
     print(out);
     hasNextPageCached = null;
     lastPostOnPageIdCached = null;

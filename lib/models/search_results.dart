@@ -3,7 +3,7 @@ import 'package:j_util/j_util_full.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-final print = lm.genPrint("main");
+final print = lm.genPrint("SearchResultsNotifier");
 
 class SearchResultsNotifier with ChangeNotifier {
   SearchResultsNotifier({
@@ -81,9 +81,16 @@ class SearchResultsNotifier with ChangeNotifier {
       if (resolveDesync) {
         _selectedIndices.clear();
         _selectedPostIds.clear();
+        notifyListeners();
       }
       throw StateError("Selected indices and posts desynced");
     }
+  }
+
+  void clearSelections({bool clearIndices = true, bool clearPostIds = true}) {
+    if (clearIndices) _selectedIndices.clear();
+    if (clearPostIds) _selectedPostIds.clear();
+    if (clearIndices || clearPostIds) notifyListeners();
   }
 }
 

@@ -417,7 +417,7 @@ class SearchViewData {
   factory SearchViewData.fromJson(JsonOut json) => SearchViewData(
         postsPerPage: json["postsPerPage"] ?? defaultData.postsPerPage,
         postsPerRow: json["postsPerRow"] ?? defaultData.postsPerRow,
-        postInfoBannerItems: (json["postInfoBannerItems"] as List?)?.mapAsList(
+        postInfoBannerItems: (json["postInfoBannerItems"] as String?)?.split(",").mapAsList(
               (e, i, l) => PostInfoPaneItem.fromJson(e),
             ) ??
             defaultData.postInfoBannerItems,
@@ -425,12 +425,12 @@ class SearchViewData {
   JsonOut toJson() => {
         "postsPerPage": postsPerPage,
         "postsPerRow": postsPerRow,
-        "postInfoBannerItems": "[${postInfoBannerItems.fold(
+        "postInfoBannerItems": postInfoBannerItems.fold(
           "",
           (previousValue, element) =>
               "${previousValue.isNotEmpty ? '$previousValue,' : previousValue}"
               "${element.name}",
-        )}]",
+        ),
       };
 }
 

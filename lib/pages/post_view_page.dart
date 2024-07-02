@@ -19,7 +19,7 @@ import '../widgets/w_fab_builder.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-final print = lm.genPrint("main");
+final print = lm.genPrint("PostViewPage");
 
 abstract interface class IReturnsTags {
   List<String>? get tagsToAdd;
@@ -217,7 +217,8 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
           ],
         ),
       ),
-      floatingActionButton: WFabBuilder.singlePost(post: e6Post),//_buildFab(context),
+      floatingActionButton:
+          WFabBuilder.singlePost(post: e6Post), //_buildFab(context),
     );
   }
 
@@ -578,9 +579,12 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
           alignment: AlignmentDirectional.centerStart,
           child: TextButton(
             onPressed: () {
-              onAddToSearch?.call(e);
-              tagsToAdd?.add(e);
+              showTagDialog(e, context);
             },
+            // onPressed: () {
+            //   onAddToSearch?.call(e);
+            //   tagsToAdd?.add(e);
+            // },
             child: SelectableText(e),
           ),
         ));
@@ -591,6 +595,51 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
     //         : null;
     //   },
     // );
+  }
+
+  // @widgetFactory
+  // AlertDialog
+  void showTagDialog(String tag, BuildContext cxt) {
+    showDialog(
+      context: cxt,
+      builder: (context) {
+        return AlertDialog(
+          content: ListBody(
+            children: [
+              ListTile(
+                title: Text(tag),
+              ),
+              ListTile(
+                title: const Text("Add to search"),
+                onTap: () {
+                  onAddToSearch?.call(tag);
+                  tagsToAdd?.add(tag);
+                  Navigator.pop(context);
+                },
+              ),
+              if (!AppSettings.i!.blacklistedTags.contains(tag))
+                ListTile(
+                  title: const Text("Add to blacklist"),
+                  onTap: () {
+                    AppSettings.i?.blacklistedTags.add(tag);
+                    AppSettings.i?.writeToFile();
+                    Navigator.pop(context);
+                  },
+                ),
+              if (AppSettings.i?.blacklistedTags.contains(tag) ?? false)
+                ListTile(
+                  title: const Text("Remove from blacklist"),
+                  onTap: () {
+                    AppSettings.i?.blacklistedTags.remove(tag);
+                    AppSettings.i?.writeToFile();
+                    Navigator.pop(context);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @widgetFactory

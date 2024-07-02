@@ -19,8 +19,9 @@ void Function(Object? message,
     StackTrace? stackTrace,
     Zone? zone]) genPrint(String fileName, [String? className]) {
   var l = FileLogger(className ?? fileName, "$fileName.txt");
+  l.$.level = Level.INFO;
   return (Object? message,
-          [LogLevel logLevel = Level.INFO,
+          [LogLevel logLevel = Level.FINEST,
           Object? error,
           StackTrace? stackTrace,
           Zone? zone]) =>
@@ -41,11 +42,15 @@ Future<String> logsPathInit() async {
 const mainFileName = "main.txt";
 final mainFile = LateFinal<File?>();
 Future<void> init() async {
+  hierarchicalLoggingEnabled = true;
   await logPath.getItem().then(
         (v) => Platform.isWeb
             ? null
             : Storable.handleInitStorageAsync("$v/$mainFileName")
-          ?..onError((error, stackTrace) => mainFile.$ = null,)..then((v2) {
+          ?..onError(
+            (error, stackTrace) => mainFile.$ = null,
+          )
+          ..then((v2) {
             mainFile.$ = v2;
             return v2?.writeAsString(
                   "\n${DateTime.timestamp().toISO8601DateString()}",
@@ -94,7 +99,9 @@ class FileLogger implements Logger {
                     mode: FileMode.append,
                   ) ??
                   Future.sync(() => null);
-            }).onError((error, stackTrace) => file.$ = null,),
+            }).onError(
+              (error, stackTrace) => file.$ = null,
+            ),
         );
     $.onRecord.listen(
       (e) {
@@ -108,7 +115,8 @@ class FileLogger implements Logger {
           name: e.loggerName,
           stackTrace: e.stackTrace,
           zone: e.zone,
-        );;
+        );
+        ;
       },
     );
   }
