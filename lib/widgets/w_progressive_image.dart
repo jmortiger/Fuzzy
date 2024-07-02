@@ -2,11 +2,21 @@ import 'package:flutter/material.dart';
 
 /// TODO: EVERYTHING
 class WProgressiveImage extends StatefulWidget {
-  const WProgressiveImage({
+  const WProgressiveImage._({
     super.key,
-    //  this.
+    this.placeholder,
+    this.thumbnail,
+    this.image,
   });
-
+  // const WProgressiveImage.({
+  //   super.key,
+  //   this.placeholder,
+  //   this.thumbnail,
+  //   this.image,
+  // });
+  final ImageProvider? placeholder;
+  final ImageProvider? thumbnail;
+  final ImageProvider? image;
   @override
   State<WProgressiveImage> createState() => _WProgressiveImageState();
 }

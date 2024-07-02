@@ -97,9 +97,11 @@ class SearchResultArgs extends SearchArgs {
     required super.pageNumber,
     required super.username,
     required super.apiKey,
+    this.response,
   });
   SearchResultArgs.fromSearchArgs({
     this.results,
+    this.response,
     required this.responseBody,
     required this.statusCode,
     required SearchArgs args,
@@ -115,6 +117,7 @@ class SearchResultArgs extends SearchArgs {
   final E6Posts? results;
   final String responseBody;
   final StatusCode statusCode;
+  final http.BaseResponse? response;
 }
 
 class PostActionArgs extends JEventArgs {
@@ -157,7 +160,7 @@ sealed class E621 extends Site {
   static const int softRateLimit = 2;
   static const int idealRateLimit = 3;
   static final http.Client client = http.Client();
-  static const maxPostsPerSearch = 320;
+  static const maxPostsPerSearch = e621.Api.maxPostsPerSearch;
   static DateTime timeOfLastRequest =
       DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
 
@@ -465,6 +468,52 @@ sealed class E621 extends Site {
       statusCode: t.statusCodeInfo,
       args: a1,
       results: t2,
+      response: t,
+    );
+    searchEnded.invoke(a2);
+    return a2;
+  }
+  static Future<SearchResultArgs> performUserPostSearch({
+    String tags = "",
+    int limit = 50,
+    String? pageModifier, //pageModifier.contains(RegExp(r'a|b'))
+    int? postId,
+    int? pageNumber,
+    String? username,
+    String? apiKey,
+  }) async {
+    print(tags);
+    var a1 = SearchArgs(
+        tags: [tags], //tags.split(RegExpExt.whitespace),
+        limit: limit,
+        pageModifier: pageModifier,
+        postId: postId,
+        pageNumber: pageNumber,
+        username: username,
+        apiKey: apiKey);
+    searchBegan.invoke(a1);
+    var t = await sendRequest(initSearchRequest(
+      tags: tags,
+      limit: limit,
+      pageModifier: pageModifier,
+      postId: postId,
+      pageNumber: pageNumber,
+      username: username,
+      apiKey: apiKey,
+    ));
+    var t1 = await t.stream.bytesToString();
+    E6Posts? t2;
+    try {
+      t2 = E6PostsSync.fromJson(jsonDecode(t1));
+    } catch (e) {
+      print("performPostSearch: $e");
+    }
+    var a2 = SearchResultArgs.fromSearchArgs(
+      responseBody: t1,
+      statusCode: t.statusCodeInfo,
+      args: a1,
+      results: t2,
+      response: t,
     );
     searchEnded.invoke(a2);
     return a2;

@@ -485,7 +485,7 @@ class WFabBuilder extends StatelessWidget {
       disabledTooltip: (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
           ? ""
           : "Long-press to select posts and perform bulk actions.",
-      children: true || (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
+      children: (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
           ? [
               if (!isSinglePost && onClearSelections != null)
                 WFabBuilder.getClearSelectionButton(
@@ -508,7 +508,7 @@ class WFabBuilder extends StatelessWidget {
                 getMultiplePostsRemoveFavAction(context, posts!),
               if (isSinglePost && post!.isFavorited)
                 getSinglePostRemoveFavAction(context, post!),
-              getPrintSelectionsAction(context, post, posts),
+              // getPrintSelectionsAction(context, post, posts),
             ]
           : [],
     );

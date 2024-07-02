@@ -8,24 +8,42 @@ import 'package:logging/logging.dart';
 
 import 'util/util.dart' as f_util;
 
-import 'package:fuzzy/log_management.dart' as lm;
-
-// final print = lm.genPrint("main");
-
 typedef LogLevel = Level;
+const logFileExt = ".txt";
 void Function(Object? message,
     [LogLevel logLevel,
     Object? error,
     StackTrace? stackTrace,
-    Zone? zone]) genPrint(String fileName, [String? className]) {
-  var l = FileLogger(className ?? fileName, "$fileName.txt");
-  l.$.level = Level.INFO;
-  return (Object? message,
-          [LogLevel logLevel = Level.FINEST,
-          Object? error,
-          StackTrace? stackTrace,
-          Zone? zone]) =>
-      l.log(logLevel, message, error, stackTrace, zone);
+    Zone? zone]) genPrint(
+  String fileName, [
+  String? className,
+  Level? level,
+]) =>
+    genLogger(fileName, className, level).print;
+
+({
+  void Function(Object? message,
+      [LogLevel logLevel,
+      Object? error,
+      StackTrace? stackTrace,
+      Zone? zone]) print,
+  FileLogger logger
+}) genLogger(
+  String fileName, [
+  String? className,
+  Level? level,
+]) {
+  final l = FileLogger(className ?? fileName, "$fileName.txt");
+  l.$.level = level ?? Level.INFO;
+  return (
+    print: (Object? message,
+            [LogLevel logLevel = Level.FINEST,
+            Object? error,
+            StackTrace? stackTrace,
+            Zone? zone]) =>
+        l.log(logLevel, message, error, stackTrace, zone),
+    logger: l
+  );
 }
 
 final logPath = LazyInitializer.immediate(logsPathInit);
@@ -39,21 +57,23 @@ Future<String> logsPathInit() async {
   }
 }
 
-const mainFileName = "main.txt";
+const mainFileName = "main";
 final mainFile = LateFinal<File?>();
 Future<void> init() async {
   hierarchicalLoggingEnabled = true;
   await logPath.getItem().then(
         (v) => Platform.isWeb
             ? null
-            : Storable.handleInitStorageAsync("$v/$mainFileName")
+            : Storable.handleInitStorageAsync(
+                "$v/$mainFileName-${DateTime.timestamp().toISO8601DateString()}$logFileExt",
+              )
           ?..onError(
             (error, stackTrace) => mainFile.$ = null,
           )
           ..then((v2) {
             mainFile.$ = v2;
             return v2?.writeAsString(
-                  "\n${DateTime.timestamp().toISO8601DateString()}",
+                  "\n${DateTime.timestamp().toIso8601String()}",
                   mode: FileMode.append,
                 ) ??
                 Future.sync(() => null);
@@ -87,7 +107,12 @@ Future<void> init() async {
 class FileLogger implements Logger {
   final Logger $;
   final file = LateFinal<File?>();
-  FileLogger(String name, String? fileName) : $ = Logger(name) {
+  FileLogger(
+    String name,
+    String? fileName, [
+    Level level = Level.FINE,
+  ]) : $ = Logger(name) {
+    $.level = level;
     logPath.getItem().then(
           (v) => Platform.isWeb
               ? null
@@ -95,7 +120,7 @@ class FileLogger implements Logger {
             ?..then((v2) {
               file.$ = v2;
               return v2?.writeAsString(
-                    "\n${DateTime.timestamp().toISO8601DateString()}",
+                    "\n${DateTime.timestamp().toIso8601String()}",
                     mode: FileMode.append,
                   ) ??
                   Future.sync(() => null);
@@ -129,7 +154,7 @@ class FileLogger implements Logger {
             ?..then((v2) {
               file.$ = v2;
               return v2?.writeAsString(
-                    "\n${DateTime.timestamp().toISO8601DateString()}",
+                    "\n${DateTime.timestamp().toIso8601String()}",
                     mode: FileMode.append,
                   ) ??
                   Future.sync(() => null);

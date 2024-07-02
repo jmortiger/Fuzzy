@@ -25,6 +25,10 @@ class WPostSearchResults extends StatefulWidget {
   final bool useLazyBuilding;
 
   final bool disallowSelections;
+
+  final bool stripToGridView;
+
+  final JPureEvent? _fireRebuild;
   const WPostSearchResults({
     super.key,
     required this.posts,
@@ -33,7 +37,10 @@ class WPostSearchResults extends StatefulWidget {
     this.useLazyBuilding = false,
     this.disallowSelections = false,
     JPureEvent? onSelectionCleared,
-  }) : _onSelectionCleared = onSelectionCleared;
+    this.stripToGridView = false,
+    JPureEvent? fireRebuild,
+  })  : _onSelectionCleared = onSelectionCleared,
+        _fireRebuild = fireRebuild;
 
   @override
   State<WPostSearchResults> createState() => _WPostSearchResultsState();
@@ -143,12 +150,15 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
     }
   }
 
+  void _rebuildCallback() => setState(() {});
+
   @override
   void initState() {
     if (widget.posts.runtimeType == E6PostsSync) {
       trueCount = postSync!.posts.length;
     }
     widget._onSelectionCleared?.subscribe(_clearSelectionsCallback);
+    widget._fireRebuild?.subscribe(_rebuildCallback);
     if (widget.posts.runtimeType == E6PostsLazy) {
       postLazy!.onFullyIterated.subscribe(
         (FullyIteratedArgs posts) => setState(() {
@@ -162,36 +172,43 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
   @override
   void dispose() {
     widget._onSelectionCleared?.unsubscribe(_clearSelectionsCallback);
+    widget._fireRebuild?.unsubscribe(_rebuildCallback);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // TODO: Make this work lazy
-        if (widget.posts.restrictedIndices.isNotEmpty)
-          Linkify(
-            onOpen: (link) async {
-              if (!await launchUrl(Uri.parse(link.url))) {
-                throw Exception('Could not launch ${link.url}');
-              }
-            },
-            text: "${widget.posts.restrictedIndices.length} hidden by global"
-                " blacklist. https://e621.net/help/global_blacklist",
-            // style: TextStyle(color: Colors.yellow),
-            linkStyle: const TextStyle(color: Colors.yellow),
-          ),
-        // if (widget.posts.restrictedIndices.isNotEmpty)
-        //   Text(
-        //     "${widget.posts.restrictedIndices.length} hidden by global"
-        //     " blacklist. https://e621.net/help/global_blacklist",
-        //   ),
-        Expanded(child: _makeGridView(widget.posts)),
-      ],
-    );
+    return !widget.stripToGridView
+        ? Column(
+            children: [
+              // TODO: Make this work lazy
+              if (widget.posts.restrictedIndices.isNotEmpty)
+                Linkify(
+                  onOpen: (link) async {
+                    if (!await launchUrl(Uri.parse(link.url))) {
+                      throw Exception('Could not launch ${link.url}');
+                    }
+                  },
+                  text:
+                      "${widget.posts.restrictedIndices.length} hidden by global"
+                      " blacklist. https://e621.net/help/global_blacklist",
+                  // style: TextStyle(color: Colors.yellow),
+                  linkStyle: const TextStyle(color: Colors.yellow),
+                ),
+              // if (widget.posts.restrictedIndices.isNotEmpty)
+              //   Text(
+              //     "${widget.posts.restrictedIndices.length} hidden by global"
+              //     " blacklist. https://e621.net/help/global_blacklist",
+              //   ),
+              Expanded(child: _makeGridView(widget.posts)),
+            ],
+          )
+        : _makeGridView(widget.posts);
   }
 
+  int get estimatedCount => widget.posts.runtimeType == E6PostsSync
+      ? widget.posts.count
+      : trueCount ?? widget.expectedCount;
   @widgetFactory
   GridView _makeGridView(E6Posts posts) {
     return widget.useLazyBuilding
@@ -201,9 +218,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
               crossAxisSpacing: 4,
               mainAxisSpacing: 4,
             ),
-            itemCount: widget.posts.runtimeType == E6PostsSync
-                ? widget.posts.count
-                : trueCount ?? widget.expectedCount,
+            itemCount: estimatedCount,
             itemBuilder: (context, index) {
               if (trueCount == null && widget.expectedCount - 1 == index) {
                 posts.tryGet(index + 3);
@@ -217,7 +232,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
             crossAxisSpacing: 4,
             mainAxisSpacing: 4,
             children:
-                (Iterable<int>.generate(widget.expectedCount)).reduceUntilTrue(
+                (Iterable<int>.generate(estimatedCount)).reduceUntilTrue(
                     (accumulator, _, index, __) => posts.tryGet(index) != null
                         ? (
                             accumulator

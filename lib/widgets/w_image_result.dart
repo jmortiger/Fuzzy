@@ -194,9 +194,9 @@ class WImageResult extends StatelessWidget {
     return Center(
       child: AspectRatio(
         aspectRatio: w / h,
-        child: Platform.isWeb
+        child: /* Platform.isWeb
             ? _createHtmlImageElement(url, w, h)
-            : Image.network(
+            :  */Image.network(
                 url,
                 errorBuilder: (context, error, stackTrace) => throw error,
                 fit: BoxFit.contain,

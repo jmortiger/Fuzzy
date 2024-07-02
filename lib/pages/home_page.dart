@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
+import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
@@ -321,9 +322,7 @@ class _HomePageState extends State<HomePage> {
 
   // #region Only Needed in search view
   String get searchText => svm.searchText;
-  set searchText(String value) {
-    svm.searchText = value;
-  }
+  set searchText(String value) => svm.searchText = value;
 
   Future<SearchResultArgs>? get pr => svm.pr;
   set pr(Future<SearchResultArgs>? value) => svm.pr = value;
@@ -343,23 +342,18 @@ class _HomePageState extends State<HomePage> {
   Widget buildSearchView(BuildContext context) {
     return Column(
       children: [
-        // _buildSearchBar(context),
         if (posts == null && pr != null)
-          Expanded(
+          const Expanded(
             child: Center(
-                child: pr != null
-                    ? const AspectRatio(
-                        aspectRatio: 1,
-                        child: CircularProgressIndicator(),
-                      )
-                    : const Placeholder()),
+                child: AspectRatio(
+              aspectRatio: 1,
+              child: CircularProgressIndicator(),
+            )),
           ),
         if (posts != null)
           (() {
             if (pr != null) {
               print("Results Came back: $priorSearchText");
-              // print("371: pr: $pr");
-              // pr = null;
             }
             // if (posts!.posts.firstOrNull == null) {
             //   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No Results. Did you mean to login?")));
@@ -371,11 +365,6 @@ class _HomePageState extends State<HomePage> {
                 expectedCount: svm.lazyLoad
                     ? (currentPostCollectionExpectedSize ?? 50)
                     : posts!.count,
-                // onPostsSelected: (indices, newest) {
-                //   setState(() {
-                //     selectedIndices = indices;
-                //   });
-                // },
                 onSelectionCleared: onSelectionCleared,
                 useLazyBuilding: svm.lazyBuilding,
               ),
@@ -389,14 +378,8 @@ class _HomePageState extends State<HomePage> {
         if (posts != null &&
             (posts.runtimeType == E6PostsSync ||
                 (posts as E6PostsLazy).isFullyProcessed))
-          // Builder(builder: (context) {
           (() {
             print("BUILDING PAGE NAVIGATION");
-            // getHasNextPage(
-            //   tags: priorSearchText,
-            //   // lastPostId: _lastPostOnPageIdCached,
-            //   lastPostId: posts?.tryGet(posts!.count - 1)?.id,
-            // );
             return WSearchResultPageNavigation(
               onNextPage: hasNextPageCached ?? false
                   ? () => _sendSearchAndUpdateState(
@@ -456,7 +439,8 @@ class _HomePageState extends State<HomePage> {
         var db = !util.DO_NOT_USE_TAG_DB ? util.tagDbLazy.itemSafe : null;
         if (db == null || currText.isEmpty) {
           if ((AppSettings.i?.favoriteTags.isEmpty ?? true) &&
-              SavedDataE6.$Safe == null) {
+              SavedDataE6.$Safe == null &&
+              CachedSearches.searches.isEmpty) {
             return const Iterable<String>.empty();
           }
           return [
@@ -464,17 +448,19 @@ class _HomePageState extends State<HomePage> {
             if (SavedDataE6.$Safe != null)
               ...SavedDataE6.$.all
                   .where(
-                    (v) => !currText.contains(
-                      "${E621.delimiter}${v.uniqueId}",
-                    ),
+                    (v) => !currText.contains("${E621.delimiter}${v.uniqueId}"),
                   )
                   .map((v) => "$currPrefix ${E621.delimiter}${v.uniqueId}"),
             if (AppSettings.i?.favoriteTags.isNotEmpty ?? false)
               ...AppSettings.i!.favoriteTags
-                  .where(
-                    (element) => !currText.contains(element),
-                  )
+                  .where((element) => !currText.contains(element))
                   .map((e) => "$currPrefix$e"),
+            if (CachedSearches.searches.isNotEmpty)
+              ...CachedSearches.searches
+                  .where(
+                    (element) => element.searchString.contains(currText),
+                  )
+                  .map((e) => e.searchString),
           ]..sort(
               (a, b) {
                 return (b.similarityTo(currText /* SubString */) * 1000000 -
@@ -708,7 +694,7 @@ class _HomePageState extends State<HomePage> {
     hasNextPageCached = null;
     lastPostOnPageIdCached = null;
     var (:username, :apiKey) = devGetAuth();
-    pr = E621.performPostSearch(
+    pr = E621.performUserPostSearch(
       tags: svm.forceSafe ? "$tags rating:safe" : tags,
       limit: limit,
       pageModifier: pageModifier,

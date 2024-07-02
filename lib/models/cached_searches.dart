@@ -9,20 +9,12 @@ import '../web/e621/e621.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-final print = lm.genPrint("main");
+final lRecord = lm.genLogger("CachedSearches");
+final print = lRecord.print;
+final logger = lRecord.logger;
 
 class CachedSearches {
   static const fileName = "CachedSearches.json";
-  static final fileFullPath = LazyInitializer.immediate(fileFullPathInit);
-  static Future<String> fileFullPathInit() async {
-    print("fileFullPathInit called");
-    try {
-      return Platform.isWeb ? "" : "${await appDataPath.getItem()}/$fileName";
-    } catch (e) {
-      print("Error in CachedSearches.fileFullPathInit():\n$e");
-      return "";
-    }
-  }
 
   static final file = LazyInitializer.immediate(() async {
     E621.searchBegan.subscribe(onSearchBegan);
@@ -31,19 +23,20 @@ class CachedSearches {
           ? null
           : Storable.handleInitStorageAsync(
               "${await appDataPath.getItem()}/$fileName");
-    } catch (e) {
-      print("Error in CachedSearches.file.Init():\n$e");
+    } catch (e, s) {
+      logger.warning("Error in CachedSearches.file.Init()", e, s);
       return null;
     }
   });
 
-  static async_lib.FutureOr<List<SearchData>> loadFromStorageAsync() async =>
-      CachedSearches.loadFromJson(
-        jsonDecode(
-          await (await file.getItem())?.readAsString() ??
-              jsonEncode(CachedSearches.toJson()),
-        ),
-      );
+  static async_lib.FutureOr<List<SearchData>> loadFromStorageAsync() async {
+    E621.searchBegan.subscribe(onSearchBegan);
+    var t = await (await file.getItem())?.readAsString();
+    return (t != null)
+        ? CachedSearches.loadFromJson(jsonDecode(t))
+        : _searches = const <SearchData>[];
+  }
+
   static List<SearchData> loadFromJson(JsonMap json) =>
       searches = (json as List).mapAsList((e, i, l) => SearchData.fromJson(e));
   static List toJson() => _searches;
@@ -54,17 +47,17 @@ class CachedSearches {
   static List<SearchData> _searches = const <SearchData>[];
   static List<SearchData> get searches => _searches;
   static set searches(List<SearchData> v) {
-    _searches = v;
     Changed.invoke(
       CachedSearchesEvent(
           priorValue: List.unmodifiable(_searches),
-          currentValue: List.unmodifiable(_searches = v)),
+          currentValue: _searches = List.unmodifiable(v)),
     );
   }
 
-  CachedSearches({List<SearchData>? searches}) {
-    E621.searchBegan.subscribe(onSearchBegan);
+  static void clear() {
+    searches = const <SearchData>[];
   }
+
   static void onSearchBegan(SearchArgs a) {
     _searches = _searches.toList()..add(SearchData.fromList(tagList: a.tags));
     _save();
@@ -72,11 +65,15 @@ class CachedSearches {
 
   static void _save() {
     print("Writing search cache");
-    file.getItem().then<Object?>(
-      (v) => v?.writeAsString(jsonEncode(CachedSearches.toJson())) ?? Future.sync(() => null)
-      ).then(
-      (value) => print("Write ${value == null ? "not performed" : "presumably successful"}"),
-    );
+    file
+        .getItem()
+        .then<Object?>((v) =>
+            v?.writeAsString(jsonEncode(CachedSearches.toJson())) ??
+            Future.sync(() => null))
+        .then(
+          (value) => print(
+              "Write ${value == null ? "not performed" : "presumably successful"}"),
+        );
   }
 }
 

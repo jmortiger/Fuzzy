@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/j_util_full.dart';
 
@@ -105,8 +106,6 @@ class SettingsPage extends StatelessWidget {
           ),
         ],
       ),
-      // body: const WExpandingSettings(),
-      // body: const WNonFoldOutSettings(),
       body: const WFoldoutSettings(),
     );
   }
@@ -219,7 +218,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
   TextStyle get titleStyle => SettingsPage.titleStyle;
 
   AppSettings get settings => AppSettings.i!;
-
+  
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -240,6 +239,10 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               name: "Blacklisted Tags",
               setVal: (Set<String> v) => AppSettings.i!.blacklistedTags = v,
             ),
+            const ListTile(
+              title: Text("Clear Cached Searches"),
+              onTap: CachedSearches.clear,
+            )
           ],
         ),
         ExpansionTile(

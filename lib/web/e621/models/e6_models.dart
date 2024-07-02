@@ -2,13 +2,21 @@
 // https://app.quicktype.io/
 // import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
+import 'package:logging/logging.dart';
 
 import '../../models/image_listing.dart';
 
+import 'package:fuzzy/log_management.dart' as lm;
+
+late final thing = lm.genLogger("E6Models");
+late final print = thing.print;
+late final logger = thing.logger;
 typedef JsonOut = Map<String, dynamic>;
 
 abstract class E6Posts {
@@ -773,29 +781,7 @@ class PoolModel extends e621.Pool {
     required super.postCount,
   }) {
     posts = LazyInitializer<List<E6PostResponse>>(
-      () async {
-        var t1 = (jsonDecode(
-          (await E621.performPostSearch(
-            tags: postIds.fold(
-              "order:id_asc",
-              (previousValue, element) => "$previousValue ~id:$element",
-            ),
-            limit: E621.maxPostsPerSearch,
-          ))
-              .responseBody,
-        )["posts"] as List),
-            t2 = postIds.fold(
-          <E6PostResponse>[],
-          (previousValue, element) {
-            return previousValue..add(
-              E6PostResponse.fromJson(t1.firstWhere(
-                (t) => element == (t["id"] as int),
-              )),
-            );
-          },
-        );
-        return t2;
-      },
+      () async => getOrderedPosts(postIds, poolId: id),
     );
   }
   factory PoolModel.fromRawJson(String json) =>
@@ -816,40 +802,83 @@ class PoolModel extends e621.Pool {
           postCount: json["post_count"],
         );
   late final LazyInitializer<List<E6PostResponse>> posts;
-  static Future<List<E6PostResponse>> getOrderedPosts(List<int> postIds) async {
-    var t1 = (jsonDecode(
-      (await E621.performPostSearch(
-        tags: postIds.fold(
-          "order:id_asc",
-          (previousValue, element) => "$previousValue ~$element",
-        ),
-        limit: E621.maxPostsPerSearch,
-      ))
-          .responseBody,
-    )["posts"] as List)
-        .fold(
-      <E6PostResponse>[],
-      (previousValue, element) {
-        previousValue[previousValue.indexOf(
-          previousValue.firstWhere(
-            (t) => (t as int) == (element["id"] as int),
-          ),
-        )] = E6PostResponse.fromJson(element);
-        return previousValue;
-      },
-    );
-    return t1; /* .then((v) {
-        (jsonDecode(v.responseBody)["posts"] as List).fold(
-          <E6PostResponse>[],
-          (previousValue, element) {
-            previousValue[previousValue.indexOf(
-              previousValue.firstWhere(
-                (t) => (t as int) == (element["id"] as int),
-              ),
-            )] = E6PostResponse.fromJson(element);
-            return previousValue;
-          },
-        );
-      }) */
+
+  /// TODO: Still not iron-clad in terms of ordering and page offsets.
+  Future<List<E6PostResponse>> getPosts({
+    int page = 1,
+    int? postsPerPage,
+  }) =>
+      getOrderedPosts(
+        postIds,
+        poolId: id,
+        postsPerPage: postsPerPage,
+        page: page,
+      );
+
+  /// TODO: Still not iron-cladin terms of ordering and page offsets.
+  ///
+  /// Uses `order:id_asc` to try and grab them in order. If there are too many
+  /// posts and a lot are out of order, this could cause failure somewhere.
+  static Future<List<E6PostResponse>> getOrderedPosts(
+    List<int> postIds, {
+    int? poolId,
+    int? postsPerPage,
+    int page = 1,
+  }) async {
+    if (page <= 0) page = 1;
+    postsPerPage ??= SearchView.i.postsPerPage;
+    if (postIds.length > e621.Api.maxPostsPerSearch) {
+      logger.warning("Too many posts in pool for a single search request");
+    } else if (postIds.length > postsPerPage) {
+      logger.warning("Too many posts in pool for 1 page");
+    } else if (poolId == null &&
+        postIds.length > e621.Api.maxTagsPerSearch - 1) {
+      logger.warning("Too many posts in pool for 1 search (use the pool id)");
+      postsPerPage = e621.Api.maxTagsPerSearch - 1;
+    }
+    try {
+      final searchString =
+          "${(poolId != null ? "pool:$poolId order:id_asc" : postIds.getRange(
+                0,
+                min(postIds.length, postsPerPage),
+              ).fold(
+                "",
+                (previousValue, element) => "$previousValue~id:$element ",
+              ))} order:id_asc";
+      final response = await E621.performPostSearch(
+          tags: searchString, limit: postsPerPage, pageNumber: page);
+      logger.finer("first: ${postIds.first}");
+      logger.finer(response.responseBody);
+      logger.finer(response.statusCode);
+      final t1 = (jsonDecode(
+        (response).responseBody,
+      )["posts"] as List);
+      logger.finer("# posts in response: ${t1.length}");
+      int postOffset = (page - 1) * postsPerPage;
+      logger.finer("offset from start of poolIds[$postOffset] = ${postIds[postOffset]}");
+      // Sort them by order in pool
+      final t2 = postIds.getRange(postOffset, postIds.length).reduceUntilTrue(
+        (acc, e, i, l) {
+          var match =
+              t1.firstWhere((t) => e == (t["id"] as int), orElse: () => null);
+          return match != null
+              ? ((acc..add(E6PostResponse.fromJson(match))), false)
+              : (acc, true);
+        },
+        <E6PostResponse>[],
+      );
+      logger.finer("# posts after sorting: ${t2.length}");
+      if (t1.length != t2.length) {
+        logger.warning(
+            "# posts before ${t1.length} & after ${t2.length} sorting mismatched. There is likely 1 or more posts whose id is out of order with its order in the list. This will likely cause problems.");
+      }
+      return t2;
+    } catch (e, s) {
+      logger.severe(
+          "Failed to getOrderedPosts(poolId: $poolId, postsPerPage: $postsPerPage, page: $page), defaulting to empty array. PostIds: $postIds",
+          e,
+          s);
+      return [];
+    }
   }
 }

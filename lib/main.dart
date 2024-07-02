@@ -22,7 +22,7 @@ void main() async {
     (value) => print("Can Use AppSettings singleton"),
   );
   CachedFavorites.fileFullPath.getItem();
-  CachedSearches.file.getItem();
+  CachedSearches.loadFromStorageAsync();
   SavedDataE6.$Safe;
   runApp(
     MaterialApp(

@@ -15,7 +15,9 @@ dependencies:
   j_util:
     #path: C:/Users/***REMOVED***source/repos/j_util
     #https://dart.dev/tools/pub/dependencies#git-packages
-    #git: https://github.com/***REMOVED***/j_util.git
+    # git: 
+    #   url: https://github.com/***REMOVED***/j_util.git
+    #   version: ^1.0.0
     path: ../j_util/
   logging: ^1.2.0
   measure_size: ^4.0.0
