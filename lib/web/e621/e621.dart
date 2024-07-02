@@ -395,19 +395,7 @@ sealed class E621 extends Site {
         searchOrder: searchOrder,
         limit: limit,
         page: page,
-      )).toResponse() /* .then((v) async {
-      var t = await http.ByteStream(v.stream.asBroadcastStream()).bytesToString();
-      return http.Response(
-        t,
-        v.statusCode,
-        headers: v.headers,
-        isRedirect: v.isRedirect,
-        persistentConnection: v.persistentConnection,
-        reasonPhrase: v.reasonPhrase,
-        request: v.request,
-      );
-    }) */
-      ;
+      )).toResponse();
   static http.Request initSearchRequest({
     String tags = "",
     int limit = 50,
@@ -446,7 +434,7 @@ sealed class E621 extends Site {
         pageNumber: pageNumber,
         username: username,
         apiKey: apiKey);
-    searchBegan.invoke(a1);
+    nonUserSearchBegan.invoke(a1);
     var t = await sendRequest(initSearchRequest(
       tags: tags,
       limit: limit,
@@ -470,7 +458,7 @@ sealed class E621 extends Site {
       results: t2,
       response: t,
     );
-    searchEnded.invoke(a2);
+    nonUserSearchEnded.invoke(a2);
     return a2;
   }
   static Future<SearchResultArgs> performUserPostSearch({

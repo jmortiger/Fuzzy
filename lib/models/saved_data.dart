@@ -128,11 +128,15 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
     _instance.itemSafe ??= this;
     if (!Platform.isWeb) {
       fileFullPath.getItem().then((value) {
-        initStorageAsync(value);
+        initStorageAsync(value).then(
+          (value) {
+            if (!validateUniqueness()) {
+              $._save();
+            }
+          },
+        );
       });
     }
-    validateUniqueness();
-    $._save();
   }
   SavedDataE6 copyWith({
     List<SavedPoolData>? pools,
@@ -634,6 +638,30 @@ final class SavedSearchData extends SavedEntry {
   int compareTo(SavedEntry other) => (title.compareTo(other.title) != 0)
       ? title.compareTo(other.title)
       : searchString.compareTo(other.searchString);
+
+  @override
+  bool operator ==(Object other) {
+    return other.runtimeType == runtimeType &&
+        other is SavedSearchData &&
+        other.delimiter == delimiter &&
+        other.isFavorite == isFavorite &&
+        other.parent == parent &&
+        other.searchString == searchString &&
+        other.title == title &&
+        other.uniqueId == uniqueId;
+    //super == other;
+  }
+
+  @override
+  int get hashCode {
+    return delimiter.hashCode % 32767 +
+        isFavorite.hashCode % 32767 +
+        parent.hashCode % 32767 +
+        searchString.hashCode % 32767 +
+        title.hashCode % 32767 +
+        uniqueId.hashCode % 32767;
+    // return super.hashCode;
+  }
 
   factory SavedSearchData.fromJson(Map<String, dynamic> json) =>
       SavedSearchData(

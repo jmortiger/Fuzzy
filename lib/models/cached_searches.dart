@@ -37,8 +37,8 @@ class CachedSearches {
         : _searches = const <SearchData>[];
   }
 
-  static List<SearchData> loadFromJson(JsonMap json) =>
-      searches = (json as List).mapAsList((e, i, l) => SearchData.fromJson(e));
+  static List<SearchData> loadFromJson(List json) =>
+      searches = json.mapAsList((e, i, l) => SearchData.fromJson(e));
   static List toJson() => _searches;
 
   @event

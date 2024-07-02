@@ -142,7 +142,7 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
                                           searchId: [e]))
                                       .toResponse()
                                       .then((v) =>
-                                          jsonDecode((v as Response).body))
+                                          jsonDecode(v.body))
                                       .then(
                                         (v) => PoolViewPage(
                                           pool: PoolModel.fromJson(
@@ -169,8 +169,18 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
                                             "${snapshot.error}\n${snapshot.stackTrace}"),
                                       );
                                     } else {
-                                      return const Scaffold(
-                                        body: CircularProgressIndicator(),
+                                      return Scaffold(
+                                        appBar: AppBar(
+                                          title: Text("Pool $e"),
+                                        ),
+                                        body: const Column(
+                                          children: [
+                                            Expanded(
+                                              child:
+                                                  CircularProgressIndicator(),
+                                            )
+                                          ],
+                                        ),
                                       );
                                     }
                                   },

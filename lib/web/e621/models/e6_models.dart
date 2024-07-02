@@ -863,14 +863,15 @@ class PoolModel extends e621.Pool {
               t1.firstWhere((t) => e == (t["id"] as int), orElse: () => null);
           return match != null
               ? ((acc..add(E6PostResponse.fromJson(match))), false)
-              : (acc, true);
+              // Force it to stay alive until it's at least close.
+              : (acc, acc.length > l.length);
         },
         <E6PostResponse>[],
       );
       logger.finer("# posts after sorting: ${t2.length}");
       if (t1.length != t2.length) {
         logger.warning(
-            "# posts before ${t1.length} & after ${t2.length} sorting mismatched. There is likely 1 or more posts whose id is out of order with its order in the list. This will likely cause problems.");
+            "# posts before ${t1.length} & after ${t2.length} sorting mismatched. There is likely 1 or more posts whose id is out of order with its order in the pool. This will likely cause problems.");
       }
       return t2;
     } catch (e, s) {

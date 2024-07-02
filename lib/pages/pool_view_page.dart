@@ -55,64 +55,72 @@ class _PoolViewPageState extends State<PoolViewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Pool ${widget.pool.id}: ${widget.pool.name}"),),
+      appBar: AppBar(
+        title: Text("Pool ${widget.pool.id}: ${widget.pool.name}"),
+      ),
       body: SafeArea(
-        child: //posts.isNotEmpty ? 
+        child: //posts.isNotEmpty ?
             Column(
-                // mainAxisSize: MainAxisSize.min,
-                children: [
-                  Expanded(
-                    child: WPostSearchResults(
-                      posts: E6PostsSync(posts: posts),
-                      expectedCount: posts.length,
-                      disallowSelections: true,
-                      stripToGridView: true,
-                      fireRebuild: rebuild,
-                    ),
-                  ),
-                  if (loadingPosts != null)
-                    const Expanded(
-                      child: Center(
-                          child: AspectRatio(
-                        aspectRatio: 1,
-                        child: CircularProgressIndicator(),
-                      )),
-                    ),
-                  if (widget.pool.postCount > posts.length &&
-                      loadingPosts == null)
-                    TextButton(
-                      onPressed: () => setState(() {
-                        loadingPosts = widget.pool.getPosts(page: ++currentPage)
-                          ..then((data) {
-                            logger.info("Done loading");
-                            setState(() {
-                              if (posts.isNotEmpty) {
-                                posts.addAll(data);
-                                // logger.finer(
-                                //   "posts.length before set conversion: ${posts.length}",
-                                // );
-                                // posts = posts.toSet().toList();
-                                // logger.finer(
-                                //   "posts.length after set conversion: ${posts.length}",
-                                // );
-                              } else {
-                                posts = data;
-                              }
-                              loadingPosts = null;
-                              rebuild.invoke();
-                            });
-                          });
-                      }),
-                      child: const Text("Load More"),
-                    ),
-                ],
+          // mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(widget.pool.description),
+            if (posts.isNotEmpty)
+              Expanded(
+                child: WPostSearchResults(
+                  posts: E6PostsSync(posts: posts),
+                  expectedCount: posts.length,
+                  disallowSelections: true,
+                  stripToGridView: true,
+                  fireRebuild: rebuild,
+                ),
               ),
-            // : const Center(
-            //     child: AspectRatio(
-            //       aspectRatio: 1,
-            //       child: CircularProgressIndicator(),
-            //     ),
-            //   ),
+            if (loadingPosts != null)
+              const Expanded(
+                child: Center(
+                    child: AspectRatio(
+                  aspectRatio: 1,
+                  child: CircularProgressIndicator(),
+                )),
+              ),
+            Center(
+              child: Text(
+                "Loaded ${posts.length}/${widget.pool.postCount} posts",
+              ),
+            ),
+            if (widget.pool.postCount > posts.length && loadingPosts == null)
+              TextButton(
+                onPressed: () => setState(() {
+                  loadingPosts = widget.pool.getPosts(page: ++currentPage)
+                    ..then((data) {
+                      logger.info("Done loading");
+                      setState(() {
+                        if (posts.isNotEmpty) {
+                          posts.addAll(data);
+                          // logger.finer(
+                          //   "posts.length before set conversion: ${posts.length}",
+                          // );
+                          // posts = posts.toSet().toList();
+                          // logger.finer(
+                          //   "posts.length after set conversion: ${posts.length}",
+                          // );
+                        } else {
+                          posts = data;
+                        }
+                        loadingPosts = null;
+                        rebuild.invoke();
+                      });
+                    });
+                }),
+                child: const Text("Load More"),
+              ),
+          ],
+        ),
+        // : const Center(
+        //     child: AspectRatio(
+        //       aspectRatio: 1,
+        //       child: CircularProgressIndicator(),
+        //     ),
+        //   ),
       ),
     );
   }
