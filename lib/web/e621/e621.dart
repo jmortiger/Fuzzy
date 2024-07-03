@@ -195,7 +195,7 @@ sealed class E621 extends Site {
       savedSearchInsertion,
       (match) {
         try {
-          return SavedDataE6.$Safe?.all
+          return SavedDataE6Legacy.$Safe?.all
                   .singleWhere((element) => element.uniqueId == match.group(1))
                   .searchString ??
               "";

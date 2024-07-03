@@ -31,6 +31,7 @@ class CachedSearches {
 
   static async_lib.FutureOr<List<SearchData>> loadFromStorageAsync() async {
     E621.searchBegan.subscribe(onSearchBegan);
+    Changed.subscribe(CachedSearches._save);
     var t = await (await file.getItem())?.readAsString();
     return (t != null)
         ? CachedSearches.loadFromJson(jsonDecode(t))
@@ -59,11 +60,13 @@ class CachedSearches {
   }
 
   static void onSearchBegan(SearchArgs a) {
-    _searches = _searches.toList()..add(SearchData.fromList(tagList: a.tags));
+    _searches = List.unmodifiable(
+      _searches.toSet()..add(SearchData.fromList(tagList: a.tags)),
+    );
     _save();
   }
 
-  static void _save() {
+  static void _save([CachedSearchesEvent? e]) {
     print("Writing search cache");
     file
         .getItem()
@@ -80,7 +83,10 @@ class CachedSearches {
 class CachedSearchesEvent extends JEventArgs {
   final List<SearchData> priorValue;
   final List<SearchData> currentValue;
-
+  static const CachedSearchesEvent empty = CachedSearchesEvent(
+    priorValue: <SearchData>[],
+    currentValue: <SearchData>[],
+  );
   const CachedSearchesEvent({
     required this.priorValue,
     required this.currentValue,

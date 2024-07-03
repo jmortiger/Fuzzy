@@ -15,23 +15,23 @@ final print = lm.genPrint("SavedDataE6");
 /// Stuff like searches and sets
 /// TODO: Redo to a completely static, no instance implementation.
 /// "searches": searches,
-class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
+class SavedDataE6Legacy extends ChangeNotifier with Storable<SavedDataE6Legacy> {
   // #region Singleton
-  static final _instance = LateFinal<SavedDataE6>();
-  static SavedDataE6 get $ =>
-      _instance.isAssigned ? _instance.$ : SavedDataE6.fromStorageSync();
-  static SavedDataE6 get $Copy => _instance.isAssigned
+  static final _instance = LateFinal<SavedDataE6Legacy>();
+  static SavedDataE6Legacy get $ =>
+      _instance.isAssigned ? _instance.$ : SavedDataE6Legacy.fromStorageSync();
+  static SavedDataE6Legacy get $Copy => _instance.isAssigned
       ? _instance.$.copyWith()
-      : SavedDataE6.fromStorageSync();
-  static SavedDataE6? get $Safe {
+      : SavedDataE6Legacy.fromStorageSync();
+  static SavedDataE6Legacy? get $Safe {
     if (_instance.isAssigned) {
       return _instance.$;
     } else {
-      switch (SavedDataE6.loadFromStorageAsync()) {
-        case Future<SavedDataE6> t:
+      switch (SavedDataE6Legacy.loadFromStorageAsync()) {
+        case Future<SavedDataE6Legacy> t:
           t.then((v) => _instance.$ = v);
           break;
-        case SavedDataE6 t:
+        case SavedDataE6Legacy t:
           _instance.$ = t;
           break;
       }
@@ -39,8 +39,8 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
     }
   }
 
-  static async_lib.FutureOr<SavedDataE6> get $Async =>
-      _instance.isAssigned ? _instance.$ : SavedDataE6.loadFromStorageAsync();
+  static async_lib.FutureOr<SavedDataE6Legacy> get $Async =>
+      _instance.isAssigned ? _instance.$ : SavedDataE6Legacy.loadFromStorageAsync();
   // #endregion Singleton
 
   static const fileName = "savedSearches.json";
@@ -118,7 +118,7 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
     }
   }
 
-  SavedDataE6({
+  SavedDataE6Legacy({
     List<SavedPoolData>? pools,
     List<SavedSetData>? sets,
     List<SavedSearchData>? searches,
@@ -138,37 +138,37 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
       });
     }
   }
-  SavedDataE6 copyWith({
+  SavedDataE6Legacy copyWith({
     List<SavedPoolData>? pools,
     List<SavedSetData>? sets,
     List<SavedSearchData>? searches,
   }) =>
-      SavedDataE6(
+      SavedDataE6Legacy(
         pools: pools ?? this.pools.toList(),
         sets: sets ?? this.sets.toList(),
         searches: searches ?? this.searches.toList(),
       );
-  factory SavedDataE6.fromStorageSync() => Platform.isWeb
-      ? SavedDataE6()
-      : Storable.tryLoadToInstanceSync(fileFullPath.$) ?? SavedDataE6();
+  factory SavedDataE6Legacy.fromStorageSync() => Platform.isWeb
+      ? SavedDataE6Legacy()
+      : Storable.tryLoadToInstanceSync(fileFullPath.$) ?? SavedDataE6Legacy();
 
-  static async_lib.FutureOr<SavedDataE6> loadFromStorageAsync() async {
+  static async_lib.FutureOr<SavedDataE6Legacy> loadFromStorageAsync() async {
     var str = await Storable.tryLoadStringAsync(
       await fileFullPath.getItem(),
     );
     if (str == null) {
       try {
-        return SavedDataE6.fromJson(
+        return SavedDataE6Legacy.fromJson(
             (await devData.getItem())["e621"]["savedData"]);
       } catch (e) {
-        return SavedDataE6();
+        return SavedDataE6Legacy();
       }
     } else {
-      return SavedDataE6.fromJson(jsonDecode(str));
+      return SavedDataE6Legacy.fromJson(jsonDecode(str));
     }
   }
 
-  factory SavedDataE6.fromJson(Map<String, dynamic> json) => SavedDataE6(
+  factory SavedDataE6Legacy.fromJson(Map<String, dynamic> json) => SavedDataE6Legacy(
         pools: (json["pools"] as List).mapAsList(
           (e, index, list) => SavedPoolData.fromJson(e),
         ),
@@ -223,7 +223,7 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
     return ret;
   }
 
-  void _modify(void Function(SavedDataE6 instance) modifier) {
+  void _modify(void Function(SavedDataE6Legacy instance) modifier) {
     modifier(this);
     if (this != $) {
       modifier($);
@@ -263,8 +263,29 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
   //   }
   //   // _save();
   // }
-  void editAndSave<T extends SavedEntry>(
-      {required T original, required T edited}) {
+  // void editAndSave<T extends SavedEntry>(
+  //     {required T original, required T edited}) {
+  //   edited = edited.validateUniqueness();
+  //   switch ((edited, original)) {
+  //     case (SavedSearchData o, SavedSearchData orig):
+  //       _modify((i) => i.searches[i.searches.indexOf(orig)] = o);
+  //       break;
+  //     case (SavedPoolData o, SavedPoolData orig):
+  //       _modify((i) => i.pools[i.pools.indexOf(orig)] = o);
+  //       break;
+  //     case (SavedSetData o, SavedSetData orig):
+  //       _modify((i) => i.sets[i.sets.indexOf(orig)] = o);
+  //       break;
+  //     default:
+  //       throw UnsupportedError("not supported");
+  //   }
+  //   // _save();
+  // }
+  void editAndSave({
+    required SavedEntry original,
+    required SavedEntry edited,
+  }) {
+    // edited = edited.validateUniqueness();
     switch ((edited, original)) {
       case (SavedSearchData o, SavedSearchData orig):
         _modify((i) => i.searches[i.searches.indexOf(orig)] = o);
@@ -279,6 +300,15 @@ class SavedDataE6 extends ChangeNotifier with Storable<SavedDataE6> {
         throw UnsupportedError("not supported");
     }
     // _save();
+  }
+
+  void removeEntry(SavedEntry entry) {
+    // if (index >= 0 && index < all.length) {
+      // searches.removeAt(index);
+      searches.remove(entry);
+      notifyListeners();
+      $._save();
+    // }
   }
 }
 
@@ -430,6 +460,16 @@ abstract base class SavedEntry implements Comparable<SavedEntry> {
   /// Allows for composed searches
   String get uniqueId;
   const SavedEntry();
+  static const validIdCharacters =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  SavedEntry validateUniqueness();
+  bool verifyUniqueness();
+  // static bool implValidateUniqueness(SavedEntry e, [bool resolve = true]) {
+  //   var all = SavedDataE6._instance.$.all;
+  //   while(all.any((el) => el != e && el.uniqueId == e)) {
+  //     e.
+  //   }
+  // }
 }
 
 @immutable
@@ -515,6 +555,26 @@ final class SavedSetData extends SavedListData {
         parent: json["parent"],
         uniqueId: json["uniqueId"],
       );
+
+  @override
+  SavedSetData validateUniqueness() {
+    var all = SavedDataE6Legacy._instance.$.all;
+    var ret = this;
+    while (all
+        .any((e) => e.searchString != searchString && e.uniqueId == uniqueId)) {
+      ret = copyWith(
+        uniqueId: "$uniqueId${SavedEntry.validIdCharacters[Random().nextInt(
+          SavedEntry.validIdCharacters.length,
+        )]}",
+      );
+    }
+    return ret;
+  }
+
+  @override
+  bool verifyUniqueness() => !SavedDataE6Legacy._instance.$.all.any(
+        (e) => e.searchString != searchString && e.uniqueId == uniqueId,
+      );
 }
 
 @immutable
@@ -558,6 +618,25 @@ final class SavedPoolData extends SavedListData {
         parent: json["parent"],
         uniqueId: json["uniqueId"],
       );
+
+  @override
+  SavedPoolData validateUniqueness() {
+    // var all = SavedDataE6._instance.$.all;
+    var ret = this;
+    while (!verifyUniqueness()) {
+      ret = copyWith(
+        uniqueId: "$uniqueId${SavedEntry.validIdCharacters[Random().nextInt(
+          SavedEntry.validIdCharacters.length,
+        )]}",
+      );
+    }
+    return ret;
+  }
+
+  @override
+  bool verifyUniqueness() => !SavedDataE6Legacy._instance.$.all.any(
+        (e) => e.searchString != searchString && e.uniqueId == uniqueId,
+      );
 }
 
 @immutable
@@ -572,19 +651,29 @@ final class SavedSearchData extends SavedEntry {
   final String uniqueId;
   final Set<String> tags;
   @override
-  String get searchString => tagListToString(tags, delimiter);
+  final String searchString;
+  // String get searchString => tagListToString(tags, delimiter);
   @override
   final String parent;
   final bool isFavorite;
 
-  const SavedSearchData({
+  const SavedSearchData.$const({
     required this.tags,
     this.title = "",
     this.parent = "",
     this.uniqueId = "",
     this.isFavorite = false,
     this.delimiter = e621Delimiter,
+    this.searchString = "",
   });
+  SavedSearchData({
+    required this.tags,
+    this.title = "",
+    this.parent = "",
+    this.uniqueId = "",
+    this.isFavorite = false,
+    this.delimiter = e621Delimiter,
+  }) : searchString = tags.reduce((acc, e) => "$acc$delimiter$e");
   SavedSearchData.withDefaults({
     required this.tags,
     String title = "",
@@ -592,17 +681,18 @@ final class SavedSearchData extends SavedEntry {
     this.uniqueId = "",
     this.isFavorite = false,
     this.delimiter = e621Delimiter,
-  }) : title = title.isEmpty ? tagListToString(tags, delimiter) : title;
+  })  : title = title.isEmpty ? tagListToString(tags, delimiter) : title,
+        searchString = tags.reduce((acc, e) => "$acc$delimiter$e");
 
   SavedSearchData.fromTagsString({
-    required String tags,
+    required this.searchString,
     String title = "",
     this.parent = "",
     this.uniqueId = "",
     this.isFavorite = false,
     this.delimiter = e621Delimiter,
-  })  : title = title.isNotEmpty ? title : tags,
-        tags = tags.split(delimiter).toSet();
+  })  : title = title.isNotEmpty ? title : searchString,
+        tags = searchString.split(delimiter).toSet();
 
   SavedSearchData.fromSearchString({
     required String searchString,
@@ -612,26 +702,29 @@ final class SavedSearchData extends SavedEntry {
     String delimiter = e621Delimiter,
     bool isFavorite = false,
   }) : this.fromTagsString(
-            tags: searchString,
+            searchString: searchString,
             delimiter: delimiter,
             isFavorite: isFavorite,
             parent: parent,
+            uniqueId: uniqueId,
             title: title);
 
   SavedSearchData copyWith({
     String? title,
-    Set<String>? tags,
+    String? searchString,
+    // Set<String>? tags,
     String? parent,
     String? uniqueId,
     bool? isFavorite,
     String? delimiter,
   }) =>
-      SavedSearchData(
-        tags: tags ?? this.tags,
+      SavedSearchData.fromTagsString(
+        searchString: searchString ?? this.searchString,
         title: title ?? this.title,
         parent: parent ?? this.parent,
         isFavorite: isFavorite ?? this.isFavorite,
         delimiter: delimiter ?? this.delimiter,
+        uniqueId: uniqueId ?? this.uniqueId,
       );
 
   @override
@@ -680,4 +773,23 @@ final class SavedSearchData extends SavedEntry {
         "isFavorite": isFavorite,
         "delimiter": delimiter,
       };
+
+  @override
+  SavedSearchData validateUniqueness() {
+    var all = SavedDataE6Legacy._instance.$.all;
+    var ret = this;
+    while (!ret.verifyUniqueness()) {
+      ret = copyWith(
+        uniqueId: "$uniqueId${SavedEntry.validIdCharacters[Random().nextInt(
+          SavedEntry.validIdCharacters.length,
+        )]}",
+      );
+    }
+    return ret;
+  }
+
+  @override
+  bool verifyUniqueness() => !SavedDataE6Legacy._instance.$.all.any(
+        (e) => e.searchString != searchString && e.uniqueId == uniqueId,
+      );
 }

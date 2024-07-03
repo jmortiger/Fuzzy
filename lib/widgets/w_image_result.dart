@@ -199,7 +199,7 @@ class WImageResult extends StatelessWidget {
             :  */Image.network(
                 url,
                 errorBuilder: (context, error, stackTrace) => throw error,
-                fit: BoxFit.contain,
+                fit: imageFit,//BoxFit.contain,
                 width: w.toDouble(),
                 height: h.toDouble(),
                 cacheWidth: w,

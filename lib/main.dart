@@ -23,7 +23,7 @@ void main() async {
   );
   CachedFavorites.fileFullPath.getItem();
   CachedSearches.loadFromStorageAsync();
-  SavedDataE6.$Safe;
+  SavedDataE6Legacy.$Safe;
   runApp(
     MaterialApp(
       theme: ThemeData.dark(),

@@ -838,7 +838,7 @@ class PoolModel extends e621.Pool {
     }
     try {
       final searchString =
-          "${(poolId != null ? "pool:$poolId order:id_asc" : postIds.getRange(
+          "${(poolId != null ? "pool:$poolId" : postIds.getRange(
                 0,
                 min(postIds.length, postsPerPage),
               ).fold(

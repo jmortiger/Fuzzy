@@ -11,8 +11,8 @@ class SavedSearchesPageProvider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => SavedDataE6.$Copy,
-      builder: (context, child) => Consumer<SavedDataE6>(
+      create: (context) => SavedDataE6Legacy.$Copy,
+      builder: (context, child) => Consumer<SavedDataE6Legacy>(
         builder: (context, value, child) => SavedSearchesPageSingleton(
           data: value,
         ),
@@ -22,7 +22,7 @@ class SavedSearchesPageProvider extends StatelessWidget {
 }
 
 class SavedSearchesPageSingleton extends StatefulWidget {
-  final SavedDataE6? data;
+  final SavedDataE6Legacy? data;
 
   const SavedSearchesPageSingleton({super.key, this.data});
 
@@ -33,14 +33,14 @@ class SavedSearchesPageSingleton extends StatefulWidget {
 
 class _SavedSearchesPageSingletonState
     extends State<SavedSearchesPageSingleton> {
-  var data = LateInstance<SavedDataE6>();
+  var data = LateInstance<SavedDataE6Legacy>();
   @override
   void initState() {
     if (widget.data != null) {
       data.$ = widget.data!;
     } else {
-      switch (SavedDataE6.$Async) {
-        case Future<SavedDataE6> t:
+      switch (SavedDataE6Legacy.$Async) {
+        case Future<SavedDataE6Legacy> t:
           print("async");
           t.then(
             (v) {
@@ -50,7 +50,7 @@ class _SavedSearchesPageSingletonState
             },
           ).onError(util.defaultOnError);
           break;
-        case SavedDataE6 t:
+        case SavedDataE6Legacy t:
           print("sync");
           data.$ = t;
           break;
@@ -80,7 +80,7 @@ class _SavedSearchesPageSingletonState
                   if (value != null) {
                     data.$.addAndSaveSearch(
                       SavedSearchData.fromTagsString(
-                        tags: value.mainData,
+                        searchString: value.mainData,
                         title: value.title,
                         uniqueId: value.uniqueId ?? "",
                         parent: value.parent ?? "",
@@ -272,6 +272,11 @@ class _SavedSearchesPageSingletonState
           builder: (context) {
             return AlertDialog(
               title: Text(entry.title),
+              content: Text(
+                "Parent: ${entry.parent}\n"
+                "Search String: ${entry.searchString}\n"
+                "Unique Id: ${entry.uniqueId}\n",
+              ),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop<String>(
@@ -282,9 +287,21 @@ class _SavedSearchesPageSingletonState
                 TextButton(
                     onPressed: () => Navigator.pop<String>(
                           context,
+                          "Search w/ Unique id",
+                        ),
+                    child: const Text("Search w/ Unique id")),
+                TextButton(
+                    onPressed: () => Navigator.pop<String>(
+                          context,
                           "Edit",
                         ),
                     child: const Text("Edit")),
+                TextButton(
+                    onPressed: () => Navigator.pop<String>(
+                          context,
+                          "Delete",
+                        ),
+                    child: const Text("Delete")),
               ],
             );
           },
@@ -297,6 +314,7 @@ class _SavedSearchesPageSingletonState
                   context,
                   "${mye6.E621.delimiter}${entry.uniqueId}",
                 ),
+              "Delete" => data.$.removeEntry(entry),
               "Edit" => showSavedElementEditDialogue(context,
                         initialTitle: entry.title,
                         initialData: entry.searchString,

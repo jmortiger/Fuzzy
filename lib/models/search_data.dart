@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:j_util/j_util_full.dart';
 
 class SearchData {
@@ -22,10 +24,18 @@ class SearchData {
         searchString: json,
       );
   String toJson() => searchString;
+
+  @override
+  bool operator ==(Object other) {
+    return other is SearchData && searchString == other.searchString;
+  }
+
+  @override
+  int get hashCode => searchString.hashCode;
 }
 
 class SearchMetrics extends SearchData {
-  final List<int> frequency;
+  final Int32 frequency;
   const SearchMetrics.$const({
     required this.frequency,
     required String searchString,
@@ -45,7 +55,7 @@ class SearchMetrics extends SearchData {
     required List<String> tagList,
   }) : super.fromList(tagList: tagList);
   factory SearchMetrics.fromJson(Map<String, dynamic> json) => SearchMetrics.fromString(
-        frequency: (json["frequency"] as List).cast<int>(),
+        frequency: json["frequency"],
         searchString: json["searchString"],
       );
   @override
@@ -53,4 +63,12 @@ class SearchMetrics extends SearchData {
     "frequency": frequency.toString(),
     "searchString": searchString.toString(),
   }.toString();
+
+  @override
+  bool operator ==(Object other) {
+    return other is SearchMetrics && searchString == other.searchString && frequency == other.frequency;
+  }
+  
+  @override
+  int get hashCode => searchString.hashCode;
 }

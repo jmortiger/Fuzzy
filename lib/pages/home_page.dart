@@ -439,16 +439,20 @@ class _HomePageState extends State<HomePage> {
         var db = !util.DO_NOT_USE_TAG_DB ? util.tagDbLazy.itemSafe : null;
         if (db == null || currText.isEmpty) {
           if ((AppSettings.i?.favoriteTags.isEmpty ?? true) &&
-              SavedDataE6.$Safe == null &&
+              SavedDataE6Legacy.$Safe == null &&
               CachedSearches.searches.isEmpty) {
             return const Iterable<String>.empty();
           }
           return [
             currText,
-            if (SavedDataE6.$Safe != null)
-              ...SavedDataE6.$.all
+            if (SavedDataE6Legacy.$Safe != null)
+              ...SavedDataE6Legacy.$.all
                   .where(
-                    (v) => !currText.contains("${E621.delimiter}${v.uniqueId}"),
+                    (v) =>
+                        v.verifyUniqueness() &&
+                        !currText.contains(
+                          "${E621.delimiter}${v.uniqueId}",
+                        ),
                   )
                   .map((v) => "$currPrefix ${E621.delimiter}${v.uniqueId}"),
             if (AppSettings.i?.favoriteTags.isNotEmpty ?? false)
