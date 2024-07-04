@@ -1,14 +1,14 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
-import 'package:fuzzy/widgets/w_post_search_results.dart';
-import 'package:fuzzy/widgets/w_search_set.dart';
+import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
-import 'package:http/http.dart';
 import 'package:j_util/e621.dart';
-import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
@@ -17,13 +17,19 @@ import 'package:fuzzy/web/models/image_listing.dart';
 import '../web/e621/e621.dart';
 import '../widgets/w_fab_builder.dart';
 
+// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
-final print = lm.genPrint("PostViewPage");
+late final lRecord = lm.genLogger("PostViewPage");
+late final print = lRecord.print;
+late final logger = lRecord.logger;
+// #endregion Logger
 
 abstract interface class IReturnsTags {
   List<String>? get tagsToAdd;
 }
+
+bool overrideQuality = true;
 
 /// TODO: Expansion State Preservation on scroll
 class PostViewPage extends StatelessWidget implements IReturnsTags {
@@ -44,439 +50,231 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
   static final descriptionTheme = LateFinal<TextStyle>();
   @override
   Widget build(BuildContext context) {
-    descriptionTheme.itemSafe ??= const DefaultTextStyle.fallback()
-        .style
-        .copyWith(
-          fontWeight: FontWeight.bold,
-          fontSize:
-              (const DefaultTextStyle.fallback().style.fontSize ?? 12) * 1.5,
-        );
-    var horizontalPixels = MediaQuery.of(context).size.width *
-        MediaQuery.of(context).devicePixelRatio;
-    var IImageInfo(width: w, height: h, url: url) = postListing.sample;
-    if (postListing.sample.width < horizontalPixels ||
-        pvs.forceHighQualityImage) {
-      IImageInfo(width: w, height: h, url: url) = postListing.file;
+    descriptionTheme.itemSafe ??=
+        const DefaultTextStyle.fallback().style.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 12 * 1.5,
+            );
+    var horizontalPixels = MediaQuery.sizeOf(context).width *
+        MediaQuery.devicePixelRatioOf(context);
+    // var IImageInfo(width: w, height: h, url: url) = postListing.sample;
+    var IImageInfo(width: w, height: h, url: url) = postListing.file.isAVideo
+        ? switch (PostView.i.imageQuality) {
+            "low" => (e6Post.sample.alternates!.alternates["480p"] ??
+                e6Post.sample.alternates!.alternates["720p"] ??
+                e6Post.sample.alternates!.alternates["original"])!,
+            "medium" => (e6Post.sample.alternates!.alternates["720p"] ??
+                e6Post.sample.alternates!.alternates["original"])!,
+            "high" => e6Post.sample.alternates!.alternates["original"]!,
+            _ => throw UnsupportedError("type not supported"),
+          }
+        : postListing.file.extension == "gif" &&
+                e6Post.tags.meta.contains("animated")
+            ? e6Post.file
+            : switch (PostView.i.imageQuality) {
+                "low" => e6Post.preview,
+                "medium" => e6Post.sample,
+                "high" => e6Post.file,
+                _ => throw UnsupportedError("type not supported"),
+              };
+    if (!postListing.file.isAVideo && w > horizontalPixels) {
+      if (e6Post.preview.width > horizontalPixels) {
+        IImageInfo(width: w, height: h, url: url) = postListing.preview;
+      } else if (e6Post.sample.width > horizontalPixels) {
+        IImageInfo(width: w, height: h, url: url) = postListing.sample;
+      }
     }
+    // if (!postListing.file.isAVideo && /* w < horizontalPixels &&  */
+    //     pvs.forceHighQualityImage) {
+    //   IImageInfo(width: w, height: h, url: url) = postListing.file;
+    // }
     return Scaffold(
       body: SafeArea(
         child: Stack(
           children: [
-            ListView(
-              // padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
-              children: [
-                Container(
-                  constraints: BoxConstraints(
-                    maxWidth: pvs.allowOverflow
-                        ? MediaQuery.of(context).size.width
-                        : (MediaQuery.of(context).size.height / h) *
-                            w.toDouble(),
-                    maxHeight: pvs.allowOverflow
-                        ? (MediaQuery.of(context).size.width / w) * h.toDouble()
-                        : MediaQuery.of(context).size.height,
-                  ),
-                  child: AspectRatio(
-                    aspectRatio: w / h,
-                    child: _buildMainContent(url, w, h),
-                  ),
-                ),
-                if (e6Post.relationships.hasActiveChildren)
-                  Row(children: [
-                    const Text("Children: "),
-                    ...e6Post.relationships.children.map(
-                      (e) => TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => FutureBuilder(
-                                  future: E621
-                                      .sendRequest(Api.initSearchPostRequest(e))
-                                      .toResponse()
-                                      .then((v) =>
-                                          jsonDecode((v as Response).body)),
-                                  builder: (context, snapshot) {
-                                    if (snapshot.hasData) {
-                                      try {
-                                        return PostViewPage(
-                                          postListing: E6PostResponse.fromJson(
-                                            snapshot.data["posts"],
-                                          ),
-                                        );
-                                      } catch (e) {
-                                        return Scaffold(
-                                          body: Text(
-                                            "$e\n${snapshot.data}",
-                                          ),
-                                        );
-                                      }
-                                    } else if (snapshot.hasError) {
-                                      return Scaffold(
-                                        body: Text("${snapshot.error}"),
-                                      );
-                                    } else {
-                                      return const Scaffold(
-                                        body: CircularProgressIndicator(),
-                                      );
-                                    }
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                          child: Text(e.toString())),
-                    ),
-                  ]),
-                if (e6Post.pools.firstOrNull != null)
-                  Row(children: [
-                    const Text("Pools: "),
-                    ...e6Post.pools.map(
-                      (e) => TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => FutureBuilder(
-                                  future: E621
-                                      .sendRequest(Api.initSearchPoolsRequest(
-                                          searchId: [e]))
-                                      .toResponse()
-                                      .then((v) =>
-                                          jsonDecode(v.body))
-                                      .then(
-                                        (v) => PoolViewPage(
-                                          pool: PoolModel.fromJson(
-                                            v[0],
-                                          ),
-                                        ),
-                                      ) /* .catchError((element) => Scaffold(
-                                          body: Text("$e\n${element}"),
-                                        )) */
-                                  ,
-                                  builder: (context, snapshot) {
-                                    if (snapshot.hasData) {
-                                      try {
-                                        return snapshot.data!;
-                                      } catch (e, s) {
-                                        return Scaffold(
-                                          body: Text(
-                                              "$e\n$s\n${snapshot.data}\n${snapshot.error}\n${snapshot.stackTrace}"),
-                                        );
-                                      }
-                                    } else if (snapshot.hasError) {
-                                      return Scaffold(
-                                        body: Text(
-                                            "${snapshot.error}\n${snapshot.stackTrace}"),
-                                      );
-                                    } else {
-                                      return Scaffold(
-                                        appBar: AppBar(
-                                          title: Text("Pool $e"),
-                                        ),
-                                        body: const Column(
-                                          children: [
-                                            Expanded(
-                                              child:
-                                                  CircularProgressIndicator(),
-                                            )
-                                          ],
-                                        ),
-                                      );
-                                    }
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                          child: Text(e.toString())),
-                    ),
-                  ]),
-                if (e6Post.description.isNotEmpty)
-                  ExpansionTile(
-                    title: ListTile(
-                      title: Text(
-                        "Description",
-                        style: descriptionTheme.$,
-                      ),
-                    ),
-                    initiallyExpanded: PostView.i.startWithDescriptionExpanded,
-                    children: [SelectableText(e6Post.description)],
-                  ),
-                ..._buildTagsDisplay(context),
-              ],
+            _buildBody(
+              context,
+              w: w,
+              h: h,
+              url: url,
             ),
-            Align(
-              alignment: AlignmentDirectional.topStart,
-              child: IconButton(
-                onPressed: () {
-                  if (onPop != null) {
-                    onPop!();
-                  } else {
-                    Navigator.pop(context, this);
-                  }
-                },
-                icon: const Icon(Icons.arrow_back),
-                iconSize: 36,
-                style: const ButtonStyle(
-                  backgroundColor: WidgetStateColor.transparent,
-                  elevation: WidgetStatePropertyAll(15),
-                  shadowColor: WidgetStatePropertyAll(Colors.black),
-                ),
-              ),
-            ),
+            WPostViewBackButton(
+                onPop: onPop ?? () => Navigator.pop(context, this)),
           ],
         ),
       ),
-      floatingActionButton:
-          WFabBuilder.singlePost(post: e6Post), //_buildFab(context),
+      floatingActionButton: WFabBuilder.singlePost(post: e6Post),
     );
   }
 
-  ExpandableFab _buildFab(BuildContext context) {
-    return ExpandableFab(
-      distance: 112,
+  Widget _buildBody(
+    BuildContext context, {
+    required int w,
+    required int h,
+    required String url,
+  }) {
+    return ListView(
+      // padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
       children: [
-        ActionButton(
-          icon: const Icon(Icons.add),
-          tooltip: "Add to set",
-          onPressed: () async {
-            print("Adding ${postListing.id} to a set");
-            // ScaffoldMessenger.of(context).showSnackBar(
-            //   const SnackBar(content: Text("To Be Implemented")),
-            // );
-            var v = await showDialog<e621.PostSet>(
-              context: context,
-              builder: (context) {
-                return AlertDialog(
-                  content: WSearchSet(
-                    initialLimit: 10,
-                    initialPage: null,
-                    initialSearchCreatorName: "***REMOVED***,
-                    initialSearchOrder: e621.SetOrder.updatedAt,
-                    initialSearchName: null,
-                    initialSearchShortname: null,
-                    onSelected: (e621.PostSet set) =>
-                        Navigator.pop(context, set),
-                  ),
-                  // scrollable: true,
-                );
-              },
-            );
-            if (v != null) {
-              print("Adding ${postListing.id} to set ${v.id}");
-              var res = await E621
-                  .sendRequest(e621.Api.initAddToSetRequest(
-                    v.id,
-                    [postListing.id],
-                    credentials: (E621.accessData.itemSafe ??=
-                            await E621AccessData.devAccessData.getItem())
-                        .cred,
-                  ))
-                  .toResponse() as Response;
-              if (res.statusCode == 201) {
-                print("${postListing.id} successfully added to set ${v.id}");
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          "${postListing.id} successfully added to set ${v.id}"),
-                      action: SnackBarAction(
-                        label: "See Set",
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => Scaffold(
-                              appBar: AppBar(),
-                              body: WPostSearchResults.directResultFromSearch(
-                                "set:${v.shortname}",
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }
-              }
-              return;
-            } else if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("No Set Selected, canceling.")),
-              );
-              return;
-            } else {
-              return;
-            }
-          },
+        Container(
+          constraints: BoxConstraints(
+            maxWidth: pvs.allowOverflow
+                ? MediaQuery.of(context).size.width
+                : (MediaQuery.of(context).size.height / h) * w.toDouble(),
+            maxHeight: pvs.allowOverflow
+                ? (MediaQuery.of(context).size.width / w) * h.toDouble()
+                : MediaQuery.of(context).size.height,
+          ),
+          child: AspectRatio(
+            aspectRatio: w / h,
+            child: _buildMainContent(url, w, h, context),
+          ),
         ),
-        if (!e6Post.isFavorited)
-          ActionButton(
-            icon: const Icon(Icons.favorite),
-            tooltip: "Add to favorites",
-            onPressed: () async {
-              print("Adding ${e6Post.id} to favorites...");
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Adding ${e6Post.id} to favorites...")),
-              );
-              var t = E621.sendRequest(
-                E621.initAddFavoriteRequest(
-                  e6Post.id,
-                  username: E621AccessData.devUsername,
-                  apiKey: E621AccessData.devApiKey,
-                ),
-              );
-              t.then(
-                (v) => v.stream.listen(
-                  null,
-                  onDone: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("${v.statusCode}: ${v.reasonPhrase}"),
-                        action: SnackBarAction(
-                          label: "Undo",
-                          onPressed: () async {
-                            try {
-                              var newStream = E621.sendRequest(
-                                E621.initDeleteFavoriteRequest(
-                                  int.parse(
-                                    v.request!.url.queryParameters["post_id"]!,
+        if (e6Post.relationships.hasActiveChildren)
+          Row(children: [
+            const Text("Children: "),
+            ...e6Post.relationships.children.map(
+              (e) => TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => FutureBuilder(
+                          future: E621
+                              .sendRequest(Api.initSearchPostRequest(e))
+                              .toResponse()
+                              .then((v) => jsonDecode(v.body)),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData) {
+                              try {
+                                return PostViewPage(
+                                  postListing: E6PostResponse.fromJson(
+                                    snapshot.data["posts"],
                                   ),
-                                  username: E621AccessData.devUsername,
-                                  apiKey: E621AccessData.devApiKey,
+                                );
+                              } catch (e, s) {
+                                logger.severe("Failed: ${snapshot.data}", e, s);
+                                return Scaffold(
+                                  appBar: AppBar(),
+                                  body: Text("$e\n$s\n${snapshot.data}"),
+                                );
+                              }
+                            } else if (snapshot.hasError) {
+                              logger.severe(
+                                "Failed: ${snapshot.data}",
+                                snapshot.error,
+                                snapshot.stackTrace,
+                              );
+                              return Scaffold(
+                                appBar: AppBar(),
+                                body: Text(
+                                  "${snapshot.error}\n${snapshot.stackTrace}",
                                 ),
                               );
-                              newStream.then(
-                                (value2) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        "${value2.statusCode}: ${value2.reasonPhrase}",
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            } catch (e) {
-                              print(e);
-                              rethrow;
+                            } else {
+                              return scSaCoExArCpi;
                             }
                           },
                         ),
                       ),
                     );
                   },
-                ),
-              );
-            },
-          ),
-        ActionButton(
-          icon: const Icon(Icons.delete),
-          tooltip: "Remove selected from set",
-          onPressed: () {
-            print("To Be Implemented");
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("To Be Implemented")),
-            );
-          },
-        ),
-        if (e6Post.isFavorited)
-          ActionButton(
-            icon: const Icon(Icons.heart_broken_outlined),
-            tooltip: "Remove selected from favorites",
-            onPressed: () async {
-              print("Removing ${e6Post.id} from favorites...");
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("Removing ${e6Post.id} from favorites..."),
-                ),
-              );
-              E621
-                  .sendRequest(
-                    E621.initDeleteFavoriteRequest(
-                      e6Post.id,
-                      username: E621AccessData.devUsername,
-                      apiKey: E621AccessData.devApiKey,
-                    ),
-                  )
-                  .toResponse()
-                  .then(
-                    (value) => ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          "${value.statusCode}: ${value.reasonPhrase}",
-                        ),
-                        action: SnackBarAction(
-                          label: "Undo",
-                          onPressed: () async {
-                            var newStream = E621
-                                .sendRequest(
-                              E621.initAddFavoriteRequest(
-                                int.parse(
-                                  value.request!.url.pathSegments.last
-                                      .substring(
-                                    0,
-                                    value.request!.url.pathSegments.last
-                                        .indexOf("."),
-                                  ),
-                                ),
-                                username: E621AccessData.devUsername,
-                                apiKey: E621AccessData.devApiKey,
-                              ),
-                            )
-                                .onError((error, stackTrace) {
-                              print(error);
-                              throw error!;
-                            });
-                            newStream.then(
-                              (value2) {
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(SnackBar(
-                                  content: Text(
-                                    "${value2.statusCode}: ${value2.reasonPhrase}",
-                                  ),
-                                ));
-                              },
+                  child: Text(e.toString())),
+            ),
+          ]),
+        if (e6Post.pools.firstOrNull != null)
+          Row(children: [
+            const Text("Pools: "),
+            ...e6Post.pools.map((e) => TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FutureBuilder(
+                        future: E621
+                            .sendRequest(
+                                Api.initSearchPoolsRequest(searchId: [e]))
+                            .toResponse()
+                            .then((v) => jsonDecode(v.body))
+                            .then((v) => PoolViewPage(
+                                  pool: PoolModel.fromJson(v[0]),
+                                )),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData) {
+                            try {
+                              return snapshot.data!;
+                            } catch (e, s) {
+                              return Scaffold(
+                                appBar: AppBar(),
+                                body: Text(
+                                    "$e\n$s\n${snapshot.data}\n${snapshot.error}\n${snapshot.stackTrace}"),
+                              );
+                            }
+                          } else if (snapshot.hasError) {
+                            return Scaffold(
+                              appBar: AppBar(),
+                              body: Text(
+                                  "${snapshot.error}\n${snapshot.stackTrace}"),
                             );
-                          },
-                        ),
+                          } else {
+                            return Scaffold(
+                              appBar: AppBar(
+                                title: Text("Pool $e"),
+                              ),
+                              body: const Column(
+                                children: [
+                                  exArCpi,
+                                ],
+                              ),
+                            );
+                          }
+                        },
                       ),
                     ),
-                  )
-                  .onError((error, stackTrace) {
-                print(error);
-                throw error!;
-              });
-            },
+                  );
+                },
+                child: Text(e.toString()))),
+          ]),
+        if (e6Post.description.isNotEmpty)
+          ExpansionTile(
+            title: ListTile(
+              title: Text("Description", style: descriptionTheme.$),
+            ),
+            initiallyExpanded: PostView.i.startWithDescriptionExpanded,
+            children: [SelectableText(e6Post.description)],
           ),
+        ..._buildTagsDisplay(context),
       ],
     );
   }
 
   // TODO: Use ExpansionPanelList & ExpansionPanel for tags https://api.flutter.dev/flutter/material/ExpansionPanelList-class.html
   @widgetFactory
-  Widget _buildMainContent(String url, int w, int h) {
+  Widget _buildMainContent(String url, int w, int h, BuildContext ctx) {
     return postListing.file.isAVideo
-        ? WVideoPlayerScreen(resourceUri: postListing.file.address)
-        : Platform.isWeb
+        ? WVideoPlayerScreen(
+            resourceUri: Uri.tryParse(url) ?? postListing.file.address)
+        : /* Platform.isWeb
             ? _createHtmlImageElement(url, w, h)
-            : Image.network(
-                url,
-                errorBuilder: (context, error, stackTrace) => throw error,
-                fit: BoxFit.contain,
-                width: w.toDouble(),
-                height: h.toDouble(),
-                cacheWidth: w,
-                cacheHeight: h,
-              );
+            :  */
+        Image.network(
+            url,
+            errorBuilder: (context, error, stackTrace) => throw error,
+            fit: BoxFit.contain,
+            width: w.toDouble(),
+            height: h.toDouble(),
+            cacheWidth: min(w, MediaQuery.sizeOf(ctx).width.toInt()),
+            // cacheHeight: h,
+          );
   }
 
   static final headerStyle = LateFinal<TextStyle>();
   @widgetFactory
   Iterable<Widget> _buildTagsDisplay(BuildContext context) {
     headerStyle.itemSafe ??= descriptionTheme.$.copyWith(
-      color: Colors.amber,
+      // color: Colors.amber,
       decoration: TextDecoration.underline,
-      decorationStyle: TextDecorationStyle.solid,
+      // decorationStyle: TextDecorationStyle.solid,
     );
     var tagOrder = pvs.tagOrder;
     return [
@@ -541,7 +339,10 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
 
   @widgetFactory
   Iterable<Widget>? _buildTagDisplay(
-      BuildContext context, TextStyle headerStyle, TagCategory? category) {
+    BuildContext context,
+    TextStyle headerStyle,
+    TagCategory? category,
+  ) {
     return _willTagDisplayBeNonNull(category)
         ? [
             _buildTagDisplayHeader(context, headerStyle, category!),
@@ -554,7 +355,10 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
       category != null && e6Post.tags.getByCategory(category).isNotEmpty;
   @widgetFactory
   Widget? _buildTagDisplayFoldout(
-      BuildContext context, TextStyle headerStyle, TagCategory? category) {
+    BuildContext context,
+    TextStyle headerStyle,
+    TagCategory? category,
+  ) {
     return _willTagDisplayBeNonNull(category)
         ? ExpansionTile(
             initiallyExpanded: PostView.i.startWithTagsExpanded,
@@ -572,7 +376,10 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
 
   @widgetFactory
   Widget _buildTagDisplayHeader(
-      BuildContext context, TextStyle headerStyle, TagCategory category) {
+    BuildContext context,
+    TextStyle headerStyle,
+    TagCategory category,
+  ) {
     if (!pvs.colorTagHeaders) headerStyle.copyWith(color: null);
     return Text(
       "${category.name[0].toUpperCase()}${category.name.substring(1)}",
@@ -582,71 +389,202 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
 
   @widgetFactory
   Iterable<Widget> _buildTagDisplayList(
-      BuildContext context, TextStyle headerStyle, TagCategory category) {
+    BuildContext context,
+    TextStyle headerStyle,
+    TagCategory category,
+  ) {
     if (!pvs.colorTags) headerStyle.copyWith(color: null);
     return e6Post.tags.getByCategory(category).map((e) => Align(
           widthFactor: 1,
           alignment: AlignmentDirectional.centerStart,
           child: TextButton(
-            onPressed: () {
-              showTagDialog(e, context);
-            },
-            // onPressed: () {
-            //   onAddToSearch?.call(e);
-            //   tagsToAdd?.add(e);
-            // },
-            child: SelectableText(e),
+            onPressed: () => showTagDialog(e, context),
+            child: Text(e),
           ),
         ));
-    // ListView.builder(
-    //   itemBuilder: (BuildContext context, int index) {
-    //     return e6Post.tags.getByCategory(category).length > index
-    //         ? Text(e6Post.tags.getByCategory(category)[index])
-    //         : null;
-    //   },
-    // );
   }
 
-  // @widgetFactory
-  // AlertDialog
   void showTagDialog(String tag, BuildContext cxt) {
     showDialog(
       context: cxt,
       builder: (context) {
         return AlertDialog(
-          content: ListBody(
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(tag, style: headerStyle.$),
+                ListTile(
+                  title: const Text("Add to search"),
+                  onTap: () {
+                    onAddToSearch?.call(tag);
+                    tagsToAdd?.add(tag);
+                    Navigator.pop(context);
+                  },
+                ),
+                if (!(AppSettings.i?.blacklistedTags.contains(tag) ?? true))
+                  ListTile(
+                    title: const Text("Add to blacklist"),
+                    onTap: () {
+                      AppSettings.i?.blacklistedTags.add(tag);
+                      AppSettings.i?.writeToFile();
+                      Navigator.pop(context);
+                    },
+                  ),
+                if (AppSettings.i?.blacklistedTags.contains(tag) ?? false)
+                  ListTile(
+                    title: const Text("Remove from blacklist"),
+                    onTap: () {
+                      AppSettings.i?.blacklistedTags.remove(tag);
+                      AppSettings.i?.writeToFile();
+                      Navigator.pop(context);
+                    },
+                  ),
+                if (!(AppSettings.i?.favoriteTags.contains(tag) ?? true))
+                  ListTile(
+                    title: const Text("Add to favorites"),
+                    onTap: () {
+                      AppSettings.i?.favoriteTags.add(tag);
+                      AppSettings.i?.writeToFile();
+                      Navigator.pop(context);
+                    },
+                  ),
+                if (AppSettings.i?.favoriteTags.contains(tag) ?? false)
+                  ListTile(
+                    title: const Text("Remove from favorites"),
+                    onTap: () {
+                      AppSettings.i?.favoriteTags.remove(tag);
+                      AppSettings.i?.writeToFile();
+                      Navigator.pop(context);
+                    },
+                  ),
+                if (!SavedDataE6.all.any((e) =>
+                    e.searchString.replaceAll(
+                      RegExpExt.whitespace,
+                      "",
+                    ) ==
+                    tag))
+                  ListTile(
+                    title: const Text("Add to saved searches"),
+                    onTap: () {
+                      Navigator.pop(context);
+                      showSavedElementEditDialogue(
+                        context,
+                      ).then((value) {
+                        if (value != null) {
+                          SavedDataE6.addAndSaveSearch(
+                            SavedSearchData.fromTagsString(
+                              searchString: value.mainData,
+                              title: value.title,
+                              uniqueId: value.uniqueId ?? "",
+                              parent: value.parent ?? "",
+                            ),
+                          );
+                        }
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+                ListTile(
+                  title: const Text("Add to clipboard"),
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: tag)).then((v) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text("$tag added to clipboard."),
+                      ));
+                      Navigator.pop(context);
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Close"),
+            )
+          ],
+        );
+      },
+    );
+  }
+
+  Future<
+      ({
+        String mainData,
+        String title,
+        String? parent,
+        String? uniqueId,
+      })?> showSavedElementEditDialogue(
+    BuildContext context, {
+    String initialTitle = "",
+    String initialData = "",
+    String mainDataName = "Tags",
+    String initialParent = "",
+    String initialUniqueId = "",
+    bool isNumeric = false,
+  }) {
+    return showDialog<
+        ({
+          String mainData,
+          String title,
+          String? parent,
+          String? uniqueId,
+        })>(
+      context: context,
+      builder: (context) {
+        var title = initialTitle,
+            mainData = initialData,
+            parent = initialParent,
+            uniqueId = initialUniqueId;
+        return AlertDialog(
+          content: Column(
             children: [
-              ListTile(
-                title: Text(tag),
+              const Text("Title:"),
+              TextField(
+                onChanged: (value) => title = value,
+                controller: defaultSelection(initialTitle),
               ),
-              ListTile(
-                title: const Text("Add to search"),
-                onTap: () {
-                  onAddToSearch?.call(tag);
-                  tagsToAdd?.add(tag);
-                  Navigator.pop(context);
-                },
+              Text("$mainDataName:"),
+              TextField(
+                inputFormatters: isNumeric ? [numericFormatter] : null,
+                onChanged: (value) => mainData = value,
+                controller: defaultSelection(initialData),
+                keyboardType: isNumeric ? TextInputType.number : null,
               ),
-              if (!AppSettings.i!.blacklistedTags.contains(tag))
-                ListTile(
-                  title: const Text("Add to blacklist"),
-                  onTap: () {
-                    AppSettings.i?.blacklistedTags.add(tag);
-                    AppSettings.i?.writeToFile();
-                    Navigator.pop(context);
-                  },
-                ),
-              if (AppSettings.i?.blacklistedTags.contains(tag) ?? false)
-                ListTile(
-                  title: const Text("Remove from blacklist"),
-                  onTap: () {
-                    AppSettings.i?.blacklistedTags.remove(tag);
-                    AppSettings.i?.writeToFile();
-                    Navigator.pop(context);
-                  },
-                ),
+              const Text("Parent:"),
+              // TODO: Autocomplete
+              TextField(
+                onChanged: (value) => parent = value,
+                controller: defaultSelection(initialParent),
+              ),
+              const Text("UniqueId:"),
+              TextField(
+                onChanged: (value) => uniqueId = value,
+                controller: defaultSelection(initialUniqueId),
+              ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(
+                context,
+                (
+                  title: title,
+                  mainData: mainData,
+                  parent: parent,
+                  uniqueId: uniqueId
+                ),
+              ),
+              child: const Text("Accept"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+          ],
         );
       },
     );
@@ -667,6 +605,38 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
         e.style.maxWidth = "100%";
         e.style.maxHeight = "100%";
       },
+    );
+  }
+}
+
+class WPostViewBackButton extends StatelessWidget {
+  const WPostViewBackButton({
+    super.key,
+    this.onPop,
+  });
+
+  final void Function()? onPop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: AlignmentDirectional.topStart,
+      child: IconButton(
+        onPressed: () {
+          if (onPop != null) {
+            onPop!();
+          } else {
+            Navigator.pop(context);
+          }
+        },
+        icon: const Icon(Icons.arrow_back),
+        iconSize: 36,
+        style: const ButtonStyle(
+          backgroundColor: WidgetStateColor.transparent,
+          elevation: WidgetStatePropertyAll(15),
+          shadowColor: WidgetStatePropertyAll(Colors.black),
+        ),
+      ),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:io' as io;
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/e621.dart' show TagCategory;
@@ -215,6 +216,7 @@ class PostViewData {
     showTimeLeft: true,
     startWithTagsExpanded: true,
     startWithDescriptionExpanded: false,
+    imageQuality: "low",
   );
   final List<TagCategory> tagOrder;
   final Map<TagCategory, Color> tagColors;
@@ -230,6 +232,7 @@ class PostViewData {
   final bool showTimeLeft;
   final bool startWithTagsExpanded;
   final bool startWithDescriptionExpanded;
+  final String imageQuality;
   const PostViewData({
     required this.tagOrder,
     required this.tagColors,
@@ -242,6 +245,7 @@ class PostViewData {
     required this.showTimeLeft,
     required this.startWithTagsExpanded,
     required this.startWithDescriptionExpanded,
+    required this.imageQuality,
   });
   factory PostViewData.fromJson(JsonOut json) => PostViewData(
         tagOrder: (json["tagOrder"] as List?)
@@ -258,8 +262,11 @@ class PostViewData {
         autoplayVideo: json["autoplayVideo"] ?? defaultData.autoplayVideo,
         startVideoMuted: json["startVideoMuted"] ?? defaultData.startVideoMuted,
         showTimeLeft: json["showTimeLeft"] ?? defaultData.showTimeLeft,
-        startWithTagsExpanded: json["startWithTagsExpanded"] ?? defaultData.startWithTagsExpanded,
-        startWithDescriptionExpanded: json["startWithDescriptionExpanded"] ?? defaultData.startWithDescriptionExpanded,
+        startWithTagsExpanded:
+            json["startWithTagsExpanded"] ?? defaultData.startWithTagsExpanded,
+        startWithDescriptionExpanded: json["startWithDescriptionExpanded"] ??
+            defaultData.startWithDescriptionExpanded,
+        imageQuality: json["imageQuality"] ?? defaultData.imageQuality,
       );
   JsonOut toJson() => {
         "tagOrder": tagOrder,
@@ -273,6 +280,7 @@ class PostViewData {
         "showTimeLeft": showTimeLeft,
         "startWithTagsExpanded": startWithTagsExpanded,
         "startWithDescriptionExpanded": startWithDescriptionExpanded,
+        "imageQuality": imageQuality,
       };
 }
 
@@ -322,6 +330,10 @@ class PostView implements PostViewData {
   @override
   bool get startWithDescriptionExpanded => _startWithDescriptionExpanded;
   set startWithDescriptionExpanded(bool v) => _startWithDescriptionExpanded = v;
+  String _imageQuality;
+  @override
+  String get imageQuality => _imageQuality;
+  set imageQuality(String v) => _imageQuality = v;
   // #endregion Fields
   PostView({
     required List<TagCategory> tagOrder,
@@ -335,6 +347,7 @@ class PostView implements PostViewData {
     required bool showTimeLeft,
     required bool startWithTagsExpanded,
     required bool startWithDescriptionExpanded,
+    required String imageQuality,
   })  : _tagOrder = tagOrder,
         _tagColors = tagColors,
         _colorTags = colorTags,
@@ -345,8 +358,8 @@ class PostView implements PostViewData {
         _startVideoMuted = startVideoMuted,
         _showTimeLeft = showTimeLeft,
         _startWithTagsExpanded = startWithTagsExpanded,
-        _startWithDescriptionExpanded = startWithDescriptionExpanded
-        ;
+        _startWithDescriptionExpanded = startWithDescriptionExpanded,
+        _imageQuality = imageQuality;
 
   factory PostView.fromData(PostViewData postView) => PostView(
         tagOrder: List.from(postView.tagOrder),
@@ -360,6 +373,7 @@ class PostView implements PostViewData {
         showTimeLeft: postView.showTimeLeft,
         startWithTagsExpanded: postView.startWithTagsExpanded,
         startWithDescriptionExpanded: postView.startWithDescriptionExpanded,
+        imageQuality: postView.imageQuality,
       );
 
   void overwriteWithData(PostViewData postView) {
@@ -372,6 +386,9 @@ class PostView implements PostViewData {
     autoplayVideo = postView.autoplayVideo;
     startVideoMuted = postView.startVideoMuted;
     showTimeLeft = postView.showTimeLeft;
+    startWithTagsExpanded = postView.startWithTagsExpanded;
+    startWithDescriptionExpanded = postView.startWithDescriptionExpanded;
+    imageQuality = postView.imageQuality;
   }
 
   PostViewData toData() => PostViewData(
@@ -386,6 +403,7 @@ class PostView implements PostViewData {
         showTimeLeft: showTimeLeft,
         startWithTagsExpanded: startWithTagsExpanded,
         startWithDescriptionExpanded: startWithDescriptionExpanded,
+        imageQuality: imageQuality,
       );
 
   // #region JSON (indirect, don't need updating w/ new fields)
@@ -401,26 +419,34 @@ class PostView implements PostViewData {
 }
 
 class SearchViewData {
+  static const postsPerRowBounds = (min: 1, max: 15);
+  static const widthToHeightRatioBounds = (min: .5, max: 2);
   static const defaultData = SearchViewData(
     postsPerPage: 50,
     postsPerRow: 3,
     postInfoBannerItems: PostInfoPaneItem.values,
+    widthToHeightRatio: 1,
   );
   final int postsPerPage;
   final int postsPerRow;
   final List<PostInfoPaneItem> postInfoBannerItems;
+  final double widthToHeightRatio;
   const SearchViewData({
     required this.postsPerPage,
     required this.postsPerRow,
     required this.postInfoBannerItems,
+    required this.widthToHeightRatio,
   });
   factory SearchViewData.fromJson(JsonOut json) => SearchViewData(
         postsPerPage: json["postsPerPage"] ?? defaultData.postsPerPage,
         postsPerRow: json["postsPerRow"] ?? defaultData.postsPerRow,
-        postInfoBannerItems: (json["postInfoBannerItems"] as String?)?.split(",").mapAsList(
-              (e, i, l) => PostInfoPaneItem.fromJson(e),
-            ) ??
-            defaultData.postInfoBannerItems,
+        postInfoBannerItems:
+            (json["postInfoBannerItems"] as String?)?.split(",").mapAsList(
+                      (e, i, l) => PostInfoPaneItem.fromJson(e),
+                    ) ??
+                defaultData.postInfoBannerItems,
+        widthToHeightRatio:
+            json["widthToHeightRatio"] ?? defaultData.widthToHeightRatio,
       );
   JsonOut toJson() => {
         "postsPerPage": postsPerPage,
@@ -431,6 +457,7 @@ class SearchViewData {
               "${previousValue.isNotEmpty ? '$previousValue,' : previousValue}"
               "${element.name}",
         ),
+        "widthToHeightRatio": widthToHeightRatio,
       };
 }
 
@@ -438,38 +465,52 @@ class SearchView implements SearchViewData {
   int _postsPerPage;
   @override
   int get postsPerPage => _postsPerPage;
-  set postsPerPage(int v) => _postsPerPage = v;
+  set postsPerPage(int v) =>
+      (v > 0 && v <= E621.maxPostsPerSearch) ? _postsPerPage = v : "";
   int _postsPerRow;
   @override
   int get postsPerRow => _postsPerRow;
-  set postsPerRow(int v) => _postsPerRow = v;
+  set postsPerRow(int v) => (v >= SearchViewData.postsPerRowBounds.min &&
+          v <= SearchViewData.postsPerRowBounds.max)
+      ? _postsPerRow = v
+      : "";
   List<PostInfoPaneItem> _postInfoBannerItems;
   @override
   List<PostInfoPaneItem> get postInfoBannerItems => _postInfoBannerItems;
   set postInfoBannerItems(List<PostInfoPaneItem> v) => _postInfoBannerItems = v;
+  double _widthToHeightRatio;
+  @override
+  double get widthToHeightRatio => _widthToHeightRatio;
+  set widthToHeightRatio(double v) =>
+      (v >= SearchViewData.widthToHeightRatioBounds.min && v < SearchViewData.widthToHeightRatioBounds.min) ? _widthToHeightRatio = v : "";
   SearchView({
     required int postsPerPage,
     required int postsPerRow,
     required List<PostInfoPaneItem> postInfoBannerItems,
+    required double widthToHeightRatio,
   })  : _postsPerPage = postsPerPage,
         _postsPerRow = postsPerRow,
-        _postInfoBannerItems = postInfoBannerItems;
+        _postInfoBannerItems = postInfoBannerItems,
+        _widthToHeightRatio = widthToHeightRatio;
 
   factory SearchView.fromData(SearchViewData postView) => SearchView(
         postsPerPage: postView.postsPerPage,
         postsPerRow: postView.postsPerRow,
         postInfoBannerItems: postView.postInfoBannerItems,
+        widthToHeightRatio: postView.widthToHeightRatio,
       );
   void overwriteWithData(SearchViewData searchView) {
     _postsPerPage = searchView.postsPerPage;
     _postsPerRow = searchView.postsPerRow;
-    _postInfoBannerItems = searchView.postInfoBannerItems;
+    _postInfoBannerItems = searchView.postInfoBannerItems.toList();
+    _widthToHeightRatio = searchView.widthToHeightRatio;
   }
 
   SearchViewData toData() => SearchViewData(
         postsPerPage: postsPerPage,
         postsPerRow: postsPerRow,
         postInfoBannerItems: postInfoBannerItems,
+        widthToHeightRatio: widthToHeightRatio,
       );
 
   // #region JSON (indirect, don't need updating w/ new fields)

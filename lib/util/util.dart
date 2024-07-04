@@ -1,23 +1,27 @@
 import 'dart:async' show FutureOr;
 import 'dart:convert' as dc;
 
+import 'package:archive/archive.dart' as archive
+  if (dart.library.io) 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:http/http.dart' as http;
+import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart' as path;
-import 'package:archive/archive.dart' as archive
-  if (dart.library.io) 'package:archive/archive_io.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:j_util/e621.dart' as e621;
-
+// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
-
-final print = lm.genPrint("main");
+import 'package:string_similarity/string_similarity.dart';
+late final lRecord = lm.genLogger("Util");
+late final print = lRecord.print;
+late final logger = lRecord.logger;
+// #endregion Logger
 
 typedef JsonMap = Map<String, dynamic>;
 final LazyInitializer<PackageInfo> packageInfo = LazyInitializer(
@@ -66,6 +70,7 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
         // .then((value) => compute(_androidCallback, value));
   }
 });
+final pref = LazyInitializer<SharedPreferences>(() => SharedPreferences.getInstance());
 FutureOr<T> onErrorPrintAndRethrow<T>(Object? e, StackTrace stackTrace) {
   print(e);
   print(stackTrace);
@@ -154,9 +159,24 @@ Size calculateTextSize({
   return textPainter.size;
 }
 
-mixin Returns<T> {
-  T? returnValue;
-}
-mixin ReturnsList<T> {
-  final List<T> returnValue = <T>[];
-}
+const scSaCoExArCpi = Scaffold(
+  body: SafeArea(child: Column(children: [exArCpi])),
+);
+const exArCpi = Expanded(
+  child: AspectRatio(
+    aspectRatio: 1,
+    child: CircularProgressIndicator(),
+  ),
+);
+/// Lower output value means lower similarity
+Comparator<String> getCoarseSimilarityComparator(String mainComparison, [int resolution = 1000000,]) => (String a, String b) => (a.similarityTo(mainComparison) * resolution -
+                        b.similarityTo(mainComparison) * resolution)
+                    .truncate();
+/// Lower output value means higher similarity
+Comparator<String> getCoarseInverseSimilarityComparator(String mainComparison, [int resolution = 1000000,]) => (String a, String b) => (b.similarityTo(mainComparison) * resolution -
+                        a.similarityTo(mainComparison) * resolution)
+                    .truncate();
+/// Lower output value means lower similarity
+Comparator<String> getFineSimilarityComparator(String mainComparison) => (String a, String b) => a.similarityTo(mainComparison).compareTo(b.similarityTo(mainComparison));
+/// Lower output value means higher similarity
+Comparator<String> getFineInverseSimilarityComparator(String mainComparison) => (String a, String b) => b.similarityTo(mainComparison).compareTo(a.similarityTo(mainComparison));

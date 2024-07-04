@@ -5,18 +5,29 @@ import 'package:j_util/j_util_full.dart';
 
 class PostSwipePage extends StatefulWidget implements IReturnsTags {
   final int initialIndex;
-  final E6Posts posts;
+  final E6Posts? postsObj;
+  final Iterable<E6PostResponse>? postsIterable;
+  Iterable<E6PostResponse> get posts => postsObj?.posts ?? postsIterable!;
   final void Function(String addition)? onAddToSearch;
   @override
   final List<String>? tagsToAdd;
 
+  const PostSwipePage.postsCollection({
+    super.key,
+    required this.initialIndex,
+    required Iterable<E6PostResponse> posts,
+    this.onAddToSearch,
+    this.tagsToAdd,
+  }) : postsObj = null,
+      postsIterable = posts;
   const PostSwipePage({
     super.key,
     required this.initialIndex,
-    required this.posts,
+    required E6Posts posts,
     this.onAddToSearch,
     this.tagsToAdd,
-  });
+  }) : postsObj = posts,
+      postsIterable = null;
 
   @override
   State<PostSwipePage> createState() => _PostSwipePageState();
@@ -41,7 +52,7 @@ class _PostSwipePageState extends State<PostSwipePage>
       _currentPageIndex = widget.initialIndex;
       _tabController = TabController(
         initialIndex: widget.initialIndex,
-        length: widget.posts.posts.length,
+        length: widget.posts.length,
         vsync: this,
       );
     }
@@ -67,7 +78,7 @@ class _PostSwipePageState extends State<PostSwipePage>
         controller: _pageViewController,
         allowImplicitScrolling: true,
         // onPageChanged: _handlePageViewChanged,
-        children: widget.posts.posts.mapAsList(
+        children: widget.posts.mapAsList(
           (elem, index, list) => PostViewPage(
             postListing: elem,
             onAddToSearch: (s) {
@@ -75,7 +86,6 @@ class _PostSwipePageState extends State<PostSwipePage>
               toReturn = "$toReturn $s";
               widget.tagsToAdd?.add(s);
             },
-
           ),
         ),
       );
@@ -91,7 +101,7 @@ class _PostSwipePageState extends State<PostSwipePage>
           controller: _pageViewController,
           onPageChanged: _handlePageViewChanged,
           allowImplicitScrolling: true,
-          children: widget.posts.posts.mapAsList(
+          children: widget.posts.mapAsList(
             (elem, index, list) => PostViewPage(
               postListing: elem,
               onAddToSearch: (s) {

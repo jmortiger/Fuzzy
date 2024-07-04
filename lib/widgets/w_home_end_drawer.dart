@@ -11,9 +11,13 @@ import 'package:fuzzy/widgets/w_search_set.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:provider/provider.dart';
 
+// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
-final print = lm.genPrint("main");
+late final lRecord = lm.genLogger("WHomeEndDrawer");
+late final print = lRecord.print;
+late final logger = lRecord.logger;
+// #endregion Logger
 
 class WHomeEndDrawer extends StatefulWidget {
   final void Function(String searchText)? onSearchRequested;
@@ -134,7 +138,6 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
           ),
           ListTile(
             title: const Text("Toggle Image Display Method"),
-            // leading: lazyLoad ? const Icon(Icons.check_box) :const Icon(Icons.check_box_outline_blank),
             onTap: () {
               print("Before: ${imageFit.name}");
               imageFit =
@@ -142,6 +145,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
               print("After: ${imageFit.name}");
               // Navigator.pop(context);
             },
+            trailing: Text(imageFit.name),
           ),
           ListTile(
             title: const Text("Search sets"),

@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:j_util/j_util_full.dart';
 
 class SearchData {
@@ -35,7 +33,7 @@ class SearchData {
 }
 
 class SearchMetrics extends SearchData {
-  final Int32 frequency;
+  final int frequency;
   const SearchMetrics.$const({
     required this.frequency,
     required String searchString,

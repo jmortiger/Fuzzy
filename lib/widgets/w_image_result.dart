@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/post_swipe_page.dart' as old;
@@ -14,11 +15,15 @@ import 'package:provider/provider.dart';
 
 import '../web/models/image_listing.dart';
 
+// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
-final print = lm.genPrint("WImageResult");
+late final lRecord = lm.genLogger("WImageResult");
+late final print = lRecord.print;
+late final logger = lRecord.logger;
+// #endregion Logger
 
-BoxFit imageFit = BoxFit.contain;
+BoxFit imageFit = BoxFit.cover;
 const bool allowPostViewNavigation = true;
 const bool useLinkedList = false;
 
@@ -30,6 +35,7 @@ class WImageResult extends StatelessWidget {
   final bool disallowSelections;
 
   final void Function(int index)? onSelectionToggle;
+  final Iterable<E6PostResponse>? postsCache;
   SearchCache getSc(BuildContext context, [bool listen = false]) =>
       Provider.of<SearchCache>(context, listen: listen);
   const WImageResult({
@@ -39,6 +45,7 @@ class WImageResult extends StatelessWidget {
     this.onSelectionToggle,
     this.isSelected = false,
     this.disallowSelections = false,
+    this.postsCache,
   });
 
   String get _buildTooltipString =>
@@ -57,7 +64,7 @@ class WImageResult extends StatelessWidget {
     } else {
       IImageInfo(width: w, height: h, url: url) = imageListing.file;
     }
-    print(
+    logger.fine(
       "[$index/${imageListing.id}]: w: $w, "
       "h: $h, "
       "sampleWidth: ${imageListing.sample.width}, "
@@ -67,13 +74,83 @@ class WImageResult extends StatelessWidget {
     );
     return Stack(
       children: [
-        _buildPane(w, h, url),
+        _buildPane(context, w, h, url),
         PostInfoPane(post: imageListing),
         if (isSelected ||
             (!disallowSelections && sr(context).getIsSelected(index)))
           _buildCheckmark(context),
         _buildInputDetector(context, w, h, url),
       ],
+    );
+  }
+
+  static ({num width, num height, num? cacheWidth, num? cacheHeight})
+      determineResolution(
+    BuildContext ctx,
+    num fileWidth,
+    num fileHeight,
+    BoxFit fit,
+  ) {
+    final size = MediaQuery.sizeOf(ctx);
+    final sizeWidth = size.width / SearchView.i.postsPerRow;
+    final sizeHeight = sizeWidth.isFinite
+        ? sizeWidth * SearchView.i.widthToHeightRatio
+        : size.height;
+    num width, height;
+    num? cacheWidth, cacheHeight;
+    if (fileWidth != fileHeight) {
+      switch (fit) {
+        case BoxFit.cover:
+          if (fileWidth > fileHeight) {
+            cacheHeight = (sizeHeight.isFinite) ? sizeHeight : null;
+            height = (sizeHeight.isFinite)
+                ? sizeHeight //min(sizeHeight, fileHeight)
+                : fileHeight;
+            width = (fileWidth * height) / fileHeight;
+          } else /*  if (fileHeight > fileWidth) */ {
+            cacheWidth = (sizeWidth.isFinite) ? sizeWidth : null;
+            width = (sizeWidth.isFinite)
+                ? sizeWidth //min(sizeWidth, fileWidth)
+                : fileWidth;
+            height = (fileHeight * width) / fileWidth;
+          }
+          break;
+        case BoxFit.fitHeight:
+        case BoxFit.fitWidth:
+        case BoxFit.none:
+        case BoxFit.contain:
+        default:
+          if (fileWidth > fileHeight) {
+            cacheWidth = (sizeWidth.isFinite) ? sizeWidth : null;
+            width = (sizeWidth.isFinite)
+                ? sizeWidth //min(sizeWidth, fileWidth)
+                : fileWidth;
+            height = (fileHeight * width) / fileWidth;
+          } else /*  if (fileHeight > fileWidth) */ {
+            cacheHeight = (sizeHeight.isFinite) ? sizeHeight : null;
+            height = (sizeHeight.isFinite)
+                ? sizeHeight //min(sizeHeight, fileHeight)
+                : fileHeight;
+            width = (fileWidth * height) / fileHeight;
+          }
+      }
+    } else {
+      cacheHeight = cacheWidth = (sizeHeight.isFinite)
+          ? sizeHeight
+          : (sizeWidth.isFinite)
+              ? sizeWidth
+              : null;
+      height = width = (sizeHeight.isFinite)
+          ? sizeHeight //min(sizeHeight, fileHeight)
+          : (sizeWidth.isFinite)
+              ? sizeWidth //min(sizeWidth, fileWidth)
+              : fileWidth;
+    }
+    return (
+      width: width,
+      height: height,
+      cacheWidth: cacheWidth,
+      cacheHeight: cacheHeight
     );
   }
 
@@ -133,17 +210,20 @@ class WImageResult extends StatelessWidget {
             if (isSelected || (srl?.areAnySelected ?? false)) {
               toggle();
             } else {
+              SavedDataE6.init();
               Navigator.push<IReturnsTags>(
                   context,
                   MaterialPageRoute(
                     builder: (_) => allowPostViewNavigation
                         ? useLinkedList
                             ? const Placeholder() //_buildLinkedSwiper(context)
-                            : old.PostSwipePage(
+                            : old.PostSwipePage.postsCollection(
                                 initialIndex: index,
-                                posts: Provider.of<SearchCache>(context,
-                                        listen: false)
-                                    .posts!,
+                                posts: postsCache ??
+                                    Provider.of<SearchCache>(context,
+                                            listen: false)
+                                        .posts!
+                                        .posts,
                                 onAddToSearch: getOnAddToSearch(context),
                                 tagsToAdd: [],
                               )
@@ -187,25 +267,20 @@ class WImageResult extends StatelessWidget {
       };
 
   @widgetFactory
-  Center _buildPane(int w, int h, String url) {
+  Widget _buildPane(BuildContext ctx, int w, int h, String url) {
     if (url == "") {
       print("NO URL");
     }
-    return Center(
-      child: AspectRatio(
-        aspectRatio: w / h,
-        child: /* Platform.isWeb
-            ? _createHtmlImageElement(url, w, h)
-            :  */Image.network(
-                url,
-                errorBuilder: (context, error, stackTrace) => throw error,
-                fit: imageFit,//BoxFit.contain,
-                width: w.toDouble(),
-                height: h.toDouble(),
-                cacheWidth: w,
-                cacheHeight: h,
-              ),
-      ),
+    var (:width, :height, :cacheWidth, :cacheHeight) =
+        WImageResult.determineResolution(ctx, w, h, imageFit);
+    return Image.network(
+      url,
+      errorBuilder: (context, error, stackTrace) => throw error,
+      fit: imageFit, //BoxFit.contain,
+      width: width.toDouble(),
+      height: height.toDouble(),
+      cacheWidth: cacheWidth?.toInt(),
+      cacheHeight: cacheHeight?.toInt(),
     );
   }
 

@@ -2,10 +2,20 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:j_util/j_util_full.dart';
+import 'package:provider/provider.dart';
 
 import '../web/e621/e621.dart';
+// #region Logger
+import 'package:fuzzy/log_management.dart' as lm;
+
+late final lRecord = lm.genLogger("SearchViewModel");
+late final print = lRecord.print;
+late final logger = lRecord.logger;
+// #endregion Logger
 
 class SearchViewModel extends ChangeNotifier {
   bool _lazyLoad = false;
@@ -78,7 +88,6 @@ class SearchViewModel extends ChangeNotifier {
 }
 
 class SearchCache extends ChangeNotifier {
-  // bool get onFirstPage => (firstPostIdCached ?? true) == (firstPostOnPageId ?? false);
   E6Posts? _posts;
   E6Posts? get posts => _posts;
   set posts(E6Posts? v) => (this.._posts = v)..notifyListeners();
@@ -102,27 +111,84 @@ class SearchCache extends ChangeNotifier {
   bool? get hasPriorPage =>
       firstPostIdCached != null &&
       firstPostIdCached! > (firstPostOnPageId ?? firstPostIdCached!);
-  /* SetNotifier<int> _selectedIndices;
-  SetNotifier<int> get selectedIndices => _selectedIndices;
-  set selectedIndices(SetNotifier<int> v) => (this.._selectedIndices = v)..notifyListeners();
-  SetNotifier<int> _restrictedIndices;
-  SetNotifier<int> get restrictedIndices => _restrictedIndices;
-  set restrictedIndices(SetNotifier<int> v) => (this.._restrictedIndices = v)..notifyListeners(); */
   SearchCache({
     E6Posts? posts,
     int? firstPostIdCached,
     int? lastPostIdCached,
     int? lastPostOnPageIdCached,
     bool? hasNextPageCached,
-    // SetNotifier<int>? selectedIndices,
-    // SetNotifier<int>? restrictedIndices,
   })  : _posts = posts,
         _firstPostIdCached = firstPostIdCached,
         _lastPostIdCached = lastPostIdCached,
         _lastPostOnPageIdCached = lastPostOnPageIdCached,
-        _hasNextPageCached = hasNextPageCached/* ,
-        _selectedIndices = selectedIndices ?? SetNotifier(),
-        _restrictedIndices = restrictedIndices ?? SetNotifier() */;
+        _hasNextPageCached = hasNextPageCached;
+
+  Future<bool> getHasNextPage({
+    required String tags,
+    int? lastPostId,
+    // required BuildContext context,
+    // required String priorSearchText,
+  }) async {
+    if (posts == null) throw StateError("No current posts");
+    if (lastPostId == null) {
+      if (posts.runtimeType == E6PostsLazy) {
+        // Advance to the end, fully load the list
+        posts?.tryGet(E621.maxPostsPerSearch + 5);
+      }
+      lastPostId ??= posts!.tryGet(posts!.count - 1)?.id;
+    }
+    if (lastPostId == null) {
+      logger.severe("Couldn't determine current page's last post's id.");
+      throw StateError("Couldn't determine current page's last post's id.");
+    }
+    if (lastPostOnPageIdCached == lastPostId && hasNextPageCached != null) {
+      return hasNextPageCached!;
+    }
+    try {
+      lastPostOnPageIdCached = lastPostId;
+    } catch (e) {
+      print(e);
+      lastPostOnPageIdCached = lastPostId;
+    }
+    // var (:username, :apiKey) = devGetAuth();
+    var out = E6PostsSync.fromJson(
+      jsonDecode(
+        (await (await E621.sendRequest(
+          E621.initSearchForLastPostRequest(
+            tags: tags, //priorSearchText,
+            // apiKey: apiKey,
+            // username: username,
+          ),
+        ))
+            .stream
+            .bytesToString()),
+      ) as JsonOut,
+    );
+    if (out.posts.isEmpty) {
+      try {
+        // setState(() {
+        hasNextPageCached = false;
+        // });
+      } /* on Exception */ catch (e) {
+        print(e);
+        hasNextPageCached = false;
+      }
+      return hasNextPageCached = false;
+    }
+    if (out.posts.length != 1) {
+      // TODO: Warn, shouldn't be possible.
+    }
+    try {
+      // setState(() {
+      lastPostIdCached = out.posts.last.id;
+      hasNextPageCached = (lastPostId != lastPostIdCached);
+      // });
+    } catch (e) {
+      lastPostIdCached = out.posts.last.id;
+      return hasNextPageCached = (lastPostId != out.posts.last.id);
+    }
+    return (lastPostId != out.posts.last.id);
+  }
 }
 
 class MultiSearch {

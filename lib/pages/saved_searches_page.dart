@@ -184,8 +184,13 @@ class _SavedSearchesPageSingletonState
     );
   }
 
-  Future<({String mainData, String title, String? parent, String? uniqueId})?>
-      showSavedElementEditDialogue(
+  Future<
+      ({
+        String mainData,
+        String title,
+        String? parent,
+        String? uniqueId,
+      })?> showSavedElementEditDialogue(
     BuildContext context, {
     String initialTitle = "",
     String initialData = "",
@@ -195,7 +200,12 @@ class _SavedSearchesPageSingletonState
     bool isNumeric = false,
   }) {
     return showDialog<
-        ({String mainData, String title, String? parent, String? uniqueId})>(
+        ({
+          String mainData,
+          String title,
+          String? parent,
+          String? uniqueId,
+        })>(
       context: context,
       builder: (context) {
         var title = initialTitle,

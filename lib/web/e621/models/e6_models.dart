@@ -8,7 +8,6 @@ import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
-import 'package:logging/logging.dart';
 
 import '../../models/image_listing.dart';
 
@@ -436,6 +435,8 @@ class E6Sample extends E6Preview implements ISampleInfo, e621.Sample {
   @override
   final bool has;
 
+  final Alternates? alternates;
+
   @override
   bool get isAVideo => extension == "webm" || extension == "mp4";
 
@@ -444,12 +445,16 @@ class E6Sample extends E6Preview implements ISampleInfo, e621.Sample {
     required super.width,
     required super.height,
     required super.url,
+    this.alternates,
   });
   factory E6Sample.fromJson(JsonOut json) => E6Sample(
         has: json["has"],
         width: json["width"],
         height: json["height"],
         url: json["url"] as String? ?? "",
+        alternates: json["alternates"] != null
+            ? Alternates.fromJson(json["alternates"])
+            : null,
       );
 }
 
@@ -685,7 +690,7 @@ class E6Relationships extends e621.PostRelationships {
       );
 }
 
-/* class Alternates {
+class Alternates {
   Alternate? the480P;
   Alternate? the720P;
   Alternate? original;
@@ -717,13 +722,29 @@ class E6Relationships extends e621.PostRelationships {
       };
 }
 
-class Alternate {
+class Alternate implements IImageInfo {
   static const types = ["video"];
+  @override
   int height;
   String type;
   List<String?> urls;
+  @override
   int width;
 
+  @override
+  Uri get address => Uri.parse(url);
+
+  @override
+  String get extension => IImageInfoBare.extensionImpl(this);
+
+  @override
+  bool get hasValidUrl => (urls[0] ?? urls[1]) != null;
+
+  @override
+  bool get isAVideo => true;
+
+  @override
+  String get url => urls[0] ?? urls[1]!;
   Alternate({
     required this.height,
     required this.type,
@@ -744,7 +765,7 @@ class Alternate {
         "urls": List<dynamic>.from(urls.map((x) => x)),
         "width": width,
       };
-} */
+}
 
 enum PostDataType {
   png,
@@ -802,6 +823,7 @@ class PoolModel extends e621.Pool {
           postCount: json["post_count"],
         );
   late final LazyInitializer<List<E6PostResponse>> posts;
+  String get namePretty => name.replaceAll("_", " ");
 
   /// TODO: Still not iron-clad in terms of ordering and page offsets.
   Future<List<E6PostResponse>> getPosts({
@@ -855,7 +877,8 @@ class PoolModel extends e621.Pool {
       )["posts"] as List);
       logger.finer("# posts in response: ${t1.length}");
       int postOffset = (page - 1) * postsPerPage;
-      logger.finer("offset from start of poolIds[$postOffset] = ${postIds[postOffset]}");
+      logger.finer(
+          "offset from start of poolIds[$postOffset] = ${postIds[postOffset]}");
       // Sort them by order in pool
       final t2 = postIds.getRange(postOffset, postIds.length).reduceUntilTrue(
         (acc, e, i, l) {

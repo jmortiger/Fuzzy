@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/saved_data.dart';
@@ -13,9 +14,14 @@ import 'package:http/http.dart' as http;
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/e621.dart' as e621;
 
+// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:j_util/serialization.dart';
 
-final print = lm.genPrint("main");
+late final lRecord = lm.genLogger("E621");
+late final print = lRecord.print;
+late final logger = lRecord.logger;
+// #endregion Logger
 
 final class E621AccessData {
   static final devAccessData = LazyInitializer<E621AccessData>(() async =>
@@ -24,14 +30,24 @@ final class E621AccessData {
   static String? get devUsername => devAccessData.itemSafe?.username;
   static String? get devUserAgent => devAccessData.itemSafe?.userAgent;
   static final userData = LateFinal<E621AccessData>();
+  static const fileName = "credentials.json";
+  static final file = LazyInitializer<File?>(
+    () async => File("${(await appDataPath.getItem())}$fileName"),
+  );
+  static Future<E621AccessData?> tryLoad() async {
+    var t = await (await Storable.tryGetStorageAsync(
+      "${(await appDataPath.getItem())}$fileName",
+    ))
+        ?.readAsString();
+    if (t == null) return null;
+    return userData.$ = E621AccessData.fromJson(jsonDecode(t));
+  }
+
   final String apiKey;
   final String username;
   final String userAgent;
   e621.E6Credentials get cred =>
       e621.E6Credentials(username: username, apiKey: apiKey);
-  // e621.E6Credentials get cred => (e621.Api.activeCredentials ??=
-  //         e621.E6Credentials(username: username, apiKey: apiKey))
-  //     as e621.E6Credentials;
 
   const E621AccessData({
     required this.apiKey,
@@ -205,7 +221,9 @@ sealed class E621 extends Site {
       },
     );
     print("fillTagTemplate: After: $tags");
-    tags += AppSettings.i?.blacklistedTags.map((e) => "-$e").foldToString(" ") ?? "";
+    tags +=
+        AppSettings.i?.blacklistedTags.map((e) => "-$e").foldToString(" ") ??
+            "";
     print("fillTagTemplate: After Blacklist: $tags");
     return tags;
   }
@@ -461,6 +479,7 @@ sealed class E621 extends Site {
     nonUserSearchEnded.invoke(a2);
     return a2;
   }
+
   static Future<SearchResultArgs> performUserPostSearch({
     String tags = "",
     int limit = 50,

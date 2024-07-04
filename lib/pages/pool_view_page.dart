@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 
@@ -17,7 +18,10 @@ class PoolViewPage extends StatefulWidget {
   State<PoolViewPage> createState() => _PoolViewPageState();
 }
 
+var forcePostUniqueness = true;
+
 class _PoolViewPageState extends State<PoolViewPage> {
+  PoolModel get pool => widget.pool;
   List<E6PostResponse> posts = [];
   Future<List<E6PostResponse>>? loadingPosts;
   int currentPage = 1;
@@ -56,14 +60,19 @@ class _PoolViewPageState extends State<PoolViewPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Pool ${widget.pool.id}: ${widget.pool.name}"),
+        title: Text("Pool ${widget.pool.id}: ${widget.pool.namePretty} by ${pool.creatorName} (${pool.creatorId})"),
       ),
       body: SafeArea(
         child: //posts.isNotEmpty ?
             Column(
           // mainAxisSize: MainAxisSize.min,
           children: [
-            Text(widget.pool.description),
+            ExpansionTile(
+              title: const Text("Description"),
+              dense: true,
+              initiallyExpanded: true,
+              children: [SelectableText(widget.pool.description)],
+              ),
             if (posts.isNotEmpty)
               Expanded(
                 child: WPostSearchResults(
@@ -75,13 +84,7 @@ class _PoolViewPageState extends State<PoolViewPage> {
                 ),
               ),
             if (loadingPosts != null)
-              const Expanded(
-                child: Center(
-                    child: AspectRatio(
-                  aspectRatio: 1,
-                  child: CircularProgressIndicator(),
-                )),
-              ),
+              exArCpi,
             Center(
               child: Text(
                 "Loaded ${posts.length}/${widget.pool.postCount} posts",
@@ -96,13 +99,15 @@ class _PoolViewPageState extends State<PoolViewPage> {
                       setState(() {
                         if (posts.isNotEmpty) {
                           posts.addAll(data);
-                          // logger.finer(
-                          //   "posts.length before set conversion: ${posts.length}",
-                          // );
-                          // posts = posts.toSet().toList();
-                          // logger.finer(
-                          //   "posts.length after set conversion: ${posts.length}",
-                          // );
+                          if (forcePostUniqueness) {
+                            logger.finer(
+                              "posts.length before set conversion: ${posts.length}",
+                            );
+                            posts = posts.toSet().toList();
+                            logger.finer(
+                              "posts.length after set conversion: ${posts.length}",
+                            );
+                          }
                         } else {
                           posts = data;
                         }

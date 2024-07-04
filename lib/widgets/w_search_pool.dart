@@ -113,7 +113,7 @@ class _WSearchPoolState extends State<WSearchPool> {
       child: ListView(
         children: [
           AppBar(
-            title: const Text("Sets"),
+            title: const Text("Pools"),
             actions: const [
               // TODO: Filter buttons
             ],

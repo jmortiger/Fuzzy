@@ -7,9 +7,13 @@ import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/j_util_full.dart';
 
+// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
-final print = lm.genPrint("main");
+late final lRecord = lm.genLogger("SettingsPage");
+late final print = lRecord.print;
+late final logger = lRecord.logger;
+// #endregion Logger
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -218,7 +222,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
   TextStyle get titleStyle => SettingsPage.titleStyle;
 
   AppSettings get settings => AppSettings.i!;
-  
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -251,6 +255,17 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               style: SettingsPage.titleStyle,
             ),
             children: [
+              WNumSliderField<int>(
+                min: SearchViewData.postsPerRowBounds.min,
+                max: SearchViewData.postsPerRowBounds.max,
+                getVal: () => AppSettings.i!.searchView.postsPerRow,
+                name: "Posts per row",
+                setVal: (num val) => SearchView.i.postsPerRow = val.toInt(),
+                validateVal: (num? val) => (val?.toInt() ?? -1) >= 0,
+                defaultValue: SearchViewData.defaultData.postsPerRow,
+                divisions: SearchViewData.postsPerRowBounds.max -
+                    SearchViewData.postsPerRowBounds.min,
+              ),
               WIntegerField(
                 getVal: () => AppSettings.i!.searchView.postsPerRow,
                 name: "Posts per row",
@@ -274,6 +289,20 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                     .postInfoBannerItems = val.cast<PostInfoPaneItem>(),
                 values: PostInfoPaneItem.values,
               ),
+              ListTile(
+                title: const Text("Toggle Image Display Method"),
+                onTap: () {
+                  print("Before: ${imageFit.name}");
+                  setState(() {
+                    imageFit = imageFit == BoxFit.contain
+                        ? BoxFit.cover
+                        : BoxFit.contain;
+                  });
+                  print("After: ${imageFit.name}");
+                  // Navigator.pop(context);
+                },
+                trailing: Text(imageFit.name),
+              ),
             ]),
         ExpansionTile(
           title: Text(
@@ -282,10 +311,27 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
           ),
           children: [
             WBooleanField(
-              name: "Force High Quality Image",
+              name: "Default to High Quality Image",
+              subtitle: "If the selected quality is unavailable, use the highest quality.",
               getVal: () => settings.postView.forceHighQualityImage,
               setVal: (p1) =>
                   AppSettings.i!.postView.forceHighQualityImage = p1,
+            ),
+            ListTile(
+              title: const Text("Toggle Image Quality"),
+              onTap: () {
+                print("Before: ${PostView.i.imageQuality}");
+                setState(() {
+                  PostView.i.imageQuality = PostView.i.imageQuality == "low"
+                      ? "medium"
+                      : PostView.i.imageQuality == "medium"
+                        ? "high"
+                        : "low";
+                });
+                print("After: ${PostView.i.imageQuality}");
+                // Navigator.pop(context);
+              },
+              trailing: Text(PostView.i.imageQuality),
             ),
             WBooleanField(
               name: "Allow Overflow",
@@ -731,6 +777,150 @@ class _WIntegerFieldState extends State<WIntegerField> {
           }
         }).onError((error, stackTrace) => print(error));
       },
+    );
+  }
+}
+
+class WNumSliderField<T extends num> extends StatefulWidget {
+  final String name;
+
+  final String? subtitle;
+
+  final T Function() getVal;
+
+  final void Function(num p1) setVal;
+
+  final bool Function(num? p1)? validateVal;
+
+  final T min;
+
+  final T max;
+
+  final T? defaultValue;
+
+  final int? divisions;
+  const WNumSliderField({
+    super.key,
+    required this.name,
+    this.subtitle,
+    required this.getVal,
+    required this.setVal,
+    required this.min,
+    required this.max,
+    this.divisions,
+    this.defaultValue,
+    this.validateVal,
+  });
+
+  @override
+  State<WNumSliderField> createState() => _WNumSliderFieldState();
+}
+
+class _WNumSliderFieldState<T extends num> extends State<WNumSliderField<T>> {
+  String get name => widget.name;
+
+  T get getVal => widget.getVal();
+
+  void Function(num p1) get setVal => widget.setVal;
+
+  bool Function(num? p1)? get validateVal => widget.validateVal;
+
+  double tempValue = 0;
+
+  int? get divisions =>
+      widget.divisions ??
+      ((T.runtimeType == int)
+          ? (widget.max.toInt() - widget.min.toInt())
+          : null);
+
+  @override
+  void initState() {
+    super.initState();
+    tempValue = getVal.toDouble();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // var t = T;
+    // logger.severe(t);
+    return ListTile(
+      key: ValueKey(getVal),
+      title: Row(children: [
+        Text(name),
+        Slider(
+          label: getVal.toString(),
+          value: getVal.toDouble(),
+          onChanged: (v) => (validateVal?.call(v) ?? true)
+              ? setState(() => setVal(tempValue = v))
+              : setState(() {
+                  tempValue = v;
+                }),
+          min: widget.min.toDouble(),
+          max: widget.max.toDouble(),
+          secondaryTrackValue: widget.defaultValue?.toDouble(),
+          divisions: divisions,
+          // onChangeStart: (value) => ,
+          // onChangeEnd: (v) => ,
+          // allowedInteraction: SliderInteraction.tapAndSlide,
+        )
+      ]),
+      subtitle: widget.subtitle != null ? Text(widget.subtitle!) : null,
+      trailing: Text(getVal.toString()),
+      leadingAndTrailingTextStyle:
+          SettingsPage.titleStyle.copyWith(fontSize: 20),
+      // onTap: () {
+      //   final before = getVal;
+      //   var t = before.toString();
+      //   validation(String value) {
+      //     (validateVal?.call(num.tryParse(value)) ?? true) ? t = value : null;
+      //   }
+
+      //   showDialog<num>(
+      //     context: context,
+      //     builder: (context) {
+      //       return AlertDialog(
+      //         content: TextField(
+      //           keyboardType: TextInputType.number,
+      //           maxLines: null,
+      //           autofocus: true,
+      //           onChanged: validation,
+      //           onSubmitted: (v) {
+      //             validation(v);
+      //             Navigator.pop(context, int.parse(t));
+      //           },
+      //           controller: TextEditingController.fromValue(
+      //             TextEditingValue(
+      //               text: t,
+      //               selection: TextSelection(
+      //                 baseOffset: 0,
+      //                 extentOffset: t.length - 1,
+      //               ),
+      //             ),
+      //           ),
+      //         ),
+      //         actions: [
+      //           TextButton(
+      //             onPressed: () => Navigator.pop(context, int.parse(t)),
+      //             child: const Text("Accept"),
+      //           ),
+      //           TextButton(
+      //             onPressed: () => Navigator.pop(context, null),
+      //             child: const Text("Cancel"),
+      //           ),
+      //         ],
+      //       );
+      //     },
+      //   ).then<void>((value) {
+      //     if (validateVal?.call(value) ?? value != null) {
+      //       print("Before: ${getVal}");
+      //       setState(() {
+      //         setVal(value!);
+      //       });
+      //       print("After: ${getVal}");
+      //       print(jsonEncode(AppSettings.i));
+      //     }
+      //   }).onError((error, stackTrace) => print(error));
+      // },
     );
   }
 }

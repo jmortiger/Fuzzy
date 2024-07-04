@@ -12,9 +12,13 @@ import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
-final print = lm.genPrint("main");
+late final lRecord = lm.genLogger("WPostSearchResults");
+late final print = lRecord.print;
+late final logger = lRecord.logger;
+// #endregion Logger
 
 class WPostSearchResults extends StatefulWidget {
   final E6Posts posts;
@@ -253,6 +257,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
         disallowSelections: widget.disallowSelections,
         imageListing: data,
         index: index,
+        postsCache: widget.disallowSelections ? widget.posts.posts : null,
         isSelected: getIsIndexSelected(index),
         // onSelectionToggle: (!widget.disallowSelections)
         //     ? (i) => setState(() {

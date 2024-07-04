@@ -11,9 +11,13 @@ import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
 
+// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
-final print = lm.genPrint("WFabBuilder");
+late final lRecord = lm.genLogger("WFabBuilder");
+late final print = lRecord.print;
+late final logger = lRecord.logger;
+// #endregion Logger
 
 class WFabBuilder extends StatelessWidget {
   final List<E6PostResponse>? posts;
@@ -25,23 +29,25 @@ class WFabBuilder extends StatelessWidget {
   const WFabBuilder.singlePost({
     super.key,
     required E6PostResponse this.post,
-    this.onClearSelections,
-  }) : posts = null;
+    // this.onClearSelections,
+  }) : posts = null,
+       onClearSelections = null;
   const WFabBuilder.multiplePosts({
     super.key,
     required List<E6PostResponse> this.posts,
     this.onClearSelections,
   }) : post = null;
   static ActionButton getClearSelectionButton(
-    BuildContext context,
-    void Function() clearSelection,
-  ) {
-    return ActionButton(
-      icon: const Icon(Icons.clear),
-      tooltip: "Clear Selections",
-      onPressed: clearSelection,
-    );
-  }
+    BuildContext context, [
+    void Function()? clearSelection,
+  ]) => ActionButton(
+        icon: const Icon(Icons.clear),
+        tooltip: "Clear Selections",
+        onPressed: clearSelection ?? Provider.of<SearchResultsNotifier>(
+          context,
+          listen: false,
+        ).clearSelections,
+        );
 
   static ActionButton getSinglePostAddFavAction(
     BuildContext context,
@@ -487,9 +493,9 @@ class WFabBuilder extends StatelessWidget {
           : "Long-press to select posts and perform bulk actions.",
       children: (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
           ? [
-              if (!isSinglePost && onClearSelections != null)
+              if (!isSinglePost/* && onClearSelections != null */)
                 WFabBuilder.getClearSelectionButton(
-                    context, onClearSelections!),
+                    context, onClearSelections),
               if (!isSinglePost)
                 WFabBuilder.getMultiplePostsAddToSetAction(context, posts!),
               if (isSinglePost)

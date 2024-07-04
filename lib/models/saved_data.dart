@@ -1,5 +1,6 @@
 import 'dart:async' as async_lib;
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -9,13 +10,222 @@ import 'package:j_util/serialization.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:logging/logging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-final print = lm.genPrint("SavedDataE6");
+late final print = lm.genPrint("SavedDataE6");
 
 /// Stuff like searches and sets
 /// TODO: Redo to a completely static, no instance implementation.
 /// "searches": searches,
-class SavedDataE6Legacy extends ChangeNotifier with Storable<SavedDataE6Legacy> {
+class SavedDataE6 {
+  static const fileName = "savedSearches.json";
+  static final fileFullPath = LazyInitializer.immediate(fileFullPathInit);
+
+  static Future<String> fileFullPathInit() async {
+    print("fileFullPathInit called");
+    try {
+      return (Platform.isWeb ? "" : "${await appDataPath.getItem()}/$fileName")
+        ..printMe();
+    } catch (e) {
+      print("Error in SavedDataE6.fileFullPathInit():\n$e");
+      return "";
+    }
+  }
+
+  static final file = LazyInitializer<File?>(() async {
+    return !Platform.isWeb
+        ? Storable.getStorageAsync(await fileFullPath.getItem())
+        : null;
+  });
+  static late ListNotifier<SavedSearchData> searches;
+  static ListNotifier<SavedEntry> get all => searches;
+  static int get length => searches.length;
+  static ListNotifier<ListNotifier<SavedEntry>> get parented => searches.fold(
+        ListNotifier<ListNotifier<SavedEntry>>.empty(true),
+        (acc, element) {
+          try {
+            return acc
+              ..singleWhere((e) => e.firstOrNull?.parent == element.parent)
+                  .add(element);
+          } catch (e) {
+            return acc..add(ListNotifier.filled(1, element, true));
+          }
+        },
+      )
+        ..sort(
+          (a, b) => a.first.parent.compareTo(b.first.parent),
+        )
+        ..forEach((e) => e.sort(
+              (a, b) => a.compareTo(b),
+            ));
+
+  static const localStoragePrefix = 'ssd';
+  static const localStorageLengthKey = '$localStoragePrefix.length';
+  SavedDataE6({
+    ListNotifier<SavedSearchData>? searches,
+  }) {
+    SavedDataE6.searches =
+        searches ?? ListNotifier<SavedSearchData>.empty(true);
+    file.getItem().then((value) {
+      value?.readAsString().then((v) {
+        if (!validateUniqueness()) {
+          _save();
+        }
+      });
+    });
+  }
+  SavedDataE6.init() {
+    file.getItem().then((value) {
+      (value?.readAsString().then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
+              loadFromPref())
+          .then((v) {
+        if (!validateUniqueness(searches: v)) {
+          _save();
+        }
+        searches = v;
+      });
+    });
+  }
+  // SavedDataE6 copyWith({
+  //   // List<SavedPoolData>? pools,
+  //   // List<SavedSetData>? sets,
+  //   ListNotifier<SavedSearchData>? searches,
+  // }) =>
+  //     SavedDataE6(
+  //       // pools: pools ?? this.pools.toList(),
+  //       // sets: sets ?? this.sets.toList(),
+  //       searches: searches ?? this.searches.toList(),
+  //     );
+  factory SavedDataE6.fromStorageSync() => Platform.isWeb
+      ? SavedDataE6()
+      : Storable.tryLoadToInstanceSync(fileFullPath.$) ?? SavedDataE6();
+  static Future<ListNotifier<SavedSearchData>> loadFromPref() =>
+      pref.getItem().then((v) {
+        final length = v.getInt(localStorageLengthKey) ?? 0;
+        var data = ListNotifier<SavedSearchData>();
+        for (var i = 0; i < length; i++) {
+          data.add(
+            SavedSearchData.fromSearchString(
+              searchString:
+                  v.getString("$localStoragePrefix.$i.searchString") ??
+                      "FAILURE",
+              delimiter: SavedSearchData.e621Delimiter,
+              parent: v.getString("$localStoragePrefix.$i.parent") ?? "FAILURE",
+              title: v.getString("$localStoragePrefix.$i.title") ?? "FAILURE",
+              uniqueId:
+                  v.getString("$localStoragePrefix.$i.uniqueId") ?? "FAILURE",
+              isFavorite:
+                  v.getBool("$localStoragePrefix.$i.isFavorite") ?? false,
+            ),
+          );
+        }
+        return data;
+      });
+
+  static async_lib.FutureOr<ListNotifier<SavedSearchData>>
+      loadFromStorageAsync() async {
+    var str = await Storable.tryLoadStringAsync(
+      await fileFullPath.getItem(),
+    );
+    if (str == null) {
+      try {
+        return SavedDataE6.fromJson(
+            (await devData.getItem())["e621"]["savedData"]);
+      } catch (e) {
+        return ListNotifier<SavedSearchData>();
+      }
+    } else {
+      return SavedDataE6.fromJson(jsonDecode(str));
+    }
+  }
+
+  static ListNotifier<SavedSearchData> fromJson(Map<String, dynamic> json) =>
+      ListNotifier.of((json["searches"] as List).mapAsList(
+        (e, index, list) => SavedSearchData.fromJson(e),
+      ));
+  static Map<String, dynamic> toJson() => {
+        "searches": searches,
+      };
+  static void _save() {
+    if (!Platform.isWeb) {
+      file.itemSafe
+          ?.writeAsString(jsonEncode(toJson()))
+          .catchError((e, s) => print(e, Level.WARNING, e, s))
+          .then(
+            (value) => print("Write ${true ? "successful" : "failed"}"),
+          )
+          .catchError((e, s) => print(e, Level.WARNING, e, s));
+    } else {
+      print(jsonEncode(toJson()), Level.FINE);
+    }
+  }
+
+  static const validIdCharacters =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+  /// Returns [true] if was valid before entering method and false otherwise.
+  bool validateUniqueness({
+    ListNotifier<SavedSearchData>? searches,
+    bool resolve = true,
+  }) {
+    searches ??= SavedDataE6.searches;
+    var ret = true;
+    for (var i = 0; i < searches.length; i++) {
+      for (var j = i; j < searches.length; j++) {
+        if (i == j) continue;
+        if (searches[i].uniqueId == searches[j].uniqueId) {
+          ret = false;
+          if (!resolve) {
+            return ret;
+          }
+          var store = searches[j];
+          store = store.copyWith(
+            uniqueId:
+                "${store.uniqueId}${validIdCharacters[Random().nextInt(validIdCharacters.length)]}",
+          );
+          searches[j] = store;
+        }
+      }
+    }
+    return ret;
+  }
+
+  static void _modify(void Function() modifier) {
+    modifier();
+    _save();
+  }
+
+  static void addAndSaveSearch(SavedSearchData s) {
+    searches.add(s);
+    _save();
+  }
+
+  static void editAndSave({
+    required SavedEntry original,
+    required SavedEntry edited,
+  }) {
+    // edited = edited.validateUniqueness();
+    switch ((edited, original)) {
+      case (SavedSearchData o, SavedSearchData orig):
+        searches[searches.indexOf(orig)] = o;
+        break;
+      default:
+        throw UnsupportedError("not supported");
+    }
+    // _save();
+  }
+
+  static void removeEntry(SavedEntry entry) {
+    searches.remove(entry);
+    _save();
+  }
+}
+
+/// Stuff like searches and sets
+/// TODO: Redo to a completely static, no instance implementation.
+/// "searches": searches,
+class SavedDataE6Legacy extends ChangeNotifier
+    with Storable<SavedDataE6Legacy> {
   // #region Singleton
   static final _instance = LateFinal<SavedDataE6Legacy>();
   static SavedDataE6Legacy get $ =>
@@ -40,7 +250,9 @@ class SavedDataE6Legacy extends ChangeNotifier with Storable<SavedDataE6Legacy> 
   }
 
   static async_lib.FutureOr<SavedDataE6Legacy> get $Async =>
-      _instance.isAssigned ? _instance.$ : SavedDataE6Legacy.loadFromStorageAsync();
+      _instance.isAssigned
+          ? _instance.$
+          : SavedDataE6Legacy.loadFromStorageAsync();
   // #endregion Singleton
 
   static const fileName = "savedSearches.json";
@@ -168,7 +380,8 @@ class SavedDataE6Legacy extends ChangeNotifier with Storable<SavedDataE6Legacy> 
     }
   }
 
-  factory SavedDataE6Legacy.fromJson(Map<String, dynamic> json) => SavedDataE6Legacy(
+  factory SavedDataE6Legacy.fromJson(Map<String, dynamic> json) =>
+      SavedDataE6Legacy(
         pools: (json["pools"] as List).mapAsList(
           (e, index, list) => SavedPoolData.fromJson(e),
         ),
@@ -304,10 +517,10 @@ class SavedDataE6Legacy extends ChangeNotifier with Storable<SavedDataE6Legacy> 
 
   void removeEntry(SavedEntry entry) {
     // if (index >= 0 && index < all.length) {
-      // searches.removeAt(index);
-      searches.remove(entry);
-      notifyListeners();
-      $._save();
+    // searches.removeAt(index);
+    _modify((e) => e.searches.remove(entry));
+    notifyListeners();
+    $._save();
     // }
   }
 }
@@ -773,10 +986,30 @@ final class SavedSearchData extends SavedEntry {
         "isFavorite": isFavorite,
         "delimiter": delimiter,
       };
+  static const localStoragePrefix = SavedDataE6.localStoragePrefix;
+  factory SavedSearchData.readFromPrefSync(SharedPreferences v,
+          [String? instancePrefix]) =>
+      SavedSearchData.fromSearchString(
+        searchString: v.getString(
+                "$localStoragePrefix${instancePrefix != null ? ".$instancePrefix" : ""}.searchString") ??
+            "FAILURE",
+        delimiter: SavedSearchData.e621Delimiter,
+        parent: v.getString(
+                "$localStoragePrefix${instancePrefix != null ? ".$instancePrefix" : ""}.parent") ??
+            "FAILURE",
+        title: v.getString(
+                "$localStoragePrefix${instancePrefix != null ? ".$instancePrefix" : ""}.title") ??
+            "FAILURE",
+        uniqueId: v.getString(
+                "$localStoragePrefix${instancePrefix != null ? ".$instancePrefix" : ""}.uniqueId") ??
+            "FAILURE",
+        isFavorite: v.getBool(
+                "$localStoragePrefix${instancePrefix != null ? ".$instancePrefix" : ""}.isFavorite") ??
+            false,
+      );
 
   @override
   SavedSearchData validateUniqueness() {
-    var all = SavedDataE6Legacy._instance.$.all;
     var ret = this;
     while (!ret.verifyUniqueness()) {
       ret = copyWith(
@@ -793,3 +1026,159 @@ final class SavedSearchData extends SavedEntry {
         (e) => e.searchString != searchString && e.uniqueId == uniqueId,
       );
 }
+
+// @immutable
+// final class SavedSearchDataMutable implements SavedSearchData {
+//   static String tagListToString(Iterable<String> tags, String delimiter) =>
+//       tags.reduce((acc, e) => "$acc$delimiter$e");
+//   static const e621Delimiter = " ";
+//   @override
+//   final String delimiter;
+//   @override
+//   final String title;
+//   @override
+//   final String uniqueId;
+//   final Set<String> tags;
+//   @override
+//   final String searchString;
+//   // String get searchString => tagListToString(tags, delimiter);
+//   @override
+//   final String parent;
+//   final bool isFavorite;
+
+//   const SavedSearchDataMutable.$const({
+//     required this.tags,
+//     this.title = "",
+//     this.parent = "",
+//     this.uniqueId = "",
+//     this.isFavorite = false,
+//     this.delimiter = e621Delimiter,
+//     this.searchString = "",
+//   });
+//   SavedSearchDataMutable({
+//     required this.tags,
+//     this.title = "",
+//     this.parent = "",
+//     this.uniqueId = "",
+//     this.isFavorite = false,
+//     this.delimiter = e621Delimiter,
+//   }) : searchString = tags.reduce((acc, e) => "$acc$delimiter$e");
+//   SavedSearchDataMutable.withDefaults({
+//     required this.tags,
+//     String title = "",
+//     this.parent = "",
+//     this.uniqueId = "",
+//     this.isFavorite = false,
+//     this.delimiter = e621Delimiter,
+//   })  : title = title.isEmpty ? tagListToString(tags, delimiter) : title,
+//         searchString = tags.reduce((acc, e) => "$acc$delimiter$e");
+
+//   SavedSearchDataMutable.fromTagsString({
+//     required this.searchString,
+//     String title = "",
+//     this.parent = "",
+//     this.uniqueId = "",
+//     this.isFavorite = false,
+//     this.delimiter = e621Delimiter,
+//   })  : title = title.isNotEmpty ? title : searchString,
+//         tags = searchString.split(delimiter).toSet();
+
+//   SavedSearchDataMutable.fromSearchString({
+//     required String searchString,
+//     String title = "",
+//     String parent = "",
+//     String uniqueId = "",
+//     String delimiter = e621Delimiter,
+//     bool isFavorite = false,
+//   }) : this.fromTagsString(
+//             searchString: searchString,
+//             delimiter: delimiter,
+//             isFavorite: isFavorite,
+//             parent: parent,
+//             uniqueId: uniqueId,
+//             title: title);
+
+//   SavedSearchDataMutable copyWith({
+//     String? title,
+//     String? searchString,
+//     // Set<String>? tags,
+//     String? parent,
+//     String? uniqueId,
+//     bool? isFavorite,
+//     String? delimiter,
+//   }) =>
+//       SavedSearchDataMutable.fromTagsString(
+//         searchString: searchString ?? this.searchString,
+//         title: title ?? this.title,
+//         parent: parent ?? this.parent,
+//         isFavorite: isFavorite ?? this.isFavorite,
+//         delimiter: delimiter ?? this.delimiter,
+//         uniqueId: uniqueId ?? this.uniqueId,
+//       );
+
+//   @override
+//   int compareTo(SavedEntry other) => (title.compareTo(other.title) != 0)
+//       ? title.compareTo(other.title)
+//       : searchString.compareTo(other.searchString);
+
+//   @override
+//   bool operator ==(Object other) {
+//     return other.runtimeType == runtimeType &&
+//         other is SavedSearchDataMutable &&
+//         other.delimiter == delimiter &&
+//         other.isFavorite == isFavorite &&
+//         other.parent == parent &&
+//         other.searchString == searchString &&
+//         other.title == title &&
+//         other.uniqueId == uniqueId;
+//     //super == other;
+//   }
+
+//   @override
+//   int get hashCode {
+//     return delimiter.hashCode % 32767 +
+//         isFavorite.hashCode % 32767 +
+//         parent.hashCode % 32767 +
+//         searchString.hashCode % 32767 +
+//         title.hashCode % 32767 +
+//         uniqueId.hashCode % 32767;
+//     // return super.hashCode;
+//   }
+
+//   factory SavedSearchDataMutable.fromJson(Map<String, dynamic> json) =>
+//       SavedSearchDataMutable(
+//         title: json["title"],
+//         parent: json["parent"],
+//         uniqueId: json["uniqueId"],
+//         isFavorite: json["isFavorite"],
+//         delimiter: json["delimiter"],
+//         tags: (json["tags"] as List).cast<String>().toSet(),
+//       );
+//   Map<String, dynamic> toJson() => {
+//         "tags": tags.toList(),
+//         "title": title,
+//         "parent": parent,
+//         "uniqueId": uniqueId,
+//         "isFavorite": isFavorite,
+//         "delimiter": delimiter,
+//       };
+
+//   @override
+//   SavedSearchDataMutable validateUniqueness() {
+//     var all = SavedDataE6Legacy._instance.$.all;
+//     var ret = this;
+//     while (!ret.verifyUniqueness()) {
+//       ret = copyWith(
+//         uniqueId: "$uniqueId${SavedEntry.validIdCharacters[Random().nextInt(
+//           SavedEntry.validIdCharacters.length,
+//         )]}",
+//       );
+//     }
+//     return ret;
+//   }
+
+//   @override
+//   bool verifyUniqueness() => !SavedDataE6Legacy._instance.$.all.any(
+//         (e) => e.searchString != searchString && e.uniqueId == uniqueId,
+//       );
+// }
