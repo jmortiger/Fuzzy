@@ -75,7 +75,8 @@ class WImageResult extends StatelessWidget {
     return Stack(
       children: [
         _buildPane(context, w, h, url),
-        PostInfoPane(post: imageListing),
+        if (SearchView.i.postInfoBannerItems.isNotEmpty)
+          PostInfoPane(post: imageListing),
         if (isSelected ||
             (!disallowSelections && sr(context).getIsSelected(index)))
           _buildCheckmark(context),
