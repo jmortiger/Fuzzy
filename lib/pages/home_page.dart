@@ -29,7 +29,7 @@ import '../widgets/w_home_end_drawer.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-import 'w_search_bar.dart';
+import '../widgets/w_search_bar.dart';
 
 late final lRecord = lm.genLogger("HomePage");
 late final print = lRecord.print;
