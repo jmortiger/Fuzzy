@@ -653,41 +653,45 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
               content: SizedBox(
                 width: double.maxFinite,
                 height: double.maxFinite,
-                child: ListView(
-                  key: ObjectKey(temp),
-                  children: temp.mapAsList(
-                    (e, i, list) => ListTile(
-                      leading: Text(i.toString()),
-                      // leading: IconButton(
-                      //   icon: const Icon(Icons.remove),
-                      //   onPressed: () => setState(() {
-                      //     temp.removeAt(i);
-                      //   }),
-                      // ),
-                      title: DropdownMenu<T>(
-                        dropdownMenuEntries: widget.values
-                            .map((v) => DropdownMenuEntry(
-                                  value: v,
-                                  label: convertEnumValueToInput(v),
-                                ))
-                            .toList(),
-                        initialSelection: e,
-                        onSelected: (value) {
-                          if (value != null && value is T) {
-                            setState(() {
-                              temp[i] = value;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  )/* ..add(ListTile(
-                      title: const Text("Add"),
-                      onTap: () => setState(() {
-                        temp.add(widget.values.first);
-                      }),
-                    )) */,
+                child: WEnumListFieldContent(
+                  enumToString: widget.enumToString,
+                  values: widget.values,
+                  initialState: temp,
                 ),
+                // child: ListView(
+                //   children: temp.mapAsList(
+                //     (e, i, list) => ListTile(
+                //       // leading: Text(i.toString()),
+                //       leading: IconButton(
+                //         icon: const Icon(Icons.remove),
+                //         onPressed: () => setState(() {
+                //           temp.removeAt(i);
+                //         }),
+                //       ),
+                //       title: DropdownMenu<T>(
+                //         dropdownMenuEntries: widget.values
+                //             .map((v) => DropdownMenuEntry(
+                //                   value: v,
+                //                   label: convertEnumValueToInput(v),
+                //                 ))
+                //             .toList(),
+                //         initialSelection: e,
+                //         onSelected: (value) {
+                //           if (value != null && value is T) {
+                //             setState(() {
+                //               temp[i] = value;
+                //             });
+                //           }
+                //         },
+                //       ),
+                //     ),
+                //   )..add(ListTile(
+                //       title: const Text("Add"),
+                //       onTap: () => setState(() {
+                //         temp.add(widget.values.first);
+                //       }),
+                //     )),
+                // ),
               ),
               actions: [
                 TextButton(
@@ -737,6 +741,77 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Abuses reference to [initialState] to send data back.
+class WEnumListFieldContent<T extends Enum> extends StatefulWidget {
+  final List<T> initialState;
+
+  /// Needed because I can't access [T.values] from here.
+  final List<T> values;
+
+  final String Function(T v)? enumToString;
+
+  const WEnumListFieldContent({
+    super.key,
+    required this.initialState,
+    required this.values,
+    this.enumToString,
+  });
+
+  @override
+  State<WEnumListFieldContent> createState() => _WEnumListFieldContentState();
+}
+
+class _WEnumListFieldContentState<T extends Enum>
+    extends State<WEnumListFieldContent<T>> {
+  /* late  */ List<T> get temp => widget.initialState;
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   temp = widget.initialState;
+  // }
+
+  String convertEnumValueToInput(T value) =>
+      widget.enumToString?.call(value) ?? value.name;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: temp.mapAsList(
+        (e, i, list) => ListTile(
+          // leading: Text(i.toString()),
+          leading: IconButton(
+            icon: const Icon(Icons.remove),
+            onPressed: () => setState(() {
+              temp.removeAt(i);
+            }),
+          ),
+          title: DropdownMenu<T>(
+            dropdownMenuEntries: widget.values
+                .map((v) => DropdownMenuEntry(
+                      value: v,
+                      label: convertEnumValueToInput(v),
+                    ))
+                .toList(),
+            initialSelection: e,
+            onSelected: (value) {
+              if (value != null && value is T) {
+                setState(() {
+                  temp[i] = value;
+                });
+              }
+            },
+          ),
+        ),
+      )..add(ListTile(
+          title: const Text("Add"),
+          onTap: () => setState(() {
+            temp.add(widget.values.first);
+          }),
+        )),
     );
   }
 }
