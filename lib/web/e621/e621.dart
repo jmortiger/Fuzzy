@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/saved_data.dart';
@@ -23,24 +22,65 @@ late final print = lRecord.print;
 late final logger = lRecord.logger;
 // #endregion Logger
 
-final class E621AccessData {
+final class E621AccessData with Storable<E621AccessData> {
   static final devAccessData = LazyInitializer<E621AccessData>(() async =>
       E621AccessData.fromJson((await devData.getItem())["e621"] as JsonOut));
   static String? get devApiKey => devAccessData.itemSafe?.apiKey;
   static String? get devUsername => devAccessData.itemSafe?.username;
   static String? get devUserAgent => devAccessData.itemSafe?.userAgent;
-  static final userData = LateFinal<E621AccessData>();
+  static final userData = LateInstance<E621AccessData>();
   static const fileName = "credentials.json";
-  static final file = LazyInitializer<File?>(
-    () async => File("${(await appDataPath.getItem())}$fileName"),
+  static final filePathFull = LazyInitializer<String>(
+    () async =>
+        (!Platform.isWeb) ? "${(await appDataPath.getItem())}$fileName" : "",
   );
   static Future<E621AccessData?> tryLoad() async {
     var t = await (await Storable.tryGetStorageAsync(
-      "${(await appDataPath.getItem())}$fileName",
+      await filePathFull.getItem(),
     ))
         ?.readAsString();
-    if (t == null) return null;
+    if (t == null) {
+      logger.warning(
+        "Failed to load:"
+        "\tfileName: $fileName"
+        "\tfilePathFull: ${filePathFull.itemSafe}",
+      );
+      return null;
+    }
     return userData.$ = E621AccessData.fromJson(jsonDecode(t));
+  }
+
+  static void _failedToLoadLog(E621AccessData? data) => logger.warning(
+        "Failed to load: $data"
+        "\n\tfileName: $fileName"
+        "\n\tfilePathFull: ${filePathFull.itemSafe}"
+        "\n\tfile.isAssigned: ${data?.file.isAssigned}"
+        "\n\tfile.itemSafe?.existsSync(): "
+        "${data?.file.itemSafe?.existsSync()}",
+      );
+  static Future<bool> tryWrite([E621AccessData? data]) async {
+    if (Platform.isWeb) {
+      logger.info("Can't access file storage on web. "
+          "Local Storage solution not implemented.");
+      return false;
+    }
+    data ??= userData.itemSafe;
+    if (data != null) {
+      if (!data.file.isAssigned) {
+        logger.warning(
+            "data.file.isAssigned was false. Attempting initialization");
+        data.initStorageAsync(filePathFull.getItem()).onError(
+              (e, s) => logger.warning("Failed to initialize Storable", e, s),
+            );
+      }
+      return data.tryWriteAsync(flush: true)
+        ..then<void>((v) {
+          if (!v) _failedToLoadLog(data);
+        });
+    } else {
+      _failedToLoadLog(data);
+      return false;
+    }
   }
 
   final String apiKey;
@@ -49,11 +89,15 @@ final class E621AccessData {
   e621.E6Credentials get cred =>
       e621.E6Credentials(username: username, apiKey: apiKey);
 
-  const E621AccessData({
+  /* const  */ E621AccessData({
     required this.apiKey,
     required this.username,
     required this.userAgent,
-  });
+  }) {
+    initStorageAsync(filePathFull.getItem()).onError(
+      (e, s) => logger.warning("Failed to initialize Storable", e, s),
+    );
+  }
   factory E621AccessData.withDefault({
     required String apiKey,
     required String username,

@@ -7,23 +7,26 @@ import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/web/e621/e621.dart';
 import 'package:j_util/platform_finder.dart';
 import 'package:path_provider/path_provider.dart' as path;
 import 'package:provider/provider.dart';
 
 import 'pages/home_page.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await lm.init().then((v) => print = lm.genPrint("main"));
   if (Platform.isWeb) registerImgElement();
   pathSoundOff();
-  appDataPath.getItem();
+  await appDataPath.getItem()/* .ignore() */;
   AppSettings.instance.then(
     (value) => print("Can Use AppSettings singleton"),
-  );
-  CachedFavorites.fileFullPath.getItem();
+  ).ignore();
+  CachedFavorites.fileFullPath.getItem().ignore();
   CachedSearches.loadFromStorageAsync();
   SavedDataE6Legacy.$Safe;
+  E621AccessData.tryLoad().ignore();
   runApp(
     MaterialApp(
       theme: ThemeData.dark(),

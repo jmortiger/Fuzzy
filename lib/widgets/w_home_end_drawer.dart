@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/settings_page.dart';
+import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:fuzzy/widgets/w_search_pool.dart';
@@ -68,6 +69,90 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
               );
             },
           ),
+          ListTile(
+            title: !E621AccessData.userData.isAssigned
+                ? const Text("Login")
+                : const Text("Change Login"),
+            onTap: () {
+              showDialog<({String username, String apiKey})>(
+                context: context,
+                builder: (context) {
+                  String username = "", apiKey = "";
+                  return AlertDialog(
+                    title: const Text("Login"),
+                    content: Column(
+                      children: [
+                        TextField(
+                          onChanged: (value) => username = value,
+                          decoration: const InputDecoration(
+                            label: Text("Username"),
+                            hintText: "Username",
+                          ),
+                        ),
+                        TextField(
+                          onChanged: (value) => apiKey = value,
+                          decoration: const InputDecoration(
+                            label: Text("API Key"),
+                            hintText: "API Key",
+                          ),
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        // onPressed: () => Navigator.pop(context, t),
+                        onPressed: () => Navigator.pop(
+                            context, (username: username, apiKey: apiKey)),
+                        child: const Text("Accept"),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, null),
+                        child: const Text("Cancel"),
+                      ),
+                    ],
+                  );
+                },
+              ).then((v) {
+                if (v != null) {
+                  E621AccessData.userData.$ = E621AccessData.withDefault(
+                      apiKey: v.apiKey, username: v.username);
+                  E621AccessData.tryWrite().then<void>((v) {
+                    if (v) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text("Successfully stored! Test it!"),
+                          action: SnackBarAction(
+                            label: "See Contents",
+                            onPressed: () async => showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                content: Text(E621AccessData
+                                        .userData.itemSafe?.file.itemSafe
+                                        ?.readAsStringSync() ??
+                                    ""),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  });
+                }
+              });
+            },
+          ),
+          if (E621AccessData.userData.isAssigned)
+            ListTile(
+              title: const Text("Show User Profile"),
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog();
+                  },
+                );
+              },
+            ),
           ListTile(
             title: const Text("Toggle Lazy Loading"),
             leading:
@@ -164,7 +249,8 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                       initialSearchOrder: e621.SetOrder.updatedAt,
                       initialSearchName: null,
                       initialSearchShortname: null,
-                      onSelected: (e621.PostSet set) => Navigator.pop(context, set),
+                      onSelected: (e621.PostSet set) =>
+                          Navigator.pop(context, set),
                     ),
                     // scrollable: true,
                   );
@@ -189,7 +275,8 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                       // initialSearchCreatorName: "***REMOVED***,
                       initialSearchOrder: e621.PoolOrder.updatedAt,
                       initialSearchNameMatches: null,
-                      onSelected: (e621.Pool pool) => Navigator.pop(context, pool),
+                      onSelected: (e621.Pool pool) =>
+                          Navigator.pop(context, pool),
                     ),
                     // scrollable: true,
                   );
