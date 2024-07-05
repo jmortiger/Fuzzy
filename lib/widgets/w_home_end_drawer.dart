@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/settings_page.dart';
+import 'package:fuzzy/pages/user_profile_page.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
@@ -141,16 +142,18 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
               });
             },
           ),
-          if (E621AccessData.userData.isAssigned)
+          // if (E621AccessData.userData.isAssigned)
             ListTile(
               title: const Text("Show User Profile"),
               onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) {
-                    return AlertDialog();
-                  },
-                );
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => UserProfileLoaderPage.getByName(
+                          username:
+                              E621AccessData.userData.itemSafe?.username ??
+                                  E621AccessData.devAccessData.item.username),
+                    ));
               },
             ),
           ListTile(

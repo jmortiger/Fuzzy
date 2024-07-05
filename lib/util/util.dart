@@ -24,6 +24,7 @@ late final logger = lRecord.logger;
 // #endregion Logger
 
 typedef JsonMap = Map<String, dynamic>;
+const isDebug = kDebugMode;
 final LazyInitializer<PackageInfo> packageInfo = LazyInitializer(
   () => PackageInfo.fromPlatform(),
 );

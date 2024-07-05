@@ -9,7 +9,8 @@ import 'package:j_util/e621.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:j_util/j_util_full.dart';
 
-late final lRecord = lm.genLogger("UserProfilePage");
+late final lRecord =
+    lm.genLogger("UserProfilePage" /* , null, lm.LogLevel.FINEST */);
 late final print = lRecord.print;
 late final logger = lRecord.logger;
 // #endregion Logger
@@ -17,8 +18,7 @@ late final logger = lRecord.logger;
 class UserProfilePage extends StatelessWidget {
   final User user;
   UserDetailed? get userD => user is UserDetailed ? user as UserDetailed : null;
-  UserLoggedIn? get userL =>
-      user is UserLoggedIn ? user as UserLoggedIn : null;
+  UserLoggedIn? get userL => user is UserLoggedIn ? user as UserLoggedIn : null;
 
   const UserProfilePage({
     super.key,
@@ -116,7 +116,11 @@ class UserProfileLoaderPage extends StatefulWidget {
           "\n\t${v.statusCode}"
           "\n\t${v.headers}",
         );
-        return User.fromRawJson(v.body);
+        try {
+          return UserLoggedIn.fromRawJson(v.body);
+        } catch (e, s) {
+          return User.fromRawJson(v.body);
+        }
       }
     });
   }
@@ -208,8 +212,51 @@ class _UserProfileLoaderPageState extends State<UserProfileLoaderPage> {
         ..then<void>(myThen);
     } else if (userFuture == null) {
       user = userFuture = null;
-    } else if (userFuture.runtimeType == Future<User?>) {
-      (userFuture as Future<User?>).then<void>(myThen);
+    } else if (userFuture is Future<UserLoggedInDetail?>) {
+      (userFuture as Future<UserLoggedInDetail?>)
+        ..then<void>(myThen)
+        ..then((v) {
+          if (v == null) {
+            setState(() {
+              user = userFuture = null;
+            });
+          } else {
+            setState(() {
+              user = v;
+              userFuture = null;
+            });
+          }
+        });
+    } else if (userFuture is Future<UserDetailed?>) {
+      (userFuture as Future<UserDetailed?>)
+        ..then<void>(myThen)
+        ..then((v) {
+          if (v == null) {
+            setState(() {
+              user = userFuture = null;
+            });
+          } else {
+            setState(() {
+              user = v;
+              userFuture = null;
+            });
+          }
+        });
+    } else /* if (userFuture is Future<User?>) */ {
+      (userFuture as Future<User?>)
+        ..then<void>(myThen)
+        ..then((v) {
+          if (v == null) {
+            setState(() {
+              user = userFuture = null;
+            });
+          } else {
+            setState(() {
+              user = v;
+              userFuture = null;
+            });
+          }
+        });
     }
   }
 
@@ -218,7 +265,15 @@ class _UserProfileLoaderPageState extends State<UserProfileLoaderPage> {
     return user != null
         ? UserProfilePage(user: user!)
         : userFuture != null
-            ? scSaCoExArCpi
+            // ? scSaCoExArCpi
+            ? Scaffold(
+                appBar: AppBar(
+                  title: const Text("User "),
+                ),
+                body: const Column(
+                  children: [exArCpi],
+                ),
+              )
             : Scaffold(
                 appBar: AppBar(),
                 body: const Text("Failed"),
