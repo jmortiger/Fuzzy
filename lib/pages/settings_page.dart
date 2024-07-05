@@ -292,13 +292,13 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               ListTile(
                 title: const Text("Toggle Image Display Method"),
                 onTap: () {
-                  print("Before: ${imageFit.name}");
+                  logger.finest("Before: ${imageFit.name}");
                   setState(() {
                     imageFit = imageFit == BoxFit.contain
                         ? BoxFit.cover
                         : BoxFit.contain;
                   });
-                  print("After: ${imageFit.name}");
+                  logger.finer("After: ${imageFit.name}");
                   // Navigator.pop(context);
                 },
                 trailing: Text(imageFit.name),
@@ -312,7 +312,8 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
           children: [
             WBooleanField(
               name: "Default to High Quality Image",
-              subtitle: "If the selected quality is unavailable, use the highest quality.",
+              subtitle:
+                  "If the selected quality is unavailable, use the highest quality.",
               getVal: () => settings.postView.forceHighQualityImage,
               setVal: (p1) =>
                   AppSettings.i!.postView.forceHighQualityImage = p1,
@@ -325,8 +326,8 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                   PostView.i.imageQuality = PostView.i.imageQuality == "low"
                       ? "medium"
                       : PostView.i.imageQuality == "medium"
-                        ? "high"
-                        : "low";
+                          ? "high"
+                          : "low";
                 });
                 print("After: ${PostView.i.imageQuality}");
                 // Navigator.pop(context);
@@ -606,19 +607,34 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
         .split(RegExpExt.whitespace)
         .where((s) => s.isNotEmpty)
         .mapAsList(
-          (e, index, list) =>
-              widget.stringToEnum?.call(e) ??
-              widget.values.singleWhere((v) => v.name == e),
+          (e, index, list) => convertInputToEnumValue(e),
         );
   }
 
   String convertValueToInput(List<T> value) {
     return value.fold(
       "",
-      (acc, e) => "$acc${widget.enumToString?.call(e) ?? e.name}\n",
+      (acc, e) => "$acc${convertEnumValueToInput(e)}\n",
     );
   }
 
+  String convertEnumValueToInput(T value) =>
+      widget.enumToString?.call(value) ?? value.name;
+  T convertInputToEnumValue(String value) =>
+      widget.stringToEnum?.call(value) ??
+      widget.values.singleWhere((v) => v.name == value);
+  late List<T> temp;
+  @override
+  void initState() {
+    super.initState();
+    temp = List.of(getVal);
+  }
+
+  // void addElement() {
+  //   setState(() {
+  //     temp.add(widget.values.first);
+  //   });
+  // }
   @override
   Widget build(BuildContext context) {
     return ListTile(
@@ -626,35 +642,57 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
       title: Text(name),
       subtitle: Text(getVal.toString()),
       onTap: () {
-        final before = convertValueToInput(getVal);
-        var t = before;
-        validation(String value) {
-          validateVal?.call(convertInputToValue(value)) ?? true
-              ? t = value
-              : null;
-        }
-
-        showDialog<String>(
+        // final before = convertValueToInput(getVal);
+        // var t = before;
+        // showDialog<String>(
+        showDialog<List<T>>(
           context: context,
           builder: (context) {
             return AlertDialog(
-              content: TextField(
-                maxLines: null,
-                onChanged: validation,
-                onSubmitted: validation,
-                controller: TextEditingController.fromValue(
-                  TextEditingValue(
-                    text: t,
-                    selection: TextSelection(
-                      baseOffset: 0,
-                      extentOffset: t.length - 1,
+              // content: _buildTextEntry(t),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: double.maxFinite,
+                child: ListView(
+                  key: ObjectKey(temp),
+                  children: temp.mapAsList(
+                    (e, i, list) => ListTile(
+                      leading: Text(i.toString()),
+                      // leading: IconButton(
+                      //   icon: const Icon(Icons.remove),
+                      //   onPressed: () => setState(() {
+                      //     temp.removeAt(i);
+                      //   }),
+                      // ),
+                      title: DropdownMenu<T>(
+                        dropdownMenuEntries: widget.values
+                            .map((v) => DropdownMenuEntry(
+                                  value: v,
+                                  label: convertEnumValueToInput(v),
+                                ))
+                            .toList(),
+                        initialSelection: e,
+                        onSelected: (value) {
+                          if (value != null && value is T) {
+                            setState(() {
+                              temp[i] = value;
+                            });
+                          }
+                        },
+                      ),
                     ),
-                  ),
+                  )/* ..add(ListTile(
+                      title: const Text("Add"),
+                      onTap: () => setState(() {
+                        temp.add(widget.values.first);
+                      }),
+                    )) */,
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context, t),
+                  // onPressed: () => Navigator.pop(context, t),
+                  onPressed: () => Navigator.pop(context, temp),
                   child: const Text("Accept"),
                 ),
                 TextButton(
@@ -667,15 +705,38 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
         ).then<void>(
           (value) {
             if (value != null) {
-              print("_EnumListFieldState: Before: ${getVal.toString()}");
+              logger.finer("_EnumListFieldState: Before: ${getVal.toString()}");
               setState(() {
-                setVal(convertInputToValue(value));
+                // setVal(convertInputToValue(value));
+                setVal(value);
               });
-              print("_EnumListFieldState: After: ${getVal.toString()}");
+              logger.fine("_EnumListFieldState: After: ${getVal.toString()}");
             }
           },
-        ).onError((error, stackTrace) => print(error));
+        ).onError(
+            (error, stackTrace) => logger.severe(error, error, stackTrace));
       },
+    );
+  }
+
+  TextField _buildTextEntry(String t) {
+    validation(String value) {
+      validateVal?.call(convertInputToValue(value)) ?? true ? t = value : null;
+    }
+
+    return TextField(
+      maxLines: null,
+      onChanged: validation,
+      onSubmitted: validation,
+      controller: TextEditingController.fromValue(
+        TextEditingValue(
+          text: t,
+          selection: TextSelection(
+            baseOffset: 0,
+            extentOffset: t.length - 1,
+          ),
+        ),
+      ),
     );
   }
 }
