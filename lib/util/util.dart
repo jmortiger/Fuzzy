@@ -11,6 +11,7 @@ import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:http/http.dart' as http;
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
+import 'package:logging/logging.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -181,3 +182,33 @@ Comparator<String> getCoarseInverseSimilarityComparator(String mainComparison, [
 Comparator<String> getFineSimilarityComparator(String mainComparison) => (String a, String b) => a.similarityTo(mainComparison).compareTo(b.similarityTo(mainComparison));
 /// Lower output value means higher similarity
 Comparator<String> getFineInverseSimilarityComparator(String mainComparison) => (String a, String b) => b.similarityTo(mainComparison).compareTo(a.similarityTo(mainComparison));
+
+void logRequest(
+    http.Request r,
+    Logger logger, [
+    Level level = Level.FINEST,
+  ]) {
+  logger.log(
+    level,
+    "Request:"
+    "\n\t$r"
+    "\n\t${r.url}"
+    "\n\t${r.url.query}"
+    "\n\t${r.body}"
+    "\n\t${r.headers}",
+  );
+}
+void logResponse(
+    http.Response v,
+    Logger logger, [
+    Level level = Level.FINEST,
+  ]) {
+  logger.log(
+    level,
+    "Response:"
+    "\n\t$v"
+    "\n\t${v.body}"
+    "\n\t${v.statusCode}"
+    "\n\t${v.headers}",
+  );
+}

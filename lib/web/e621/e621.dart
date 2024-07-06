@@ -215,7 +215,8 @@ sealed class E621 extends Site {
   static final nonUserSearchEnded = JEvent<SearchResultArgs>();
   static const String rootUrl = "https://e621.net/";
   static final Uri rootUri = Uri.parse(rootUrl);
-  static final accessData = LateFinal<E621AccessData>();
+  // static final accessData = LateFinal<E621AccessData>();
+  static LateInstance<E621AccessData> get accessData => E621AccessData.userData;
   static const int hardRateLimit = 1;
   static const int softRateLimit = 2;
   static const int idealRateLimit = 3;
@@ -224,8 +225,30 @@ sealed class E621 extends Site {
   static DateTime timeOfLastRequest =
       DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
 
+  // #region User Account Data
+  static final loggedInUser = LateInstance<e621.UserLoggedIn>();
+  static int get tagQueryLimit =>
+      loggedInUser.isAssigned ? loggedInUser.$.tagQueryLimit : 40;
+  static int get favoriteLimit =>
+      loggedInUser.isAssigned ? loggedInUser.$.favoriteLimit : 80000;
+  static bool get blacklistUsers =>
+      loggedInUser.isAssigned ? loggedInUser.$.blacklistUsers : false;
+  static String get blacklistedTags =>
+      loggedInUser.isAssigned ? loggedInUser.$.blacklistedTags : "";
+  static String get favoriteTags =>
+      loggedInUser.isAssigned ? loggedInUser.$.favoriteTags : "";
+  static int get apiBurstLimit =>
+      loggedInUser.isAssigned ? loggedInUser.$.apiBurstLimit : 60;
+  static int get apiRegenMultiplier =>
+      loggedInUser.isAssigned ? loggedInUser.$.apiRegenMultiplier : 1;
+  static int get remainingApiLimit =>
+      loggedInUser.isAssigned ? loggedInUser.$.remainingApiLimit : 60;
+  // #endregion User Account Data
+
+  // #region Saved Search Parsing
   /// The (escaped) character used to delimit saved search insertion.
   static const savedSearchInsertionDelimiter = r"#";
+  /// Matches either whitespace or the end of input without consuming characters
   static const savedSearchInsertionEnd =
       r'(?=' + RegExpExt.whitespacePattern + r'+?|$)';
 
@@ -236,17 +259,15 @@ sealed class E621 extends Site {
   ///
   /// Lazily expands
   /// #(.+?)(?=[\u2028\n\r\u000B\f\u2029\u0085 ]+?|$)
-  // static final savedSearchInsertion = RegExp("$delimiter(.+?)$delimiter");
-  // static final savedSearchInsertion = RegExp("$delimiter(.+?)${RegExpExt.whitespace.pattern}");
   static final savedSearchInsertion =
       RegExp("$delimiter(.+?)$savedSearchInsertionEnd");
 
   /// Used to inject a saved search entry into a search using the entry's unique ID.
   ///
   /// Matches all characters other than [delimiter]
-  // static final savedSearchInsertionAlt = RegExp("$delimiter([^$delimiter]+)$delimiter");
   static final savedSearchInsertionAlt =
       RegExp("$delimiter([^$delimiter]+?)$savedSearchInsertionEnd");
+  // #endregion Saved Search Parsing
   E621();
 
   static String fillTagTemplate(String tags) {

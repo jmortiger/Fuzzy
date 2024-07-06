@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
+import 'package:http/http.dart';
 import 'package:j_util/e621.dart';
 
 // #region Logger
@@ -29,11 +30,32 @@ class UserProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("User ${user.id}: ${user.name}"),
+        title: Text(
+          "User ${user.id}: ${user.name}${user is UserLoggedIn ? " (You)" : ""}",
+        ),
       ),
       body: Column(children: [
+        // avatarId
+        Text("Created At: ${user.createdAt}"),
+        Text("Level: ${user.levelString}(${user.level})"),
+        Text("Post Update Count: ${user.postUpdateCount}"),
+        Text("Post Upload Count: ${user.postUploadCount}"),
+        Text("Note Update Count: ${user.noteUpdateCount}"),
+        Text("Is Banned: ${user.isBanned}"),
+        Text("Can Approve Posts: ${user.canApprovePosts}"),
+        Text("Can Upload Free: ${user.canUploadFree}"),
+        Text("Base Upload Limit: ${user.baseUploadLimit}"),
         if (userL != null)
           Text("FavCount: ${userL!.favoriteCount}/${userL!.favoriteLimit}"),
+        if (userL != null) Text("Tag Query Limit: ${userL!.tagQueryLimit}"),
+        if (userL != null) Text("Blacklist Users: ${userL!.blacklistUsers}"),
+        if (userL != null) Text("Blacklisted Tags: ${userL!.blacklistedTags}"),
+        if (userL != null) Text("Favorite Tags: ${userL!.favoriteTags}"),
+        if (userL != null) Text("Api Burst Limit: ${userL!.apiBurstLimit}"),
+        if (userL != null)
+          Text("API Regen Multiplier: ${userL!.apiRegenMultiplier}"),
+        if (userL != null)
+          Text("Remaining API Limit: ${userL!.remainingApiLimit}"),
       ]),
     );
   }
@@ -43,22 +65,32 @@ class UserProfileLoaderPage extends StatefulWidget {
   final User? _user;
   final E621AccessData? data;
   final String? username;
+  final int? id;
 
   const UserProfileLoaderPage({
     super.key,
     required User user,
   })  : data = null,
         username = null,
+        id = null,
         _user = user;
   const UserProfileLoaderPage.loadFromAccessData({
     super.key,
     required E621AccessData this.data,
   })  : username = null,
+        id = null,
         _user = null;
   const UserProfileLoaderPage.getByName({
     super.key,
     required String this.username,
   })  : data = null,
+        id = null,
+        _user = null;
+  const UserProfileLoaderPage.getById({
+    super.key,
+    required int this.id,
+  })  : data = null,
+        username = null,
         _user = null;
   FutureOr<User?> get user {
     if (_user != null) return _user;
@@ -77,57 +109,121 @@ class UserProfileLoaderPage extends StatefulWidget {
     }
     var r = Api.initSearchUsersRequest(
       searchNameMatches: d?.username,
-      // searchOrder: UserOrder.name,
       credentials: d,
       limit: 1,
     );
-    logger.finest(
-      "Request:"
-      "\n\t$r"
-      "\n\t${r.url}"
-      "\n\t${r.url.query}"
-      "\n\t${r.body}"
-      "\n\t${r.headers}",
-    );
+    logRequest(r, logger);
     return Api.sendRequest(r).then((v) {
       if (v.statusCodeInfo.isError) {
-        logger.severe(
-          "Response:"
-          "\n\t$v"
-          "\n\t${v.body}"
-          "\n\t${v.statusCode}"
-          "\n\t${v.headers}",
-        );
+        logResponse(v, logger, lm.LogLevel.SEVERE);
         return null;
       } else if (!v.statusCodeInfo.isSuccessful) {
-        logger.warning(
-          "Response:"
-          "\n\t$v"
-          "\n\t${v.body}"
-          "\n\t${v.statusCode}"
-          "\n\t${v.headers}",
-        );
+        logResponse(v, logger, lm.LogLevel.WARNING);
         return null;
       } else {
-        logger.info(
-          "Response:"
-          "\n\t$v"
-          "\n\t${v.body}"
-          "\n\t${v.statusCode}"
-          "\n\t${v.headers}",
-        );
+        logResponse(v, logger, lm.LogLevel.INFO);
         try {
           return UserLoggedIn.fromRawJson(v.body);
-        } catch (e, s) {
+        } catch (e) {
           return User.fromRawJson(v.body);
         }
       }
     });
   }
 
+  /// Based on the provided user info, attempts to get, in order:
+  /// 1. [UserLoggedInDetail]
+  /// 1. [UserDetailed]
+  /// 1. [UserLoggedIn]
+  /// 1. [User]
+  FutureOr<User?> get userMostSpecific {
+    var id = this.id;
+    if (_user != null) {
+      if (_user is UserLoggedInDetail || _user is UserDetailed) {
+        return _user;
+      } else {
+        logger.finest("Attempting to retrieve more specific user "
+            "info for user ${_user.id} (${_user.name})");
+        id = _user.id;
+      }
+    } else {
+      logger.finest("No User obj, trying id");
+    }
+    var d = (data ??
+            E621AccessData.userData.itemSafe ??
+            (isDebug ? E621AccessData.devAccessData.itemSafe : null))
+        ?.cred;
+    if (id != null) {
+      if (d == null) {
+        logger.info("No credential data, can't get logged in data.");
+      }
+      var r = Api.initGetUserRequest(
+        id,
+        credentials: d,
+      );
+      logRequest(r, logger);
+      return Api.sendRequest(r).then(resolveGetUserFuture);
+    }
+    logger.finest("No id, trying access data");
+    var username = d?.username ?? this.username;
+    if (d == null) {
+      logger.finest("No access data, trying by name");
+    }
+    if (username == null || username.isEmpty) {
+      logger.warning("No user info available: cannot find user");
+      return null;
+    }
+    var r = Api.initSearchUsersRequest(
+      searchNameMatches: d?.username,
+      credentials: d,
+      limit: 1,
+    );
+    logRequest(r, logger);
+    return Api.sendRequest(r).then((v) {
+      if (v.statusCodeInfo.isError) {
+        logResponse(v, logger, lm.LogLevel.SEVERE);
+        return null;
+      } else if (!v.statusCodeInfo.isSuccessful) {
+        logResponse(v, logger, lm.LogLevel.WARNING);
+        return null;
+      } else {
+        logResponse(v, logger, lm.LogLevel.FINER);
+        User t;
+        try {
+          t = UserLoggedIn.fromRawJson(v.body);
+        } catch (e) {
+          t = User.fromRawJson(v.body);
+        }
+        logger.info("Launching request for User ${t.id} (${t.name})");
+        var r = Api.initGetUserRequest(
+          t.id,
+          credentials: d,
+        );
+        logRequest(r, logger);
+        return Api.sendRequest(r).then(resolveGetUserFuture);
+      }
+    });
+  }
+
+  static UserDetailed? resolveGetUserFuture(Response v) {
+    if (v.statusCodeInfo.isError) {
+      logResponse(v, logger, lm.LogLevel.SEVERE);
+      return null;
+    } else if (!v.statusCodeInfo.isSuccessful) {
+      logResponse(v, logger, lm.LogLevel.WARNING);
+      return null;
+    } else {
+      logResponse(v, logger, lm.LogLevel.FINER);
+      try {
+        return UserLoggedInDetail.fromRawJson(v.body);
+      } catch (e) {
+        return UserDetailed.fromRawJson(v.body);
+      }
+    }
+  }
+
   static Future<UserDetailed?> getUserDetailedFromId(int id,
       [E6Credentials? c]) {
-    logger.finest("No User obj, trying access data");
     var d = c ??
         (E621AccessData.userData.itemSafe ??
                 (isDebug ? E621AccessData.devAccessData.itemSafe : null))
@@ -139,42 +235,21 @@ class UserProfileLoaderPage extends StatefulWidget {
       id,
       credentials: d,
     );
-    logger.finest(
-      "Request:"
-      "\n\t$r"
-      "\n\t${r.url}"
-      "\n\t${r.url.query}"
-      "\n\t${r.body}"
-      "\n\t${r.headers}",
-    );
+    logRequest(r, logger, lm.LogLevel.FINEST);
     return Api.sendRequest(r).then((v) {
       if (v.statusCodeInfo.isError) {
-        logger.severe(
-          "Response:"
-          "\n\t$v"
-          "\n\t${v.body}"
-          "\n\t${v.statusCode}"
-          "\n\t${v.headers}",
-        );
+        logResponse(v, logger, lm.LogLevel.SEVERE);
         return null;
       } else if (!v.statusCodeInfo.isSuccessful) {
-        logger.warning(
-          "Response:"
-          "\n\t$v"
-          "\n\t${v.body}"
-          "\n\t${v.statusCode}"
-          "\n\t${v.headers}",
-        );
+        logResponse(v, logger, lm.LogLevel.WARNING);
         return null;
       } else {
-        logger.info(
-          "Response:"
-          "\n\t$v"
-          "\n\t${v.body}"
-          "\n\t${v.statusCode}"
-          "\n\t${v.headers}",
-        );
-        return UserDetailed.fromRawJson(v.body);
+        logResponse(v, logger, lm.LogLevel.FINER);
+        try {
+          return UserLoggedInDetail.fromRawJson(v.body);
+        } catch (e) {
+          return UserDetailed.fromRawJson(v.body);
+        }
       }
     });
   }
