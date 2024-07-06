@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/pages/post_view_page.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:j_util/j_util_full.dart';
 
-class PostSwipePage extends StatefulWidget implements IReturnsTags {
+class PostSwipePage extends StatefulWidget implements IReturnsTags, IRoute<PostSwipePage> {
+  static const routeNameString = "/";
+  @override
+  get routeName => routeNameString;
   final int initialIndex;
   final E6Posts? postsObj;
   final Iterable<E6PostResponse>? postsIterable;

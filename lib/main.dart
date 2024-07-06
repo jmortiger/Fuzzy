@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
@@ -5,6 +7,7 @@ import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
+import 'package:fuzzy/pages/post_view_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/web/e621/e621.dart';
@@ -14,23 +17,79 @@ import 'package:provider/provider.dart';
 
 import 'pages/home_page.dart';
 
+// #region Logger
+late final ({
+  lm.FileLogger logger,
+  void Function(Object?, [lm.LogLevel, Object?, StackTrace?, Zone?]) print
+}) lRecord;
+void Function(Object?, [lm.LogLevel, Object?, StackTrace?, Zone?]) get print =>
+    lRecord.print;
+lm.FileLogger get logger => lRecord.logger;
+late final ({
+  lm.FileLogger logger,
+  void Function(Object?, [lm.LogLevel, Object?, StackTrace?, Zone?]) print
+}) lRRecord;
+void Function(Object?, [lm.LogLevel, Object?, StackTrace?, Zone?])
+    get routePrint => lRRecord.print;
+lm.FileLogger get routeLogger => lRRecord.logger;
+// #endregion Logger
+
+// late final Map<String, Route<dynamic>? Function(RouteSettings)> routeJumpTable = {
+//   PoolViewPageBuilder.routeNameString: (settings) =>
+// };
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await lm.init().then((v) => print = lm.genPrint("main"));
+  await lm.init().then((v) {
+    lRecord = lm.genLogger("main");
+    lRRecord = lm.genLogger("Routing");
+  });
   if (Platform.isWeb) registerImgElement();
   pathSoundOff();
-  await appDataPath.getItem()/* .ignore() */;
-  AppSettings.instance.then(
-    (value) => print("Can Use AppSettings singleton"),
-  ).ignore();
+  await appDataPath.getItem() /* .ignore() */;
+  AppSettings.instance
+      .then(
+        (value) => print("Can Use AppSettings singleton"),
+      )
+      .ignore();
   CachedFavorites.fileFullPath.getItem().ignore();
   CachedSearches.loadFromStorageAsync();
   SavedDataE6Legacy.$Safe;
   E621AccessData.tryLoad().ignore();
   runApp(
     MaterialApp(
+      onGenerateRoute: (settings) {
+        if (settings.name != null) {
+          final url = Uri.parse(settings.name!);
+          switch (url.path) {
+            case HomePage.routeNameString:
+              return MaterialPageRoute(builder: (ctx) => const HomePage());
+            case PoolViewPageBuilder.routeNameString:
+              final t = int.tryParse(url.queryParameters["poolId"] ?? "");
+              if (t != null) {
+                return MaterialPageRoute(
+                  settings: settings,
+                  builder: (cxt) => PoolViewPageBuilder(
+                    poolId: t,
+                  ),
+                );
+              } else {
+                routeLogger.severe("routing failure\nRoute: ${settings.name}");
+                return null;
+              }
+            default:
+              routeLogger.severe('No Route found for "${settings.name}"');
+              return null;
+          }
+        }
+        routeLogger.info("no settings.name found, defaulting to HomePage");
+        return MaterialPageRoute(builder: (ctx) => const HomePage());
+      },
       theme: ThemeData.dark(),
-      home: MultiProvider(
+      home: _buildHomePageWithProviders(),
+    ),
+  );
+}
+Widget _buildHomePageWithProviders() => MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (context) => SearchViewModel()),
           ChangeNotifierProvider(create: (context) => SearchCache()),
@@ -40,12 +99,7 @@ void main() async {
           // ChangeNotifierProvider(create: (context) => SavedDataE6.$),
         ],
         child: const HomePage(),
-      ),
-    ),
-  );
-}
-
-late final print;
+      );
 void pathSoundOff() {
   path
       .getApplicationCacheDirectory()

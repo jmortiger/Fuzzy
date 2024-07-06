@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:http/http.dart';
@@ -16,7 +17,10 @@ late final print = lRecord.print;
 late final logger = lRecord.logger;
 // #endregion Logger
 
-class UserProfilePage extends StatelessWidget {
+class UserProfilePage extends StatelessWidget implements IRoute<UserProfilePage> {
+  static const routeNameString = "/";
+  @override
+  get routeName => routeNameString;
   final User user;
   UserDetailed? get userD => user is UserDetailed ? user as UserDetailed : null;
   UserLoggedIn? get userL => user is UserLoggedIn ? user as UserLoggedIn : null;
@@ -61,7 +65,10 @@ class UserProfilePage extends StatelessWidget {
   }
 }
 
-class UserProfileLoaderPage extends StatefulWidget {
+class UserProfileLoaderPage extends StatefulWidget implements IRoute<UserProfileLoaderPage> {
+  static const routeNameString = "/";
+  @override
+  get routeName => routeNameString;
   final User? _user;
   final E621AccessData? data;
   final String? username;

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
@@ -15,7 +16,10 @@ late final print = lRecord.print;
 late final logger = lRecord.logger;
 // #endregion Logger
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatelessWidget implements IRoute<SettingsPage> {
+  static const routeNameString = "/";
+  @override
+  get routeName => routeNameString;
   const SettingsPage({super.key});
   AppSettings get settings => AppSettings.i!;
   static final TextStyle titleStyle =
@@ -658,44 +662,9 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
                   values: widget.values,
                   initialState: temp,
                 ),
-                // child: ListView(
-                //   children: temp.mapAsList(
-                //     (e, i, list) => ListTile(
-                //       // leading: Text(i.toString()),
-                //       leading: IconButton(
-                //         icon: const Icon(Icons.remove),
-                //         onPressed: () => setState(() {
-                //           temp.removeAt(i);
-                //         }),
-                //       ),
-                //       title: DropdownMenu<T>(
-                //         dropdownMenuEntries: widget.values
-                //             .map((v) => DropdownMenuEntry(
-                //                   value: v,
-                //                   label: convertEnumValueToInput(v),
-                //                 ))
-                //             .toList(),
-                //         initialSelection: e,
-                //         onSelected: (value) {
-                //           if (value != null && value is T) {
-                //             setState(() {
-                //               temp[i] = value;
-                //             });
-                //           }
-                //         },
-                //       ),
-                //     ),
-                //   )..add(ListTile(
-                //       title: const Text("Add"),
-                //       onTap: () => setState(() {
-                //         temp.add(widget.values.first);
-                //       }),
-                //     )),
-                // ),
               ),
               actions: [
                 TextButton(
-                  // onPressed: () => Navigator.pop(context, t),
                   onPressed: () => Navigator.pop(context, temp),
                   child: const Text("Accept"),
                 ),
@@ -711,7 +680,6 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
             if (value != null) {
               logger.finer("_EnumListFieldState: Before: ${getVal.toString()}");
               setState(() {
-                // setVal(convertInputToValue(value));
                 setVal(value);
               });
               logger.fine("_EnumListFieldState: After: ${getVal.toString()}");
@@ -798,7 +766,7 @@ class _WEnumListFieldContentState<T extends Enum>
                 .toList(),
             initialSelection: e,
             onSelected: (value) {
-              if (value != null && value is T) {
+              if (value != null) {
                 setState(() {
                   temp[i] = value;
                 });

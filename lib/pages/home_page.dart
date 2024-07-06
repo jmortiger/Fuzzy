@@ -1,29 +1,20 @@
 // ignore_for_file: avoid_print
 
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
+import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/models/app_settings.dart';
-import 'package:fuzzy/models/cached_favorites.dart';
-import 'package:fuzzy/models/cached_searches.dart';
-import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/saved_searches_page.dart';
-import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
-import 'package:fuzzy/web/e621/models/tag_d_b.dart';
-import 'package:fuzzy/web/e621/search_helper.dart';
 import 'package:fuzzy/widgets/w_fab_builder.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:fuzzy/widgets/w_search_result_page_navigation.dart';
-import 'package:http/http.dart' as http;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
-import 'package:string_similarity/string_similarity.dart';
 
 import '../widgets/w_home_end_drawer.dart';
 
@@ -35,7 +26,10 @@ late final lRecord = lm.genLogger("HomePage");
 late final print = lRecord.print;
 late final logger = lRecord.logger;
 
-class HomePage extends StatefulWidget {
+class HomePage extends StatefulWidget implements IRoute<HomePage> {
+  static const routeNameString = "/";
+  @override
+  get routeName => routeNameString;
   const HomePage({super.key});
 
   @override
@@ -112,7 +106,7 @@ class _HomePageState extends State<HomePage> {
           });
         },
       ), //_buildDrawer(context),
-      floatingActionButton: WFabBuilder.multiplePosts (
+      floatingActionButton: WFabBuilder.multiplePosts(
         posts: Provider.of<SearchCache>(context, listen: true)
                 .posts
                 ?.posts
@@ -177,9 +171,8 @@ class _HomePageState extends State<HomePage> {
               child: WPostSearchResults(
                 key: ObjectKey(sc.posts!),
                 posts: sc.posts!,
-                expectedCount: svm.lazyLoad
-                    ? SearchView.i.postsPerPage
-                    : sc.posts!.count,
+                expectedCount:
+                    svm.lazyLoad ? SearchView.i.postsPerPage : sc.posts!.count,
                 onSelectionCleared: onSelectionCleared,
                 useLazyBuilding: svm.lazyBuilding,
               ),
@@ -244,15 +237,15 @@ class _HomePageState extends State<HomePage> {
     sc.hasNextPageCached = null;
     sc.lastPostOnPageIdCached = null;
     var (:username, :apiKey) = svm.sendAuthHeaders &&
-          (E621AccessData.userData.isAssigned ||
-              E621AccessData.devAccessData.isAssigned)
-      ? (
-          username: E621AccessData.userData.itemSafe?.username ??
-              E621AccessData.devAccessData.item.username,
-          apiKey: E621AccessData.userData.itemSafe?.apiKey ??
-              E621AccessData.devAccessData.item.apiKey,
-        )
-      : (username: null, apiKey: null);
+            (E621AccessData.userData.isAssigned ||
+                E621AccessData.devAccessData.isAssigned)
+        ? (
+            username: E621AccessData.userData.itemSafe?.username ??
+                E621AccessData.devAccessData.item.username,
+            apiKey: E621AccessData.userData.itemSafe?.apiKey ??
+                E621AccessData.devAccessData.item.apiKey,
+          )
+        : (username: null, apiKey: null);
     svm.pr = E621.performUserPostSearch(
       tags: svm.forceSafe ? "$tags rating:safe" : tags,
       limit: limit,

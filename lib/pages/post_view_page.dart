@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
@@ -32,7 +33,11 @@ abstract interface class IReturnsTags {
 bool overrideQuality = true;
 
 /// TODO: Expansion State Preservation on scroll
-class PostViewPage extends StatelessWidget implements IReturnsTags {
+class PostViewPage extends StatelessWidget
+    implements IReturnsTags, IRoute<PostViewPage> {
+  static const routeNameString = "/post";
+  @override
+  get routeName => routeNameString;
   final PostListing postListing;
   final void Function(String addition)? onAddToSearch;
   final void Function()? onPop;
@@ -187,51 +192,19 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
             const Text("Pools: "),
             ...e6Post.pools.map((e) => TextButton(
                 onPressed: () {
-                  Navigator.push(
+                  Navigator.pushNamed(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => FutureBuilder(
-                        future: E621
-                            .sendRequest(
-                                Api.initSearchPoolsRequest(searchId: [e]))
-                            .toResponse()
-                            .then((v) => jsonDecode(v.body))
-                            .then((v) => PoolViewPage(
-                                  pool: PoolModel.fromJson(v[0]),
-                                )),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData) {
-                            try {
-                              return snapshot.data!;
-                            } catch (e, s) {
-                              return Scaffold(
-                                appBar: AppBar(),
-                                body: Text(
-                                    "$e\n$s\n${snapshot.data}\n${snapshot.error}\n${snapshot.stackTrace}"),
-                              );
-                            }
-                          } else if (snapshot.hasError) {
-                            return Scaffold(
-                              appBar: AppBar(),
-                              body: Text(
-                                  "${snapshot.error}\n${snapshot.stackTrace}"),
-                            );
-                          } else {
-                            return Scaffold(
-                              appBar: AppBar(
-                                title: Text("Pool $e"),
-                              ),
-                              body: const Column(
-                                children: [
-                                  exArCpi,
-                                ],
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                    ),
+                    "${PoolViewPageBuilder.routeNameString}?poolId=$e"
+                    // MaterialPageRoute(
+                    //   builder: (context) => PoolViewPageBuilder(poolId: e),
+                    // ),
                   );
+                  // Navigator.push(
+                  //   context,
+                  //   MaterialPageRoute(
+                  //     builder: (context) => PoolViewPageBuilder(poolId: e),
+                  //   ),
+                  // );
                 },
                 child: Text(e.toString()))),
           ]),
@@ -604,6 +577,64 @@ class PostViewPage extends StatelessWidget implements IReturnsTags {
         e.style.height = "auto";
         e.style.maxWidth = "100%";
         e.style.maxHeight = "100%";
+      },
+    );
+  }
+}
+
+class PoolViewPageBuilder extends StatelessWidget
+    implements IRoute<PoolViewPageBuilder> {
+  static const routeNameString = "/pool";
+  @override
+  get routeName => routeNameString;
+  final int poolId;
+
+  const PoolViewPageBuilder({
+    required this.poolId,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: E621
+          .sendRequest(
+              // Api.initSearchPoolsRequest(searchId: [poolId]))
+              Api.initGetPoolRequest(poolId))
+          .toResponse()
+          // .then((v) => jsonDecode(v.body))
+          .then((v) => PoolViewPage(
+                // pool: PoolModel.fromJson(v[0]),
+                pool: PoolModel.fromRawJson(v.body),
+              )),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          try {
+            return snapshot.data!;
+          } catch (e, s) {
+            return Scaffold(
+              appBar: AppBar(),
+              body: Text(
+                  "$e\n$s\n${snapshot.data}\n${snapshot.error}\n${snapshot.stackTrace}"),
+            );
+          }
+        } else if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(),
+            body: Text("${snapshot.error}\n${snapshot.stackTrace}"),
+          );
+        } else {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text("Pool $poolId"),
+            ),
+            body: const Column(
+              children: [
+                exArCpi,
+              ],
+            ),
+          );
+        }
       },
     );
   }

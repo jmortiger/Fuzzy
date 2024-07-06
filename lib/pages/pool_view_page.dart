@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
@@ -10,7 +11,10 @@ late final lRecord = lm.genLogger("PoolViewPage");
 late final print = lRecord.print;
 late final logger = lRecord.logger;
 
-class PoolViewPage extends StatefulWidget {
+class PoolViewPage extends StatefulWidget implements IRoute<PoolViewPage> {
+  static const routeNameString = "/poolView";
+  @override
+  get routeName => routeNameString;
   final PoolModel pool;
   const PoolViewPage({super.key, required this.pool});
 
