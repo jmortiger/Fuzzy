@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:j_util/e621.dart';
 import 'package:j_util/j_util_full.dart';
 
-late final lRecord = lm.genLogger("PoolViewPage");
-late final print = lRecord.print;
-late final logger = lRecord.logger;
+late final lRecord = lm.genLogger("pool_view_page.dart");
+lm.Printer get print => lRecord.print;
+lm.FileLogger get logger => lRecord.logger;
 
 class PoolViewPage extends StatefulWidget implements IRoute<PoolViewPage> {
+  // #region Logger
+  static late final lRecord = lm.genLogger("PoolViewPage");
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // #endregion Logger
   static const routeNameString = "/poolView";
   @override
   get routeName => routeNameString;
@@ -25,6 +32,11 @@ class PoolViewPage extends StatefulWidget implements IRoute<PoolViewPage> {
 var forcePostUniqueness = true;
 
 class _PoolViewPageState extends State<PoolViewPage> {
+  // #region Logger
+  static late final lRecord = lm.genLogger("_PoolViewPageState");
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // #endregion Logger
   PoolModel get pool => widget.pool;
   List<E6PostResponse> posts = [];
   Future<List<E6PostResponse>>? loadingPosts;
@@ -131,6 +143,63 @@ class _PoolViewPageState extends State<PoolViewPage> {
         //     ),
         //   ),
       ),
+    );
+  }
+}
+class PoolViewPageBuilder extends StatelessWidget
+    implements IRoute<PoolViewPageBuilder> {
+  static const routeNameString = "/pool";
+  @override
+  get routeName => routeNameString;
+  final int poolId;
+
+  const PoolViewPageBuilder({
+    required this.poolId,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: E621
+          .sendRequest(
+              // Api.initSearchPoolsRequest(searchId: [poolId]))
+              Api.initGetPoolRequest(poolId))
+          .toResponse()
+          // .then((v) => jsonDecode(v.body))
+          .then((v) => PoolViewPage(
+                // pool: PoolModel.fromJson(v[0]),
+                pool: PoolModel.fromRawJson(v.body),
+              )),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          try {
+            return snapshot.data!;
+          } catch (e, s) {
+            return Scaffold(
+              appBar: AppBar(),
+              body: Text(
+                  "$e\n$s\n${snapshot.data}\n${snapshot.error}\n${snapshot.stackTrace}"),
+            );
+          }
+        } else if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(),
+            body: Text("${snapshot.error}\n${snapshot.stackTrace}"),
+          );
+        } else {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text("Pool $poolId"),
+            ),
+            body: const Column(
+              children: [
+                exArCpi,
+              ],
+            ),
+          );
+        }
+      },
     );
   }
 }

@@ -3,7 +3,6 @@ import 'dart:convert' as dc;
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_results.dart';
-import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
@@ -14,6 +13,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 // #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
+
+import '../models/search_cache.dart';
 
 late final lRecord = lm.genLogger("WPostSearchResults");
 late final print = lRecord.print;

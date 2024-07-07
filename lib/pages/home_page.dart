@@ -16,6 +16,7 @@ import 'package:fuzzy/widgets/w_search_result_page_navigation.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
 
+import '../models/search_cache.dart';
 import '../widgets/w_home_end_drawer.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;

@@ -10,9 +10,13 @@ import '../web/e621/e621.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-late final print = lm.genPrint("main");
-
 class CachedFavorites extends ChangeNotifier with Storable<CachedFavorites> {
+  // #region Logger
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("CachedFavorites");
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // #endregion Logger
   static const fileName = "cachedFavorites.json";
   static final fileFullPath = LazyInitializer.immediate(fileFullPathInit);
   static Future<String> fileFullPathInit() async {

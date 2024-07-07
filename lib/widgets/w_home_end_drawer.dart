@@ -16,6 +16,8 @@ import 'package:provider/provider.dart';
 // #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
+import '../models/search_cache.dart';
+
 late final lRecord = lm.genLogger("WHomeEndDrawer");
 late final print = lRecord.print;
 late final logger = lRecord.logger;

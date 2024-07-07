@@ -9,6 +9,11 @@ import 'package:logging/logging.dart';
 import 'util/util.dart' as f_util;
 
 typedef LogLevel = Level;
+typedef Printer = void Function(Object? message,
+      [LogLevel logLevel,
+      Object? error,
+      StackTrace? stackTrace,
+      Zone? zone]);
 const logFileExt = ".txt";
 void Function(Object? message,
     [LogLevel logLevel,
@@ -22,11 +27,7 @@ void Function(Object? message,
     genLogger(fileName, className, level).print;
 
 ({
-  void Function(Object? message,
-      [LogLevel logLevel,
-      Object? error,
-      StackTrace? stackTrace,
-      Zone? zone]) print,
+  Printer print,
   FileLogger logger
 }) genLogger(
   String fileName, [
@@ -65,7 +66,7 @@ Future<void> init() async {
         (v) => Platform.isWeb
             ? null
             : Storable.handleInitStorageAsync(
-                "$v/$mainFileName-${DateTime.timestamp().toISO8601DateString()}$logFileExt",
+                "$v/$mainFileName-${DateTime.timestamp().toIso8601DateString()}$logFileExt",
               )
           ?..onError(
             (error, stackTrace) => mainFile.$ = null,
@@ -141,7 +142,6 @@ class FileLogger implements Logger {
           stackTrace: e.stackTrace,
           zone: e.zone,
         );
-        ;
       },
     );
   }

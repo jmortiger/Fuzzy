@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 
 abstract interface class IRoute<T extends IRoute<T>> {
   String get routeName;

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
 import 'package:fuzzy/models/search_results.dart';
-import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
@@ -13,6 +12,8 @@ import 'package:provider/provider.dart';
 
 // #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
+
+import '../models/search_cache.dart';
 
 late final lRecord = lm.genLogger("WFabBuilder");
 late final print = lRecord.print;

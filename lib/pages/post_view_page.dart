@@ -194,7 +194,7 @@ class PostViewPage extends StatelessWidget
                 onPressed: () {
                   Navigator.pushNamed(
                     context,
-                    "${PoolViewPageBuilder.routeNameString}?poolId=$e"
+                    "${PoolViewPageBuilder.routeNameString}?poolId=$e",
                     // MaterialPageRoute(
                     //   builder: (context) => PoolViewPageBuilder(poolId: e),
                     // ),
@@ -221,7 +221,6 @@ class PostViewPage extends StatelessWidget
     );
   }
 
-  // TODO: Use ExpansionPanelList & ExpansionPanel for tags https://api.flutter.dev/flutter/material/ExpansionPanelList-class.html
   @widgetFactory
   Widget _buildMainContent(String url, int w, int h, BuildContext ctx) {
     return postListing.file.isAVideo
@@ -577,64 +576,6 @@ class PostViewPage extends StatelessWidget
         e.style.height = "auto";
         e.style.maxWidth = "100%";
         e.style.maxHeight = "100%";
-      },
-    );
-  }
-}
-
-class PoolViewPageBuilder extends StatelessWidget
-    implements IRoute<PoolViewPageBuilder> {
-  static const routeNameString = "/pool";
-  @override
-  get routeName => routeNameString;
-  final int poolId;
-
-  const PoolViewPageBuilder({
-    required this.poolId,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: E621
-          .sendRequest(
-              // Api.initSearchPoolsRequest(searchId: [poolId]))
-              Api.initGetPoolRequest(poolId))
-          .toResponse()
-          // .then((v) => jsonDecode(v.body))
-          .then((v) => PoolViewPage(
-                // pool: PoolModel.fromJson(v[0]),
-                pool: PoolModel.fromRawJson(v.body),
-              )),
-      builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          try {
-            return snapshot.data!;
-          } catch (e, s) {
-            return Scaffold(
-              appBar: AppBar(),
-              body: Text(
-                  "$e\n$s\n${snapshot.data}\n${snapshot.error}\n${snapshot.stackTrace}"),
-            );
-          }
-        } else if (snapshot.hasError) {
-          return Scaffold(
-            appBar: AppBar(),
-            body: Text("${snapshot.error}\n${snapshot.stackTrace}"),
-          );
-        } else {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text("Pool $poolId"),
-            ),
-            body: const Column(
-              children: [
-                exArCpi,
-              ],
-            ),
-          );
-        }
       },
     );
   }

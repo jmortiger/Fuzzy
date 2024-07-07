@@ -11,11 +11,14 @@ import 'package:j_util/serialization.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-late final print = lm.genPrint("SavedDataE6");
+// #region Logger
+// ignore: unnecessary_late
+late final lRecord = lm.genLogger("SavedData");
+lm.Printer get print => lRecord.print;
+lm.FileLogger get logger => lRecord.logger;
+// #endregion Logger
 
 /// Stuff like searches and sets
-/// TODO: Redo to a completely static, no instance implementation.
 /// "searches": searches,
 class SavedDataE6 {
   static const fileName = "savedSearches.json";
@@ -222,8 +225,8 @@ class SavedDataE6 {
 }
 
 /// Stuff like searches and sets
-/// TODO: Redo to a completely static, no instance implementation.
 /// "searches": searches,
+@Deprecated("Use SavedDataE6")
 class SavedDataE6Legacy extends ChangeNotifier
     with Storable<SavedDataE6Legacy> {
   // #region Singleton

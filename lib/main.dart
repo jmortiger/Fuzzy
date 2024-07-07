@@ -7,14 +7,16 @@ import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
-import 'package:fuzzy/pages/post_view_page.dart';
+import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:j_util/platform_finder.dart';
+import 'package:j_util/serialization.dart' as storable;
 import 'package:path_provider/path_provider.dart' as path;
 import 'package:provider/provider.dart';
 
+import 'models/search_cache.dart';
 import 'pages/home_page.dart';
 
 // #region Logger
@@ -39,6 +41,7 @@ lm.FileLogger get routeLogger => lRRecord.logger;
 // };
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  storable.Storable.beSilent = true;
   await lm.init().then((v) {
     lRecord = lm.genLogger("main");
     lRRecord = lm.genLogger("Routing");

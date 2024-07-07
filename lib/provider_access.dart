@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/search_results.dart';
-import 'package:fuzzy/models/search_view_model.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
+
+import 'models/search_cache.dart';
 
 mixin ProviderAccessState<T extends StatefulWidget> on State<T> {
   final _sc = LateInstance<SearchCache>();
