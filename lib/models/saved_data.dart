@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/serialization.dart';
@@ -1030,6 +1031,84 @@ final class SavedSearchData extends SavedEntry {
       );
 }
 
+Future<
+      ({
+        String mainData,
+        String title,
+        String? parent,
+        String? uniqueId,
+      })?> showSavedElementEditDialogue(
+    BuildContext context, {
+    String initialTitle = "",
+    String initialData = "",
+    String mainDataName = "Tags",
+    String initialParent = "",
+    String initialUniqueId = "",
+    bool isNumeric = false,
+  }) {
+    return showDialog<
+        ({
+          String mainData,
+          String title,
+          String? parent,
+          String? uniqueId,
+        })>(
+      context: context,
+      builder: (context) {
+        var title = initialTitle,
+            mainData = initialData,
+            parent = initialParent,
+            uniqueId = initialUniqueId;
+        return AlertDialog(
+          content: Column(
+            children: [
+              const Text("Title:"),
+              TextField(
+                onChanged: (value) => title = value,
+                controller: defaultSelection(initialTitle),
+              ),
+              Text("$mainDataName:"),
+              TextField(
+                inputFormatters: isNumeric ? [numericFormatter] : null,
+                onChanged: (value) => mainData = value,
+                controller: defaultSelection(initialData),
+                keyboardType: isNumeric ? TextInputType.number : null,
+              ),
+              const Text("Parent:"),
+              // TODO: Autocomplete
+              TextField(
+                onChanged: (value) => parent = value,
+                controller: defaultSelection(initialParent),
+              ),
+              const Text("UniqueId:"),
+              TextField(
+                onChanged: (value) => uniqueId = value,
+                controller: defaultSelection(initialUniqueId),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(
+                context,
+                (
+                  title: title,
+                  mainData: mainData,
+                  parent: parent,
+                  uniqueId: uniqueId
+                ),
+              ),
+              child: const Text("Accept"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 // @immutable
 // final class SavedSearchDataMutable implements SavedSearchData {
 //   static String tagListToString(Iterable<String> tags, String delimiter) =>
