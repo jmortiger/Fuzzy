@@ -110,7 +110,8 @@ class PostViewPage extends StatelessWidget
               url: url,
             ),
             WPostViewBackButton(
-                onPop: onPop ?? () => Navigator.pop(context, this)),
+              onPop: onPop ?? () => Navigator.pop(context, this),
+            ),
           ],
         ),
       ),
@@ -252,7 +253,13 @@ class PostViewPage extends StatelessWidget
                         children: [
                           Positioned.fill(
                             child: InteractiveViewer(
-                              child: _buildImageContent(url, w, h, ctx, BoxFit.contain),
+                              child: _buildImageContent(
+                                url,
+                                w,
+                                h,
+                                ctx,
+                                BoxFit.contain,
+                              ),
                             ),
                           ),
                           const WPostViewBackButton(),
@@ -616,21 +623,23 @@ class WPostViewBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: AlignmentDirectional.topStart,
-      child: BackButton(
-        onPressed: () {
-          if (onPop != null) {
-            onPop!();
-          } else {
-            Navigator.pop(context);
-          }
-        },
-        // icon: const Icon(Icons.arrow_back),
-        // iconSize: 36,
-        style: const ButtonStyle(
-          iconSize: WidgetStatePropertyAll(36),
-          backgroundColor: WidgetStateColor.transparent,
-          elevation: WidgetStatePropertyAll(15),
-          shadowColor: WidgetStatePropertyAll(Colors.black),
+      child: SafeArea(
+        child: BackButton(
+          onPressed: () {
+            if (onPop != null) {
+              onPop!();
+            } else {
+              Navigator.pop(context);
+            }
+          },
+          // icon: const Icon(Icons.arrow_back),
+          // iconSize: 36,
+          style: const ButtonStyle(
+            iconSize: WidgetStatePropertyAll(36),
+            backgroundColor: WidgetStateColor.transparent,
+            elevation: WidgetStatePropertyAll(15),
+            shadowColor: WidgetStatePropertyAll(Colors.black),
+          ),
         ),
       ),
       // child: IconButton(

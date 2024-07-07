@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
+import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
@@ -17,15 +18,15 @@ import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
 
 import '../models/search_cache.dart';
+import '../web/e621/e621_access_data.dart';
 import '../widgets/w_home_end_drawer.dart';
-
-import 'package:fuzzy/log_management.dart' as lm;
-
 import '../widgets/w_search_bar.dart';
 
+// #region Logger
 late final lRecord = lm.genLogger("HomePage");
-late final print = lRecord.print;
-late final logger = lRecord.logger;
+lm.Printer get print => lRecord.print;
+lm.FileLogger get logger => lRecord.logger;
+// #endregion Logger
 
 class HomePage extends StatefulWidget implements IRoute<HomePage> {
   static const routeNameString = "/";

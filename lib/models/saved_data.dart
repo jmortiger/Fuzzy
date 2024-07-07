@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:j_util/j_util_full.dart';
@@ -12,16 +11,16 @@ import 'package:j_util/serialization.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// #region Logger
-// ignore: unnecessary_late
-late final lRecord = lm.genLogger("SavedData");
-lm.Printer get print => lRecord.print;
-lm.FileLogger get logger => lRecord.logger;
-// #endregion Logger
 
 /// Stuff like searches and sets
 /// "searches": searches,
 class SavedDataE6 {
+  // #region Logger
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("SavedData");
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // #endregion Logger
   static const fileName = "savedSearches.json";
   static final fileFullPath = LazyInitializer.immediate(fileFullPathInit);
 
@@ -156,7 +155,7 @@ class SavedDataE6 {
           ?.writeAsString(jsonEncode(toJson()))
           .catchError((e, s) => print(e, Level.WARNING, e, s))
           .then(
-            (value) => print("Write ${true ? "successful" : "failed"}"),
+            (value) => print("Write successful"),
           )
           .catchError((e, s) => print(e, Level.WARNING, e, s));
     } else {

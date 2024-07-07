@@ -3,13 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/util/util.dart';
-import 'package:fuzzy/web/e621/e621.dart';
 import 'package:http/http.dart';
 import 'package:j_util/e621.dart';
 
 // #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:j_util/j_util_full.dart';
+
+import '../web/e621/e621_access_data.dart';
 
 late final lRecord =
     lm.genLogger("UserProfilePage" /* , null, lm.LogLevel.FINEST */);

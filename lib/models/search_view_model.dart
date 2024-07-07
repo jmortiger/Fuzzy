@@ -7,9 +7,11 @@ import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:j_util/j_util_full.dart';
 
 import '../web/e621/e621.dart';
-// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
+import '../web/e621/e621_access_data.dart';
+
+// #region Logger
 late final lRecord = lm.genLogger("SearchViewModel");
 lm.Printer get print => lRecord.print;
 lm.FileLogger get logger => lRecord.logger;

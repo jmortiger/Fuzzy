@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/util/util.dart';
@@ -13,191 +14,17 @@ import 'package:http/http.dart' as http;
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/e621.dart' as e621;
 
-// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
-import 'package:j_util/serialization.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import 'e621_access_data.dart';
+
+// #region Logger
 late final lRecord = lm.genLogger("E621");
-late final print = lRecord.print;
-late final logger = lRecord.logger;
+lm.Printer get print => lRecord.print;
+lm.FileLogger get logger => lRecord.logger;
+
 // #endregion Logger
-
-final class E621AccessData with Storable<E621AccessData> {
-  static final devAccessData = LazyInitializer<E621AccessData>(() async =>
-      E621AccessData.fromJson((await devData.getItem())["e621"] as JsonOut));
-  static String? get devApiKey => devAccessData.itemSafe?.apiKey;
-  static String? get devUsername => devAccessData.itemSafe?.username;
-  static String? get devUserAgent => devAccessData.itemSafe?.userAgent;
-  static final userData = LateInstance<E621AccessData>();
-  static const fileName = "credentials.json";
-  static final filePathFull = LazyInitializer<String>(
-    () async =>
-        (!Platform.isWeb) ? "${(await appDataPath.getItem())}$fileName" : "",
-  );
-  static Future<E621AccessData?> tryLoad() async {
-    var t = await (await Storable.tryGetStorageAsync(
-      await filePathFull.getItem(),
-    ))
-        ?.readAsString();
-    if (t == null) {
-      logger.warning(
-        "Failed to load:"
-        "\tfileName: $fileName"
-        "\tfilePathFull: ${filePathFull.itemSafe}",
-      );
-      return null;
-    }
-    return userData.$ = E621AccessData.fromJson(jsonDecode(t));
-  }
-
-  static void _failedToLoadLog(E621AccessData? data) => logger.warning(
-        "Failed to load: $data"
-        "\n\tfileName: $fileName"
-        "\n\tfilePathFull: ${filePathFull.itemSafe}"
-        "\n\tfile.isAssigned: ${data?.file.isAssigned}"
-        "\n\tfile.itemSafe?.existsSync(): "
-        "${data?.file.itemSafe?.existsSync()}",
-      );
-  static Future<bool> tryWrite([E621AccessData? data]) async {
-    if (Platform.isWeb) {
-      logger.info("Can't access file storage on web. "
-          "Local Storage solution not implemented.");
-      return false;
-    }
-    data ??= userData.itemSafe;
-    if (data != null) {
-      if (!data.file.isAssigned) {
-        logger.warning(
-            "data.file.isAssigned was false. Attempting initialization");
-        data.initStorageAsync(filePathFull.getItem()).onError(
-              (e, s) => logger.warning("Failed to initialize Storable", e, s),
-            );
-      }
-      return data.tryWriteAsync(flush: true)
-        ..then<void>((v) {
-          if (!v) _failedToLoadLog(data);
-        });
-    } else {
-      _failedToLoadLog(data);
-      return false;
-    }
-  }
-
-  final String apiKey;
-  final String username;
-  final String userAgent;
-  e621.E6Credentials get cred =>
-      e621.E6Credentials(username: username, apiKey: apiKey);
-
-  /* const  */ E621AccessData({
-    required this.apiKey,
-    required this.username,
-    required this.userAgent,
-  }) {
-    initStorageAsync(filePathFull.getItem()).onError(
-      (e, s) => logger.warning("Failed to initialize Storable", e, s),
-    );
-  }
-  factory E621AccessData.withDefault({
-    required String apiKey,
-    required String username,
-    String? userAgent,
-  }) =>
-      E621AccessData(
-          apiKey: apiKey,
-          username: username,
-          userAgent: userAgent ??
-              "fuzzy/${version.itemSafe} by atotaltirefire@gmail.com");
-  JsonOut toJson() => {
-        "apiKey": apiKey,
-        "username": username,
-        "userAgent": userAgent,
-      };
-  factory E621AccessData.fromJson(JsonOut json) => E621AccessData(
-        apiKey: json["apiKey"] as String,
-        username: json["username"] as String,
-        userAgent: json["userAgent"] as String,
-      );
-  // Map<String,String> generateHeaders() {
-
-  // }
-}
-
-class SearchArgs extends JEventArgs {
-  final List<String> tags;
-  final Set<String> _tagSet;
-  SearchArgs({
-    required List<String> tags,
-    required this.limit,
-    required this.pageModifier,
-    required this.postId,
-    required this.pageNumber,
-    required this.username,
-    required this.apiKey,
-  })  : _tagSet = Set.unmodifiable(tags.toSet()),
-        tags = List.unmodifiable(tags);
-  Set<String> get tagSet => _tagSet;
-  final int limit;
-  final String? pageModifier;
-  final int? postId;
-  final int? pageNumber;
-  final String? username;
-  final String? apiKey;
-}
-
-class SearchResultArgs extends SearchArgs {
-  SearchResultArgs({
-    this.results,
-    required this.responseBody,
-    required this.statusCode,
-    required super.tags,
-    required super.limit,
-    required super.pageModifier,
-    required super.postId,
-    required super.pageNumber,
-    required super.username,
-    required super.apiKey,
-    this.response,
-  });
-  SearchResultArgs.fromSearchArgs({
-    this.results,
-    this.response,
-    required this.responseBody,
-    required this.statusCode,
-    required SearchArgs args,
-  }) : super(
-          tags: args.tags,
-          limit: args.limit,
-          pageModifier: args.pageModifier,
-          postId: args.postId,
-          pageNumber: args.pageNumber,
-          username: args.username,
-          apiKey: args.apiKey,
-        );
-  final E6Posts? results;
-  final String responseBody;
-  final StatusCode statusCode;
-  final http.BaseResponse? response;
-}
-
-class PostActionArgs extends JEventArgs {
-  PostActionArgs({
-    required E6PostResponse post,
-    required this.responseBody,
-    required this.statusCode,
-  })  : postId = post.id,
-        post = post;
-  PostActionArgs.withoutPost({
-    required this.postId,
-    required this.responseBody,
-    required this.statusCode,
-  }) : post = null;
-  final E6PostResponse? post;
-  final int postId;
-  final String responseBody;
-  final StatusCode statusCode;
-}
-
 sealed class E621 extends Site {
   @event
   static final favDeleted = JPureEvent();
@@ -248,6 +75,7 @@ sealed class E621 extends Site {
   // #region Saved Search Parsing
   /// The (escaped) character used to delimit saved search insertion.
   static const savedSearchInsertionDelimiter = r"#";
+
   /// Matches either whitespace or the end of input without consuming characters
   static const savedSearchInsertionEnd =
       r'(?=' + RegExpExt.whitespacePattern + r'+?|$)';
@@ -662,7 +490,7 @@ sealed class E621 extends Site {
             [postListing.id],
             credentials: E621.accessData.$.cred,
           ))
-          .toResponse() as http.Response;
+          .toResponse();
       if (res.statusCode == 201) {
         print("${postListing.id} successfully added to set ${v.id}");
         if (context.mounted) {
@@ -698,6 +526,81 @@ sealed class E621 extends Site {
       return;
     }
   }
+}
+
+class SearchArgs extends JEventArgs {
+  final List<String> tags;
+  final Set<String> _tagSet;
+  SearchArgs({
+    required List<String> tags,
+    required this.limit,
+    required this.pageModifier,
+    required this.postId,
+    required this.pageNumber,
+    required this.username,
+    required this.apiKey,
+  })  : _tagSet = Set.unmodifiable(tags.toSet()),
+        tags = List.unmodifiable(tags);
+  Set<String> get tagSet => _tagSet;
+  final int limit;
+  final String? pageModifier;
+  final int? postId;
+  final int? pageNumber;
+  final String? username;
+  final String? apiKey;
+}
+
+class SearchResultArgs extends SearchArgs {
+  SearchResultArgs({
+    this.results,
+    required this.responseBody,
+    required this.statusCode,
+    required super.tags,
+    required super.limit,
+    required super.pageModifier,
+    required super.postId,
+    required super.pageNumber,
+    required super.username,
+    required super.apiKey,
+    this.response,
+  });
+  SearchResultArgs.fromSearchArgs({
+    this.results,
+    this.response,
+    required this.responseBody,
+    required this.statusCode,
+    required SearchArgs args,
+  }) : super(
+          tags: args.tags,
+          limit: args.limit,
+          pageModifier: args.pageModifier,
+          postId: args.postId,
+          pageNumber: args.pageNumber,
+          username: args.username,
+          apiKey: args.apiKey,
+        );
+  final E6Posts? results;
+  final String responseBody;
+  final StatusCode statusCode;
+  final http.BaseResponse? response;
+}
+
+class PostActionArgs extends JEventArgs {
+  PostActionArgs({
+    required E6PostResponse post,
+    required this.responseBody,
+    required this.statusCode,
+  })  : postId = post.id,
+        post = post;
+  PostActionArgs.withoutPost({
+    required this.postId,
+    required this.responseBody,
+    required this.statusCode,
+  }) : post = null;
+  final E6PostResponse? post;
+  final int postId;
+  final String responseBody;
+  final StatusCode statusCode;
 }
 
 enum PostRating with EnumQueryParameter<PostRating> {
@@ -739,3 +642,83 @@ enum PostActions {
   editNotes,
   ;
 }
+
+Future<({String username, String apiKey})?> launchLogInDialog(
+  BuildContext context,
+) =>
+    showDialog<({String username, String apiKey})>(
+      context: context,
+      builder: (context) {
+        String username = "", apiKey = "";
+        return AlertDialog(
+          title: const Text("Login"),
+          content: Column(
+            children: [
+              TextField(
+                onChanged: (value) => username = value,
+                decoration: const InputDecoration(
+                  label: Text("Username"),
+                  hintText: "Username",
+                ),
+              ),
+              TextField(
+                onChanged: (value) => apiKey = value,
+                decoration: InputDecoration(
+                  // label: Text("API Key"),
+                  label: Linkify(
+                    text: "API Key (https://e621.net/users/home )",
+                    linkStyle: const TextStyle(color: Colors.yellow),
+                    style: DefaultTextStyle.of(context).style,
+                    onOpen: (link) async =>
+                        (await launchUrl(Uri.parse(link.url)))
+                            ? throw Exception('Could not launch ${link.url}')
+                            : "",
+                  ),
+                  hintText: "API Key",
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              // onPressed: () => Navigator.pop(context, t),
+              onPressed: () =>
+                  Navigator.pop(context, (username: username, apiKey: apiKey)),
+              child: const Text("Accept"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text("Cancel"),
+            ),
+          ],
+        );
+      },
+    ).then((v) {
+      if (v != null) {
+        E621AccessData.userData.$ =
+            E621AccessData.withDefault(apiKey: v.apiKey, username: v.username);
+        E621AccessData.tryWrite().then<void>(
+          (_) => _
+              ? ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text("Successfully stored! Test it!"),
+                    action: SnackBarAction(
+                      label: "See Contents",
+                      onPressed: () async => showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          content: Text(
+                            E621AccessData.userData.itemSafe?.file.itemSafe
+                                    ?.readAsStringSync() ??
+                                "",
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              : "",
+        );
+      }
+      return v;
+    });

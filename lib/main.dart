@@ -10,7 +10,6 @@ import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/log_management.dart' as lm;
-import 'package:fuzzy/web/e621/e621.dart';
 import 'package:j_util/platform_finder.dart';
 import 'package:j_util/serialization.dart' as storable;
 import 'package:path_provider/path_provider.dart' as path;
@@ -18,6 +17,7 @@ import 'package:provider/provider.dart';
 
 import 'models/search_cache.dart';
 import 'pages/home_page.dart';
+import 'web/e621/e621_access_data.dart';
 
 // #region Logger
 late final ({

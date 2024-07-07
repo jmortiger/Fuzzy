@@ -17,6 +17,7 @@ import 'package:provider/provider.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
 import '../models/search_cache.dart';
+import '../web/e621/e621_access_data.dart';
 
 late final lRecord = lm.genLogger("WSearchBar");
 late final print = lRecord.print;

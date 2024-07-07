@@ -17,6 +17,7 @@ import 'package:provider/provider.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
 import '../models/search_cache.dart';
+import '../web/e621/e621_access_data.dart';
 
 late final lRecord = lm.genLogger("WHomeEndDrawer");
 late final print = lRecord.print;
@@ -76,88 +77,21 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             title: !E621AccessData.userData.isAssigned
                 ? const Text("Login")
                 : const Text("Change Login"),
-            onTap: () {
-              showDialog<({String username, String apiKey})>(
-                context: context,
-                builder: (context) {
-                  String username = "", apiKey = "";
-                  return AlertDialog(
-                    title: const Text("Login"),
-                    content: Column(
-                      children: [
-                        TextField(
-                          onChanged: (value) => username = value,
-                          decoration: const InputDecoration(
-                            label: Text("Username"),
-                            hintText: "Username",
-                          ),
-                        ),
-                        TextField(
-                          onChanged: (value) => apiKey = value,
-                          decoration: const InputDecoration(
-                            label: Text("API Key"),
-                            hintText: "API Key",
-                          ),
-                        ),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        // onPressed: () => Navigator.pop(context, t),
-                        onPressed: () => Navigator.pop(
-                            context, (username: username, apiKey: apiKey)),
-                        child: const Text("Accept"),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, null),
-                        child: const Text("Cancel"),
-                      ),
-                    ],
-                  );
-                },
-              ).then((v) {
-                if (v != null) {
-                  E621AccessData.userData.$ = E621AccessData.withDefault(
-                      apiKey: v.apiKey, username: v.username);
-                  E621AccessData.tryWrite().then<void>((v) {
-                    if (v) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text("Successfully stored! Test it!"),
-                          action: SnackBarAction(
-                            label: "See Contents",
-                            onPressed: () async => showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                content: Text(E621AccessData
-                                        .userData.itemSafe?.file.itemSafe
-                                        ?.readAsStringSync() ??
-                                    ""),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                  });
-                }
-              });
-            },
+            onTap: () => launchLogInDialog(context),
           ),
           // if (E621AccessData.userData.isAssigned)
-            ListTile(
-              title: const Text("Show User Profile"),
-              onTap: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => UserProfileLoaderPage.getByName(
-                          username:
-                              E621AccessData.userData.itemSafe?.username ??
-                                  E621AccessData.devAccessData.item.username),
-                    ));
-              },
-            ),
+          ListTile(
+            title: const Text("Show User Profile"),
+            onTap: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UserProfileLoaderPage.getByName(
+                        username: E621AccessData.userData.itemSafe?.username ??
+                            E621AccessData.devAccessData.item.username),
+                  ));
+            },
+          ),
           ListTile(
             title: const Text("Toggle Lazy Loading"),
             leading:

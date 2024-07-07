@@ -2,10 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/util/util.dart';
-import 'package:fuzzy/web/e621/e621.dart';
 import 'package:http/http.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
+
+import '../web/e621/e621_access_data.dart';
 
 class WSearchPool extends StatefulWidget {
   final String? initialSearchNameMatches;
