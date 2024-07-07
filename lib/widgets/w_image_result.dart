@@ -85,54 +85,61 @@ class WImageResult extends StatelessWidget {
     );
   }
 
-  static ({num width, num height, num? cacheWidth, num? cacheHeight})
-      determineResolution(
-    BuildContext ctx,
-    num fileWidth,
-    num fileHeight,
-    BoxFit fit,
-  ) {
+  static ({double width, double height}) getGridSizeEstimate(BuildContext ctx) {
     final size = MediaQuery.sizeOf(ctx);
     final sizeWidth = size.width / SearchView.i.postsPerRow;
     final sizeHeight = sizeWidth.isFinite
         ? sizeWidth * SearchView.i.widthToHeightRatio
         : size.height;
+    return (height: sizeHeight, width: sizeWidth);
+  }
+
+  /// TODO: Change if statements to check if file w or h has a greater disparity to its bounding size
+  static ({num width, num height, num? cacheWidth, num? cacheHeight})
+      determineResolution(
+    final BuildContext ctx,
+    final num fileWidth,
+    final num fileHeight,
+    final double sizeWidth,
+    final double sizeHeight,
+    final BoxFit fit,
+  ) {
     num width, height;
     num? cacheWidth, cacheHeight;
     if (fileWidth != fileHeight) {
       switch (fit) {
+        case BoxFit.none:
+          cacheWidth = width = fileWidth;
+          cacheHeight = height = fileHeight;
+          break;
         case BoxFit.cover:
           if (fileWidth > fileHeight) {
-            cacheHeight = (sizeHeight.isFinite) ? sizeHeight : null;
-            height = (sizeHeight.isFinite)
-                ? sizeHeight //min(sizeHeight, fileHeight)
-                : fileHeight;
-            width = (fileWidth * height) / fileHeight;
+            continue fitHeight;
           } else /*  if (fileHeight > fileWidth) */ {
-            cacheWidth = (sizeWidth.isFinite) ? sizeWidth : null;
-            width = (sizeWidth.isFinite)
-                ? sizeWidth //min(sizeWidth, fileWidth)
-                : fileWidth;
-            height = (fileHeight * width) / fileWidth;
+            continue fitWidth;
           }
-          break;
+        fitHeight:
         case BoxFit.fitHeight:
+          cacheHeight = (sizeHeight.isFinite) ? sizeHeight : null;
+          height = (sizeHeight.isFinite)
+              ? sizeHeight //min(sizeHeight, fileHeight)
+              : fileHeight;
+          width = (fileWidth * height) / fileHeight;
+          break;
+        fitWidth:
         case BoxFit.fitWidth:
-        case BoxFit.none:
+          cacheWidth = (sizeWidth.isFinite) ? sizeWidth : null;
+          width = (sizeWidth.isFinite)
+              ? sizeWidth //min(sizeWidth, fileWidth)
+              : fileWidth;
+          height = (fileHeight * width) / fileWidth;
+          break;
         case BoxFit.contain:
         default:
           if (fileWidth > fileHeight) {
-            cacheWidth = (sizeWidth.isFinite) ? sizeWidth : null;
-            width = (sizeWidth.isFinite)
-                ? sizeWidth //min(sizeWidth, fileWidth)
-                : fileWidth;
-            height = (fileHeight * width) / fileWidth;
+            continue fitWidth;
           } else /*  if (fileHeight > fileWidth) */ {
-            cacheHeight = (sizeHeight.isFinite) ? sizeHeight : null;
-            height = (sizeHeight.isFinite)
-                ? sizeHeight //min(sizeHeight, fileHeight)
-                : fileHeight;
-            width = (fileWidth * height) / fileHeight;
+            continue fitHeight;
           }
       }
     } else {
@@ -272,17 +279,30 @@ class WImageResult extends StatelessWidget {
     if (url == "") {
       print("NO URL");
     }
+    var (width:sizeWidth, height:sizeHeight) = WImageResult.getGridSizeEstimate(ctx);
     var (:width, :height, :cacheWidth, :cacheHeight) =
-        WImageResult.determineResolution(ctx, w, h, imageFit);
-    return Image.network(
-      url,
-      errorBuilder: (context, error, stackTrace) => throw error,
-      fit: imageFit, //BoxFit.contain,
-      width: width.toDouble(),
-      height: height.toDouble(),
-      cacheWidth: cacheWidth?.toInt(),
-      cacheHeight: cacheHeight?.toInt(),
-    );
+        WImageResult.determineResolution(ctx, w, h, sizeWidth, sizeHeight, imageFit);
+    return imageFit != BoxFit.cover
+        ? Center(
+            child: Image.network(
+              url,
+              errorBuilder: (context, error, stackTrace) => throw error,
+              fit: imageFit, //BoxFit.contain,
+              width: width.toDouble(),
+              height: height.toDouble(),
+              cacheWidth: cacheWidth?.toInt(),
+              cacheHeight: cacheHeight?.toInt(),
+            ),
+          )
+        : Image.network(
+            url,
+            errorBuilder: (context, error, stackTrace) => throw error,
+            fit: imageFit, //BoxFit.contain,
+            width: width.toDouble(),
+            height: height.toDouble(),
+            cacheWidth: cacheWidth?.toInt(),
+            cacheHeight: cacheHeight?.toInt(),
+          );
   }
 
   @widgetFactory
