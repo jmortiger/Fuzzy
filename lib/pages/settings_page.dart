@@ -151,20 +151,20 @@ class WNonFoldOutSettings extends StatelessWidget {
           titleTextStyle: SettingsPage.titleStyle,
         ),
         WIntegerField(
-          getVal: () => AppSettings.i!.searchView.postsPerRow,
+          getVal: () => SearchView.i.postsPerRow,
           name: "Posts per row",
-          setVal: (int val) => AppSettings.i!.searchView.postsPerRow = val,
+          setVal: (int val) => SearchView.i.postsPerRow = val,
           validateVal: (int? val) => (val ?? -1) >= 0,
         ),
         WIntegerField(
-          getVal: () => AppSettings.i!.searchView.postsPerPage,
+          getVal: () => SearchView.i.postsPerPage,
           name: "Posts per page",
-          setVal: (int val) => AppSettings.i!.searchView.postsPerPage = val,
+          setVal: (int val) => SearchView.i.postsPerPage = val,
           validateVal: (int? val) => (val ?? -1) >= 0,
         ),
         WEnumListField<PostInfoPaneItem>.getter(
           name: "Posts per page",
-          getter: () => AppSettings.i!.searchView.postInfoBannerItems,
+          getter: () => SearchView.i.postInfoBannerItems,
           setVal: (/* List<PostInfoPaneItem>  */ val) => AppSettings
               .i!.searchView.postInfoBannerItems = val.cast<PostInfoPaneItem>(),
           values: PostInfoPaneItem.values,
@@ -262,7 +262,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               WNumSliderField<int>(
                 min: SearchViewData.postsPerRowBounds.min,
                 max: SearchViewData.postsPerRowBounds.max,
-                getVal: () => AppSettings.i!.searchView.postsPerRow,
+                getVal: () => SearchView.i.postsPerRow,
                 name: "Posts per row",
                 setVal: (num val) => SearchView.i.postsPerRow = val.toInt(),
                 validateVal: (num? val) => (val?.toInt() ?? -1) >= 0,
@@ -271,25 +271,30 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                     SearchViewData.postsPerRowBounds.min,
               ),
               WIntegerField(
-                getVal: () => AppSettings.i!.searchView.postsPerRow,
+                getVal: () => SearchView.i.postsPerRow,
                 name: "Posts per row",
                 setVal: (int val) =>
-                    AppSettings.i!.searchView.postsPerRow = val,
+                    SearchView.i.postsPerRow = val,
                 validateVal: (int? val) => (val ?? -1) >= 0,
               ),
               WIntegerField(
-                getVal: () => AppSettings.i!.searchView.postsPerPage,
+                getVal: () => SearchView.i.postsPerPage,
                 name: "Posts per page",
                 setVal: (int val) =>
-                    AppSettings.i!.searchView.postsPerPage = val,
+                    SearchView.i.postsPerPage = val,
                 validateVal: (int? val) => (val ?? -1) >= 0,
               ),
+              WIntegerField(
+                getVal: () => (SearchView.i.widthToHeightRatio * 100).toInt(),
+                name: "Width to height ratio",
+                setVal: (int val) =>
+                    SearchView.i.widthToHeightRatio = val / 100,
+                // validateVal: (int? val) => (val ?? -1) >= 0,
+              ),
               WEnumListField<PostInfoPaneItem>.getter(
-                name: "Posts per page",
-                getter: () => AppSettings.i!.searchView.postInfoBannerItems,
-                setVal: (/* List<PostInfoPaneItem>  */ val) => AppSettings
-                    .i!
-                    .searchView
+                name: "Post Info Display",
+                getter: () => SearchView.i.postInfoBannerItems,
+                setVal: (/* List<PostInfoPaneItem>  */ val) => SearchView.i
                     .postInfoBannerItems = val.cast<PostInfoPaneItem>(),
                 values: PostInfoPaneItem.values,
               ),
@@ -306,6 +311,13 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                   // Navigator.pop(context);
                 },
                 trailing: Text(imageFit.name),
+              ),
+              WBooleanField(
+                getVal: () => SearchView.i.useProgressiveImages,
+                name: "Use Progressive Images",
+                subtitle: "Load a low-quality preview before loading the main image?",
+                setVal: (bool val) =>
+                    SearchView.i.useProgressiveImages = val,
               ),
             ]),
         ExpansionTile(

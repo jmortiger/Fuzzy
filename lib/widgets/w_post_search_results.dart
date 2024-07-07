@@ -222,6 +222,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
               crossAxisCount: AppSettings.i!.searchView.postsPerRow,
               crossAxisSpacing: 4,
               mainAxisSpacing: 4,
+              childAspectRatio: SearchView.i.widthToHeightRatio,
             ),
             itemCount: estimatedCount,
             itemBuilder: (context, index) {
@@ -236,6 +237,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
             crossAxisCount: AppSettings.i!.searchView.postsPerRow,
             crossAxisSpacing: 4,
             mainAxisSpacing: 4,
+            childAspectRatio: SearchView.i.widthToHeightRatio,
             children:
                 (Iterable<int>.generate(estimatedCount)).reduceUntilTrue(
                     (accumulator, _, index, __) => posts.tryGet(index) != null

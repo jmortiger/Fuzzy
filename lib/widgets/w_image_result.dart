@@ -11,6 +11,7 @@ import 'package:j_util/j_util_full.dart';
 import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/pages/post_view_page.dart';
+import 'package:progressive_image/progressive_image.dart';
 import 'package:provider/provider.dart';
 
 import '../models/search_cache.dart';
@@ -90,7 +91,7 @@ class WImageResult extends StatelessWidget {
     final size = MediaQuery.sizeOf(ctx);
     final sizeWidth = size.width / SearchView.i.postsPerRow;
     final sizeHeight = sizeWidth.isFinite
-        ? sizeWidth * SearchView.i.widthToHeightRatio
+        ? sizeWidth / SearchView.i.widthToHeightRatio
         : size.height;
     logger.info(
       "Estimated height ${sizeWidth * SearchView.i.widthToHeightRatio}"
@@ -101,8 +102,13 @@ class WImageResult extends StatelessWidget {
 
   /// Using the smaller of size(Dimension) and file(Dimension) causes big
   /// scale-ups (e.g. a long vertical comic) to have the wrong resolution.
-  static ({num width, num height, num? cacheWidth, num? cacheHeight})
-      determineResolution(
+  static ({
+    num width,
+    num height,
+    num? cacheWidth,
+    num? cacheHeight,
+    double aspectRatio,
+  }) determineResolution(
     final num fileWidth,
     final num fileHeight,
     final double sizeWidth,
@@ -111,14 +117,14 @@ class WImageResult extends StatelessWidget {
   ) {
     num width, height;
     num? cacheWidth, cacheHeight;
-    final double widthRatio =
-        // (sizeWidth - fileWidth).abs() / max(fileWidth, fileHeight);
-        (sizeWidth - fileWidth).abs() / fileWidth;
-    final double heightRatio =
-        // (sizeHeight - fileHeight).abs() / max(fileWidth, fileHeight);
-        (sizeHeight - fileHeight).abs() / fileHeight;
-    // final double widthRatio = sizeWidth / fileWidth;
-    // final double heightRatio = sizeHeight / fileHeight;
+    // final double widthRatio =
+    //     // (sizeWidth - fileWidth).abs() / max(fileWidth, fileHeight);
+    //     (sizeWidth - fileWidth).abs() / fileWidth;
+    // final double heightRatio =
+    //     // (sizeHeight - fileHeight).abs() / max(fileWidth, fileHeight);
+    //     (sizeHeight - fileHeight).abs() / fileHeight;
+    final double widthRatio = fileWidth / sizeWidth;
+    final double heightRatio = fileHeight / sizeHeight;
     final bool finiteRatios = widthRatio.isFinite && heightRatio.isFinite;
     if ((finiteRatios && widthRatio != heightRatio) ||
         fileWidth != fileHeight) {
@@ -145,13 +151,13 @@ class WImageResult extends StatelessWidget {
         fitHeight:
         case BoxFit.fitHeight:
           cacheHeight = (sizeHeight.isFinite) ? sizeHeight : null;
-          height = (sizeHeight.isFinite) ? sizeHeight : fileHeight;
+          height = cacheHeight ?? fileHeight;
           width = (fileWidth * height) / fileHeight;
           break;
         fitWidth:
         case BoxFit.fitWidth:
           cacheWidth = (sizeWidth.isFinite) ? sizeWidth : null;
-          width = (sizeWidth.isFinite) ? sizeWidth : fileWidth;
+          width = cacheWidth ?? fileWidth;
           height = (fileHeight * width) / fileWidth;
           break;
         case BoxFit.cover:
@@ -188,7 +194,8 @@ class WImageResult extends StatelessWidget {
       width: width,
       height: height,
       cacheWidth: cacheWidth,
-      cacheHeight: cacheHeight
+      cacheHeight: cacheHeight,
+      aspectRatio: width / height,
     );
   }
 
@@ -311,29 +318,96 @@ class WImageResult extends StatelessWidget {
     }
     var (width: sizeWidth, height: sizeHeight) =
         WImageResult.getGridSizeEstimate(ctx);
-    var (:width, :height, :cacheWidth, :cacheHeight) =
+    var (:width, :height, :cacheWidth, :cacheHeight, :aspectRatio) =
         WImageResult.determineResolution(w, h, sizeWidth, sizeHeight, imageFit);
-    return imageFit != BoxFit.cover
-        ? Center(
-            child: Image.network(
-              url,
-              errorBuilder: (context, error, stackTrace) => throw error,
-              fit: imageFit, //BoxFit.contain,
-              width: width.toDouble(),
-              height: height.toDouble(),
-              cacheWidth: cacheWidth?.toInt(),
-              cacheHeight: cacheHeight?.toInt(),
-            ),
-          )
-        : Image.network(
-            url,
-            errorBuilder: (context, error, stackTrace) => throw error,
-            fit: imageFit, //BoxFit.contain,
-            width: width.toDouble(),
-            height: height.toDouble(),
-            cacheWidth: cacheWidth?.toInt(),
-            cacheHeight: cacheHeight?.toInt(),
-          );
+    if (!SearchView.i.useProgressiveImages) {
+      Widget i = Image.network(
+        url,
+        errorBuilder: (context, error, stackTrace) => throw error,
+        fit: imageFit, //BoxFit.contain,
+        width: width.toDouble(),
+        height: height.toDouble(),
+        cacheWidth: cacheWidth?.toInt(),
+        cacheHeight: cacheHeight?.toInt(),
+      );
+      return imageFit != BoxFit.cover ? Center(child: i) : i;
+    }
+    dynamic i = ResizeImage.resizeIfNeeded(
+      cacheWidth?.toInt(),
+      cacheHeight?.toInt(),
+      NetworkImage(
+        url,
+        // errorBuilder: (context, error, stackTrace) => throw error,
+        // fit: imageFit, //BoxFit.contain,
+        // width: width.toDouble(),
+        // height: height.toDouble(),
+        scale: cacheWidth?.isFinite ?? false
+            ? cacheWidth! / w
+            : cacheHeight?.isFinite ?? false
+                ? cacheHeight! / h
+                : 1,
+      ),
+    );
+    final fWidth = width, fHeight = height;
+    // if (imageListing.preview.url != url) {
+    var IImageInfo(width: w2, height: h2, url: url2) = imageListing.preview;
+    var (
+      width: width2,
+      height: height2,
+      cacheWidth: cacheWidth2,
+      cacheHeight: cacheHeight2,
+      aspectRatio: aspectRatio2,
+    ) = WImageResult.determineResolution(
+        w2, h2, sizeWidth, sizeHeight, imageFit);
+    // if (sizeWidth.isFinite && sizeHeight.isFinite) {
+    //   assert(fWidth == w && fHeight == h);
+    // }
+    logger.info(
+      "fWidth: $fWidth"
+      "\nwidth2: $width2"
+      "\nfHeight: $fHeight"
+      "\nheight2: $height2"
+      "\naspect: $aspectRatio"
+      "\naspect2: $aspectRatio2"
+      "\nw: $w"
+      "\nw2: $w2"
+      "\nh: $h"
+      "\nh2: $h2"
+    );
+    i = ProgressiveImage(
+      placeholder: const AssetImage("snake_loader.webp"),
+      thumbnail: ResizeImage.resizeIfNeeded(
+        cacheWidth2?.toInt(),
+        cacheHeight2?.toInt(),
+        NetworkImage(
+          url2,
+          // errorBuilder: (context, error, stackTrace) => throw error,
+          // fit: imageFit, //BoxFit.contain,
+          // width: width.toDouble(),
+          // height: height.toDouble(),
+          scale: cacheWidth2?.isFinite ?? false
+              ? cacheWidth2! / w2
+              : cacheHeight2?.isFinite ?? false
+                  ? cacheHeight2! / h2
+                  : 1,
+        ),
+      ),
+      image: i,
+      width: fWidth.toDouble(),
+      height: fHeight.toDouble(),
+      fit: imageFit, //BoxFit.contain,
+    );
+    /* } else {
+      i = ProgressiveImage(
+        placeholder: const AssetImage("snake_loader.webp"),
+        image: i,
+        width: width.toDouble(),
+        height: height.toDouble(),
+        fit: imageFit, //BoxFit.contain,
+      );
+    } */
+    return Center(child: i);
+    // return imageFit != BoxFit.cover ? Center(child: i) : i;
   }
 
   @widgetFactory

@@ -426,16 +426,19 @@ class SearchViewData {
     postsPerRow: 3,
     postInfoBannerItems: PostInfoPaneItem.values,
     widthToHeightRatio: 1,
+    useProgressiveImages: true,
   );
   final int postsPerPage;
   final int postsPerRow;
   final List<PostInfoPaneItem> postInfoBannerItems;
   final double widthToHeightRatio;
+  final bool useProgressiveImages;
   const SearchViewData({
     required this.postsPerPage,
     required this.postsPerRow,
     required this.postInfoBannerItems,
     required this.widthToHeightRatio,
+    required this.useProgressiveImages,
   });
   factory SearchViewData.fromJson(JsonOut json) => SearchViewData(
         postsPerPage: json["postsPerPage"] ?? defaultData.postsPerPage,
@@ -447,6 +450,7 @@ class SearchViewData {
                 defaultData.postInfoBannerItems,
         widthToHeightRatio:
             json["widthToHeightRatio"] ?? defaultData.widthToHeightRatio,
+        useProgressiveImages: json["useProgressiveImages"] ?? defaultData.useProgressiveImages,
       );
   JsonOut toJson() => {
         "postsPerPage": postsPerPage,
@@ -458,6 +462,7 @@ class SearchViewData {
               "${element.name}",
         ),
         "widthToHeightRatio": widthToHeightRatio,
+        "useProgressiveImages": useProgressiveImages,
       };
 }
 
@@ -482,28 +487,36 @@ class SearchView implements SearchViewData {
   @override
   double get widthToHeightRatio => _widthToHeightRatio;
   set widthToHeightRatio(double v) =>
-      (v >= SearchViewData.widthToHeightRatioBounds.min && v < SearchViewData.widthToHeightRatioBounds.min) ? _widthToHeightRatio = v : "";
+      (v >= SearchViewData.widthToHeightRatioBounds.min && v < SearchViewData.widthToHeightRatioBounds.max) ? _widthToHeightRatio = v : "";
+  bool _useProgressiveImages;
+  @override
+  bool get useProgressiveImages => _useProgressiveImages;
+  set useProgressiveImages(bool v) => _useProgressiveImages = v;
   SearchView({
     required int postsPerPage,
     required int postsPerRow,
     required List<PostInfoPaneItem> postInfoBannerItems,
     required double widthToHeightRatio,
+    required bool useProgressiveImages
   })  : _postsPerPage = postsPerPage,
         _postsPerRow = postsPerRow,
         _postInfoBannerItems = postInfoBannerItems,
-        _widthToHeightRatio = widthToHeightRatio;
+        _widthToHeightRatio = widthToHeightRatio,
+        _useProgressiveImages = useProgressiveImages;
 
   factory SearchView.fromData(SearchViewData postView) => SearchView(
         postsPerPage: postView.postsPerPage,
         postsPerRow: postView.postsPerRow,
         postInfoBannerItems: postView.postInfoBannerItems,
         widthToHeightRatio: postView.widthToHeightRatio,
+        useProgressiveImages: postView.useProgressiveImages,
       );
   void overwriteWithData(SearchViewData searchView) {
     _postsPerPage = searchView.postsPerPage;
     _postsPerRow = searchView.postsPerRow;
     _postInfoBannerItems = searchView.postInfoBannerItems.toList();
     _widthToHeightRatio = searchView.widthToHeightRatio;
+    _useProgressiveImages = searchView.useProgressiveImages;
   }
 
   SearchViewData toData() => SearchViewData(
@@ -511,6 +524,7 @@ class SearchView implements SearchViewData {
         postsPerRow: postsPerRow,
         postInfoBannerItems: postInfoBannerItems,
         widthToHeightRatio: widthToHeightRatio,
+        useProgressiveImages: useProgressiveImages,
       );
 
   // #region JSON (indirect, don't need updating w/ new fields)
