@@ -217,6 +217,7 @@ class PostViewData {
     startWithTagsExpanded: true,
     startWithDescriptionExpanded: false,
     imageQuality: "low",
+    useProgressiveImages: true,
   );
   final List<TagCategory> tagOrder;
   final Map<TagCategory, Color> tagColors;
@@ -233,6 +234,7 @@ class PostViewData {
   final bool startWithTagsExpanded;
   final bool startWithDescriptionExpanded;
   final String imageQuality;
+  final bool useProgressiveImages;
   const PostViewData({
     required this.tagOrder,
     required this.tagColors,
@@ -246,6 +248,7 @@ class PostViewData {
     required this.startWithTagsExpanded,
     required this.startWithDescriptionExpanded,
     required this.imageQuality,
+    required this.useProgressiveImages,
   });
   factory PostViewData.fromJson(JsonOut json) => PostViewData(
         tagOrder: (json["tagOrder"] as List?)
@@ -267,6 +270,8 @@ class PostViewData {
         startWithDescriptionExpanded: json["startWithDescriptionExpanded"] ??
             defaultData.startWithDescriptionExpanded,
         imageQuality: json["imageQuality"] ?? defaultData.imageQuality,
+        useProgressiveImages:
+            json["useProgressiveImages"] ?? defaultData.useProgressiveImages,
       );
   JsonOut toJson() => {
         "tagOrder": tagOrder,
@@ -281,6 +286,7 @@ class PostViewData {
         "startWithTagsExpanded": startWithTagsExpanded,
         "startWithDescriptionExpanded": startWithDescriptionExpanded,
         "imageQuality": imageQuality,
+        "useProgressiveImages": useProgressiveImages,
       };
 }
 
@@ -330,6 +336,10 @@ class PostView implements PostViewData {
   @override
   bool get startWithDescriptionExpanded => _startWithDescriptionExpanded;
   set startWithDescriptionExpanded(bool v) => _startWithDescriptionExpanded = v;
+  bool _useProgressiveImages;
+  @override
+  bool get useProgressiveImages => _useProgressiveImages;
+  set useProgressiveImages(bool v) => _useProgressiveImages = v;
   String _imageQuality;
   @override
   String get imageQuality => _imageQuality;
@@ -348,6 +358,7 @@ class PostView implements PostViewData {
     required bool startWithTagsExpanded,
     required bool startWithDescriptionExpanded,
     required String imageQuality,
+    required bool useProgressiveImages,
   })  : _tagOrder = tagOrder,
         _tagColors = tagColors,
         _colorTags = colorTags,
@@ -359,7 +370,8 @@ class PostView implements PostViewData {
         _showTimeLeft = showTimeLeft,
         _startWithTagsExpanded = startWithTagsExpanded,
         _startWithDescriptionExpanded = startWithDescriptionExpanded,
-        _imageQuality = imageQuality;
+        _imageQuality = imageQuality,
+        _useProgressiveImages = useProgressiveImages;
 
   factory PostView.fromData(PostViewData postView) => PostView(
         tagOrder: List.from(postView.tagOrder),
@@ -374,6 +386,7 @@ class PostView implements PostViewData {
         startWithTagsExpanded: postView.startWithTagsExpanded,
         startWithDescriptionExpanded: postView.startWithDescriptionExpanded,
         imageQuality: postView.imageQuality,
+        useProgressiveImages: postView.useProgressiveImages,
       );
 
   void overwriteWithData(PostViewData postView) {
@@ -389,6 +402,7 @@ class PostView implements PostViewData {
     startWithTagsExpanded = postView.startWithTagsExpanded;
     startWithDescriptionExpanded = postView.startWithDescriptionExpanded;
     imageQuality = postView.imageQuality;
+    useProgressiveImages = postView.useProgressiveImages;
   }
 
   PostViewData toData() => PostViewData(
@@ -404,6 +418,7 @@ class PostView implements PostViewData {
         startWithTagsExpanded: startWithTagsExpanded,
         startWithDescriptionExpanded: startWithDescriptionExpanded,
         imageQuality: imageQuality,
+        useProgressiveImages: useProgressiveImages,
       );
 
   // #region JSON (indirect, don't need updating w/ new fields)
@@ -450,7 +465,8 @@ class SearchViewData {
                 defaultData.postInfoBannerItems,
         widthToHeightRatio:
             json["widthToHeightRatio"] ?? defaultData.widthToHeightRatio,
-        useProgressiveImages: json["useProgressiveImages"] ?? defaultData.useProgressiveImages,
+        useProgressiveImages:
+            json["useProgressiveImages"] ?? defaultData.useProgressiveImages,
       );
   JsonOut toJson() => {
         "postsPerPage": postsPerPage,
@@ -487,18 +503,21 @@ class SearchView implements SearchViewData {
   @override
   double get widthToHeightRatio => _widthToHeightRatio;
   set widthToHeightRatio(double v) =>
-      (v >= SearchViewData.widthToHeightRatioBounds.min && v < SearchViewData.widthToHeightRatioBounds.max) ? _widthToHeightRatio = v : "";
+      (v >= SearchViewData.widthToHeightRatioBounds.min &&
+              v < SearchViewData.widthToHeightRatioBounds.max)
+          ? _widthToHeightRatio = v
+          : "";
   bool _useProgressiveImages;
   @override
   bool get useProgressiveImages => _useProgressiveImages;
   set useProgressiveImages(bool v) => _useProgressiveImages = v;
-  SearchView({
-    required int postsPerPage,
-    required int postsPerRow,
-    required List<PostInfoPaneItem> postInfoBannerItems,
-    required double widthToHeightRatio,
-    required bool useProgressiveImages
-  })  : _postsPerPage = postsPerPage,
+  SearchView(
+      {required int postsPerPage,
+      required int postsPerRow,
+      required List<PostInfoPaneItem> postInfoBannerItems,
+      required double widthToHeightRatio,
+      required bool useProgressiveImages})
+      : _postsPerPage = postsPerPage,
         _postsPerRow = postsPerRow,
         _postInfoBannerItems = postInfoBannerItems,
         _widthToHeightRatio = widthToHeightRatio,

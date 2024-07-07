@@ -362,7 +362,7 @@ class WImageResult extends StatelessWidget {
     // if (sizeWidth.isFinite && sizeHeight.isFinite) {
     //   assert(fWidth == w && fHeight == h);
     // }
-    logger.info(
+    logger.finest(
       "fWidth: $fWidth"
       "\nwidth2: $width2"
       "\nfHeight: $fHeight"

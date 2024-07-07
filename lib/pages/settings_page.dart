@@ -119,102 +119,6 @@ class SettingsPage extends StatelessWidget implements IRoute<SettingsPage> {
   }
 }
 
-class WNonFoldOutSettings extends StatelessWidget {
-  const WNonFoldOutSettings({
-    super.key,
-  });
-
-  TextStyle get titleStyle => SettingsPage.titleStyle;
-
-  AppSettings get settings => AppSettings.i!;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      children: [
-        ListTile(
-          title: const Text("General Settings"),
-          titleTextStyle: SettingsPage.titleStyle,
-        ),
-        WSetStringField(
-          name: "Favorite Tags",
-          getVal: AppSettings.i!.favoriteTags,
-          setVal: (Set<String> v) => AppSettings.i!.favoriteTags = v,
-        ),
-        WSetStringField(
-          getVal: AppSettings.i!.blacklistedTags,
-          name: "Blacklisted Tags",
-          setVal: (Set<String> v) => AppSettings.i!.blacklistedTags = v,
-        ),
-        ListTile(
-          title: const Text("Search View Settings"),
-          titleTextStyle: SettingsPage.titleStyle,
-        ),
-        WIntegerField(
-          getVal: () => SearchView.i.postsPerRow,
-          name: "Posts per row",
-          setVal: (int val) => SearchView.i.postsPerRow = val,
-          validateVal: (int? val) => (val ?? -1) >= 0,
-        ),
-        WIntegerField(
-          getVal: () => SearchView.i.postsPerPage,
-          name: "Posts per page",
-          setVal: (int val) => SearchView.i.postsPerPage = val,
-          validateVal: (int? val) => (val ?? -1) >= 0,
-        ),
-        WEnumListField<PostInfoPaneItem>.getter(
-          name: "Posts per page",
-          getter: () => SearchView.i.postInfoBannerItems,
-          setVal: (/* List<PostInfoPaneItem>  */ val) => AppSettings
-              .i!.searchView.postInfoBannerItems = val.cast<PostInfoPaneItem>(),
-          values: PostInfoPaneItem.values,
-        ),
-        ListTile(
-          title: const Text("Post View Settings"),
-          titleTextStyle: SettingsPage.titleStyle,
-        ),
-        WBooleanField(
-          name: "Force High Quality Image",
-          getVal: () => settings.postView.forceHighQualityImage,
-          setVal: (p1) => AppSettings.i!.postView.forceHighQualityImage = p1,
-        ),
-        WBooleanField(
-          name: "Allow Overflow",
-          getVal: () => settings.postView.allowOverflow,
-          setVal: (p1) => AppSettings.i!.postView.allowOverflow = p1,
-        ),
-        WBooleanField(
-          name: "Color Tag Headers",
-          getVal: () => settings.postView.colorTagHeaders,
-          setVal: (p1) => AppSettings.i!.postView.colorTagHeaders = p1,
-        ),
-        WBooleanField(
-          name: "Color Tags",
-          getVal: () => settings.postView.colorTags,
-          setVal: (p1) => AppSettings.i!.postView.colorTags = p1,
-        ),
-        WBooleanField(
-          name: "Autoplay Video",
-          getVal: () => settings.postView.autoplayVideo,
-          setVal: (p1) => AppSettings.i!.postView.autoplayVideo = p1,
-        ),
-        WBooleanField(
-          name: "Start video muted",
-          getVal: () => settings.postView.startVideoMuted,
-          setVal: (p1) => AppSettings.i!.postView.startVideoMuted = p1,
-        ),
-        WBooleanField(
-          name: "Show time left",
-          subtitle:
-              "When playing a video, show the time remaining instead of the total duration?",
-          getVal: () => settings.postView.showTimeLeft,
-          setVal: (p1) => AppSettings.i!.postView.showTimeLeft = p1,
-        ),
-      ],
-    );
-  }
-}
-
 class WFoldoutSettings extends StatefulWidget {
   const WFoldoutSettings({super.key});
 
@@ -273,15 +177,13 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               WIntegerField(
                 getVal: () => SearchView.i.postsPerRow,
                 name: "Posts per row",
-                setVal: (int val) =>
-                    SearchView.i.postsPerRow = val,
+                setVal: (int val) => SearchView.i.postsPerRow = val,
                 validateVal: (int? val) => (val ?? -1) >= 0,
               ),
               WIntegerField(
                 getVal: () => SearchView.i.postsPerPage,
                 name: "Posts per page",
-                setVal: (int val) =>
-                    SearchView.i.postsPerPage = val,
+                setVal: (int val) => SearchView.i.postsPerPage = val,
                 validateVal: (int? val) => (val ?? -1) >= 0,
               ),
               WIntegerField(
@@ -294,8 +196,8 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               WEnumListField<PostInfoPaneItem>.getter(
                 name: "Post Info Display",
                 getter: () => SearchView.i.postInfoBannerItems,
-                setVal: (/* List<PostInfoPaneItem>  */ val) => SearchView.i
-                    .postInfoBannerItems = val.cast<PostInfoPaneItem>(),
+                setVal: (/* List<PostInfoPaneItem>  */ val) => SearchView
+                    .i.postInfoBannerItems = val.cast<PostInfoPaneItem>(),
                 values: PostInfoPaneItem.values,
               ),
               ListTile(
@@ -315,9 +217,9 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               WBooleanField(
                 getVal: () => SearchView.i.useProgressiveImages,
                 name: "Use Progressive Images",
-                subtitle: "Load a low-quality preview before loading the main image?",
-                setVal: (bool val) =>
-                    SearchView.i.useProgressiveImages = val,
+                subtitle:
+                    "Load a low-quality preview before loading the main image?",
+                setVal: (bool val) => SearchView.i.useProgressiveImages = val,
               ),
             ]),
         ExpansionTile(
@@ -330,9 +232,8 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               name: "Default to High Quality Image",
               subtitle:
                   "If the selected quality is unavailable, use the highest quality.",
-              getVal: () => settings.postView.forceHighQualityImage,
-              setVal: (p1) =>
-                  AppSettings.i!.postView.forceHighQualityImage = p1,
+              getVal: () => PostView.i.forceHighQualityImage,
+              setVal: (p1) => PostView.i.forceHighQualityImage = p1,
             ),
             ListTile(
               title: const Text("Toggle Image Quality"),
@@ -352,46 +253,52 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
             ),
             WBooleanField(
               name: "Allow Overflow",
-              getVal: () => settings.postView.allowOverflow,
-              setVal: (p1) => AppSettings.i!.postView.allowOverflow = p1,
+              getVal: () => PostView.i.allowOverflow,
+              setVal: (p1) => PostView.i.allowOverflow = p1,
             ),
             WBooleanField(
               name: "Color Tag Headers",
-              getVal: () => settings.postView.colorTagHeaders,
-              setVal: (p1) => AppSettings.i!.postView.colorTagHeaders = p1,
+              getVal: () => PostView.i.colorTagHeaders,
+              setVal: (p1) => PostView.i.colorTagHeaders = p1,
             ),
             WBooleanField(
               name: "Color Tags",
-              getVal: () => settings.postView.colorTags,
-              setVal: (p1) => AppSettings.i!.postView.colorTags = p1,
+              getVal: () => PostView.i.colorTags,
+              setVal: (p1) => PostView.i.colorTags = p1,
             ),
             WBooleanField(
               name: "Autoplay Video",
-              getVal: () => settings.postView.autoplayVideo,
-              setVal: (p1) => AppSettings.i!.postView.autoplayVideo = p1,
+              getVal: () => PostView.i.autoplayVideo,
+              setVal: (p1) => PostView.i.autoplayVideo = p1,
             ),
             WBooleanField(
               name: "Start video muted",
-              getVal: () => settings.postView.startVideoMuted,
-              setVal: (p1) => AppSettings.i!.postView.startVideoMuted = p1,
+              getVal: () => PostView.i.startVideoMuted,
+              setVal: (p1) => PostView.i.startVideoMuted = p1,
             ),
             WBooleanField(
               name: "Show time left",
               subtitle: "When playing a video, show the time "
                   "remaining instead of the total duration?",
-              getVal: () => settings.postView.showTimeLeft,
-              setVal: (p1) => AppSettings.i!.postView.showTimeLeft = p1,
+              getVal: () => PostView.i.showTimeLeft,
+              setVal: (p1) => PostView.i.showTimeLeft = p1,
             ),
             WBooleanField(
               name: "Start With Tags Expanded",
-              getVal: () => settings.postView.startWithTagsExpanded,
-              setVal: (p) => AppSettings.i!.postView.startWithTagsExpanded = p,
+              getVal: () => PostView.i.startWithTagsExpanded,
+              setVal: (p) => PostView.i.startWithTagsExpanded = p,
             ),
             WBooleanField(
               name: "Start With Description Expanded",
-              getVal: () => settings.postView.startWithDescriptionExpanded,
-              setVal: (p) =>
-                  AppSettings.i!.postView.startWithDescriptionExpanded = p,
+              getVal: () => PostView.i.startWithDescriptionExpanded,
+              setVal: (p) => PostView.i.startWithDescriptionExpanded = p,
+            ),
+            WBooleanField(
+              name: "Use Progressive Images",
+              subtitle:
+                  "Load a low-quality preview before loading the main image?",
+              getVal: () => PostView.i.useProgressiveImages,
+              setVal: (p) => PostView.i.useProgressiveImages = p,
             ),
           ],
         ),
