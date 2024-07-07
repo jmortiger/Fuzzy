@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
@@ -91,13 +92,17 @@ class WImageResult extends StatelessWidget {
     final sizeHeight = sizeWidth.isFinite
         ? sizeWidth * SearchView.i.widthToHeightRatio
         : size.height;
+    logger.info(
+      "Estimated height ${sizeWidth * SearchView.i.widthToHeightRatio}"
+      "Alleged height ${size.height}",
+    );
     return (height: sizeHeight, width: sizeWidth);
   }
 
-  /// TODO: Change if statements to check if file w or h has a greater disparity to its bounding size
+  /// Using the smaller of size(Dimension) and file(Dimension) causes big
+  /// scale-ups (e.g. a long vertical comic) to have the wrong resolution.
   static ({num width, num height, num? cacheWidth, num? cacheHeight})
       determineResolution(
-    final BuildContext ctx,
     final num fileWidth,
     final num fileHeight,
     final double sizeWidth,
@@ -106,40 +111,65 @@ class WImageResult extends StatelessWidget {
   ) {
     num width, height;
     num? cacheWidth, cacheHeight;
-    if (fileWidth != fileHeight) {
+    final double widthRatio =
+        // (sizeWidth - fileWidth).abs() / max(fileWidth, fileHeight);
+        (sizeWidth - fileWidth).abs() / fileWidth;
+    final double heightRatio =
+        // (sizeHeight - fileHeight).abs() / max(fileWidth, fileHeight);
+        (sizeHeight - fileHeight).abs() / fileHeight;
+    // final double widthRatio = sizeWidth / fileWidth;
+    // final double heightRatio = sizeHeight / fileHeight;
+    final bool finiteRatios = widthRatio.isFinite && heightRatio.isFinite;
+    if ((finiteRatios && widthRatio != heightRatio) ||
+        fileWidth != fileHeight) {
       switch (fit) {
+        // TODO: Implement
+        // case BoxFit.scaleDown:
+        case BoxFit.fill:
+          cacheWidth = fileWidth;
+          cacheHeight = fileHeight;
+          if (finiteRatios) {
+            width = sizeWidth;
+            height = sizeHeight;
+          } else if (sizeWidth.isFinite || !sizeHeight.isFinite) {
+            width = (sizeWidth.isFinite) ? sizeWidth : fileWidth;
+            height = (fileHeight * width) / fileWidth;
+          } else {
+            height = (sizeHeight.isFinite) ? sizeHeight : fileHeight;
+            width = (fileWidth * height) / fileHeight;
+          }
         case BoxFit.none:
           cacheWidth = width = fileWidth;
           cacheHeight = height = fileHeight;
           break;
-        case BoxFit.cover:
-          if (fileWidth > fileHeight) {
-            continue fitHeight;
-          } else /*  if (fileHeight > fileWidth) */ {
-            continue fitWidth;
-          }
         fitHeight:
         case BoxFit.fitHeight:
           cacheHeight = (sizeHeight.isFinite) ? sizeHeight : null;
-          height = (sizeHeight.isFinite)
-              ? sizeHeight //min(sizeHeight, fileHeight)
-              : fileHeight;
+          height = (sizeHeight.isFinite) ? sizeHeight : fileHeight;
           width = (fileWidth * height) / fileHeight;
           break;
         fitWidth:
         case BoxFit.fitWidth:
           cacheWidth = (sizeWidth.isFinite) ? sizeWidth : null;
-          width = (sizeWidth.isFinite)
-              ? sizeWidth //min(sizeWidth, fileWidth)
-              : fileWidth;
+          width = (sizeWidth.isFinite) ? sizeWidth : fileWidth;
           height = (fileHeight * width) / fileWidth;
           break;
-        case BoxFit.contain:
-        default:
-          if (fileWidth > fileHeight) {
+        case BoxFit.cover:
+          // if (fileWidth > fileHeight) {
+          if ((finiteRatios && heightRatio > widthRatio) ||
+              (!finiteRatios && fileWidth > fileHeight)) {
             continue fitWidth;
           } else /*  if (fileHeight > fileWidth) */ {
             continue fitHeight;
+          }
+        case BoxFit.contain:
+        default:
+          // if (fileWidth > fileHeight) {
+          if ((finiteRatios && heightRatio > widthRatio) ||
+              (!finiteRatios && fileWidth > fileHeight)) {
+            continue fitHeight;
+          } else /*  if (fileHeight > fileWidth) */ {
+            continue fitWidth;
           }
       }
     } else {
@@ -149,9 +179,9 @@ class WImageResult extends StatelessWidget {
               ? sizeWidth
               : null;
       height = width = (sizeHeight.isFinite)
-          ? sizeHeight //min(sizeHeight, fileHeight)
+          ? sizeHeight
           : (sizeWidth.isFinite)
-              ? sizeWidth //min(sizeWidth, fileWidth)
+              ? sizeWidth
               : fileWidth;
     }
     return (
@@ -279,9 +309,10 @@ class WImageResult extends StatelessWidget {
     if (url == "") {
       print("NO URL");
     }
-    var (width:sizeWidth, height:sizeHeight) = WImageResult.getGridSizeEstimate(ctx);
+    var (width: sizeWidth, height: sizeHeight) =
+        WImageResult.getGridSizeEstimate(ctx);
     var (:width, :height, :cacheWidth, :cacheHeight) =
-        WImageResult.determineResolution(ctx, w, h, sizeWidth, sizeHeight, imageFit);
+        WImageResult.determineResolution(w, h, sizeWidth, sizeHeight, imageFit);
     return imageFit != BoxFit.cover
         ? Center(
             child: Image.network(
