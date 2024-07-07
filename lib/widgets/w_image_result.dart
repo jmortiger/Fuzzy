@@ -7,6 +7,7 @@ import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/post_swipe_page.dart' as old;
+import 'package:fuzzy/util/util.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
@@ -375,7 +376,7 @@ class WImageResult extends StatelessWidget {
       "\nh2: $h2"
     );
     i = ProgressiveImage(
-      placeholder: const AssetImage("snake_loader.webp"),
+      placeholder: placeholder,
       thumbnail: ResizeImage.resizeIfNeeded(
         cacheWidth2?.toInt(),
         cacheHeight2?.toInt(),

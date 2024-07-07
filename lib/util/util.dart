@@ -182,7 +182,7 @@ Comparator<String> getCoarseInverseSimilarityComparator(String mainComparison, [
 Comparator<String> getFineSimilarityComparator(String mainComparison) => (String a, String b) => a.similarityTo(mainComparison).compareTo(b.similarityTo(mainComparison));
 /// Lower output value means higher similarity
 Comparator<String> getFineInverseSimilarityComparator(String mainComparison) => (String a, String b) => b.similarityTo(mainComparison).compareTo(a.similarityTo(mainComparison));
-
+const placeholder = AssetImage("snake_loader.webp");
 void logRequest(
     http.Request r,
     Logger logger, [

@@ -80,7 +80,8 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
 
     widget.onRequestTogglePlayState + togglePlayState;
     if (PostView.i.autoplayVideo) {
-      _initializeVideoPlayerFuture.then((v) => _controller.play());
+      // TODO: Await until on screen
+      // _initializeVideoPlayerFuture.then((v) => _controller.play());
     }
     volume = PostView.i.startVideoMuted ? 0 : 1;
     _controller.setVolume(volume);

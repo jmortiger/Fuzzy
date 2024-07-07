@@ -14,16 +14,16 @@ import 'package:j_util/j_util_full.dart';
 import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
+import 'package:progressive_image/progressive_image.dart';
 
 import '../web/e621/e621.dart';
 import '../widgets/w_fab_builder.dart';
-
-// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
+// #region Logger
 late final lRecord = lm.genLogger("PostViewPage");
-late final print = lRecord.print;
-late final logger = lRecord.logger;
+lm.Printer get print => lRecord.print;
+lm.FileLogger get logger => lRecord.logger;
 // #endregion Logger
 
 abstract interface class IReturnsTags {
@@ -53,17 +53,12 @@ class PostViewPage extends StatelessWidget
   E6PostResponse get e6Post => postListing as E6PostResponse;
   PostView get pvs => AppSettings.i!.postView;
   static final descriptionTheme = LateFinal<TextStyle>();
-  @override
-  Widget build(BuildContext context) {
-    descriptionTheme.itemSafe ??=
-        const DefaultTextStyle.fallback().style.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 12 * 1.5,
-            );
+
+  IImageInfo getImageInfo(BuildContext context) {
     var horizontalPixels = MediaQuery.sizeOf(context).width *
         MediaQuery.devicePixelRatioOf(context);
     // var IImageInfo(width: w, height: h, url: url) = postListing.sample;
-    var IImageInfo(width: w, height: h, url: url) = postListing.file.isAVideo
+    var i = postListing.file.isAVideo
         ? switch (PostView.i.imageQuality) {
             "low" => (e6Post.sample.alternates!.alternates["480p"] ??
                 e6Post.sample.alternates!.alternates["720p"] ??
@@ -82,17 +77,28 @@ class PostViewPage extends StatelessWidget
                 "high" => e6Post.file,
                 _ => throw UnsupportedError("type not supported"),
               };
-    if (!postListing.file.isAVideo && w > horizontalPixels) {
+    if (!postListing.file.isAVideo && i.width > horizontalPixels) {
       if (e6Post.preview.width > horizontalPixels) {
-        IImageInfo(width: w, height: h, url: url) = postListing.preview;
+        i = postListing.preview;
       } else if (e6Post.sample.width > horizontalPixels) {
-        IImageInfo(width: w, height: h, url: url) = postListing.sample;
+        i = postListing.sample;
       }
     }
     // if (!postListing.file.isAVideo && /* w < horizontalPixels &&  */
     //     pvs.forceHighQualityImage) {
     //   IImageInfo(width: w, height: h, url: url) = postListing.file;
     // }
+    return i;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    descriptionTheme.itemSafe ??=
+        const DefaultTextStyle.fallback().style.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 12 * 1.5,
+            );
+    var IImageInfo(width: w, height: h, url: url) = getImageInfo(context);
     return Scaffold(
       body: SafeArea(
         child: Stack(
@@ -222,22 +228,118 @@ class PostViewPage extends StatelessWidget
   }
 
   @widgetFactory
-  Widget _buildMainContent(String url, int w, int h, BuildContext ctx) {
-    return postListing.file.isAVideo
-        ? WVideoPlayerScreen(
-            resourceUri: Uri.tryParse(url) ?? postListing.file.address)
-        : /* Platform.isWeb
-            ? _createHtmlImageElement(url, w, h)
-            :  */
-        Image.network(
-            url,
-            errorBuilder: (context, error, stackTrace) => throw error,
-            fit: BoxFit.contain,
-            width: w.toDouble(),
-            height: h.toDouble(),
-            cacheWidth: min(w, MediaQuery.sizeOf(ctx).width.toInt()),
-            // cacheHeight: h,
-          );
+  Widget _buildMainContent(
+    final String url,
+    final int w,
+    final int h,
+    final BuildContext ctx,
+  ) {
+    if (postListing.file.isAVideo) {
+      return WVideoPlayerScreen(
+          resourceUri: Uri.tryParse(url) ?? postListing.file.address);
+    } else {
+      return Stack(
+        children: [
+          Positioned.fill(child: _buildImageContent(url, w, h, ctx)),
+          Positioned.fill(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                  builder: (context) {
+                    return Scaffold(
+                      body: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: InteractiveViewer(
+                              child: _buildImageContent(url, w, h, ctx, BoxFit.contain),
+                            ),
+                          ),
+                          const WPostViewBackButton(),
+                        ],
+                      ),
+                    );
+                  },
+                )),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
+  @widgetFactory
+  Widget _buildImageContent(
+    final String url,
+    final int w,
+    final int h,
+    final BuildContext ctx, [
+    final BoxFit fit = BoxFit.fitWidth,
+  ]) {
+    final screenWidth = MediaQuery.sizeOf(ctx).width;
+    if (!pvs.useProgressiveImages) {
+      return Image.network(
+        url,
+        errorBuilder: (context, error, stackTrace) => throw error,
+        fit: fit,
+        width: w.toDouble(),
+        height: h.toDouble(),
+        cacheWidth: min(w, screenWidth.toInt()),
+        // cacheHeight: h,
+        filterQuality: FilterQuality.medium,
+      );
+    }
+    var cWidth = min(w, MediaQuery.sizeOf(ctx).width.toInt());
+    var iFinal = ResizeImage.resizeIfNeeded(
+      cWidth,
+      null,
+      NetworkImage(url, scale: w / cWidth),
+    );
+    if (url == e6Post.preview.url) {
+      return ProgressiveImage(
+        placeholder: placeholder,
+        thumbnail: iFinal,
+        image: iFinal,
+        width: screenWidth, //cWidth.toDouble(),
+        height: double.infinity,
+        fit: fit,
+        fadeDuration: const Duration(milliseconds: 250),
+      );
+    } else {
+      var iPreview = ResizeImage.resizeIfNeeded(
+        cWidth,
+        null,
+        NetworkImage(e6Post.preview.url, scale: e6Post.preview.width / cWidth),
+      );
+      if (e6Post.sample.has && url != e6Post.sample.url) {
+        var iSample = ResizeImage.resizeIfNeeded(
+          cWidth,
+          null,
+          NetworkImage(e6Post.sample.url, scale: e6Post.sample.width / cWidth),
+        );
+        return ProgressiveImage(
+          // placeholder: placeholder,
+          placeholder: iPreview,
+          thumbnail: iSample,
+          image: iFinal,
+          width: screenWidth, //cWidth.toDouble(),
+          height: double.infinity,
+          fit: fit,
+          fadeDuration: const Duration(milliseconds: 250),
+        );
+      } else {
+        return ProgressiveImage(
+          placeholder: placeholder,
+          thumbnail: iPreview,
+          image: iFinal,
+          width: screenWidth, //cWidth.toDouble(),
+          height: double.infinity,
+          fit: fit,
+          fadeDuration: const Duration(milliseconds: 250),
+        );
+      }
+    }
   }
 
   static final headerStyle = LateFinal<TextStyle>();
@@ -514,7 +616,7 @@ class WPostViewBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: AlignmentDirectional.topStart,
-      child: IconButton(
+      child: BackButton(
         onPressed: () {
           if (onPop != null) {
             onPop!();
@@ -522,14 +624,31 @@ class WPostViewBackButton extends StatelessWidget {
             Navigator.pop(context);
           }
         },
-        icon: const Icon(Icons.arrow_back),
-        iconSize: 36,
+        // icon: const Icon(Icons.arrow_back),
+        // iconSize: 36,
         style: const ButtonStyle(
+          iconSize: WidgetStatePropertyAll(36),
           backgroundColor: WidgetStateColor.transparent,
           elevation: WidgetStatePropertyAll(15),
           shadowColor: WidgetStatePropertyAll(Colors.black),
         ),
       ),
+      // child: IconButton(
+      //   onPressed: () {
+      //     if (onPop != null) {
+      //       onPop!();
+      //     } else {
+      //       Navigator.pop(context);
+      //     }
+      //   },
+      //   icon: const Icon(Icons.arrow_back),
+      //   iconSize: 36,
+      //   style: const ButtonStyle(
+      //     backgroundColor: WidgetStateColor.transparent,
+      //     elevation: WidgetStatePropertyAll(15),
+      //     shadowColor: WidgetStatePropertyAll(Colors.black),
+      //   ),
+      // ),
     );
   }
 }
