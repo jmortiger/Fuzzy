@@ -80,12 +80,14 @@ class PostViewPage extends StatefulWidget
   State<PostViewPage> createState() => _PostViewPageState();
 }
 
-class _PostViewPageState extends State<PostViewPage> {
+class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
   // #region Logger
   // static get lRecord => PostViewPage.lRecord;
   static lm.Printer get print => PoolViewPage.print;
   static lm.FileLogger get logger => PostViewPage.logger;
   // #endregion Logger
+  @override
+  List<String>? get tagsToAdd => widget.tagsToAdd;
   E6PostResponse get e6Post => widget.postListing as E6PostResponse;
 
   PostView get pvs => AppSettings.i!.postView;
@@ -203,8 +205,9 @@ class _PostViewPageState extends State<PostViewPage> {
     required int h,
     required String url,
   }) {
-    final maxWidth = MediaQuery.of(context).size.width;
-    final maxHeight = (h / w) * MediaQuery.of(context).size.width;
+    final maxWidth = MediaQuery.sizeOf(context).width *
+        MediaQuery.devicePixelRatioOf(context);
+    final maxHeight = (h / w) * maxWidth;
     final ar = w / h;
     logger.log(
       lm.LogLevel.INFO,
@@ -233,6 +236,13 @@ class _PostViewPageState extends State<PostViewPage> {
             aspectRatio: ar,
             child: _buildMainContent(url, w, h, context),
           ),
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Text(
+                "ID: ${e6Post.id}, W: $w, H: $h, screenWidth: ${maxWidth.toStringAsPrecision(5)}, MQWidth: ${MediaQuery.sizeOf(context).width.toStringAsPrecision(5)}"),
+          ],
         ),
         if (e6Post.relationships.hasActiveChildren)
           Row(children: [
@@ -406,7 +416,7 @@ class _PostViewPageState extends State<PostViewPage> {
     final BuildContext ctx, [
     final BoxFit fit = BoxFit.fitWidth,
   ]) {
-    final screenWidth = MediaQuery.sizeOf(ctx).width;
+    final screenWidth = MediaQuery.sizeOf(ctx).width * MediaQuery.devicePixelRatioOf(context);
     if (!pvs.useProgressiveImages) {
       return Image.network(
         url,
@@ -414,7 +424,8 @@ class _PostViewPageState extends State<PostViewPage> {
         fit: fit,
         width: w.toDouble(),
         height: h.toDouble(),
-        cacheWidth: min(w, screenWidth.toInt()),
+        cacheWidth:
+            !pvs.forceHighQualityImage ? min(w, screenWidth.toInt()) : w,
         // cacheHeight: h,
         filterQuality: pvs.imageFilterQuality,
       );
