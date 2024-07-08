@@ -45,3 +45,4 @@ app.*.map.json
 # Personal data
 /assets/devData.json
 .vscode/settings.json
+.vscode/settings.json

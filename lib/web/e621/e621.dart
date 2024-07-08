@@ -671,7 +671,7 @@ Future<({String username, String apiKey})?> launchLogInDialog(
                     style: DefaultTextStyle.of(context).style,
                     onOpen: (link) async =>
                         (await launchUrl(Uri.parse(link.url)))
-                            ? throw Exception('Could not launch ${link.url}')
+                            ? print('ALLEGEDLY Could not launch ${link.url}')
                             : "",
                   ),
                   hintText: "API Key",

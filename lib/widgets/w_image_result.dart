@@ -1,24 +1,24 @@
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
-import 'package:fuzzy/models/app_settings.dart';
-import 'package:fuzzy/models/saved_data.dart';
-import 'package:fuzzy/models/search_results.dart';
-import 'package:fuzzy/models/search_view_model.dart';
+import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/models/app_settings.dart' show SearchView;
+import 'package:fuzzy/models/saved_data.dart' show SavedDataE6;
+import 'package:fuzzy/models/search_cache.dart' show SearchCache;
+import 'package:fuzzy/models/search_results.dart' show SearchResultsNotifier;
+import 'package:fuzzy/models/search_view_model.dart' show SearchViewModel;
 import 'package:fuzzy/pages/post_swipe_page.dart' as old;
-import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/pages/post_view_page.dart'
+    show IReturnsTags, PostViewPage;
+import 'package:fuzzy/util/util.dart' show placeholder;
+import 'package:fuzzy/web/e621/models/e6_models.dart' show E6PostResponse;
+import 'package:fuzzy/web/models/image_listing.dart'
+    show IImageInfo, PostListing;
 import 'package:j_util/j_util_full.dart';
-import 'package:j_util/platform_finder.dart' as ui_web;
-import 'package:fuzzy/web/e621/models/e6_models.dart';
-import 'package:fuzzy/pages/post_view_page.dart';
-import 'package:progressive_image/progressive_image.dart';
-import 'package:provider/provider.dart';
-
-import '../models/search_cache.dart';
-import '../web/models/image_listing.dart';
+import 'package:progressive_image/progressive_image.dart' show ProgressiveImage;
+import 'package:provider/provider.dart' show Provider;
 
 // #region Logger
-import 'package:fuzzy/log_management.dart' as lm;
 
 late final lRecord = lm.genLogger("WImageResult");
 late final print = lRecord.print;
@@ -29,7 +29,6 @@ BoxFit imageFit = BoxFit.cover;
 const bool allowPostViewNavigation = true;
 const bool useLinkedList = false;
 
-// TODO: Fade in images https://docs.flutter.dev/cookbook/images/fading-in-images
 class WImageResult extends StatelessWidget {
   final PostListing imageListing;
   final int index;
@@ -324,7 +323,7 @@ class WImageResult extends StatelessWidget {
       Widget i = Image.network(
         url,
         errorBuilder: (context, error, stackTrace) => throw error,
-        fit: imageFit, //BoxFit.contain,
+        fit: imageFit,
         width: width.toDouble(),
         height: height.toDouble(),
         cacheWidth: cacheWidth?.toInt(),
@@ -337,10 +336,6 @@ class WImageResult extends StatelessWidget {
       cacheHeight?.toInt(),
       NetworkImage(
         url,
-        // errorBuilder: (context, error, stackTrace) => throw error,
-        // fit: imageFit, //BoxFit.contain,
-        // width: width.toDouble(),
-        // height: height.toDouble(),
         scale: cacheWidth?.isFinite ?? false
             ? cacheWidth! / w
             : cacheHeight?.isFinite ?? false
@@ -362,18 +357,16 @@ class WImageResult extends StatelessWidget {
     // if (sizeWidth.isFinite && sizeHeight.isFinite) {
     //   assert(fWidth == w && fHeight == h);
     // }
-    logger.finest(
-      "fWidth: $fWidth"
-      "\nwidth2: $width2"
-      "\nfHeight: $fHeight"
-      "\nheight2: $height2"
-      "\naspect: $aspectRatio"
-      "\naspect2: $aspectRatio2"
-      "\nw: $w"
-      "\nw2: $w2"
-      "\nh: $h"
-      "\nh2: $h2"
-    );
+    logger.finest("fWidth: $fWidth"
+        "\nwidth2: $width2"
+        "\nfHeight: $fHeight"
+        "\nheight2: $height2"
+        "\naspect: $aspectRatio"
+        "\naspect2: $aspectRatio2"
+        "\nw: $w"
+        "\nw2: $w2"
+        "\nh: $h"
+        "\nh2: $h2");
     i = ProgressiveImage(
       placeholder: placeholder,
       thumbnail: ResizeImage.resizeIfNeeded(
@@ -381,10 +374,6 @@ class WImageResult extends StatelessWidget {
         cacheHeight2?.toInt(),
         NetworkImage(
           url2,
-          // errorBuilder: (context, error, stackTrace) => throw error,
-          // fit: imageFit, //BoxFit.contain,
-          // width: width.toDouble(),
-          // height: height.toDouble(),
           scale: cacheWidth2?.isFinite ?? false
               ? cacheWidth2! / w2
               : cacheHeight2?.isFinite ?? false
@@ -395,19 +384,9 @@ class WImageResult extends StatelessWidget {
       image: i,
       width: fWidth.toDouble(),
       height: fHeight.toDouble(),
-      fit: imageFit, //BoxFit.contain,
+      fit: imageFit,
     );
-    /* } else {
-      i = ProgressiveImage(
-        placeholder: const AssetImage("snake_loader.webp"),
-        image: i,
-        width: width.toDouble(),
-        height: height.toDouble(),
-        fit: imageFit, //BoxFit.contain,
-      );
-    } */
     return Center(child: i);
-    // return imageFit != BoxFit.cover ? Center(child: i) : i;
   }
 
   @widgetFactory
@@ -417,7 +396,7 @@ class WImageResult extends StatelessWidget {
       // creationParams: ,
       onPlatformViewCreated: (id) {
         // https://api.flutter.dev/flutter/dart-html/ImageElement-class.html
-        var e = ui_web.getViewById(id) as dynamic; //ImageElement
+        var e = getViewById(id) as dynamic; //ImageElement
         e.attributes["src"] = url;
         // https://api.flutter.dev/flutter/dart-html/CssStyleDeclaration-class.html
         if (imageFit == BoxFit.contain) {

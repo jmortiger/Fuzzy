@@ -69,11 +69,11 @@ class _HomePageState extends State<HomePage> {
     // workThroughSnackbarQueue();
     return Scaffold(
       appBar: AppBar(
-        title: Padding(
-          padding: const EdgeInsets.all(8.0),
+        title: const Padding(
+          padding: EdgeInsets.all(8.0),
           // child: simpleTextField(),
           child: WSearchBar(
-            initialValue: Provider.of<SearchViewModel>(context).searchText,
+            // initialValue: Provider.of<SearchViewModel>(context).searchText,
             // onSelected: () => setState(() {}),
           ),
         ),

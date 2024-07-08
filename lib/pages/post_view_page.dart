@@ -8,6 +8,7 @@ import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/main.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
 import 'package:j_util/e621.dart';
 import 'package:j_util/j_util_full.dart';
@@ -418,20 +419,6 @@ class PostViewPage extends StatelessWidget
     ];
   }
 
-  @widgetFactory
-  Iterable<Widget>? _buildTagDisplay(
-    BuildContext context,
-    TextStyle headerStyle,
-    TagCategory? category,
-  ) {
-    return _willTagDisplayBeNonNull(category)
-        ? [
-            _buildTagDisplayHeader(context, headerStyle, category!),
-            ..._buildTagDisplayList(context, headerStyle, category),
-          ]
-        : null;
-  }
-
   bool _willTagDisplayBeNonNull(TagCategory? category) =>
       category != null && e6Post.tags.getByCategory(category).isNotEmpty;
   @widgetFactory
@@ -496,6 +483,16 @@ class PostViewPage extends StatelessWidget
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(tag, style: headerStyle.$),
+                ListTile(
+                  title: const Text("Search"),
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => buildHomePageWithProviders(
+                          searchText: tag,
+                        ),
+                      )),
+                ),
                 ListTile(
                   title: const Text("Add to search"),
                   onTap: () {
@@ -588,24 +585,6 @@ class PostViewPage extends StatelessWidget
             )
           ],
         );
-      },
-    );
-  }
-
-  @widgetFactory
-  HtmlElementView _createHtmlImageElement(String url, int w, int h) {
-    return HtmlElementView(
-      viewType: "imgPostTile",
-      // creationParams: ,
-      onPlatformViewCreated: (id) {
-        // https://api.flutter.dev/flutter/dart-html/ImageElement-class.html
-        var e = ui_web.getViewById(id) as dynamic; //ImageElement
-        e.attributes["src"] = url;
-        // https://api.flutter.dev/flutter/dart-html/CssStyleDeclaration-class.html
-        e.style.width = "100%";
-        e.style.height = "auto";
-        e.style.maxWidth = "100%";
-        e.style.maxHeight = "100%";
       },
     );
   }

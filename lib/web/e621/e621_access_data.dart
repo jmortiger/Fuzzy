@@ -19,6 +19,7 @@ final class E621AccessData with Storable<E621AccessData> {
   static String? get devUsername => devAccessData.itemSafe?.username;
   static String? get devUserAgent => devAccessData.itemSafe?.userAgent;
   static final userData = LateInstance<E621AccessData>();
+  static E621AccessData? fallback = userData.itemSafe ?? devAccessData.itemSafe;
   static const fileName = "credentials.json";
   static final filePathFull = LazyInitializer<String>(
     () async =>

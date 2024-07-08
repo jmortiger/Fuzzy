@@ -32,8 +32,8 @@ class WFabBuilder extends StatelessWidget {
     super.key,
     required E6PostResponse this.post,
     // this.onClearSelections,
-  }) : posts = null,
-       onClearSelections = null;
+  })  : posts = null,
+        onClearSelections = null;
   const WFabBuilder.multiplePosts({
     super.key,
     required List<E6PostResponse> this.posts,
@@ -42,14 +42,80 @@ class WFabBuilder extends StatelessWidget {
   static ActionButton getClearSelectionButton(
     BuildContext context, [
     void Function()? clearSelection,
-  ]) => ActionButton(
+  ]) =>
+      ActionButton(
         icon: const Icon(Icons.clear),
         tooltip: "Clear Selections",
-        onPressed: clearSelection ?? Provider.of<SearchResultsNotifier>(
-          context,
-          listen: false,
-        ).clearSelections,
+        onPressed: clearSelection ??
+            Provider.of<SearchResultsNotifier>(
+              context,
+              listen: false,
+            ).clearSelections,
+      );
+
+  static ActionButton getSinglePostUpvoteAction(
+    BuildContext context,
+    E6PostResponse post,
+  ) {
+    return ActionButton(
+      icon: const Icon(Icons.arrow_upward),
+      tooltip: "Upvote",
+      onPressed: () async {
+        print("Upvoting ${post.id}...");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Upvoting ${post.id}...")),
         );
+        e621.Api.sendRequest(
+          e621.Api.initVotePostRequest(
+            postId: post.id,
+            score: 1,
+            credentials: E621AccessData.fallback?.cred,
+          ),
+        ).then(
+          (v) {
+            print(v.body);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("${v.statusCode}: ${v.reasonPhrase}"),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  static ActionButton getSinglePostDownvoteAction(
+    BuildContext context,
+    E6PostResponse post,
+  ) {
+    return ActionButton(
+      icon: const Icon(Icons.arrow_downward),
+      tooltip: "Downvote",
+      onPressed: () async {
+        print("Downvoting ${post.id}...");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Downvoting ${post.id}...")),
+        );
+        e621.Api.sendRequest(
+          e621.Api.initVotePostRequest(
+            postId: post.id,
+            score: -1,
+            credentials: E621AccessData.fallback?.cred,
+          ),
+        ).then(
+          (v) {
+            print(v.body);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("${v.statusCode}: ${v.reasonPhrase}"),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   static ActionButton getSinglePostAddFavAction(
     BuildContext context,
@@ -67,8 +133,8 @@ class WFabBuilder extends StatelessWidget {
             .sendRequest(
               E621.initAddFavoriteRequest(
                 post.id,
-                username: E621AccessData.devUsername,
-                apiKey: E621AccessData.devApiKey,
+                username: E621AccessData.fallback?.username,
+                apiKey: E621AccessData.fallback?.apiKey,
               ),
             )
             .toResponse()
@@ -87,8 +153,8 @@ class WFabBuilder extends StatelessWidget {
                           int.parse(
                             v.request!.url.queryParameters["post_id"]!,
                           ),
-                          username: E621AccessData.devUsername,
-                          apiKey: E621AccessData.devApiKey,
+                          username: E621AccessData.fallback?.username,
+                          apiKey: E621AccessData.fallback?.apiKey,
                         ),
                       );
                       newStream.then(
@@ -131,8 +197,8 @@ class WFabBuilder extends StatelessWidget {
         );
         E621.sendAddFavoriteRequestBatch(
           posts.map((e) => e.id),
-          username: E621AccessData.devUsername,
-          apiKey: E621AccessData.devApiKey,
+          username: E621AccessData.fallback?.username,
+          apiKey: E621AccessData.fallback?.apiKey,
           onComplete: (responses) {
             var total = responses.length;
             responses.removeWhere(
@@ -159,8 +225,8 @@ class WFabBuilder extends StatelessWidget {
                       responses.map((e) => int.parse(
                             e.request!.url.queryParameters["post_id"]!,
                           )),
-                      username: E621AccessData.devUsername,
-                      apiKey: E621AccessData.devApiKey,
+                      username: E621AccessData.fallback?.username,
+                      apiKey: E621AccessData.fallback?.apiKey,
                       onComplete: (responses) =>
                           ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -178,6 +244,68 @@ class WFabBuilder extends StatelessWidget {
       },
     );
   }
+  /* static ActionButton getMultiplePostsUpvoteAction(
+    BuildContext context,
+    List<E6PostResponse> posts,
+  ) {
+    return ActionButton(
+      icon: const Icon(Icons.favorite),
+      tooltip: "Upvote selected to favorites",
+      onPressed: () async {
+        print("Upvoting ${posts.length} posts to favorites...");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text("Upvoting ${posts.length} posts to favorites...")),
+        );
+        E621.sendAddFavoriteRequestBatch(
+          posts.map((e) => e.id),
+          username: E621AccessData.fallback?.username,
+          apiKey: E621AccessData.fallback?.apiKey,
+          onComplete: (responses) {
+            var total = responses.length;
+            responses.removeWhere(
+              (element) => element.statusCodeInfo.isSuccessful,
+            );
+            var sbs = "${total - responses.length}/"
+                "$total posts added to favorites!";
+            responses.where((r) => r.statusCode == 422).forEach((r) async {
+              var pId = int.parse(r.request!.url.queryParameters["post_id"]!);
+              if (context.mounted &&
+                  Provider.of<CachedFavorites>(context, listen: false)
+                      .postIds
+                      .contains(pId)) {
+                sbs += " $pId Cached";
+              }
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(sbs),
+                action: SnackBarAction(
+                  label: "Undo",
+                  onPressed: () async {
+                    E621.sendDeleteFavoriteRequestBatch(
+                      responses.map((e) => int.parse(
+                            e.request!.url.queryParameters["post_id"]!,
+                          )),
+                      username: E621AccessData.fallback?.username,
+                      apiKey: E621AccessData.fallback?.apiKey,
+                      onComplete: (responses) =>
+                          ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              "${responses.where((element) => element.statusCodeInfo.isSuccessful).length}/${responses.length} posts removed from favorites!"),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  } */
 
   static ActionButton getMultiplePostsAddToSetAction(
     BuildContext context,
@@ -319,8 +447,8 @@ class WFabBuilder extends StatelessWidget {
               postIds.add(e.id);
               return E621.initDeleteFavoriteRequest(
                 e.id,
-                username: E621AccessData.devUsername,
-                apiKey: E621AccessData.devApiKey,
+                username: E621AccessData.fallback?.username,
+                apiKey: E621AccessData.fallback?.apiKey,
               );
             },
           ),
@@ -340,8 +468,8 @@ class WFabBuilder extends StatelessWidget {
                         int.parse(
                           e.request!.url.queryParameters["post_id"]!,
                         ),
-                        username: E621AccessData.devUsername,
-                        apiKey: E621AccessData.devApiKey,
+                        username: E621AccessData.fallback?.username,
+                        apiKey: E621AccessData.fallback?.apiKey,
                       ),
                     ),
                     onComplete: (responses) {
@@ -400,8 +528,8 @@ class WFabBuilder extends StatelessWidget {
             .sendRequest(
               E621.initDeleteFavoriteRequest(
                 post.id,
-                username: E621AccessData.devUsername,
-                apiKey: E621AccessData.devApiKey,
+                username: E621AccessData.fallback?.username,
+                apiKey: E621AccessData.fallback?.apiKey,
               ),
             )
             .toResponse()
@@ -424,8 +552,8 @@ class WFabBuilder extends StatelessWidget {
                               value.request!.url.pathSegments.last.indexOf("."),
                             ),
                           ),
-                          username: E621AccessData.devUsername,
-                          apiKey: E621AccessData.devApiKey,
+                          username: E621AccessData.fallback?.username,
+                          apiKey: E621AccessData.fallback?.apiKey,
                         ),
                       )
                           .onError((error, stackTrace) {
@@ -495,9 +623,8 @@ class WFabBuilder extends StatelessWidget {
           : "Long-press to select posts and perform bulk actions.",
       children: (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
           ? [
-              if (!isSinglePost/* && onClearSelections != null */)
-                WFabBuilder.getClearSelectionButton(
-                    context, onClearSelections),
+              if (!isSinglePost /* && onClearSelections != null */)
+                WFabBuilder.getClearSelectionButton(context, onClearSelections),
               if (!isSinglePost)
                 WFabBuilder.getMultiplePostsAddToSetAction(context, posts!),
               if (isSinglePost)
@@ -516,6 +643,8 @@ class WFabBuilder extends StatelessWidget {
                 getMultiplePostsRemoveFavAction(context, posts!),
               if (isSinglePost && post!.isFavorited)
                 getSinglePostRemoveFavAction(context, post!),
+              if (isSinglePost) getSinglePostUpvoteAction(context, post!),
+              if (isSinglePost) getSinglePostDownvoteAction(context, post!),
               // getPrintSelectionsAction(context, post, posts),
             ]
           : [],

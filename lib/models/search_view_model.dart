@@ -18,7 +18,7 @@ lm.FileLogger get logger => lRecord.logger;
 // #endregion Logger
 
 class SearchViewModel extends ChangeNotifier {
-  bool _lazyLoad = false;
+  bool _lazyLoad;
   bool get lazyLoad => _lazyLoad;
   bool toggleLazyLoad() {
     _lazyLoad = !_lazyLoad;
@@ -26,7 +26,7 @@ class SearchViewModel extends ChangeNotifier {
     return _lazyLoad;
   }
 
-  bool _lazyBuilding = false;
+  bool _lazyBuilding;
   bool get lazyBuilding => _lazyBuilding;
   bool toggleLazyBuilding() {
     _lazyBuilding = !_lazyBuilding;
@@ -34,7 +34,7 @@ class SearchViewModel extends ChangeNotifier {
     return _lazyBuilding;
   }
 
-  bool _forceSafe = false;
+  bool _forceSafe;
   bool get forceSafe => _forceSafe;
   bool toggleForceSafe() {
     _forceSafe = !_forceSafe;
@@ -42,7 +42,7 @@ class SearchViewModel extends ChangeNotifier {
     return _forceSafe;
   }
 
-  bool _sendAuthHeaders = true;
+  bool _sendAuthHeaders;
   bool get sendAuthHeaders => _sendAuthHeaders;
   bool toggleSendAuthHeaders() {
     _sendAuthHeaders = !_sendAuthHeaders;
@@ -58,7 +58,7 @@ class SearchViewModel extends ChangeNotifier {
     return _sendAuthHeaders;
   }
 
-  String _searchText = "";
+  String _searchText;
   String get searchText => _searchText;
   set searchText(String value) {
     _searchText = value;
@@ -79,12 +79,30 @@ class SearchViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool _fillTextBarWithSearchString = false;
+  bool _fillTextBarWithSearchString;
   bool get fillTextBarWithSearchString => _fillTextBarWithSearchString;
   set fillTextBarWithSearchString(bool value) {
     _fillTextBarWithSearchString = value;
     notifyListeners();
   }
+
+  SearchViewModel({
+    bool? lazyLoad,
+    bool? lazyBuilding,
+    bool? forceSafe,
+    String? priorSearchText,
+    String? searchText,
+    bool? sendAuthHeaders,
+    bool? fillTextBarWithSearchString,
+    Future<SearchResultArgs>? pr,
+  })  : _lazyLoad = lazyLoad ?? false,
+        _lazyBuilding = lazyBuilding ?? false,
+        _forceSafe = forceSafe ?? false,
+        _priorSearchText = priorSearchText ?? "",
+        _searchText = searchText ?? "",
+        _sendAuthHeaders = sendAuthHeaders ?? false,
+        _fillTextBarWithSearchString = fillTextBarWithSearchString ?? false,
+        _pr = pr;
 }
 
 class MultiSearch {

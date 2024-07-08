@@ -25,12 +25,12 @@ late final logger = lRecord.logger;
 // #endregion Logger
 
 class WSearchBar extends StatefulWidget {
-  final String? initialValue;
+  // final String? initialValue;
   final VoidFunction? onSelected;
 
   const WSearchBar({
     super.key,
-    this.initialValue,
+    // this.initialValue,
     this.onSelected,
   });
 

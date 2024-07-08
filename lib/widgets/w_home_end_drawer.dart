@@ -12,17 +12,10 @@ import 'package:fuzzy/widgets/w_search_pool.dart';
 import 'package:fuzzy/widgets/w_search_set.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:provider/provider.dart';
-
-// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
 import '../models/search_cache.dart';
 import '../web/e621/e621_access_data.dart';
-
-late final lRecord = lm.genLogger("WHomeEndDrawer");
-late final print = lRecord.print;
-late final logger = lRecord.logger;
-// #endregion Logger
 
 class WHomeEndDrawer extends StatefulWidget {
   final void Function(String searchText)? onSearchRequested;
@@ -34,6 +27,11 @@ class WHomeEndDrawer extends StatefulWidget {
 }
 
 class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
+  // #region Logger
+  static late final lRecord = lm.genLogger("WHomeEndDrawer");
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // #endregion Logger
   SearchViewModel get svm =>
       Provider.of<SearchViewModel>(context, listen: false);
   // #region SearchCache
@@ -77,21 +75,23 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             title: !E621AccessData.userData.isAssigned
                 ? const Text("Login")
                 : const Text("Change Login"),
-            onTap: () => launchLogInDialog(context),
+            onTap: () =>
+                launchLogInDialog(context).then((v) => setState(() {})),
           ),
-          // if (E621AccessData.userData.isAssigned)
-          ListTile(
-            title: const Text("Show User Profile"),
-            onTap: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => UserProfileLoaderPage.getByName(
-                        username: E621AccessData.userData.itemSafe?.username ??
-                            E621AccessData.devAccessData.item.username),
-                  ));
-            },
-          ),
+          if (E621AccessData.userData.isAssigned)
+            ListTile(
+              title: const Text("Show User Profile"),
+              onTap: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => UserProfileLoaderPage.getByName(
+                          username:
+                              E621AccessData.userData.itemSafe?.username ??
+                                  E621AccessData.devAccessData.item.username),
+                    )).then((v) => setState(() {}));
+              },
+            ),
           ListTile(
             title: const Text("Toggle Lazy Loading"),
             leading:
@@ -175,7 +175,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             title: const Text("Search sets"),
             leading: const Icon(Icons.search),
             onTap: () {
-              print("_WHomeEndDrawerState.build: Search Set activated");
+              print("Search Set activated");
               Navigator.pop(context);
               showDialog<e621.PostSet>(
                 context: context,
@@ -203,7 +203,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             title: const Text("Search pools"),
             leading: const Icon(Icons.search),
             onTap: () {
-              print("_WHomeEndDrawerState.build: Search Pool activated");
+              print("Search Pool activated");
               Navigator.pop(context);
               showDialog<e621.Pool>(
                 context: context,

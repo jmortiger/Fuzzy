@@ -20,19 +20,11 @@ import 'pages/home_page.dart';
 import 'web/e621/e621_access_data.dart';
 
 // #region Logger
-late final ({
-  lm.FileLogger logger,
-  void Function(Object?, [lm.LogLevel, Object?, StackTrace?, Zone?]) print
-}) lRecord;
-void Function(Object?, [lm.LogLevel, Object?, StackTrace?, Zone?]) get print =>
-    lRecord.print;
+late final ({lm.FileLogger logger, lm.Printer print}) lRecord;
+lm.Printer get print => lRecord.print;
 lm.FileLogger get logger => lRecord.logger;
-late final ({
-  lm.FileLogger logger,
-  void Function(Object?, [lm.LogLevel, Object?, StackTrace?, Zone?]) print
-}) lRRecord;
-void Function(Object?, [lm.LogLevel, Object?, StackTrace?, Zone?])
-    get routePrint => lRRecord.print;
+late final ({lm.FileLogger logger, lm.Printer print}) lRRecord;
+lm.Printer get routePrint => lRRecord.print;
 lm.FileLogger get routeLogger => lRRecord.logger;
 // #endregion Logger
 
@@ -88,21 +80,27 @@ void main() async {
         return MaterialPageRoute(builder: (ctx) => const HomePage());
       },
       theme: ThemeData.dark(),
-      home: _buildHomePageWithProviders(),
+      home: buildHomePageWithProviders(),
     ),
   );
 }
-Widget _buildHomePageWithProviders() => MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (context) => SearchViewModel()),
-          ChangeNotifierProvider(create: (context) => SearchCache()),
-          ChangeNotifierProvider(create: (context) => SearchResultsNotifier()),
-          ChangeNotifierProvider(
-              create: (context) => CachedFavorites.loadFromStorageSync()),
-          // ChangeNotifierProvider(create: (context) => SavedDataE6.$),
-        ],
-        child: const HomePage(),
-      );
+
+Widget buildHomePageWithProviders({
+  String? searchText,
+}) =>
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (context) => SearchViewModel(searchText: searchText),
+        ),
+        ChangeNotifierProvider(create: (context) => SearchCache()),
+        ChangeNotifierProvider(create: (context) => SearchResultsNotifier()),
+        ChangeNotifierProvider(
+            create: (context) => CachedFavorites.loadFromStorageSync()),
+        // ChangeNotifierProvider(create: (context) => SavedDataE6.$),
+      ],
+      child: const HomePage(),
+    );
 void pathSoundOff() {
   path
       .getApplicationCacheDirectory()
