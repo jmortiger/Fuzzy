@@ -25,12 +25,28 @@ final class E621AccessData with Storable<E621AccessData> {
     () async =>
         (!Platform.isWeb) ? "${(await appDataPath.getItem())}/$fileName" : "",
   );
+  static Future<String?> tryLoadAsStringAsync([E621AccessData? data]) async {
+    return Platform.isWeb
+        ? (await pref.getItem()).getString(localStorageKey)
+        : await (await Storable.tryGetStorageAsync(
+            await filePathFull.getItem(),
+          ))
+            ?.readAsString();
+  }
+
+  static String? tryLoadAsStringSync([E621AccessData? data]) {
+    return Platform.isWeb
+        ? pref.itemSafe?.getString(localStorageKey)
+        : Storable.tryGetStorageSync(
+            filePathFull.itemSafe ?? "",
+          )?.readAsStringSync();
+  }
+
   static Future<E621AccessData?> tryLoad() async {
     if (Platform.isWeb) {
       var t = (await pref.getItem()).getString(localStorageKey);
-      if (t != null) return E621AccessData.fromJson(jsonDecode(t));
+      if (t != null) return userData.$ = E621AccessData.fromJson(jsonDecode(t));
     }
-    var thing = await filePathFull.getItem();
     var t = await (await Storable.tryGetStorageAsync(
       await filePathFull.getItem(),
     ))
@@ -62,19 +78,19 @@ final class E621AccessData with Storable<E621AccessData> {
         "${data?.file.itemSafe?.existsSync()}",
       );
   static const localStorageKey = "e6Access";
+  static Future<bool> tryWriteToLocalStorage(E621AccessData data) =>
+      pref.getItem().then((v) => v.setString(
+            localStorageKey,
+            jsonEncode(data.toJson()),
+          ));
+
   static Future<bool> tryWrite([E621AccessData? data]) async {
-    if (Platform.isWeb) {
-      logger.info("Can't access file storage on web. "
-          "Local Storage solution not implemented.");
-      return false;
-    }
     data ??= userData.itemSafe;
     if (data != null) {
       if (Platform.isWeb) {
-        return (await pref.getItem()).setString(
-          localStorageKey,
-          jsonEncode(data.toJson()),
-        );
+        logger.info("Can't access file storage on web. "
+            "Attempting with Local Storage.");
+        return tryWriteToLocalStorage(data);
       }
       if (!data.file.isAssigned) {
         logger.warning(
@@ -122,6 +138,16 @@ final class E621AccessData with Storable<E621AccessData> {
           username: username,
           userAgent: userAgent ??
               "fuzzy/${version.itemSafe} by atotaltirefire@gmail.com");
+  static Future<E621AccessData> withDefaultAssured({
+    required String apiKey,
+    required String username,
+    String? userAgent,
+  }) async =>
+      E621AccessData(
+          apiKey: apiKey,
+          username: username,
+          userAgent: userAgent ??
+              "fuzzy/${await version.getItem()} by atotaltirefire@gmail.com");
   JsonOut toJson() => {
         "apiKey": apiKey,
         "username": username,

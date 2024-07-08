@@ -107,6 +107,7 @@ class _HomePageState extends State<HomePage> {
             _sendSearchAndUpdateState(tags: searchText);
           });
         },
+        getMountedContext: () => this.context,
       ), //_buildDrawer(context),
       floatingActionButton: WFabBuilder.multiplePosts(
         posts: Provider.of<SearchCache>(context, listen: true)

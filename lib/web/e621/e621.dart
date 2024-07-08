@@ -644,8 +644,10 @@ enum PostActions {
 }
 
 Future<({String username, String apiKey})?> launchLogInDialog(
-  BuildContext context,
-) =>
+  BuildContext context, [
+  BuildContext Function()? getMountedContext,
+  Duration snackbarDuration = const Duration(seconds: 6)
+]) =>
     showDialog<({String username, String apiKey})>(
       context: context,
       builder: (context) {
@@ -676,6 +678,7 @@ Future<({String username, String apiKey})?> launchLogInDialog(
                   ),
                   hintText: "API Key",
                 ),
+                obscureText: true,
               ),
             ],
           ),
@@ -695,30 +698,23 @@ Future<({String username, String apiKey})?> launchLogInDialog(
       },
     ).then((v) {
       if (v != null) {
-        version.getItem().then((_) {
-          E621AccessData.userData.$ = E621AccessData.withDefault(
-              apiKey: v.apiKey, username: v.username);
+        E621AccessData.withDefaultAssured(
+                apiKey: v.apiKey, username: v.username)
+            .then((v2) {
+          E621AccessData.userData.$ = v2;
           E621AccessData.tryWrite().then<void>(
-            (_) => _
+            (success) => success
                 ? ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: const Text("Successfully stored! Test it!"),
-                      action: SnackBarAction(
-                        label: "See Contents",
-                        onPressed: () async => context.mounted
-                            ? showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  content: Text(
-                                    E621AccessData
-                                            .userData.itemSafe?.file.itemSafe
-                                            ?.readAsStringSync() ??
-                                        "",
-                                  ),
-                                ),
-                              )
-                            : "",
-                      ),
+                      duration: snackbarDuration,
+                      action: getMountedContext?.call().mounted ?? false
+                          ? SnackBarAction(
+                              label: "See File Contents",
+                              onPressed: () => showSavedE621AccessDataFile(
+                                  getMountedContext!()),
+                            )
+                          : null,
                     ),
                   )
                 : "",
@@ -727,3 +723,15 @@ Future<({String username, String apiKey})?> launchLogInDialog(
       }
       return v;
     });
+FutureOr<void> showSavedE621AccessDataFile(BuildContext context) =>
+    context.mounted
+        ? showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              content: Text(
+                E621AccessData.tryLoadAsStringSync(E621AccessData.userData.$) ??
+                    "",
+              ),
+            ),
+          )
+        : null;

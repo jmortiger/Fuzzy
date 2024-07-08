@@ -20,7 +20,14 @@ import '../web/e621/e621_access_data.dart';
 class WHomeEndDrawer extends StatefulWidget {
   final void Function(String searchText)? onSearchRequested;
 
-  const WHomeEndDrawer({super.key, this.onSearchRequested});
+  /// For snackbars
+  final BuildContext Function()? getMountedContext;
+
+  const WHomeEndDrawer({
+    super.key,
+    this.onSearchRequested,
+    this.getMountedContext,
+  });
 
   @override
   State<WHomeEndDrawer> createState() => _WHomeEndDrawerState();
@@ -49,6 +56,16 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
   set hasNextPageCached(bool? value) => sc.hasNextPageCached = value;
   bool? get hasPriorPage => sc.hasPriorPage;
   // #endregion SearchCache
+  /// It's better to directly check if [E621AccessData.userData] is assigned, 
+  /// but this forces the end drawer to rebuild when changed.
+  bool isLoggedIn = false;
+  // bool get isLoggedIn => E621AccessData.userData.isAssigned;
+  @override
+  void initState() {
+    super.initState();
+    // TODO: implement initState
+    isLoggedIn = E621AccessData.userData.isAssigned;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,13 +89,19 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             },
           ),
           ListTile(
-            title: !E621AccessData.userData.isAssigned
+            title: !isLoggedIn
                 ? const Text("Login")
                 : const Text("Change Login"),
-            onTap: () =>
-                launchLogInDialog(context).then((v) => setState(() {})),
+            onTap: () => launchLogInDialog(context, widget.getMountedContext)
+                .then((v) => (this.context.mounted)
+                    ? setState(() {
+                        isLoggedIn = true;
+                      })
+                    : ""),
+            // onTap: () => launchLogInDialog(context, () => this.context)
+            //     .then((v) => setState(() {})),
           ),
-          if (E621AccessData.userData.isAssigned)
+          if (isLoggedIn)
             ListTile(
               title: const Text("Show User Profile"),
               onTap: () {
@@ -164,8 +187,10 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             title: const Text("Toggle Image Display Method"),
             onTap: () {
               print("Before: ${imageFit.name}");
-              imageFit =
-                  imageFit == BoxFit.contain ? BoxFit.cover : BoxFit.contain;
+              setState(() {
+                imageFit =
+                    imageFit == BoxFit.contain ? BoxFit.cover : BoxFit.contain;
+              });
               print("After: ${imageFit.name}");
               // Navigator.pop(context);
             },
