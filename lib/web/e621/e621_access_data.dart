@@ -21,7 +21,8 @@ final class E621AccessData with Storable<E621AccessData> {
   static bool useLoginData = true;
   static bool toggleUseLoginData() => useLoginData = !useLoginData;
   static final userData = LateInstance<E621AccessData>();
-  static E621AccessData? fallback = useLoginData ? userData.$Safe ?? devAccessData.$Safe : null;
+  static E621AccessData? fallback =
+      useLoginData ? userData.$Safe ?? devAccessData.$Safe : null;
   static E621AccessData? fallbackForced = userData.$Safe ?? devAccessData.$Safe;
   static const fileName = "credentials.json";
   static final filePathFull = LazyInitializer<String>(
@@ -48,6 +49,7 @@ final class E621AccessData with Storable<E621AccessData> {
   static Future<E621AccessData?> tryLoad() async {
     if (Platform.isWeb) {
       var t = (await pref.getItem()).getString(localStorageKey);
+      logger.warning("From Local Storage: $t");
       if (t != null) return userData.$ = E621AccessData.fromJson(jsonDecode(t));
     }
     var t = await (await Storable.tryGetStorageAsync(

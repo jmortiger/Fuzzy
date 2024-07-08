@@ -4,8 +4,11 @@ import 'package:fuzzy/pages/post_view_page.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:j_util/j_util_full.dart';
 
-class PostSwipePage extends StatefulWidget implements IReturnsTags, IRoute<PostSwipePage> {
+class PostSwipePage extends StatefulWidget
+    implements IReturnsTags, IRoute<PostSwipePage> {
   static const routeNameString = "/";
+
+  final bool startFullscreen;
   @override
   get routeName => routeNameString;
   final int initialIndex;
@@ -22,16 +25,18 @@ class PostSwipePage extends StatefulWidget implements IReturnsTags, IRoute<PostS
     required Iterable<E6PostResponse> posts,
     this.onAddToSearch,
     this.tagsToAdd,
-  }) : postsObj = null,
-      postsIterable = posts;
+    this.startFullscreen = false,
+  })  : postsObj = null,
+        postsIterable = posts;
   const PostSwipePage({
     super.key,
     required this.initialIndex,
     required E6Posts posts,
     this.onAddToSearch,
     this.tagsToAdd,
-  }) : postsObj = posts,
-      postsIterable = null;
+    this.startFullscreen = false,
+  })  : postsObj = posts,
+        postsIterable = null;
 
   @override
   State<PostSwipePage> createState() => _PostSwipePageState();
@@ -44,10 +49,11 @@ class _PostSwipePageState extends State<PostSwipePage>
   late TabController _tabController;
   late int _currentPageIndex;
   String toReturn = "";
-
+  bool isFullscreen = false;
   @override
   void initState() {
     super.initState();
+    isFullscreen = widget.startFullscreen;
     _pageViewController = PageController(
       initialPage: widget.initialIndex,
       keepPage: false,
@@ -83,13 +89,17 @@ class _PostSwipePageState extends State<PostSwipePage>
         allowImplicitScrolling: true,
         // onPageChanged: _handlePageViewChanged,
         children: widget.posts.mapAsList(
-          (elem, index, list) => PostViewPage(
+          (elem, index, list) => PostViewPage.overrideFullscreen(
             postListing: elem,
             onAddToSearch: (s) {
               widget.onAddToSearch?.call(s);
               toReturn = "$toReturn $s";
               widget.tagsToAdd?.add(s);
             },
+            getFullscreen: () => isFullscreen,
+            setFullscreen: (v) => setState(() {
+              isFullscreen = v;
+            }),
           ),
         ),
       );
@@ -106,7 +116,7 @@ class _PostSwipePageState extends State<PostSwipePage>
           onPageChanged: _handlePageViewChanged,
           allowImplicitScrolling: true,
           children: widget.posts.mapAsList(
-            (elem, index, list) => PostViewPage(
+            (elem, index, list) => PostViewPage.overrideFullscreen(
               postListing: elem,
               onAddToSearch: (s) {
                 widget.onAddToSearch?.call(s);
@@ -114,6 +124,10 @@ class _PostSwipePageState extends State<PostSwipePage>
                 widget.tagsToAdd?.add(s);
               },
               onPop: () => Navigator.pop(context, widget),
+              getFullscreen: () => isFullscreen,
+              setFullscreen: (v) => setState(() {
+                isFullscreen = v;
+              }),
             ),
           ),
         ),
@@ -201,7 +215,7 @@ class PageIndicator extends StatelessWidget {
             splashRadius: 16.0,
             padding: EdgeInsets.zero,
             onPressed: () {
-              if (currentPageIndex == 2) {
+              if (currentPageIndex == tabController.length - 1) {
                 return;
               }
               onUpdateCurrentPageIndex(currentPageIndex + 1);

@@ -12,7 +12,7 @@ import 'package:fuzzy/main.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
 import 'package:j_util/e621.dart';
 import 'package:j_util/j_util_full.dart';
-import 'package:j_util/platform_finder.dart' as ui_web;
+// import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
 import 'package:progressive_image/progressive_image.dart';
@@ -21,27 +21,36 @@ import '../web/e621/e621.dart';
 import '../widgets/w_fab_builder.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
-// #region Logger
-late final lRecord = lm.genLogger("PostViewPage");
-lm.Printer get print => lRecord.print;
-lm.FileLogger get logger => lRecord.logger;
-// #endregion Logger
-
 abstract interface class IReturnsTags {
   List<String>? get tagsToAdd;
 }
 
 bool overrideQuality = true;
+const descriptionTheme = TextStyle(fontWeight: FontWeight.bold, fontSize: 18);
+const headerStyle = TextStyle(
+  fontWeight: FontWeight.bold,
+  fontSize: 18,
+  // color: Colors.amber,
+  // decorationStyle: TextDecorationStyle.solid,
+  decoration: TextDecoration.underline,
+);
 
 /// TODO: Expansion State Preservation on scroll
-class PostViewPage extends StatelessWidget
+class PostViewPage extends StatefulWidget
     implements IReturnsTags, IRoute<PostViewPage> {
+  // #region Logger
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("PostViewPage");
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // #endregion Logger
   static const routeNameString = "/post";
-  @override
-  get routeName => routeNameString;
   final PostListing postListing;
   final void Function(String addition)? onAddToSearch;
   final void Function()? onPop;
+  final bool? startFullscreen;
+  final bool Function()? getFullscreen;
+  final void Function(bool)? setFullscreen;
   @override
   final List<String>? tagsToAdd;
   const PostViewPage({
@@ -50,16 +59,45 @@ class PostViewPage extends StatelessWidget
     this.onAddToSearch,
     this.onPop,
     this.tagsToAdd,
+    bool this.startFullscreen = false,
+  })  : getFullscreen = null,
+        setFullscreen = null;
+  const PostViewPage.overrideFullscreen({
+    super.key,
+    required this.postListing,
+    this.onAddToSearch,
+    this.onPop,
+    this.tagsToAdd,
+    this.startFullscreen,
+    required bool Function() this.getFullscreen,
+    required void Function(bool) this.setFullscreen,
   });
-  E6PostResponse get e6Post => postListing as E6PostResponse;
+
+  @override
+  get routeName => PostViewPage.routeNameString;
+
+  @override
+  State<PostViewPage> createState() => _PostViewPageState();
+}
+
+class _PostViewPageState extends State<PostViewPage> {
+  // #region Logger
+  // static get lRecord => PostViewPage.lRecord;
+  static lm.Printer get print => PoolViewPage.print;
+  static lm.FileLogger get logger => PostViewPage.logger;
+  // #endregion Logger
+  E6PostResponse get e6Post => widget.postListing as E6PostResponse;
+
   PostView get pvs => AppSettings.i!.postView;
-  static final descriptionTheme = LateFinal<TextStyle>();
 
   IImageInfo getImageInfo(BuildContext context) {
-    var horizontalPixels = MediaQuery.sizeOf(context).width *
-        MediaQuery.devicePixelRatioOf(context);
+    final w = MediaQuery.sizeOf(context).width,
+        dpr = MediaQuery.devicePixelRatioOf(context),
+        horizontalPixels = w * dpr;
+    logger.log(lm.LogLevel.INFO,
+        "MediaQuery.sizeOf(context).width: $w\nMediaQuery.devicePixelRatioOf(context): $dpr\nCalculated pixel width(w*dpr): $horizontalPixels");
     // var IImageInfo(width: w, height: h, url: url) = postListing.sample;
-    var i = postListing.file.isAVideo
+    var i = widget.postListing.file.isAVideo
         ? switch (PostView.i.imageQuality) {
             "low" => (e6Post.sample.alternates!.alternates["480p"] ??
                 e6Post.sample.alternates!.alternates["720p"] ??
@@ -69,7 +107,7 @@ class PostViewPage extends StatelessWidget
             "high" => e6Post.sample.alternates!.alternates["original"]!,
             _ => throw UnsupportedError("type not supported"),
           }
-        : postListing.file.extension == "gif" &&
+        : widget.postListing.file.extension == "gif" &&
                 e6Post.tags.meta.contains("animated")
             ? e6Post.file
             : switch (PostView.i.imageQuality) {
@@ -78,13 +116,13 @@ class PostViewPage extends StatelessWidget
                 "high" => e6Post.file,
                 _ => throw UnsupportedError("type not supported"),
               };
-    if (!postListing.file.isAVideo && i.width > horizontalPixels) {
+    /* if (!postListing.file.isAVideo && i.width > horizontalPixels) {
       if (e6Post.preview.width > horizontalPixels) {
         i = postListing.preview;
       } else if (e6Post.sample.width > horizontalPixels) {
         i = postListing.sample;
       }
-    }
+    } */
     // if (!postListing.file.isAVideo && /* w < horizontalPixels &&  */
     //     pvs.forceHighQualityImage) {
     //   IImageInfo(width: w, height: h, url: url) = postListing.file;
@@ -92,13 +130,27 @@ class PostViewPage extends StatelessWidget
     return i;
   }
 
+  bool _isFullScreen = false;
+  bool get isFullScreen =>
+      isFullscreenOverridden ? widget.getFullscreen!() : _isFullScreen;
+  set isFullScreen(bool v) => setState(() {
+        isFullscreenOverridden
+            ? widget.setFullscreen!(_isFullScreen = v)
+            : _isFullScreen = v;
+      });
+  @override
+  void initState() {
+    super.initState();
+    _isFullScreen = widget.startFullscreen ?? widget.getFullscreen!();
+  }
+
+  bool get isFullscreenOverridden => widget.getFullscreen != null;
+
+  void toggleFullscreen() => isFullScreen = !isFullScreen;
+
+  bool get treatAsFullscreen => isFullScreen && !e6Post.file.isAVideo;
   @override
   Widget build(BuildContext context) {
-    descriptionTheme.itemSafe ??=
-        const DefaultTextStyle.fallback().style.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 12 * 1.5,
-            );
     var IImageInfo(width: w, height: h, url: url) = getImageInfo(context);
     return Scaffold(
       body: SafeArea(
@@ -110,8 +162,33 @@ class PostViewPage extends StatelessWidget
               h: h,
               url: url,
             ),
+            if (treatAsFullscreen)
+              const Positioned.fill(
+                child: ColoredBox(
+                  color: Colors.black,
+                ),
+              ),
+            if (treatAsFullscreen)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: toggleFullscreen,
+                  child: InteractiveViewer(
+                    child: _buildImageContent(
+                      url,
+                      w,
+                      h,
+                      context,
+                      BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+            // if (treatAsFullscreen) _buildFullscreenToggle(),
             WPostViewBackButton(
-              onPop: onPop ?? () => Navigator.pop(context, this),
+              // onPop: widget.onPop ?? () => Navigator.pop(context, this),
+              onPop: !treatAsFullscreen
+                  ? widget.onPop ?? () => Navigator.pop(context, this)
+                  : toggleFullscreen,
             ),
           ],
         ),
@@ -126,20 +203,34 @@ class PostViewPage extends StatelessWidget
     required int h,
     required String url,
   }) {
+    final maxWidth = MediaQuery.of(context).size.width;
+    final maxHeight = (h / w) * MediaQuery.of(context).size.width;
+    final ar = w / h;
+    logger.log(
+      lm.LogLevel.INFO,
+      "Content: w $w h $h ratio $ar",
+    );
+    logger.log(
+      lm.LogLevel.INFO,
+      "Constraints: maxWidth $maxWidth maxHeight $maxHeight ratio ${maxWidth / maxHeight}",
+    );
     return ListView(
       // padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
       children: [
         Container(
           constraints: BoxConstraints(
-            maxWidth: pvs.allowOverflow
-                ? MediaQuery.of(context).size.width
-                : (MediaQuery.of(context).size.height / h) * w.toDouble(),
-            maxHeight: pvs.allowOverflow
-                ? (MediaQuery.of(context).size.width / w) * h.toDouble()
-                : MediaQuery.of(context).size.height,
+            maxWidth: maxWidth,
+            maxHeight: maxHeight,
+            // maxHeight: (MediaQuery.of(context).size.width / w) * h.toDouble(),
+            // maxWidth: pvs.allowOverflow
+            //     ? MediaQuery.of(context).size.width
+            //     : (MediaQuery.of(context).size.height / h) * w.toDouble(),
+            // maxHeight: pvs.allowOverflow
+            //     ? (MediaQuery.of(context).size.width / w) * h.toDouble()
+            //     : MediaQuery.of(context).size.height,
           ),
           child: AspectRatio(
-            aspectRatio: w / h,
+            aspectRatio: ar,
             child: _buildMainContent(url, w, h, context),
           ),
         ),
@@ -166,14 +257,15 @@ class PostViewPage extends StatelessWidget
                                   ),
                                 );
                               } catch (e, s) {
-                                logger.severe("Failed: ${snapshot.data}", e, s);
+                                PostViewPage.logger
+                                    .severe("Failed: ${snapshot.data}", e, s);
                                 return Scaffold(
                                   appBar: AppBar(),
                                   body: Text("$e\n$s\n${snapshot.data}"),
                                 );
                               }
                             } else if (snapshot.hasError) {
-                              logger.severe(
+                              PostViewPage.logger.severe(
                                 "Failed: ${snapshot.data}",
                                 snapshot.error,
                                 snapshot.stackTrace,
@@ -219,7 +311,7 @@ class PostViewPage extends StatelessWidget
         if (e6Post.description.isNotEmpty)
           ExpansionTile(
             title: ListTile(
-              title: Text("Description", style: descriptionTheme.$),
+              title: Text("Description", style: descriptionTheme),
             ),
             initiallyExpanded: PostView.i.startWithDescriptionExpanded,
             children: [SelectableText(e6Post.description)],
@@ -236,9 +328,38 @@ class PostViewPage extends StatelessWidget
     final int h,
     final BuildContext ctx,
   ) {
-    if (postListing.file.isAVideo) {
+    if (widget.postListing.file.isAVideo) {
       return WVideoPlayerScreen(
-          resourceUri: Uri.tryParse(url) ?? postListing.file.address);
+          resourceUri: Uri.tryParse(url) ?? widget.postListing.file.address);
+    } else {
+      return Stack(
+        children: [
+          Positioned.fill(child: _buildImageContent(url, w, h, ctx)),
+          _buildFullscreenToggle(),
+        ],
+      );
+    }
+  }
+
+  Positioned _buildFullscreenToggle() {
+    return Positioned.fill(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(onTap: toggleFullscreen),
+      ),
+    );
+  }
+
+  @widgetFactory
+  Widget _buildMainContentLegacy(
+    final String url,
+    final int w,
+    final int h,
+    final BuildContext ctx,
+  ) {
+    if (widget.postListing.file.isAVideo) {
+      return WVideoPlayerScreen(
+          resourceUri: Uri.tryParse(url) ?? widget.postListing.file.address);
     } else {
       return Stack(
         children: [
@@ -350,20 +471,14 @@ class PostViewPage extends StatelessWidget
     }
   }
 
-  static final headerStyle = LateFinal<TextStyle>();
   @widgetFactory
   Iterable<Widget> _buildTagsDisplay(BuildContext context) {
-    headerStyle.itemSafe ??= descriptionTheme.$.copyWith(
-      // color: Colors.amber,
-      decoration: TextDecoration.underline,
-      // decorationStyle: TextDecorationStyle.solid,
-    );
     var tagOrder = pvs.tagOrder;
     return [
       if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(0)))
         _buildTagDisplayFoldout(
           context,
-          headerStyle.$.copyWith(
+          headerStyle.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(0)],
           ),
           tagOrder.elementAtOrNull(0),
@@ -371,7 +486,7 @@ class PostViewPage extends StatelessWidget
       if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(1)))
         _buildTagDisplayFoldout(
           context,
-          headerStyle.$.copyWith(
+          headerStyle.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(1)],
           ),
           tagOrder.elementAtOrNull(1),
@@ -379,7 +494,7 @@ class PostViewPage extends StatelessWidget
       if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(2)))
         _buildTagDisplayFoldout(
           context,
-          headerStyle.$.copyWith(
+          headerStyle.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(2)],
           ),
           tagOrder.elementAtOrNull(2),
@@ -387,7 +502,7 @@ class PostViewPage extends StatelessWidget
       if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(3)))
         _buildTagDisplayFoldout(
           context,
-          headerStyle.$.copyWith(
+          headerStyle.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(3)],
           ),
           tagOrder.elementAtOrNull(3),
@@ -395,7 +510,7 @@ class PostViewPage extends StatelessWidget
       if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(4)))
         _buildTagDisplayFoldout(
           context,
-          headerStyle.$.copyWith(
+          headerStyle.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(4)],
           ),
           tagOrder.elementAtOrNull(4),
@@ -403,7 +518,7 @@ class PostViewPage extends StatelessWidget
       if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(5)))
         _buildTagDisplayFoldout(
           context,
-          headerStyle.$.copyWith(
+          headerStyle.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(5)],
           ),
           tagOrder.elementAtOrNull(5),
@@ -411,7 +526,7 @@ class PostViewPage extends StatelessWidget
       if (_willTagDisplayBeNonNull(tagOrder.elementAtOrNull(6)))
         _buildTagDisplayFoldout(
           context,
-          headerStyle.$.copyWith(
+          headerStyle.copyWith(
             color: pvs.tagColors[tagOrder.elementAtOrNull(6)],
           ),
           tagOrder.elementAtOrNull(6),
@@ -421,6 +536,7 @@ class PostViewPage extends StatelessWidget
 
   bool _willTagDisplayBeNonNull(TagCategory? category) =>
       category != null && e6Post.tags.getByCategory(category).isNotEmpty;
+
   @widgetFactory
   Widget? _buildTagDisplayFoldout(
     BuildContext context,
@@ -482,7 +598,7 @@ class PostViewPage extends StatelessWidget
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(tag, style: headerStyle.$),
+                Text(tag, style: headerStyle),
                 ListTile(
                   title: const Text("Search"),
                   onTap: () => Navigator.push(
@@ -496,8 +612,8 @@ class PostViewPage extends StatelessWidget
                 ListTile(
                   title: const Text("Add to search"),
                   onTap: () {
-                    onAddToSearch?.call(tag);
-                    tagsToAdd?.add(tag);
+                    widget.onAddToSearch?.call(tag);
+                    widget.tagsToAdd?.add(tag);
                     Navigator.pop(context);
                   },
                 ),

@@ -63,7 +63,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
   @override
   void initState() {
     super.initState();
-    isLoggedIn = E621AccessData.userData.isAssigned;
+    isLoggedIn = E621AccessData.userData.isAssigned && E621AccessData.useLoginData;
   }
 
   @override
@@ -71,9 +71,10 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
     return Drawer(
       child: ListView(
         children: [
-          isLoggedIn
+          !isLoggedIn
               ? const DrawerHeader(child: Text("Menu"))
-              : DrawerHeader(child: Text(E621AccessData.userData.$.username)),
+              // : DrawerHeader(child: Text(E621AccessData.fallback?.username ?? "FAIL")),
+              : DrawerHeader(child: Text(E621AccessData.userData.$Safe?.username ?? "FAIL")),
           ListTile(
             title: const Text("Go to settings"),
             onTap: () {
@@ -108,8 +109,8 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                     MaterialPageRoute(
                       builder: (context) => UserProfileLoaderPage.getByName(
                           username:
-                              E621AccessData.userData.itemSafe?.username ??
-                                  E621AccessData.devAccessData.item.username),
+                              E621AccessData.userData.$Safe?.username ??
+                                  E621AccessData.devAccessData.$.username),
                     ));
               },
             ),

@@ -52,6 +52,7 @@ class AppSettingsRecord {
 
 class AppSettings implements AppSettingsRecord {
   // #region FileIO
+  // static const localStoragePrefix = "settings";
   static const fileName = "settings.json";
   static final _fileFullPath = LazyInitializer(
       () async => "${await util.appDataPath.getItem()}/$fileName");
@@ -90,14 +91,19 @@ class AppSettings implements AppSettingsRecord {
 
   Future<AppSettings> loadFromFile() async {
     return switch (Platform.getPlatform()) {
-      Platform.web => defaultSettings,
+      Platform.web => this..overwriteWithRecord(defaultSettings),
       Platform.android || Platform.iOS => this
         ..overwriteWithRecord(AppSettings.fromJson(
             jsonDecode(await (await myFile.getItem()).readAsString()))),
       _ => throw UnsupportedError("platform not supported"),
     };
   }
-
+  /* static Future<String?> loadStringAsync() async {
+    !Platform.isWeb ? await (await myFile.getItem()).readAsString()
+    : (() {
+      
+    })();
+  } */
   static Future<io.File?> writeSettingsToFile([AppSettings? a]) async =>
       switch (Platform.getPlatform()) {
         Platform.web => null,
@@ -128,6 +134,16 @@ class AppSettings implements AppSettingsRecord {
   factory AppSettings.fromJson(JsonOut json) =>
       AppSettings.fromRecord(AppSettingsRecord.fromJson(json));
   // #endregion JSON (indirect, don't need updating w/ new fields)
+  
+  // static List<(String, dynamic Function(), void Function(dynamic))> getFields(AppSettings i) => [
+  //   ("postView", () => i.postView as dynamic, (v) => i.postView = v),
+  //   ("searchView", () => i.searchView as dynamic, (v) => i.searchView = v),
+  //   ("favoriteTags", () => i.favoriteTags as dynamic, (v) => i.favoriteTags = v),
+  //   ("blacklistedTags", () => i.blacklistedTags as dynamic, (v) => i.blacklistedTags = v),
+  // ];
+  // static String? loadFromLocalStorage() {
+    
+  // }
   factory AppSettings.fromRecord(AppSettingsRecord r) => AppSettings.all(
         postView: PostView.fromData(r.postView),
         searchView: SearchView.fromData(r.searchView),
@@ -210,7 +226,7 @@ class PostViewData {
     },
     colorTags: true,
     colorTagHeaders: false,
-    allowOverflow: true,
+    // allowOverflow: true,
     forceHighQualityImage: true,
     autoplayVideo: true,
     startVideoMuted: true,
@@ -225,7 +241,7 @@ class PostViewData {
   final Map<TagCategory, Color> tagColors;
   final bool colorTags;
   final bool colorTagHeaders;
-  final bool allowOverflow;
+  // final bool allowOverflow;
   final bool forceHighQualityImage;
   final bool autoplayVideo;
   final bool startVideoMuted;
@@ -243,7 +259,7 @@ class PostViewData {
     required this.tagColors,
     required this.colorTags,
     required this.colorTagHeaders,
-    required this.allowOverflow,
+    // required this.allowOverflow,
     required this.forceHighQualityImage,
     required this.autoplayVideo,
     required this.startVideoMuted,
@@ -263,7 +279,7 @@ class PostViewData {
             defaultData.tagColors,
         colorTags: json["colorTags"] ?? defaultData.colorTags,
         colorTagHeaders: json["colorTagHeaders"] ?? defaultData.colorTagHeaders,
-        allowOverflow: json["allowOverflow"] ?? defaultData.allowOverflow,
+        // allowOverflow: json["allowOverflow"] ?? defaultData.allowOverflow,
         forceHighQualityImage:
             json["forceHighQualityImage"] ?? defaultData.forceHighQualityImage,
         autoplayVideo: json["autoplayVideo"] ?? defaultData.autoplayVideo,
@@ -286,7 +302,7 @@ class PostViewData {
         "tagColors": tagColors.map((k, v) => MapEntry(k.toJson(), v.value)),
         "colorTags": colorTags,
         "colorTagHeaders": colorTagHeaders,
-        "allowOverflow": allowOverflow,
+        // "allowOverflow": allowOverflow,
         "forceHighQualityImage": forceHighQualityImage,
         "autoplayVideo": autoplayVideo,
         "startVideoMuted": startVideoMuted,
@@ -317,10 +333,10 @@ class PostView implements PostViewData {
   @override
   bool get colorTagHeaders => _colorTagHeaders;
   set colorTagHeaders(bool v) => _colorTagHeaders = v;
-  bool _allowOverflow;
-  @override
-  bool get allowOverflow => _allowOverflow;
-  set allowOverflow(bool v) => _allowOverflow = v;
+  // bool _allowOverflow;
+  // @override
+  // bool get allowOverflow => _allowOverflow;
+  // set allowOverflow(bool v) => _allowOverflow = v;
   bool _forceHighQualityImage;
   @override
   bool get forceHighQualityImage => _forceHighQualityImage;
@@ -363,7 +379,7 @@ class PostView implements PostViewData {
     required Map<TagCategory, Color> tagColors,
     required bool colorTags,
     required bool colorTagHeaders,
-    required bool allowOverflow,
+    // required bool allowOverflow,
     required bool forceHighQualityImage,
     required bool autoplayVideo,
     required bool startVideoMuted,
@@ -377,7 +393,7 @@ class PostView implements PostViewData {
         _tagColors = tagColors,
         _colorTags = colorTags,
         _colorTagHeaders = colorTagHeaders,
-        _allowOverflow = allowOverflow,
+        // _allowOverflow = allowOverflow,
         _forceHighQualityImage = forceHighQualityImage,
         _autoplayVideo = autoplayVideo,
         _startVideoMuted = startVideoMuted,
@@ -393,7 +409,7 @@ class PostView implements PostViewData {
         tagColors: Map.from(postView.tagColors),
         colorTags: postView.colorTags,
         colorTagHeaders: postView.colorTagHeaders,
-        allowOverflow: postView.allowOverflow,
+        // allowOverflow: postView.allowOverflow,
         forceHighQualityImage: postView.forceHighQualityImage,
         autoplayVideo: postView.autoplayVideo,
         startVideoMuted: postView.startVideoMuted,
@@ -410,7 +426,7 @@ class PostView implements PostViewData {
     tagColors = Map.from(postView.tagColors);
     colorTags = postView.colorTags;
     colorTagHeaders = postView.colorTagHeaders;
-    allowOverflow = postView.allowOverflow;
+    // allowOverflow = postView.allowOverflow;
     forceHighQualityImage = postView.forceHighQualityImage;
     autoplayVideo = postView.autoplayVideo;
     startVideoMuted = postView.startVideoMuted;
@@ -427,7 +443,7 @@ class PostView implements PostViewData {
         tagColors: tagColors,
         colorTags: colorTags,
         colorTagHeaders: colorTagHeaders,
-        allowOverflow: allowOverflow,
+        // allowOverflow: allowOverflow,
         forceHighQualityImage: forceHighQualityImage,
         autoplayVideo: autoplayVideo,
         startVideoMuted: startVideoMuted,

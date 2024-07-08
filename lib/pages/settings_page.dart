@@ -18,7 +18,7 @@ late final logger = lRecord.logger;
 // #endregion Logger
 
 class SettingsPage extends StatelessWidget implements IRoute<SettingsPage> {
-  static const routeNameString = "/";
+  static const routeNameString = "/settings";
   @override
   get routeName => routeNameString;
   const SettingsPage({super.key});
@@ -152,8 +152,9 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               name: "Blacklisted Tags",
               setVal: (Set<String> v) => AppSettings.i!.blacklistedTags = v,
             ),
-            const ListTile(
-              title: Text("Clear Cached Searches"),
+            ListTile(
+              title: const Text("Clear Cached Searches"),
+              subtitle: Text("Delete all ${CachedSearches.searches.length} searches"),
               onTap: CachedSearches.clear,
             )
           ],
@@ -229,6 +230,10 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
             style: SettingsPage.titleStyle,
           ),
           children: [
+            Text(
+              "Image Display",
+              style: SettingsPage.titleStyle,
+            ),
             WBooleanField(
               name: "Default to High Quality Image",
               subtitle:
@@ -253,19 +258,22 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               trailing: Text(PostView.i.imageQuality),
             ),
             WBooleanField(
-              name: "Allow Overflow",
-              getVal: () => PostView.i.allowOverflow,
-              setVal: (p1) => PostView.i.allowOverflow = p1,
+              name: "Use Progressive Images",
+              subtitle:
+                  "Load a low-quality preview before loading the main image?",
+              getVal: () => PostView.i.useProgressiveImages,
+              setVal: (p) => PostView.i.useProgressiveImages = p,
             ),
-            WBooleanField(
-              name: "Color Tag Headers",
-              getVal: () => PostView.i.colorTagHeaders,
-              setVal: (p1) => PostView.i.colorTagHeaders = p1,
+            WEnumField<FilterQuality>(
+              name: "Image Filter Quality",
+              getVal: () => PostView.i.imageFilterQuality,
+              setVal: (/* FilterQuality  */dynamic val) =>
+                  PostView.i.imageFilterQuality = val,
+              values: FilterQuality.values,
             ),
-            WBooleanField(
-              name: "Color Tags",
-              getVal: () => PostView.i.colorTags,
-              setVal: (p1) => PostView.i.colorTags = p1,
+            Text(
+              "Video Display",
+              style: SettingsPage.titleStyle,
             ),
             WBooleanField(
               name: "Autoplay Video",
@@ -284,6 +292,25 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               getVal: () => PostView.i.showTimeLeft,
               setVal: (p1) => PostView.i.showTimeLeft = p1,
             ),
+            /* WBooleanField(
+              name: "Allow Overflow",
+              getVal: () => PostView.i.allowOverflow,
+              setVal: (p1) => PostView.i.allowOverflow = p1,
+            ), */
+            Text(
+              "Other",
+              style: SettingsPage.titleStyle,
+            ),
+            WBooleanField(
+              name: "Color Tag Headers",
+              getVal: () => PostView.i.colorTagHeaders,
+              setVal: (p1) => PostView.i.colorTagHeaders = p1,
+            ),
+            WBooleanField(
+              name: "Color Tags",
+              getVal: () => PostView.i.colorTags,
+              setVal: (p1) => PostView.i.colorTags = p1,
+            ),
             WBooleanField(
               name: "Start With Tags Expanded",
               getVal: () => PostView.i.startWithTagsExpanded,
@@ -293,20 +320,6 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               name: "Start With Description Expanded",
               getVal: () => PostView.i.startWithDescriptionExpanded,
               setVal: (p) => PostView.i.startWithDescriptionExpanded = p,
-            ),
-            WBooleanField(
-              name: "Use Progressive Images",
-              subtitle:
-                  "Load a low-quality preview before loading the main image?",
-              getVal: () => PostView.i.useProgressiveImages,
-              setVal: (p) => PostView.i.useProgressiveImages = p,
-            ),
-            WEnumField<FilterQuality>(
-              name: "Post Info Display",
-              getVal: () => PostView.i.imageFilterQuality,
-              setVal: (/* FilterQuality  */dynamic val) =>
-                  PostView.i.imageFilterQuality = val,
-              values: FilterQuality.values,
             ),
           ],
         ),
