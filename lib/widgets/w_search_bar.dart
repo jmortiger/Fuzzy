@@ -70,8 +70,7 @@ class _WSearchBarState extends State<WSearchBar> {
         var lastTermIndex = currText.lastIndexOf(RegExpExt.whitespace);
         lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
         final currSubString = currText.substring(lastTermIndex);
-        final currPrefix = currText.substring(
-            0, lastTermIndex);
+        final currPrefix = currText.substring(0, lastTermIndex);
         if (allSuggestionSourcesEmpty() || currText.isEmpty) {
           return const Iterable<String>.empty();
         }
@@ -81,8 +80,7 @@ class _WSearchBarState extends State<WSearchBar> {
           if ((AppSettings.i?.favoriteTags.isEmpty ?? true) &&
               SavedDataE6Legacy.$Safe == null &&
               CachedSearches.searches.isEmpty) {
-            return r
-              .toList(growable: false)
+            return r.toList(growable: false)
               ..sort(util.getFineInverseSimilarityComparator(
                 currText,
               ));
@@ -234,7 +232,9 @@ class _WSearchBarState extends State<WSearchBar> {
     logger.finer(out);
     sc.hasNextPageCached = null;
     sc.lastPostOnPageIdCached = null;
-    var (:username, :apiKey) = devGetAuth();
+    // var (:username, :apiKey) = devGetAuth()
+    var username = E621AccessData.fallback?.username,
+        apiKey = E621AccessData.fallback?.apiKey;
     svm.pr = E621.performUserPostSearch(
       tags: svm.forceSafe ? "$tags rating:safe" : tags,
       limit: limit,
@@ -283,12 +283,11 @@ class _WSearchBarState extends State<WSearchBar> {
     });
   }
 
-  ({String? username, String? apiKey}) devGetAuth() =>
-      Provider.of<SearchViewModel>(context, listen: false).sendAuthHeaders &&
-              E621AccessData.devAccessData.isAssigned
-          ? (
-              username: E621AccessData.devAccessData.item.username,
-              apiKey: E621AccessData.devAccessData.item.apiKey,
-            )
-          : (username: null, apiKey: null);
+  // static ({String? username, String? apiKey}) devGetAuth() => (
+  // E621AccessData.useLoginData
+  //     ? (
+  //         username: E621AccessData.fallback?.username,
+  //         apiKey: E621AccessData.fallback?.apiKey,
+  //       )
+  //     : (username: null, apiKey: null);
 }

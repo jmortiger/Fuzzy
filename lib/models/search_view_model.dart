@@ -42,20 +42,18 @@ class SearchViewModel extends ChangeNotifier {
     return _forceSafe;
   }
 
-  bool _sendAuthHeaders;
-  bool get sendAuthHeaders => _sendAuthHeaders;
+  // bool _sendAuthHeaders;
+  // bool get sendAuthHeaders => E621AccessData.useLoginData; //_sendAuthHeaders;
   bool toggleSendAuthHeaders() {
-    _sendAuthHeaders = !_sendAuthHeaders;
+    // _sendAuthHeaders = !_sendAuthHeaders;
+    E621AccessData.useLoginData = !E621AccessData.useLoginData;
     notifyListeners();
-    if (_sendAuthHeaders && !E621AccessData.devAccessData.isAssigned) {
-      E621AccessData.devAccessData
-          .getItem(); /* .then(
-            (v) => util.snackbarMessageQueue.add(const SnackBar(
-              content: Text("Dev e621 Auth Loaded"),
-            )),
-          ) */
+    if (E621AccessData.useLoginData && E621AccessData.fallback == null) {
+      E621AccessData.devAccessData.getItem().then(
+            (v) => logger.fine("Dev e621 Auth Loaded"),
+          );
     }
-    return _sendAuthHeaders;
+    return E621AccessData.useLoginData; //_sendAuthHeaders;
   }
 
   String _searchText;
@@ -92,7 +90,7 @@ class SearchViewModel extends ChangeNotifier {
     bool? forceSafe,
     String? priorSearchText,
     String? searchText,
-    bool? sendAuthHeaders,
+    // bool? sendAuthHeaders,
     bool? fillTextBarWithSearchString,
     Future<SearchResultArgs>? pr,
   })  : _lazyLoad = lazyLoad ?? false,
@@ -100,7 +98,8 @@ class SearchViewModel extends ChangeNotifier {
         _forceSafe = forceSafe ?? false,
         _priorSearchText = priorSearchText ?? "",
         _searchText = searchText ?? "",
-        _sendAuthHeaders = sendAuthHeaders ?? false,
+        // _sendAuthHeaders = E621AccessData.useLoginData =
+        //     sendAuthHeaders ?? E621AccessData.useLoginData,
         _fillTextBarWithSearchString = fillTextBarWithSearchString ?? false,
         _pr = pr;
 }

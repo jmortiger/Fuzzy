@@ -56,14 +56,13 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
   set hasNextPageCached(bool? value) => sc.hasNextPageCached = value;
   bool? get hasPriorPage => sc.hasPriorPage;
   // #endregion SearchCache
-  /// It's better to directly check if [E621AccessData.userData] is assigned, 
+  /// It's better to directly check if [E621AccessData.userData] is assigned,
   /// but this forces the end drawer to rebuild when changed.
   bool isLoggedIn = false;
   // bool get isLoggedIn => E621AccessData.userData.isAssigned;
   @override
   void initState() {
     super.initState();
-    // TODO: implement initState
     isLoggedIn = E621AccessData.userData.isAssigned;
   }
 
@@ -72,9 +71,9 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
     return Drawer(
       child: ListView(
         children: [
-          const DrawerHeader(
-            child: Text("Menu"),
-          ),
+          isLoggedIn
+              ? const DrawerHeader(child: Text("Menu"))
+              : DrawerHeader(child: Text(E621AccessData.userData.$.username)),
           ListTile(
             title: const Text("Go to settings"),
             onTap: () {
@@ -89,9 +88,8 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             },
           ),
           ListTile(
-            title: !isLoggedIn
-                ? const Text("Login")
-                : const Text("Change Login"),
+            title:
+                !isLoggedIn ? const Text("Login") : const Text("Change Login"),
             onTap: () => launchLogInDialog(context, widget.getMountedContext)
                 .then((v) => (this.context.mounted)
                     ? setState(() {
@@ -112,7 +110,59 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                           username:
                               E621AccessData.userData.itemSafe?.username ??
                                   E621AccessData.devAccessData.item.username),
-                    )).then((v) => setState(() {}));
+                    ));
+              },
+            ),
+          if (isLoggedIn)
+            ListTile(
+              title: const Text("Log out"),
+              onTap: () {
+                showDialog<bool>(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: const Text("Log Out?"),
+                      content: Text(
+                        "Do you really want to log out of account "
+                        "${E621AccessData.fallback!.username}?",
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text(
+                              "Yes, and delete my username and API key"),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text("Yes"),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("No"),
+                        ),
+                      ],
+                    );
+                  },
+                ).then((v) {
+                  switch (v) {
+                    case true:
+                      E621AccessData.userData.$Safe?.tryClearAsync().then(
+                          (success) => this.context.mounted
+                              ? ScaffoldMessenger.of(this.context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(success
+                                          ? "Successfully cleared login data"
+                                          : "Failed to clear login data")))
+                              : "");
+                      continue falseC;
+                    falseC:
+                    case false:
+                      E621AccessData.useLoginData = false;
+                      break;
+                    case null:
+                    default:
+                  }
+                });
               },
             ),
           ListTile(
@@ -123,12 +173,12 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                     : const Icon(Icons.check_box_outline_blank),
             onTap: () {
               print(
-                  "Before: ${Provider.of<SearchViewModel>(context, listen: false)}.lazyLoad");
+                  "Before: ${Provider.of<SearchViewModel>(context, listen: false).lazyLoad}");
               setState(() =>
                   Provider.of<SearchViewModel>(context, listen: false)
                       .toggleLazyLoad());
               print(
-                  "After: ${Provider.of<SearchViewModel>(context, listen: false)}.lazyLoad");
+                  "After: ${Provider.of<SearchViewModel>(context, listen: false).lazyLoad}");
               // Navigator.pop(context);
             },
           ),
@@ -140,29 +190,34 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 : const Icon(Icons.check_box_outline_blank),
             onTap: () {
               print(
-                  "Before: ${Provider.of<SearchViewModel>(context, listen: false)}.lazyBuilding");
+                  "Before: ${Provider.of<SearchViewModel>(context, listen: false).lazyBuilding}");
               setState(() =>
                   Provider.of<SearchViewModel>(context, listen: false)
                       .toggleLazyBuilding());
               print(
-                  "After: ${Provider.of<SearchViewModel>(context, listen: false)}.lazyBuilding");
+                  "After: ${Provider.of<SearchViewModel>(context, listen: false).lazyBuilding}");
               // Navigator.pop(context);
             },
           ),
           ListTile(
             title: const Text("Toggle Auth headers"),
-            leading: Provider.of<SearchViewModel>(context, listen: false)
-                    .sendAuthHeaders
+            leading: E621AccessData.useLoginData
+                /* Provider.of<SearchViewModel>(context, listen: false)
+                    .sendAuthHeaders */
                 ? const Icon(Icons.check_box)
                 : const Icon(Icons.check_box_outline_blank),
             onTap: () {
-              print(
-                  "Before: ${Provider.of<SearchViewModel>(context, listen: false)}.sendAuthHeaders");
-              setState(() =>
-                  Provider.of<SearchViewModel>(context, listen: false)
-                      .toggleSendAuthHeaders());
-              print(
-                  "After: ${Provider.of<SearchViewModel>(context, listen: false)}.sendAuthHeaders");
+              print("Before: ${E621AccessData.useLoginData}");
+              // print(
+              //     "Before: ${Provider.of<SearchViewModel>(context, listen: false).sendAuthHeaders}");
+              setState(
+                () => //E621AccessData.toggleUseLoginData
+                    Provider.of<SearchViewModel>(context, listen: false)
+                        .toggleSendAuthHeaders(),
+              );// Just to trigger rebuild
+              print("After: ${E621AccessData.useLoginData}");
+              // print(
+              //     "After: ${Provider.of<SearchViewModel>(context, listen: false).sendAuthHeaders}");
               // Navigator.pop(context);
             },
           ),
@@ -174,12 +229,12 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                     : const Icon(Icons.check_box_outline_blank),
             onTap: () {
               print(
-                  "Before: ${Provider.of<SearchViewModel>(context, listen: false)}.forceSafe");
+                  "Before: ${Provider.of<SearchViewModel>(context, listen: false).forceSafe}");
               setState(() =>
                   Provider.of<SearchViewModel>(context, listen: false)
                       .toggleForceSafe());
               print(
-                  "After: ${Provider.of<SearchViewModel>(context, listen: false)}.forceSafe");
+                  "After: ${Provider.of<SearchViewModel>(context, listen: false).forceSafe}");
               // Navigator.pop(context);
             },
           ),

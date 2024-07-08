@@ -239,16 +239,18 @@ class _HomePageState extends State<HomePage> {
     print(out);
     sc.hasNextPageCached = null;
     sc.lastPostOnPageIdCached = null;
-    var (:username, :apiKey) = svm.sendAuthHeaders &&
-            (E621AccessData.userData.isAssigned ||
-                E621AccessData.devAccessData.isAssigned)
-        ? (
-            username: E621AccessData.userData.itemSafe?.username ??
-                E621AccessData.devAccessData.item.username,
-            apiKey: E621AccessData.userData.itemSafe?.apiKey ??
-                E621AccessData.devAccessData.item.apiKey,
-          )
-        : (username: null, apiKey: null);
+    // var (:username, :apiKey) = svm.sendAuthHeaders &&
+    //         (E621AccessData.userData.isAssigned ||
+    //             E621AccessData.devAccessData.isAssigned)
+    //     ? (
+    //         username: E621AccessData.userData.$Safe?.username ??
+    //             E621AccessData.devAccessData.$.username,
+    //         apiKey: E621AccessData.userData.$Safe?.apiKey ??
+    //             E621AccessData.devAccessData.$.apiKey,
+    //       )
+    //     : (username: null, apiKey: null);
+    var username = E621AccessData.fallback?.username,
+        apiKey = E621AccessData.fallback?.apiKey;
     svm.pr = E621.performUserPostSearch(
       tags: svm.forceSafe ? "$tags rating:safe" : tags,
       limit: limit,

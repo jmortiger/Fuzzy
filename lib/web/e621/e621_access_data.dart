@@ -15,11 +15,14 @@ final class E621AccessData with Storable<E621AccessData> {
   // #endregion Logger
   static final devAccessData = LazyInitializer<E621AccessData>(() async =>
       E621AccessData.fromJson((await devData.getItem())["e621"] as JsonOut));
-  static String? get devApiKey => devAccessData.itemSafe?.apiKey;
-  static String? get devUsername => devAccessData.itemSafe?.username;
-  static String? get devUserAgent => devAccessData.itemSafe?.userAgent;
+  static String? get devApiKey => devAccessData.$Safe?.apiKey;
+  static String? get devUsername => devAccessData.$Safe?.username;
+  static String? get devUserAgent => devAccessData.$Safe?.userAgent;
+  static bool useLoginData = true;
+  static bool toggleUseLoginData() => useLoginData = !useLoginData;
   static final userData = LateInstance<E621AccessData>();
-  static E621AccessData? fallback = userData.itemSafe ?? devAccessData.itemSafe;
+  static E621AccessData? fallback = useLoginData ? userData.$Safe ?? devAccessData.$Safe : null;
+  static E621AccessData? fallbackForced = userData.$Safe ?? devAccessData.$Safe;
   static const fileName = "credentials.json";
   static final filePathFull = LazyInitializer<String>(
     () async =>
@@ -36,9 +39,9 @@ final class E621AccessData with Storable<E621AccessData> {
 
   static String? tryLoadAsStringSync([E621AccessData? data]) {
     return Platform.isWeb
-        ? pref.itemSafe?.getString(localStorageKey)
+        ? pref.$Safe?.getString(localStorageKey)
         : Storable.tryGetStorageSync(
-            filePathFull.itemSafe ?? "",
+            filePathFull.$Safe ?? "",
           )?.readAsStringSync();
   }
 
@@ -55,7 +58,7 @@ final class E621AccessData with Storable<E621AccessData> {
       logger.warning(
         "Failed to load:"
         "\tfileName: $fileName"
-        "\tfilePathFull: ${filePathFull.itemSafe}",
+        "\tfilePathFull: ${filePathFull.$Safe}",
       );
       return null;
     }
@@ -69,13 +72,15 @@ final class E621AccessData with Storable<E621AccessData> {
     }
   }
 
-  static void _failedToLoadLog(E621AccessData? data) => logger.warning(
-        "Failed to load: $data"
+  static void _failedToDoIoLog(E621AccessData? data,
+          [String operation = "load"]) =>
+      logger.warning(
+        "Failed to $operation: $data"
         "\n\tfileName: $fileName"
-        "\n\tfilePathFull: ${filePathFull.itemSafe}"
+        "\n\tfilePathFull: ${filePathFull.$Safe}"
         "\n\tfile.isAssigned: ${data?.file.isAssigned}"
-        "\n\tfile.itemSafe?.existsSync(): "
-        "${data?.file.itemSafe?.existsSync()}",
+        "\n\tfile.\$Safe?.existsSync(): "
+        "${data?.file.$Safe?.existsSync()}",
       );
   static const localStorageKey = "e6Access";
   static Future<bool> tryWriteToLocalStorage(E621AccessData data) =>
@@ -83,9 +88,11 @@ final class E621AccessData with Storable<E621AccessData> {
             localStorageKey,
             jsonEncode(data.toJson()),
           ));
+  static Future<bool> tryClearFromLocalStorage(E621AccessData data) =>
+      pref.getItem().then((v) => v.setString(localStorageKey, ""));
 
   static Future<bool> tryWrite([E621AccessData? data]) async {
-    data ??= userData.itemSafe;
+    data ??= userData.$Safe;
     if (data != null) {
       if (Platform.isWeb) {
         logger.info("Can't access file storage on web. "
@@ -101,12 +108,55 @@ final class E621AccessData with Storable<E621AccessData> {
       }
       return data.tryWriteAsync(flush: true)
         ..then<void>((v) {
-          if (!v) _failedToLoadLog(data);
+          if (!v) _failedToDoIoLog(data);
         });
     } else {
-      _failedToLoadLog(data);
+      _failedToDoIoLog(data);
       return false;
     }
+  }
+
+  static Future<bool> tryClear([E621AccessData? data]) async {
+    data ??= userData.itemSafe;
+    if (data != null) {
+      if (Platform.isWeb) {
+        logger.info("Can't access file storage on web. "
+            "Attempting with Local Storage.");
+        return tryClearFromLocalStorage(data);
+      }
+      if (!data.file.isAssigned) {
+        logger.warning(
+            "data.file.isAssigned was false. Attempting initialization");
+        await data.initStorageAsync(filePathFull.getItem()).onError(
+              (e, s) => logger.warning("Failed to initialize Storable", e, s),
+            );
+      }
+      return data.tryClearAsync(/* flush: true */)
+        ..then<void>((v) {
+          if (!v) _failedToDoIoLog(data, "clear");
+        });
+    } else {
+      _failedToDoIoLog(data);
+      return false;
+    }
+  }
+
+  Future<bool> tryClearSelf() async {
+    if (Platform.isWeb) {
+      logger.info("Can't access file storage on web. "
+          "Attempting with Local Storage.");
+      return tryClearFromLocalStorage(this);
+    }
+    if (!file.isAssigned) {
+      logger.warning("file.isAssigned was false. Attempting initialization");
+      await initStorageAsync(filePathFull.getItem()).onError(
+        (e, s) => logger.warning("Failed to initialize Storable", e, s),
+      );
+    }
+    return tryClearAsync(/* flush: true */)
+      ..then<void>((v) {
+        if (!v) _failedToDoIoLog(this, "clear");
+      });
   }
 
   final String apiKey;
@@ -122,7 +172,7 @@ final class E621AccessData with Storable<E621AccessData> {
   }) {
     initStorageAsync(filePathFull.getItem()).onError(
       (e, s) => logger.log(
-          Platform.isWeb ? lm.LogLevel.FINER : lm.LogLevel.WARNING,
+          Platform.isWeb ? lm.LogLevel.FINEST : lm.LogLevel.WARNING,
           "Failed to initialize Storable",
           e,
           s),
