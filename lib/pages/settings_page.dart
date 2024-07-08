@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_searches.dart';
@@ -299,6 +300,13 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                   "Load a low-quality preview before loading the main image?",
               getVal: () => PostView.i.useProgressiveImages,
               setVal: (p) => PostView.i.useProgressiveImages = p,
+            ),
+            WEnumField<FilterQuality>(
+              name: "Post Info Display",
+              getVal: () => PostView.i.imageFilterQuality,
+              setVal: (/* FilterQuality  */dynamic val) =>
+                  PostView.i.imageFilterQuality = val,
+              values: FilterQuality.values,
             ),
           ],
         ),
@@ -944,6 +952,66 @@ class _WNumSliderFieldState<T extends num> extends State<WNumSliderField<T>> {
       //     }
       //   }).onError((error, stackTrace) => print(error));
       // },
+    );
+  }
+}
+
+class WEnumField<T extends Enum> extends StatefulWidget {
+  final String name;
+
+  /// Needed because I can't access [T.values] from here.
+  final List<T> values;
+
+  final String? subtitle;
+
+  final T Function() getVal;
+
+  final void Function(T p1) setVal;
+
+  final bool Function(T? p1)? validateVal;
+
+  final String Function(T v)? enumToString;
+  const WEnumField({
+    super.key,
+    required this.name,
+    this.subtitle,
+    required this.getVal,
+    required this.setVal,
+    required this.values,
+    this.validateVal,
+    this.enumToString,
+  });
+
+  @override
+  State<WEnumField> createState() => _WEnumFieldState();
+}
+
+class _WEnumFieldState<T extends Enum> extends State<WEnumField<T>> {
+
+  String convertEnumValueToInput(T value) =>
+      widget.enumToString?.call(value) ?? value.name;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Text(widget.name),
+      subtitle: widget.subtitle != null ? Text(widget.subtitle!) : null,
+      trailing: DropdownMenu<T>(
+        dropdownMenuEntries: widget.values
+            .map((v) => DropdownMenuEntry(
+                  value: v,
+                  label: convertEnumValueToInput(v),
+                ))
+            .toList(),
+        initialSelection: widget.getVal(),
+        onSelected: (value) {
+          if (value != null) {
+            setState(() {
+              widget.setVal(value);
+            });
+          }
+        },
+      ),
     );
   }
 }

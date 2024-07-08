@@ -30,6 +30,7 @@ final class E621AccessData with Storable<E621AccessData> {
       var t = (await pref.getItem()).getString(localStorageKey);
       if (t != null) return E621AccessData.fromJson(jsonDecode(t));
     }
+    var thing = await filePathFull.getItem();
     var t = await (await Storable.tryGetStorageAsync(
       await filePathFull.getItem(),
     ))
@@ -42,7 +43,14 @@ final class E621AccessData with Storable<E621AccessData> {
       );
       return null;
     }
-    return userData.$ = E621AccessData.fromJson(jsonDecode(t));
+    try {
+      return userData.$ = E621AccessData.fromJson(jsonDecode(t));
+    } catch (e) {
+      logger.warning(
+        "No Credential Data",
+      );
+      return null;
+    }
   }
 
   static void _failedToLoadLog(E621AccessData? data) => logger.warning(
@@ -71,7 +79,7 @@ final class E621AccessData with Storable<E621AccessData> {
       if (!data.file.isAssigned) {
         logger.warning(
             "data.file.isAssigned was false. Attempting initialization");
-        data.initStorageAsync(filePathFull.getItem()).onError(
+        await data.initStorageAsync(filePathFull.getItem()).onError(
               (e, s) => logger.warning("Failed to initialize Storable", e, s),
             );
       }

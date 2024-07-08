@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io' as io;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/util/util.dart';
@@ -218,6 +219,7 @@ class PostViewData {
     startWithDescriptionExpanded: false,
     imageQuality: "low",
     useProgressiveImages: true,
+    imageFilterQuality: FilterQuality.medium,
   );
   final List<TagCategory> tagOrder;
   final Map<TagCategory, Color> tagColors;
@@ -235,6 +237,7 @@ class PostViewData {
   final bool startWithDescriptionExpanded;
   final String imageQuality;
   final bool useProgressiveImages;
+  final FilterQuality imageFilterQuality;
   const PostViewData({
     required this.tagOrder,
     required this.tagColors,
@@ -249,6 +252,7 @@ class PostViewData {
     required this.startWithDescriptionExpanded,
     required this.imageQuality,
     required this.useProgressiveImages,
+    required this.imageFilterQuality,
   });
   factory PostViewData.fromJson(JsonOut json) => PostViewData(
         tagOrder: (json["tagOrder"] as List?)
@@ -272,6 +276,10 @@ class PostViewData {
         imageQuality: json["imageQuality"] ?? defaultData.imageQuality,
         useProgressiveImages:
             json["useProgressiveImages"] ?? defaultData.useProgressiveImages,
+        imageFilterQuality: FilterQuality.values.singleWhere((e) =>
+            e.name ==
+            (json["imageFilterQuality"] ??
+                defaultData.imageFilterQuality.name)),
       );
   JsonOut toJson() => {
         "tagOrder": tagOrder,
@@ -287,6 +295,7 @@ class PostViewData {
         "startWithDescriptionExpanded": startWithDescriptionExpanded,
         "imageQuality": imageQuality,
         "useProgressiveImages": useProgressiveImages,
+        "imageFilterQuality": imageFilterQuality.name,
       };
 }
 
@@ -336,14 +345,18 @@ class PostView implements PostViewData {
   @override
   bool get startWithDescriptionExpanded => _startWithDescriptionExpanded;
   set startWithDescriptionExpanded(bool v) => _startWithDescriptionExpanded = v;
-  bool _useProgressiveImages;
-  @override
-  bool get useProgressiveImages => _useProgressiveImages;
-  set useProgressiveImages(bool v) => _useProgressiveImages = v;
   String _imageQuality;
   @override
   String get imageQuality => _imageQuality;
   set imageQuality(String v) => _imageQuality = v;
+  bool _useProgressiveImages;
+  @override
+  bool get useProgressiveImages => _useProgressiveImages;
+  set useProgressiveImages(bool v) => _useProgressiveImages = v;
+  FilterQuality _imageFilterQuality;
+  @override
+  FilterQuality get imageFilterQuality => _imageFilterQuality;
+  set imageFilterQuality(FilterQuality v) => _imageFilterQuality = v;
   // #endregion Fields
   PostView({
     required List<TagCategory> tagOrder,
@@ -359,6 +372,7 @@ class PostView implements PostViewData {
     required bool startWithDescriptionExpanded,
     required String imageQuality,
     required bool useProgressiveImages,
+    required FilterQuality imageFilterQuality,
   })  : _tagOrder = tagOrder,
         _tagColors = tagColors,
         _colorTags = colorTags,
@@ -371,7 +385,8 @@ class PostView implements PostViewData {
         _startWithTagsExpanded = startWithTagsExpanded,
         _startWithDescriptionExpanded = startWithDescriptionExpanded,
         _imageQuality = imageQuality,
-        _useProgressiveImages = useProgressiveImages;
+        _useProgressiveImages = useProgressiveImages,
+        _imageFilterQuality = imageFilterQuality;
 
   factory PostView.fromData(PostViewData postView) => PostView(
         tagOrder: List.from(postView.tagOrder),
@@ -387,6 +402,7 @@ class PostView implements PostViewData {
         startWithDescriptionExpanded: postView.startWithDescriptionExpanded,
         imageQuality: postView.imageQuality,
         useProgressiveImages: postView.useProgressiveImages,
+        imageFilterQuality: postView.imageFilterQuality,
       );
 
   void overwriteWithData(PostViewData postView) {
@@ -403,6 +419,7 @@ class PostView implements PostViewData {
     startWithDescriptionExpanded = postView.startWithDescriptionExpanded;
     imageQuality = postView.imageQuality;
     useProgressiveImages = postView.useProgressiveImages;
+    imageFilterQuality = postView.imageFilterQuality;
   }
 
   PostViewData toData() => PostViewData(
@@ -419,6 +436,7 @@ class PostView implements PostViewData {
         startWithDescriptionExpanded: startWithDescriptionExpanded,
         imageQuality: imageQuality,
         useProgressiveImages: useProgressiveImages,
+        imageFilterQuality: imageFilterQuality,
       );
 
   // #region JSON (indirect, don't need updating w/ new fields)

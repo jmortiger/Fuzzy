@@ -295,7 +295,7 @@ class PostViewPage extends StatelessWidget
         height: h.toDouble(),
         cacheWidth: min(w, screenWidth.toInt()),
         // cacheHeight: h,
-        filterQuality: FilterQuality.medium,
+        filterQuality: pvs.imageFilterQuality,
       );
     }
     var cWidth = min(w, MediaQuery.sizeOf(ctx).width.toInt());

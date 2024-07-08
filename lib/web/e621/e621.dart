@@ -695,30 +695,35 @@ Future<({String username, String apiKey})?> launchLogInDialog(
       },
     ).then((v) {
       if (v != null) {
-        E621AccessData.userData.$ =
-            E621AccessData.withDefault(apiKey: v.apiKey, username: v.username);
-        E621AccessData.tryWrite().then<void>(
-          (_) => _
-              ? ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text("Successfully stored! Test it!"),
-                    action: SnackBarAction(
-                      label: "See Contents",
-                      onPressed: () async => showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          content: Text(
-                            E621AccessData.userData.itemSafe?.file.itemSafe
-                                    ?.readAsStringSync() ??
-                                "",
-                          ),
-                        ),
+        version.getItem().then((_) {
+          E621AccessData.userData.$ = E621AccessData.withDefault(
+              apiKey: v.apiKey, username: v.username);
+          E621AccessData.tryWrite().then<void>(
+            (_) => _
+                ? ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text("Successfully stored! Test it!"),
+                      action: SnackBarAction(
+                        label: "See Contents",
+                        onPressed: () async => context.mounted
+                            ? showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  content: Text(
+                                    E621AccessData
+                                            .userData.itemSafe?.file.itemSafe
+                                            ?.readAsStringSync() ??
+                                        "",
+                                  ),
+                                ),
+                              )
+                            : "",
                       ),
                     ),
-                  ),
-                )
-              : "",
-        );
+                  )
+                : "",
+          );
+        });
       }
       return v;
     });
