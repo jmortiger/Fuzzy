@@ -777,10 +777,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                               initialParent: e.parent,
                               initialTitle: e.title,
                               initialUniqueId: e.uniqueId,
-                            ).catchError((er, s) {
-                              print(er, lm.LogLevel.SEVERE, er, s);
-                              return e;
-                            }).then((value) {
+                            ).then((value) {
                               if (value != null) {
                                 SavedDataE6.$editAndSave(
                                   original: e,

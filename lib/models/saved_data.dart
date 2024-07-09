@@ -70,6 +70,21 @@ class SavedDataE6 extends ChangeNotifier {
         ..forEach((e) => e.sort(
               (a, b) => a.compareTo(b),
             ));
+  Set<String> get $parents => SavedDataE6.parents;
+  static Set<String> get parents => searches.fold(
+        <String>{},
+        (acc, element) => acc..add(element.parent),
+      );
+  Map<String, int> get $parentCount => SavedDataE6.parentCount;
+  static Map<String, int> get parentCount => searches.fold(
+        <String, int>{},
+        (acc, element) {
+          acc[element] == null
+              ? acc[element.parent] = 1
+              : acc[element.parent] = acc[element.parent]! + 1;
+          return acc;
+        },
+      );
 
   static bool get isInit {
     try {
@@ -1250,9 +1265,13 @@ final class SavedSearchData extends SavedEntry {
   }
 
   @override
-  bool verifyUniqueness() => !SavedDataE6Legacy._instance.$.all.any(
+  bool verifyUniqueness() => !SavedDataE6.all.any(
         (e) => e.searchString != searchString && e.uniqueId == uniqueId,
       );
+  // @override
+  // bool verifyUniqueness() => !SavedDataE6Legacy._instance.$.all.any(
+  //       (e) => e.searchString != searchString && e.uniqueId == uniqueId,
+  //     );
 }
 
 Future<
@@ -1283,6 +1302,7 @@ Future<
           mainData = initialData,
           parent = initialParent,
           uniqueId = initialUniqueId;
+      var searchController = SearchController()..text = initialParent;
       return AlertDialog(
         content: Column(
           children: [
@@ -1300,9 +1320,34 @@ Future<
             ),
             const Text("Parent:"),
             // TODO: Autocomplete
-            TextField(
-              onChanged: (value) => parent = value,
-              controller: defaultSelection(initialParent),
+            // TextField(
+            //   onChanged: (value) => parent = value,
+            //   controller: defaultSelection(initialParent),
+            // ),
+            SearchAnchor(
+              searchController: searchController,
+              builder: (context, controller) {
+                // controller.text = initialParent;
+                return SearchBar(
+                  hintText: "parent",
+                  onChanged: (value) {
+                    controller.openView();
+                    parent = value;
+                  },
+                  controller: controller, //defaultSelection(initialParent),
+                  onTap: () => controller.openView(),
+                  onTapOutside: (e) => controller.closeView(null),
+                );
+              },
+              suggestionsBuilder: (context, controller) {
+                return (SavedDataE6.parents..add(initialParent)).map(
+                  (e) => ListTile(
+                    title: Text(e),
+                    onTap: () => controller.closeView(e),
+                    subtitle: Text("${SavedDataE6.parentCount[e]} children"),
+                  ),
+                );
+              },
             ),
             const Text("UniqueId:"),
             TextField(
@@ -1331,9 +1376,7 @@ Future<
         ],
       );
     },
-  ).catchError((e, s) {
-    print(e, Level.SEVERE, e, s);
-  });
+  );
 }
 // @immutable
 // final class SavedSearchDataMutable implements SavedSearchData {

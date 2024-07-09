@@ -49,7 +49,7 @@ void main() async {
   CachedFavorites.fileFullPath.getItem().ignore();
   CachedSearches.loadFromStorageAsync();
   // SavedDataE6Legacy.$Safe;
-  // SavedDataE6.init();
+  SavedDataE6.init();
   E621AccessData.tryLoad().ignore();
   try {
     runApp(
