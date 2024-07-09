@@ -142,8 +142,8 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                     .alternates[AlternateResolution.$480p.toString()]?.width ??
                 (screenWidth + 1)) >=
             screenWidth) {
-          i = e6Post
-              .sample.alternates!.alternates[AlternateResolution.$480p.toString()]!;
+          i = e6Post.sample.alternates!
+              .alternates[AlternateResolution.$480p.toString()]!;
         } else if ((e6Post.sample.alternates!
                     .alternates[AlternateResolution.$720p.toString()]?.width ??
                 (screenWidth + 1)) >=
@@ -648,7 +648,11 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
         ));
   }
 
-  void showTagDialog({required String tag, required TagCategory category,}) {
+  void showTagDialog({
+    required String tag,
+    required TagCategory category,
+  }) {
+    SavedDataE6.init();
     showDialog(
       context: context,
       builder: (context) {
@@ -731,16 +735,64 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                         initialUniqueId: tag,
                       ).then((value) {
                         if (value != null) {
-                          SavedDataE6.addAndSaveSearch(
-                            SavedSearchData.fromTagsString(
-                              searchString: value.mainData,
-                              title: value.title,
-                              uniqueId: value.uniqueId ?? "",
-                              parent: value.parent ?? "",
+                          SavedDataE6.doOnInit(
+                            () => SavedDataE6.$addAndSaveSearch(
+                              SavedSearchData.fromTagsString(
+                                searchString: value.mainData,
+                                title: value.title,
+                                uniqueId: value.uniqueId ?? "",
+                                parent: value.parent ?? "",
+                              ),
                             ),
                           );
                         }
                       });
+                    },
+                  ),
+                if (SavedDataE6.isInit && SavedDataE6.searches.isNotEmpty)
+                  ListTile(
+                    title: const Text("Add tag to a saved search"),
+                    onTap: () {
+                      Navigator.pop(context);
+                      showDialog<SavedSearchData>(
+                        context: this.context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text("Select a search"),
+                            content: SizedBox(
+                              width: double.maxFinite,
+                              child: SavedDataE6.buildParentedView(
+                                context: this.context,
+                                generateOnTap: (e) =>
+                                    () => Navigator.pop(this.context, e),
+                              ),
+                            ),
+                          );
+                        },
+                      ).then((e) => e == null
+                          ? ""
+                          : showSavedElementEditDialogue(
+                              this.context,
+                              initialData: "${e.searchString} $tag",
+                              initialParent: e.parent,
+                              initialTitle: e.title,
+                              initialUniqueId: e.uniqueId,
+                            ).catchError((er, s) {
+                              print(er, lm.LogLevel.SEVERE, er, s);
+                              return e;
+                            }).then((value) {
+                              if (value != null) {
+                                SavedDataE6.$editAndSave(
+                                  original: e,
+                                  edited:  SavedSearchData.fromTagsString(
+                                    searchString: value.mainData,
+                                    title: value.title,
+                                    uniqueId: value.uniqueId ?? "",
+                                    parent: value.parent ?? "",
+                                  ),
+                                );
+                              }
+                            }));
                     },
                   ),
                 ListTile(

@@ -48,7 +48,8 @@ void main() async {
       .ignore();
   CachedFavorites.fileFullPath.getItem().ignore();
   CachedSearches.loadFromStorageAsync();
-  SavedDataE6Legacy.$Safe;
+  // SavedDataE6Legacy.$Safe;
+  // SavedDataE6.init();
   E621AccessData.tryLoad().ignore();
   runApp(
     MaterialApp(

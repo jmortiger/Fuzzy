@@ -83,7 +83,7 @@ class _HomePageState extends State<HomePage> {
             Navigator.push<String>(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const SavedSearchesPageProvider(),
+                  builder: (context) => const SavedSearchesPageProvider/* Legacy */(),
                 )).then(
               (value) => value == null
                   ? null

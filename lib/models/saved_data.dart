@@ -14,7 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Stuff like searches and sets
 /// "searches": searches,
-class SavedDataE6 {
+class SavedDataE6 extends ChangeNotifier {
   // #region Logger
   // ignore: unnecessary_late
   static late final lRecord = lm.genLogger("SavedData");
@@ -40,9 +40,18 @@ class SavedDataE6 {
         ? Storable.getStorageAsync(await fileFullPath.getItem())
         : null;
   });
+  static async_lib.FutureOr<T> doOnInit<T>(T Function() callback) {
+    return isInit
+        ? callback()
+        : SavedDataE6.storageAsync.then<T>((v) => callback())
+            as async_lib.FutureOr<T>;
+  }
+
   static late ListNotifier<SavedSearchData> searches;
+  ListNotifier<SavedSearchData> get $searches => SavedDataE6.searches;
   static ListNotifier<SavedEntry> get all => searches;
   static int get length => searches.length;
+  ListNotifier<ListNotifier<SavedEntry>> get $parented => SavedDataE6.parented;
   static ListNotifier<ListNotifier<SavedEntry>> get parented => searches.fold(
         ListNotifier<ListNotifier<SavedEntry>>.empty(true),
         (acc, element) {
@@ -62,23 +71,61 @@ class SavedDataE6 {
               (a, b) => a.compareTo(b),
             ));
 
+  static bool get isInit {
+    try {
+      searches.isEmpty;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   static const localStoragePrefix = 'ssd';
   static const localStorageLengthKey = '$localStoragePrefix.length';
   SavedDataE6({
     ListNotifier<SavedSearchData>? searches,
   }) {
-    SavedDataE6.searches =
-        searches ?? ListNotifier<SavedSearchData>.empty(true);
-    file.getItem().then((value) {
-      value?.readAsString().then((v) {
+    if (searches == null) {
+      if (!isInit) {
+        SavedDataE6.searches = ListNotifier<SavedSearchData>.empty(true);
+        storageAsync.then((v) {
+          if (!validateUniqueness()) {
+            _save();
+          }
+          SavedDataE6.searches.addListener(notifyListeners);
+        });
+      }
+    } else {
+      if (isInit) SavedDataE6.searches.dispose();
+      SavedDataE6.searches = searches;
+      searches.addListener(notifyListeners);
+    }
+  }
+  SavedDataE6.recycle() {
+    try {
+      SavedDataE6.searches.isEmpty;
+    } catch (e) {
+      SavedDataE6.searches = ListNotifier<SavedSearchData>.empty(true);
+      storageAsync.then((v) {
+        searches = v;
         if (!validateUniqueness()) {
           _save();
         }
+        searches.addListener(notifyListeners);
       });
-    });
+    }
   }
-  static async_lib.FutureOr<ListNotifier<SavedSearchData>>
-      get storageAsync async => await ((await file.getItem())
+  static async_lib.FutureOr<SavedDataE6> loadOrRecycle() {
+    try {
+      searches.isEmpty;
+      return SavedDataE6.recycle();
+    } catch (e) {
+      return storageAsync.then((v) => SavedDataE6(searches: v));
+    }
+  }
+
+  static Future<ListNotifier<SavedSearchData>> get storageAsync async =>
+      await ((await file.getItem())
               ?.readAsString()
               .then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
           loadFromPref());
@@ -89,15 +136,26 @@ class SavedDataE6 {
         : SavedDataE6.fromJson(jsonDecode(t));
   }
 
+  @override
+  void dispose() {
+    searches.removeListener(notifyListeners);
+    $searches.removeListener(notifyListeners);
+    super.dispose();
+  }
+
   SavedDataE6.init() {
+    if (isInit) {
+      searches.addListener(notifyListeners);
+      return;
+    }
     file.getItem().then((value) {
       (value?.readAsString().then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
               loadFromPref())
           .then((v) {
+        searches = v..addListener(notifyListeners);
         if (!validateUniqueness(searches: v)) {
           _save();
         }
-        searches = v;
       });
     });
   }
@@ -122,24 +180,24 @@ class SavedDataE6 {
       for (var i = 0; i < searches.length; i++) {
         final e1 = searches[i];
         final e = e1.toJson();
+        success.add(v.setString("$localStoragePrefix.$i.searchString",
+            e1.searchString)); //e["searchString"]));
+        success.add(v.setString("$localStoragePrefix.$i.delimiter",
+            e1.delimiter)); //e["delimiter"]));
         success.add(v.setString(
-            "$localStoragePrefix.$i.searchString", e1.searchString));//e["searchString"]));
-        success.add(
-            v.setString("$localStoragePrefix.$i.delimiter", e1.delimiter));//e["delimiter"]));
-        success.add(v.setString("$localStoragePrefix.$i.parent", e1.parent));//e["parent"]));
-        success.add(v.setString("$localStoragePrefix.$i.title", e1.title));//e["title"]));
-        success
-            .add(v.setString("$localStoragePrefix.$i.uniqueId", e1.uniqueId));//e["uniqueId"]));
-        success.add(
-            v.setBool("$localStoragePrefix.$i.isFavorite", e1.isFavorite));//e["isFavorite"]));
+            "$localStoragePrefix.$i.parent", e1.parent)); //e["parent"]));
+        success.add(v.setString(
+            "$localStoragePrefix.$i.title", e1.title)); //e["title"]));
+        success.add(v.setString(
+            "$localStoragePrefix.$i.uniqueId", e1.uniqueId)); //e["uniqueId"]));
+        success.add(v.setBool("$localStoragePrefix.$i.isFavorite",
+            e1.isFavorite)); //e["isFavorite"]));
       }
       return success.fold(
           l,
-          (previousValue, element) =>
-              (previousValue is Future<bool>)
-                  ? previousValue
-                      .then((s) => element.then((s1) => s && s1))
-                  : element.then((s1) => previousValue && s1));
+          (previousValue, element) => (previousValue is Future<bool>)
+              ? previousValue.then((s) => element.then((s1) => s && s1))
+              : element.then((s1) => previousValue && s1));
     });
   }
 
@@ -213,7 +271,7 @@ class SavedDataE6 {
   static Map<String, dynamic> toJson() => {
         "searches": searches,
       };
-  static void _save() {
+  static void _$save() {
     if (!Platform.isWeb) {
       file.$Safe
           ?.writeAsString(jsonEncode(toJson()))
@@ -229,6 +287,11 @@ class SavedDataE6 {
           : print("SavedDataE6 failed to store: ${jsonEncode(toJson())}",
               Level.SEVERE));
     }
+  }
+
+  void _save() {
+    _$save();
+    notifyListeners();
   }
 
   static const validIdCharacters =
@@ -261,17 +324,27 @@ class SavedDataE6 {
     return ret;
   }
 
-  static void _modify(void Function() modifier) {
+  static void _$modify(void Function() modifier) {
+    modifier();
+    _$save();
+  }
+
+  void _modify(void Function() modifier) {
     modifier();
     _save();
   }
 
-  static void addAndSaveSearch(SavedSearchData s) {
+  static void $addAndSaveSearch(SavedSearchData s) {
+    searches.add(s);
+    _$save();
+  }
+
+  void addAndSaveSearch(SavedSearchData s) {
     searches.add(s);
     _save();
   }
 
-  static void editAndSave({
+  static void $editAndSave({
     required SavedEntry original,
     required SavedEntry edited,
   }) {
@@ -283,12 +356,84 @@ class SavedDataE6 {
       default:
         throw UnsupportedError("not supported");
     }
-    // _save();
+    _$save();
   }
 
-  static void removeEntry(SavedEntry entry) {
+  void editAndSave({
+    required SavedEntry original,
+    required SavedEntry edited,
+  }) {
+    // edited = edited.validateUniqueness();
+    switch ((edited, original)) {
+      case (SavedSearchData o, SavedSearchData orig):
+        searches[searches.indexOf(orig)] = o;
+        break;
+      default:
+        throw UnsupportedError("not supported");
+    }
+    _save();
+  }
+
+  static void $removeEntry(SavedEntry entry) {
+    searches.remove(entry);
+    _$save();
+  }
+
+  void removeEntry(SavedEntry entry) {
     searches.remove(entry);
     _save();
+  }
+
+  static Widget buildParentedView({
+    required BuildContext context,
+    SavedDataE6? data,
+    VoidCallback Function(SavedEntry)? generateOnTap,
+  }) {
+    final parented = data?.$parented ?? SavedDataE6.parented;
+    return ListView(
+      children: parented.mapAsList(
+        (e, index, list) => ExpansionTile(
+          title: Text.rich(
+            TextSpan(
+              text: e.first.parent,
+              children: [
+                TextSpan(
+                    text: " (${e.length} entries)",
+                    style: const DefaultTextStyle.fallback().style.copyWith(
+                          color: const Color.fromARGB(255, 80, 80, 80),
+                        )),
+              ],
+            ),
+          ),
+          dense: true,
+          children: e.mapAsList(
+            (e2, i2, l2) => buildSavedEntry(
+              entry: e2,
+              context: context,
+              generateOnTap: generateOnTap,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static ListTile buildSavedEntry<T extends SavedEntry>({
+    required BuildContext context,
+    required T entry,
+    VoidCallback Function(SavedEntry)? generateOnTap,
+  }) {
+    return ListTile(
+      leading: switch (entry.runtimeType) {
+        SavedSearchData => const Text("S"),
+        SavedPoolData => const Text("P"),
+        SavedSetData => const Text("s"),
+        _ => throw UnsupportedError("not supported"),
+      },
+      title: Text(entry.title),
+      subtitle: Text(entry.searchString),
+      onTap: generateOnTap?.call(entry),
+    );
   }
 }
 
@@ -444,7 +589,7 @@ class SavedDataE6Legacy extends ChangeNotifier
         return SavedDataE6Legacy(
             searches: (await SavedDataE6.loadFromPref()).toList());
       } catch (e, s) {
-          logger.warning("Failed to load from pref", e, s);
+        logger.warning("Failed to load from pref", e, s);
         try {
           return SavedDataE6Legacy.fromJson(
               (await devData.getItem())["e621"]["savedData"]);
@@ -486,7 +631,8 @@ class SavedDataE6Legacy extends ChangeNotifier
           .catchError(onErrorPrintAndRethrow);
     } else {
       SavedDataE6.writeToPref().then((v) => v
-          ? print("SavedDataE6Legacy stored successfully: ${jsonEncode(toJson())}",
+          ? print(
+              "SavedDataE6Legacy stored successfully: ${jsonEncode(toJson())}",
               Level.FINE)
           : print("SavedDataE6Legacy failed to store: ${jsonEncode(toJson())}",
               Level.SEVERE));
@@ -1185,7 +1331,9 @@ Future<
         ],
       );
     },
-  );
+  ).catchError((e, s) {
+    print(e, Level.SEVERE, e, s);
+  });
 }
 // @immutable
 // final class SavedSearchDataMutable implements SavedSearchData {
