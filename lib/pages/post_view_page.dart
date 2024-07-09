@@ -92,43 +92,67 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
 
   PostView get pvs => AppSettings.i!.postView;
 
-  IImageInfo getImageInfo(BuildContext context) {
-    final w = MediaQuery.sizeOf(context).width,
-        dpr = MediaQuery.devicePixelRatioOf(context),
-        horizontalPixels = w * dpr;
-    logger.log(lm.LogLevel.INFO,
-        "MediaQuery.sizeOf(context).width: $w\nMediaQuery.devicePixelRatioOf(context): $dpr\nCalculated pixel width(w*dpr): $horizontalPixels");
+  /// First, tries to get the asset data based on settings.
+  /// Then, optimizes based on settings.
+  ///
+  /// If it has more horizontal resolution than the display,
+  /// then try to find the next highest resolution asset IF:
+  /// 1. It isn't fullscreen (need extra res for zooming)
+  /// 1. We aren't forcing high quality in settings
+  /// 1. It's not an animated gif (the only animated gif asset
+  /// is the original, no alternates)
+  IImageInfo getImageInfo(double screenWidth) {
     // var IImageInfo(width: w, height: h, url: url) = postListing.sample;
     var i = widget.postListing.file.isAVideo
         ? switch (PostView.i.imageQuality) {
-            "low" => (e6Post.sample.alternates!.alternates["480p"] ??
-                e6Post.sample.alternates!.alternates["720p"] ??
-                e6Post.sample.alternates!.alternates["original"])!,
-            "medium" => (e6Post.sample.alternates!.alternates["720p"] ??
-                e6Post.sample.alternates!.alternates["original"])!,
-            "high" => e6Post.sample.alternates!.alternates["original"]!,
-            _ => throw UnsupportedError("type not supported"),
+            FilterQuality.low =>
+              (e6Post.sample.alternates!.alternates["480p"] ??
+                  e6Post.sample.alternates!.alternates["720p"] ??
+                  e6Post.sample.alternates!.alternates["original"])!,
+            FilterQuality.medium =>
+              (e6Post.sample.alternates!.alternates["720p"] ??
+                  e6Post.sample.alternates!.alternates["original"])!,
+            FilterQuality.high =>
+              e6Post.sample.alternates!.alternates["original"]!,
+            FilterQuality.none =>
+              e6Post.sample.alternates!.alternates["original"]!,
+            // _ => throw UnsupportedError("type not supported"),
           }
-        : widget.postListing.file.extension == "gif" &&
-                e6Post.tags.meta.contains("animated")
+        : e6Post.isAnimatedGif
             ? e6Post.file
             : switch (PostView.i.imageQuality) {
-                "low" => e6Post.preview,
-                "medium" => e6Post.sample,
-                "high" => e6Post.file,
-                _ => throw UnsupportedError("type not supported"),
+                FilterQuality.low => e6Post.preview,
+                FilterQuality.medium => e6Post.sample,
+                FilterQuality.high => e6Post.file,
+                FilterQuality.none => e6Post.file,
+                // _ => throw UnsupportedError("type not supported"),
               };
-    /* if (!postListing.file.isAVideo && i.width > horizontalPixels) {
-      if (e6Post.preview.width > horizontalPixels) {
-        i = postListing.preview;
-      } else if (e6Post.sample.width > horizontalPixels) {
-        i = postListing.sample;
+    if (i.width > screenWidth &&
+        !isFullScreen &&
+        !pvs.forceHighQualityImage &&
+        !e6Post.isAnimatedGif) {
+      if (!widget.postListing.file.isAVideo) {
+        if (e6Post.preview.width >= screenWidth) {
+          i = widget.postListing.preview;
+        } else if (e6Post.sample.width >= screenWidth) {
+          i = widget.postListing.sample;
+        }
+      } else {
+        if ((e6Post.sample.alternates!
+                    .alternates[AlternateResolution.$480p.toString()]?.width ??
+                (screenWidth + 1)) >=
+            screenWidth) {
+          i = e6Post
+              .sample.alternates!.alternates[AlternateResolution.$480p.toString()]!;
+        } else if ((e6Post.sample.alternates!
+                    .alternates[AlternateResolution.$720p.toString()]?.width ??
+                (screenWidth + 1)) >=
+            screenWidth) {
+          i = e6Post
+              .sample.alternates!.alternates[AlternateResolution.$720p.name]!;
+        }
       }
-    } */
-    // if (!postListing.file.isAVideo && /* w < horizontalPixels &&  */
-    //     pvs.forceHighQualityImage) {
-    //   IImageInfo(width: w, height: h, url: url) = postListing.file;
-    // }
+    }
     return i;
   }
 
@@ -153,16 +177,24 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
   bool get treatAsFullscreen => isFullScreen && !e6Post.file.isAVideo;
   @override
   Widget build(BuildContext context) {
-    var IImageInfo(width: w, height: h, url: url) = getImageInfo(context);
+    final width = MediaQuery.sizeOf(context).width,
+        dpr = MediaQuery.devicePixelRatioOf(context),
+        screenWidth = width * dpr;
+    logger.log(
+        lm.LogLevel.INFO,
+        "sizeOf.width: $width\n"
+        "devicePixelRatioOf: $dpr\n"
+        "Calculated pixel width (w * dpr): $screenWidth");
+    var IImageInfo(width: w, height: h, url: url) = getImageInfo(screenWidth);
     return Scaffold(
       body: SafeArea(
         child: Stack(
           children: [
             _buildBody(
-              context,
               w: w,
               h: h,
               url: url,
+              screenWidth: screenWidth,
             ),
             if (treatAsFullscreen)
               const Positioned.fill(
@@ -176,11 +208,11 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                   onTap: toggleFullscreen,
                   child: InteractiveViewer(
                     child: _buildImageContent(
-                      url,
-                      w,
-                      h,
-                      context,
-                      BoxFit.contain,
+                      url: url,
+                      w: w,
+                      h: h,
+                      screenWidth: screenWidth,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ),
@@ -199,14 +231,15 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
     );
   }
 
-  Widget _buildBody(
-    BuildContext context, {
+  Widget _buildBody({
     required int w,
     required int h,
     required String url,
+    double? screenWidth,
   }) {
-    final maxWidth = MediaQuery.sizeOf(context).width *
-        MediaQuery.devicePixelRatioOf(context);
+    final maxWidth = screenWidth ??
+        MediaQuery.sizeOf(context).width *
+            MediaQuery.devicePixelRatioOf(context);
     final maxHeight = (h / w) * maxWidth;
     final ar = w / h;
     logger.log(
@@ -234,7 +267,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
           ),
           child: AspectRatio(
             aspectRatio: ar,
-            child: _buildMainContent(url, w, h, context),
+            child: _buildMainContent(url, w, h),
           ),
         ),
         Row(
@@ -320,7 +353,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
           ]),
         if (e6Post.description.isNotEmpty)
           ExpansionTile(
-            title: ListTile(
+            title: const ListTile(
               title: Text("Description", style: descriptionTheme),
             ),
             initiallyExpanded: PostView.i.startWithDescriptionExpanded,
@@ -335,16 +368,24 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
   Widget _buildMainContent(
     final String url,
     final int w,
-    final int h,
-    final BuildContext ctx,
-  ) {
+    final int h, {
+    double? screenWidth,
+    BuildContext? context,
+  }) {
+    context ??= this.context;
     if (widget.postListing.file.isAVideo) {
       return WVideoPlayerScreen(
           resourceUri: Uri.tryParse(url) ?? widget.postListing.file.address);
     } else {
       return Stack(
         children: [
-          Positioned.fill(child: _buildImageContent(url, w, h, ctx)),
+          Positioned.fill(
+              child: _buildImageContent(
+            url: url,
+            w: w,
+            h: h,
+            screenWidth: screenWidth,
+          )),
           _buildFullscreenToggle(),
         ],
       );
@@ -365,15 +406,22 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
     final String url,
     final int w,
     final int h,
-    final BuildContext ctx,
-  ) {
+    final BuildContext ctx, {
+    double? screenWidth,
+  }) {
     if (widget.postListing.file.isAVideo) {
       return WVideoPlayerScreen(
           resourceUri: Uri.tryParse(url) ?? widget.postListing.file.address);
     } else {
       return Stack(
         children: [
-          Positioned.fill(child: _buildImageContent(url, w, h, ctx)),
+          Positioned.fill(
+              child: _buildImageContent(
+            url: url,
+            w: w,
+            h: h,
+            screenWidth: screenWidth,
+          )),
           Positioned.fill(
             child: Material(
               color: Colors.transparent,
@@ -386,11 +434,11 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                           Positioned.fill(
                             child: InteractiveViewer(
                               child: _buildImageContent(
-                                url,
-                                w,
-                                h,
-                                ctx,
-                                BoxFit.contain,
+                                url: url,
+                                w: w,
+                                h: h,
+                                fit: BoxFit.contain,
+                                screenWidth: screenWidth,
                               ),
                             ),
                           ),
@@ -409,14 +457,15 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
   }
 
   @widgetFactory
-  Widget _buildImageContent(
-    final String url,
-    final int w,
-    final int h,
-    final BuildContext ctx, [
+  Widget _buildImageContent({
+    required final String url,
+    required final int w,
+    required final int h,
+    double? screenWidth,
     final BoxFit fit = BoxFit.fitWidth,
-  ]) {
-    final screenWidth = MediaQuery.sizeOf(ctx).width * MediaQuery.devicePixelRatioOf(context);
+  }) {
+    screenWidth ??= MediaQuery.sizeOf(context).width *
+        MediaQuery.devicePixelRatioOf(context);
     if (!pvs.useProgressiveImages) {
       return Image.network(
         url,
@@ -430,7 +479,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
         filterQuality: pvs.imageFilterQuality,
       );
     }
-    var cWidth = min(w, MediaQuery.sizeOf(ctx).width.toInt());
+    var cWidth = min(w, screenWidth.toInt());
     var iFinal = ResizeImage.resizeIfNeeded(
       cWidth,
       null,
@@ -593,15 +642,15 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
           widthFactor: 1,
           alignment: AlignmentDirectional.centerStart,
           child: TextButton(
-            onPressed: () => showTagDialog(e, context),
+            onPressed: () => showTagDialog(tag: e, category: category),
             child: Text(e),
           ),
         ));
   }
 
-  void showTagDialog(String tag, BuildContext cxt) {
+  void showTagDialog({required String tag, required TagCategory category,}) {
     showDialog(
-      context: cxt,
+      context: context,
       builder: (context) {
         return AlertDialog(
           content: SizedBox(
@@ -676,6 +725,10 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                       Navigator.pop(context);
                       showSavedElementEditDialogue(
                         context,
+                        initialData: tag,
+                        initialParent: category.name,
+                        initialTitle: tag,
+                        initialUniqueId: tag,
                       ).then((value) {
                         if (value != null) {
                           SavedDataE6.addAndSaveSearch(
@@ -688,7 +741,6 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                           );
                         }
                       });
-                      Navigator.pop(context);
                     },
                   ),
                 ListTile(

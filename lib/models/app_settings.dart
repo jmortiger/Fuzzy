@@ -125,8 +125,8 @@ class AppSettings implements AppSettingsRecord {
   // #region Singleton
   static final _instance = LazyInitializer<AppSettings>(loadSettingsFromFile);
   static Future<AppSettings> get instance async =>
-      _instance.isAssigned ? _instance.item : await _instance.getItem();
-  static AppSettings? get i => _instance.itemSafe;
+      _instance.isAssigned ? _instance.$ : await _instance.getItem();
+  static AppSettings? get i => _instance.$Safe;
   // #endregion Singleton
   // #region JSON (indirect, don't need updating w/ new fields)
   @override
@@ -233,9 +233,9 @@ class PostViewData {
     showTimeLeft: true,
     startWithTagsExpanded: true,
     startWithDescriptionExpanded: false,
-    imageQuality: "low",
+    imageQuality: FilterQuality.medium,
     useProgressiveImages: true,
-    imageFilterQuality: FilterQuality.medium,
+    imageFilterQuality: FilterQuality.none,
   );
   final List<TagCategory> tagOrder;
   final Map<TagCategory, Color> tagColors;
@@ -251,7 +251,7 @@ class PostViewData {
   final bool showTimeLeft;
   final bool startWithTagsExpanded;
   final bool startWithDescriptionExpanded;
-  final String imageQuality;
+  final FilterQuality imageQuality;
   final bool useProgressiveImages;
   final FilterQuality imageFilterQuality;
   const PostViewData({
@@ -289,7 +289,10 @@ class PostViewData {
             json["startWithTagsExpanded"] ?? defaultData.startWithTagsExpanded,
         startWithDescriptionExpanded: json["startWithDescriptionExpanded"] ??
             defaultData.startWithDescriptionExpanded,
-        imageQuality: json["imageQuality"] ?? defaultData.imageQuality,
+        imageQuality: FilterQuality.values.singleWhere((e) =>
+            e.name ==
+            (json["imageQuality"] ??
+                defaultData.imageQuality.name)),
         useProgressiveImages:
             json["useProgressiveImages"] ?? defaultData.useProgressiveImages,
         imageFilterQuality: FilterQuality.values.singleWhere((e) =>
@@ -361,10 +364,10 @@ class PostView implements PostViewData {
   @override
   bool get startWithDescriptionExpanded => _startWithDescriptionExpanded;
   set startWithDescriptionExpanded(bool v) => _startWithDescriptionExpanded = v;
-  String _imageQuality;
+  FilterQuality _imageQuality;
   @override
-  String get imageQuality => _imageQuality;
-  set imageQuality(String v) => _imageQuality = v;
+  FilterQuality get imageQuality => _imageQuality;
+  set imageQuality(FilterQuality v) => _imageQuality = v;
   bool _useProgressiveImages;
   @override
   bool get useProgressiveImages => _useProgressiveImages;
@@ -386,7 +389,7 @@ class PostView implements PostViewData {
     required bool showTimeLeft,
     required bool startWithTagsExpanded,
     required bool startWithDescriptionExpanded,
-    required String imageQuality,
+    required FilterQuality imageQuality,
     required bool useProgressiveImages,
     required FilterQuality imageFilterQuality,
   })  : _tagOrder = tagOrder,

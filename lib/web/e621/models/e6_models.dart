@@ -245,6 +245,8 @@ final class E6PostResponse implements PostListing, e621.Post {
   // #endregion Json Fields
   @override
   List<String> get tagList => tags.allTags;
+  bool get isAnimatedGif =>
+      file.extension == "gif" && tags.meta.contains("animated");
   E6PostResponse({
     required this.id,
     required this.createdAt,
@@ -722,14 +724,14 @@ class Alternates {
       };
 }
 
-class Alternate implements IImageInfo {
+class Alternate extends e621.Alternate implements IImageInfo {
   static const types = ["video"];
-  @override
-  int height;
-  String type;
-  List<String?> urls;
-  @override
-  int width;
+  // @override
+  // int height;
+  // String type;
+  // List<String?> urls;
+  // @override
+  // int width;
 
   @override
   Uri get address => Uri.parse(url);
@@ -746,10 +748,10 @@ class Alternate implements IImageInfo {
   @override
   String get url => urls[0] ?? urls[1]!;
   Alternate({
-    required this.height,
-    required this.type,
-    required this.urls,
-    required this.width,
+    required super.height,
+    required super.type,
+    required super.urls,
+    required super.width,
   });
 
   factory Alternate.fromJson(Map<String, dynamic> json) => Alternate(
@@ -759,12 +761,13 @@ class Alternate implements IImageInfo {
         width: json["width"],
       );
 
-  Map<String, dynamic> toJson() => {
-        "height": height,
-        "type": type,
-        "urls": List<dynamic>.from(urls.map((x) => x)),
-        "width": width,
-      };
+  // @override
+  // Map<String, dynamic> toJson() => {
+  //       "height": height,
+  //       "type": type,
+  //       "urls": List<dynamic>.from(urls.map((x) => x)),
+  //       "width": width,
+  //     };
 }
 
 enum PostDataType {

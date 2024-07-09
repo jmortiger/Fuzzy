@@ -154,7 +154,8 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
             ),
             ListTile(
               title: const Text("Clear Cached Searches"),
-              subtitle: Text("Delete all ${CachedSearches.searches.length} searches"),
+              subtitle:
+                  Text("Delete all ${CachedSearches.searches.length} searches"),
               onTap: CachedSearches.clear,
             )
           ],
@@ -241,7 +242,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               getVal: () => PostView.i.forceHighQualityImage,
               setVal: (p1) => PostView.i.forceHighQualityImage = p1,
             ),
-            ListTile(
+            /* ListTile(
               title: const Text("Toggle Image Quality"),
               onTap: () {
                 print("Before: ${PostView.i.imageQuality}");
@@ -256,6 +257,13 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                 // Navigator.pop(context);
               },
               trailing: Text(PostView.i.imageQuality),
+            ), */
+            WEnumField(
+              name: "Image Quality",
+              getVal: () => PostView.i.imageQuality,
+              setVal: (/*FilterQuality*/ dynamic v) =>
+                  PostView.i.imageQuality = v,
+              values: FilterQuality.values,
             ),
             WBooleanField(
               name: "Use Progressive Images",
@@ -267,7 +275,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
             WEnumField<FilterQuality>(
               name: "Image Filter Quality",
               getVal: () => PostView.i.imageFilterQuality,
-              setVal: (/* FilterQuality  */dynamic val) =>
+              setVal: (/*FilterQuality*/ dynamic val) =>
                   PostView.i.imageFilterQuality = val,
               values: FilterQuality.values,
             ),
@@ -1000,7 +1008,6 @@ class WEnumField<T extends Enum> extends StatefulWidget {
 }
 
 class _WEnumFieldState<T extends Enum> extends State<WEnumField<T>> {
-
   String convertEnumValueToInput(T value) =>
       widget.enumToString?.call(value) ?? value.name;
 

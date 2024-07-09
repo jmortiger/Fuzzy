@@ -77,6 +77,18 @@ class SavedDataE6 {
       });
     });
   }
+  static async_lib.FutureOr<ListNotifier<SavedSearchData>>
+      get storageAsync async => await ((await file.getItem())
+              ?.readAsString()
+              .then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
+          loadFromPref());
+  static ListNotifier<SavedSearchData>? get storageSync {
+    String? t = file.$Safe?.readAsStringSync();
+    return (t == null)
+        ? loadFromPrefSync()
+        : SavedDataE6.fromJson(jsonDecode(t));
+  }
+
   SavedDataE6.init() {
     file.getItem().then((value) {
       (value?.readAsString().then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
@@ -102,6 +114,35 @@ class SavedDataE6 {
   factory SavedDataE6.fromStorageSync() => Platform.isWeb
       ? SavedDataE6()
       : Storable.tryLoadToInstanceSync(fileFullPath.$) ?? SavedDataE6();
+  static Future<bool> writeToPref([List<SavedSearchData>? searches]) {
+    searches ??= SavedDataE6.searches;
+    return pref.getItem().then((v) {
+      final l = v.setInt(localStorageLengthKey, searches!.length);
+      final success = <Future<bool>>[];
+      for (var i = 0; i < searches.length; i++) {
+        final e1 = searches[i];
+        final e = e1.toJson();
+        success.add(v.setString(
+            "$localStoragePrefix.$i.searchString", e1.searchString));//e["searchString"]));
+        success.add(
+            v.setString("$localStoragePrefix.$i.delimiter", e1.delimiter));//e["delimiter"]));
+        success.add(v.setString("$localStoragePrefix.$i.parent", e1.parent));//e["parent"]));
+        success.add(v.setString("$localStoragePrefix.$i.title", e1.title));//e["title"]));
+        success
+            .add(v.setString("$localStoragePrefix.$i.uniqueId", e1.uniqueId));//e["uniqueId"]));
+        success.add(
+            v.setBool("$localStoragePrefix.$i.isFavorite", e1.isFavorite));//e["isFavorite"]));
+      }
+      return success.fold(
+          l,
+          (previousValue, element) =>
+              (previousValue is Future<bool>)
+                  ? previousValue
+                      .then((s) => element.then((s1) => s && s1))
+                  : element.then((s1) => previousValue && s1));
+    });
+  }
+
   static Future<ListNotifier<SavedSearchData>> loadFromPref() =>
       pref.getItem().then((v) {
         final length = v.getInt(localStorageLengthKey) ?? 0;
@@ -124,6 +165,29 @@ class SavedDataE6 {
         }
         return data;
       });
+  static ListNotifier<SavedSearchData>? loadFromPrefSync() {
+    if (!pref.isAssigned) return null;
+    final length = pref.$.getInt(localStorageLengthKey) ?? 0;
+    var data = ListNotifier<SavedSearchData>();
+    for (var i = 0; i < length; i++) {
+      data.add(
+        SavedSearchData.fromSearchString(
+          searchString:
+              pref.$.getString("$localStoragePrefix.$i.searchString") ??
+                  "FAILURE",
+          delimiter: SavedSearchData.e621Delimiter,
+          parent:
+              pref.$.getString("$localStoragePrefix.$i.parent") ?? "FAILURE",
+          title: pref.$.getString("$localStoragePrefix.$i.title") ?? "FAILURE",
+          uniqueId:
+              pref.$.getString("$localStoragePrefix.$i.uniqueId") ?? "FAILURE",
+          isFavorite:
+              pref.$.getBool("$localStoragePrefix.$i.isFavorite") ?? false,
+        ),
+      );
+    }
+    return data;
+  }
 
   static async_lib.FutureOr<ListNotifier<SavedSearchData>>
       loadFromStorageAsync() async {
@@ -151,7 +215,7 @@ class SavedDataE6 {
       };
   static void _save() {
     if (!Platform.isWeb) {
-      file.itemSafe
+      file.$Safe
           ?.writeAsString(jsonEncode(toJson()))
           .catchError((e, s) => print(e, Level.WARNING, e, s))
           .then(
@@ -159,7 +223,11 @@ class SavedDataE6 {
           )
           .catchError((e, s) => print(e, Level.WARNING, e, s));
     } else {
-      print(jsonEncode(toJson()), Level.FINE);
+      writeToPref().then((v) => v
+          ? print("SavedDataE6 stored successfully: ${jsonEncode(toJson())}",
+              Level.FINE)
+          : print("SavedDataE6 failed to store: ${jsonEncode(toJson())}",
+              Level.SEVERE));
     }
   }
 
@@ -373,10 +441,17 @@ class SavedDataE6Legacy extends ChangeNotifier
     );
     if (str == null) {
       try {
-        return SavedDataE6Legacy.fromJson(
-            (await devData.getItem())["e621"]["savedData"]);
-      } catch (e) {
-        return SavedDataE6Legacy();
+        return SavedDataE6Legacy(
+            searches: (await SavedDataE6.loadFromPref()).toList());
+      } catch (e, s) {
+          logger.warning("Failed to load from pref", e, s);
+        try {
+          return SavedDataE6Legacy.fromJson(
+              (await devData.getItem())["e621"]["savedData"]);
+        } catch (e, s) {
+          logger.warning("Failed to load from devData", e, s);
+          return SavedDataE6Legacy();
+        }
       }
     } else {
       return SavedDataE6Legacy.fromJson(jsonDecode(str));
@@ -410,7 +485,11 @@ class SavedDataE6Legacy extends ChangeNotifier
           )
           .catchError(onErrorPrintAndRethrow);
     } else {
-      print(jsonEncode(toJson()), Level.FINE);
+      SavedDataE6.writeToPref().then((v) => v
+          ? print("SavedDataE6Legacy stored successfully: ${jsonEncode(toJson())}",
+              Level.FINE)
+          : print("SavedDataE6Legacy failed to store: ${jsonEncode(toJson())}",
+              Level.SEVERE));
     }
   }
 
@@ -1031,83 +1110,83 @@ final class SavedSearchData extends SavedEntry {
 }
 
 Future<
+    ({
+      String mainData,
+      String title,
+      String? parent,
+      String? uniqueId,
+    })?> showSavedElementEditDialogue(
+  BuildContext context, {
+  String initialTitle = "",
+  String initialData = "",
+  String mainDataName = "Tags",
+  String initialParent = "",
+  String initialUniqueId = "",
+  bool isNumeric = false,
+}) {
+  return showDialog<
       ({
         String mainData,
         String title,
         String? parent,
         String? uniqueId,
-      })?> showSavedElementEditDialogue(
-    BuildContext context, {
-    String initialTitle = "",
-    String initialData = "",
-    String mainDataName = "Tags",
-    String initialParent = "",
-    String initialUniqueId = "",
-    bool isNumeric = false,
-  }) {
-    return showDialog<
-        ({
-          String mainData,
-          String title,
-          String? parent,
-          String? uniqueId,
-        })>(
-      context: context,
-      builder: (context) {
-        var title = initialTitle,
-            mainData = initialData,
-            parent = initialParent,
-            uniqueId = initialUniqueId;
-        return AlertDialog(
-          content: Column(
-            children: [
-              const Text("Title:"),
-              TextField(
-                onChanged: (value) => title = value,
-                controller: defaultSelection(initialTitle),
-              ),
-              Text("$mainDataName:"),
-              TextField(
-                inputFormatters: isNumeric ? [numericFormatter] : null,
-                onChanged: (value) => mainData = value,
-                controller: defaultSelection(initialData),
-                keyboardType: isNumeric ? TextInputType.number : null,
-              ),
-              const Text("Parent:"),
-              // TODO: Autocomplete
-              TextField(
-                onChanged: (value) => parent = value,
-                controller: defaultSelection(initialParent),
-              ),
-              const Text("UniqueId:"),
-              TextField(
-                onChanged: (value) => uniqueId = value,
-                controller: defaultSelection(initialUniqueId),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(
-                context,
-                (
-                  title: title,
-                  mainData: mainData,
-                  parent: parent,
-                  uniqueId: uniqueId
-                ),
-              ),
-              child: const Text("Accept"),
+      })>(
+    context: context,
+    builder: (context) {
+      var title = initialTitle,
+          mainData = initialData,
+          parent = initialParent,
+          uniqueId = initialUniqueId;
+      return AlertDialog(
+        content: Column(
+          children: [
+            const Text("Title:"),
+            TextField(
+              onChanged: (value) => title = value,
+              controller: defaultSelection(initialTitle),
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
+            Text("$mainDataName:"),
+            TextField(
+              inputFormatters: isNumeric ? [numericFormatter] : null,
+              onChanged: (value) => mainData = value,
+              controller: defaultSelection(initialData),
+              keyboardType: isNumeric ? TextInputType.number : null,
+            ),
+            const Text("Parent:"),
+            // TODO: Autocomplete
+            TextField(
+              onChanged: (value) => parent = value,
+              controller: defaultSelection(initialParent),
+            ),
+            const Text("UniqueId:"),
+            TextField(
+              onChanged: (value) => uniqueId = value,
+              controller: defaultSelection(initialUniqueId),
             ),
           ],
-        );
-      },
-    );
-  }
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(
+              context,
+              (
+                title: title,
+                mainData: mainData,
+                parent: parent,
+                uniqueId: uniqueId
+              ),
+            ),
+            child: const Text("Accept"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+        ],
+      );
+    },
+  );
+}
 // @immutable
 // final class SavedSearchDataMutable implements SavedSearchData {
 //   static String tagListToString(Iterable<String> tags, String delimiter) =>
