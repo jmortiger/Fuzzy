@@ -51,39 +51,44 @@ void main() async {
   // SavedDataE6Legacy.$Safe;
   // SavedDataE6.init();
   E621AccessData.tryLoad().ignore();
-  runApp(
-    MaterialApp(
-      onGenerateRoute: (settings) {
-        if (settings.name != null) {
-          final url = Uri.parse(settings.name!);
-          switch (url.path) {
-            case HomePage.routeNameString:
-              return MaterialPageRoute(builder: (ctx) => const HomePage());
-            case PoolViewPageBuilder.routeNameString:
-              final t = int.tryParse(url.queryParameters["poolId"] ?? "");
-              if (t != null) {
-                return MaterialPageRoute(
-                  settings: settings,
-                  builder: (cxt) => PoolViewPageBuilder(
-                    poolId: t,
-                  ),
-                );
-              } else {
-                routeLogger.severe("routing failure\nRoute: ${settings.name}");
+  try {
+    runApp(
+      MaterialApp(
+        onGenerateRoute: (settings) {
+          if (settings.name != null) {
+            final url = Uri.parse(settings.name!);
+            switch (url.path) {
+              case HomePage.routeNameString:
+                return MaterialPageRoute(builder: (ctx) => const HomePage());
+              case PoolViewPageBuilder.routeNameString:
+                final t = int.tryParse(url.queryParameters["poolId"] ?? "");
+                if (t != null) {
+                  return MaterialPageRoute(
+                    settings: settings,
+                    builder: (cxt) => PoolViewPageBuilder(
+                      poolId: t,
+                    ),
+                  );
+                } else {
+                  routeLogger
+                      .severe("routing failure\nRoute: ${settings.name}");
+                  return null;
+                }
+              default:
+                routeLogger.severe('No Route found for "${settings.name}"');
                 return null;
-              }
-            default:
-              routeLogger.severe('No Route found for "${settings.name}"');
-              return null;
+            }
           }
-        }
-        routeLogger.info("no settings.name found, defaulting to HomePage");
-        return MaterialPageRoute(builder: (ctx) => const HomePage());
-      },
-      theme: ThemeData.dark(),
-      home: buildHomePageWithProviders(),
-    ),
-  );
+          routeLogger.info("no settings.name found, defaulting to HomePage");
+          return MaterialPageRoute(builder: (ctx) => const HomePage());
+        },
+        theme: ThemeData.dark(),
+        home: buildHomePageWithProviders(),
+      ),
+    );
+  } catch (e, s) {
+    logger.severe("FATAL ERROR", e, s);
+  }
 }
 
 Widget buildHomePageWithProviders({
