@@ -17,8 +17,8 @@ import '../models/search_cache.dart';
 import '../web/e621/e621_access_data.dart';
 
 late final lRecord = lm.genLogger("WFabBuilder");
-late final print = lRecord.print;
-late final logger = lRecord.logger;
+lm.Printer get print => lRecord.print;
+lm.FileLogger get logger => lRecord.logger;
 // #endregion Logger
 
 class WFabBuilder extends StatelessWidget {

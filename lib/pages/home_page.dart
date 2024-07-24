@@ -114,7 +114,7 @@ class _HomePageState extends State<HomePage> {
                 .posts
                 ?.posts
                 .where((e) =>
-                    Provider.of<SearchResultsNotifier>(context, listen: false)
+                    Provider.of<SearchResultsNotifier>(context, listen: true)
                         .selectedPostIds
                         .contains(e.id))
                 .toList() ??
