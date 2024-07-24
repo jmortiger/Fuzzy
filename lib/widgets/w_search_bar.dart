@@ -123,26 +123,32 @@ class _WSearchBarState extends State<WSearchBar> {
       svm.searchText = s;
     }
 
-    return SearchAnchor(
+    return SearchAnchor.bar(
+      // viewConstraints: const BoxConstraints.expand(),
+      constraints: BoxConstraints.expand(
+        height: MediaQuery.sizeOf(context).height,
+      ),
+      barHintText: "Search",
+      viewHintText: "Search",
+      isFullScreen: true,
       searchController: searchController,
-      builder: (context, controller) {
-        // return SearchBar(
-        //   controller: controller,
-        //   // onChanged: (v) => svm.searchText = v,
-        //   onTapOutside: (event) => closeAndUnfocus(),
-        //   onTap: () => controller.openView(),
-        //   onSubmitted: onSubmitted,
-        //   focusNode: fn,
-        //   textInputAction: TextInputAction.newline,
-        //   onChanged: (value) => setState(() {
-        //     currentText = value;
-        //   }),
-        // );
-        return IconButton(
-          icon: const Icon(Icons.search),
-          onPressed: controller.openView,
-        );
-      },
+      // builder: (context, controller) {
+      //   // return SearchBar(
+      //   //   controller: controller,
+      //   //   onTapOutside: (event) => closeAndUnfocus(),
+      //   //   onTap: () => controller.openView(),
+      //   //   focusNode: fn,
+      //   //   textInputAction: TextInputAction.newline,
+      //   //   onSubmitted: onSubmitted,
+      //   //   onChanged: (value) => setState(() {
+      //   //     currentText = value;
+      //   //   }),
+      //   // );
+      //   return IconButton(
+      //     icon: const Icon(Icons.search),
+      //     onPressed: controller.openView,
+      //   );
+      // },
       suggestionsBuilder: (context, controller) {
         return generateSortedOptions(controller.text).map(
           (e) => ListTile(
@@ -159,10 +165,14 @@ class _WSearchBarState extends State<WSearchBar> {
           ),
         );
       },
-      viewOnSubmitted: onSubmitted,
-      viewOnChanged: (value) => setState(() {
+      onSubmitted: onSubmitted,
+      onChanged: (value) => setState(() {
         currentText = value;
       }),
+      // viewOnSubmitted: onSubmitted,
+      // viewOnChanged: (value) => setState(() {
+      //   currentText = value;
+      // }),
     );
   }
 

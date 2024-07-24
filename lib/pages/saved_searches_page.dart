@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/saved_data.dart';
+import 'package:fuzzy/tws_interop.dart' as tws;
 import 'package:fuzzy/web/e621/e621.dart' as mye6;
 import 'package:j_util/j_util_full.dart';
 import 'package:fuzzy/util/util.dart' as util;
@@ -11,20 +12,27 @@ class SavedSearchesPageProvider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var t = SavedDataE6.loadOrRecycle();
-    return (t is SavedDataE6) ? ChangeNotifierProvider(
-      create: (context) => SavedDataE6.recycle(),
-      builder: (context, child) => Consumer<SavedDataE6>(
-        builder: (context, value, child) => SavedSearchesPageSingleton(
-          data: value,
-        ),
-      ),
-    ) : FutureBuilder(future: t, builder: (context, snapshot) => snapshot.hasData ? ChangeNotifierProvider(
-      create: (context) => SavedDataE6.recycle(),
-      builder: (context, child) => Consumer<SavedDataE6>(
-        builder: (context, value, child) => SavedSearchesPageSingleton(
-          data: value,
-        ),
-      )) : util.scSaCoExArCpi );
+    return (t is SavedDataE6)
+        ? ChangeNotifierProvider(
+            create: (context) => SavedDataE6.recycle(),
+            builder: (context, child) => Consumer<SavedDataE6>(
+              builder: (context, value, child) => SavedSearchesPageSingleton(
+                data: value,
+              ),
+            ),
+          )
+        : FutureBuilder(
+            future: t,
+            builder: (context, snapshot) => snapshot.hasData
+                ? ChangeNotifierProvider(
+                    create: (context) => SavedDataE6.recycle(),
+                    builder: (context, child) => Consumer<SavedDataE6>(
+                          builder: (context, value, child) =>
+                              SavedSearchesPageSingleton(
+                            data: value,
+                          ),
+                        ))
+                : util.scSaCoExArCpi);
   }
 }
 
@@ -66,83 +74,116 @@ class _SavedSearchesPageSingletonState
     super.initState();
   }
 
+  void _addSearchDirect(SavedElementRecord value) =>
+      data.$ /* SavedDataE6 */ .addAndSaveSearch(
+        SavedSearchData.fromTagsString(
+          searchString: value.mainData,
+          title: value.title,
+          uniqueId: value.uniqueId ?? "",
+          parent: value.parent ?? "",
+        ),
+      );
+  void _addSearch() => showSavedElementEditDialogue(
+        context,
+      ).then((value) {
+        if (value != null) {
+          _addSearchDirect(value);
+        }
+      });
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Saved Searches"),
-      ),
-      endDrawer: Drawer(
-        child: ListView(
-          children: [
-            const DrawerHeader(
-              child: Text("TGH"),
-            ),
-            ListTile(
-              title: const Text("Add Saved Search"),
-              onTap: () {
-                showSavedElementEditDialogue(
-                  context,
-                ).then((value) {
-                  if (value != null) {
-                    data.$ /* SavedDataE6 */ .addAndSaveSearch(
-                      SavedSearchData.fromTagsString(
-                        searchString: value.mainData,
-                        title: value.title,
-                        uniqueId: value.uniqueId ?? "",
-                        parent: value.parent ?? "",
-                      ),
-                    );
+        actions: [
+          IconButton(
+            onPressed: _addSearch,
+            icon: const Icon(Icons.add),
+            tooltip: "Add Saved Search",
+          ),
+          IconButton(
+            onPressed: data.$Safe?.$searches.clear,
+            icon: const Icon(Icons.remove),
+            tooltip: "Clear Saved Searches",
+          ),
+          IconButton(
+            onPressed: () {
+              tws.showEnhancedImportElementEditDialogue(context).then((v) {
+                if (v != null) {
+                  // for (var e in v) {
+                  //   _addSearchDirect(e.toSer());
+                  // }
+                  for (var e in v) {
+                    _addSearchDirect(e);
                   }
-                });
-              },
-            ),
-            // ListTile(
-            //   title: const Text("Add Saved Pool"),
-            //   onTap: () {
-            //     showSavedElementEditDialogue(
-            //       context,
-            //       mainDataName: "Pool Id",
-            //       isNumeric: true,
-            //     ).then((value) {
-            //       if (value != null) {
-            //         data.$.addAndSavePool(
-            //           SavedPoolData(
-            //             id: int.parse(value.mainData),
-            //             title: value.title,
-            //           ),
-            //         );
-            //       }
-            //     });
-            //   },
-            // ),
-            // ListTile(
-            //   title: const Text("Add Saved Set"),
-            //   onTap: () {
-            //     showSavedElementEditDialogue(
-            //       context,
-            //       mainDataName: "Set Id",
-            //       isNumeric: true,
-            //     ).then((value) {
-            //       if (value != null) {
-            //         data.$.addAndSaveSet(
-            //           SavedSetData(
-            //             id: int.parse(value.mainData),
-            //             title: value.title,
-            //           ),
-            //         );
-            //       }
-            //     });
-            //   },
-            // ),
-          ],
-        ),
+                }
+              });
+            },
+            icon: const Icon(Icons.import_export),
+            tooltip: "Import Saved Searches from The Wolf's Stash",
+          ),
+        ],
       ),
+      // endDrawer: _buildDrawer(),
       body: SafeArea(
         child: !data.isAssigned
             ? const CircularProgressIndicator()
             : _buildParentedView(),
         // : _buildSingleLevelView(),
+      ),
+    );
+  }
+
+  Drawer _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        children: [
+          const DrawerHeader(
+            child: Text("TGH"),
+          ),
+          ListTile(
+            title: const Text("Add Saved Search"),
+            onTap: _addSearch,
+          ),
+          // ListTile(
+          //   title: const Text("Add Saved Pool"),
+          //   onTap: () {
+          //     showSavedElementEditDialogue(
+          //       context,
+          //       mainDataName: "Pool Id",
+          //       isNumeric: true,
+          //     ).then((value) {
+          //       if (value != null) {
+          //         data.$.addAndSavePool(
+          //           SavedPoolData(
+          //             id: int.parse(value.mainData),
+          //             title: value.title,
+          //           ),
+          //         );
+          //       }
+          //     });
+          //   },
+          // ),
+          // ListTile(
+          //   title: const Text("Add Saved Set"),
+          //   onTap: () {
+          //     showSavedElementEditDialogue(
+          //       context,
+          //       mainDataName: "Set Id",
+          //       isNumeric: true,
+          //     ).then((value) {
+          //       if (value != null) {
+          //         data.$.addAndSaveSet(
+          //           SavedSetData(
+          //             id: int.parse(value.mainData),
+          //             title: value.title,
+          //           ),
+          //         );
+          //       }
+          //     });
+          //   },
+          // ),
+        ],
       ),
     );
   }

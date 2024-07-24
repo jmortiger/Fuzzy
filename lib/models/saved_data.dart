@@ -1274,13 +1274,7 @@ final class SavedSearchData extends SavedEntry {
   //     );
 }
 
-Future<
-    ({
-      String mainData,
-      String title,
-      String? parent,
-      String? uniqueId,
-    })?> showSavedElementEditDialogue(
+Future<SavedElementRecord?> showSavedElementEditDialogue(
   BuildContext context, {
   String initialTitle = "",
   String initialData = "",
@@ -1289,13 +1283,7 @@ Future<
   String initialUniqueId = "",
   bool isNumeric = false,
 }) {
-  return showDialog<
-      ({
-        String mainData,
-        String title,
-        String? parent,
-        String? uniqueId,
-      })>(
+  return showDialog<SavedElementRecord>(
     context: context,
     builder: (context) {
       var title = initialTitle,
@@ -1325,10 +1313,18 @@ Future<
             //   controller: defaultSelection(initialParent),
             // ),
             SearchAnchor(
+              viewHintText: "parent",
+              viewOnChanged: (value) {
+                // searchController.openView();
+                parent = value;
+              },
+              // controller: controller, //defaultSelection(initialParent),
+              // viewonTap: () => controller.openView(),
+              // onTapOutside: (e) => controller.closeView(null),
               searchController: searchController,
               builder: (context, controller) {
                 // controller.text = initialParent;
-                return SearchBar(
+                /* return SearchBar(
                   hintText: "parent",
                   onChanged: (value) {
                     controller.openView();
@@ -1337,6 +1333,12 @@ Future<
                   controller: controller, //defaultSelection(initialParent),
                   onTap: () => controller.openView(),
                   onTapOutside: (e) => controller.closeView(null),
+                ); */
+                return TextField(
+                  controller: controller,
+                  // icon: const Icon(Icons.search),
+                  // onPressed: controller.openView,
+                  onTap: controller.openView,
                 );
               },
               suggestionsBuilder: (context, controller) {
@@ -1378,6 +1380,14 @@ Future<
     },
   );
 }
+
+typedef SavedElementRecord = ({
+  String mainData,
+  String title,
+  String? parent,
+  String? uniqueId,
+});
+
 // @immutable
 // final class SavedSearchDataMutable implements SavedSearchData {
 //   static String tagListToString(Iterable<String> tags, String delimiter) =>
