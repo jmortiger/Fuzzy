@@ -5,6 +5,7 @@ import 'package:fuzzy/web/e621/e621.dart' as mye6;
 import 'package:j_util/j_util_full.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:provider/provider.dart';
+import 'package:fuzzy/log_management.dart' as lm;
 
 class SavedSearchesPageProvider extends StatelessWidget {
   const SavedSearchesPageProvider({super.key});
@@ -48,6 +49,12 @@ class SavedSearchesPageSingleton extends StatefulWidget {
 
 class _SavedSearchesPageSingletonState
     extends State<SavedSearchesPageSingleton> {
+  
+  // #region Logger
+  static late final lRecord = lm.genLogger("SavedSearchesPage");
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // #endregion Logger
   var data = LateInstance<SavedDataE6>();
   @override
   void initState() {

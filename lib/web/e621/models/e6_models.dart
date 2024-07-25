@@ -41,7 +41,7 @@ final class E6PostsLazy extends E6Posts {
   final onFullyIterated = JEvent<FullyIteratedArgs>();
   final _postList = <E6PostResponse>[];
   final _postCapacity = LateFinal<int>();
-  int get capacity => _postCapacity.itemSafe ?? -1;
+  int get capacity => _postCapacity.$Safe ?? -1;
   bool get isFullyProcessed => _postCapacity.isAssigned;
   @override
   int get count => _postList.length;
@@ -87,7 +87,7 @@ final class E6PostsLazy extends E6Posts {
         _postList.add(_postListIterator.current);
       }
       if (mn == false && !isFullyProcessed) {
-        _postCapacity.item = _postList.length;
+        _postCapacity.$ = _postList.length;
         onFullyIterated.invoke(FullyIteratedArgs(_postList));
       }
     }
@@ -377,7 +377,7 @@ class E6FileResponse extends E6Preview implements e621.File {
       url.isNotEmpty &&
       (_address.isAssigned
           ? true
-          : (_address.itemSafe = Uri.tryParse(url)) != null);
+          : (_address.$Safe = Uri.tryParse(url)) != null);
 
   final Late<Uri> _address = Late();
   @override
@@ -413,12 +413,12 @@ class E6Preview extends e621.Preview implements IImageInfo {
       url.isNotEmpty &&
       (_address.isAssigned
           ? true
-          : (_address.itemSafe = Uri.tryParse(url)) != null);
+          : (_address.$Safe = Uri.tryParse(url)) != null);
 
   final _address = LateFinal<Uri>();
   @override
   Uri get address =>
-      _address.isAssigned ? _address.$ : _address.itemSafe = Uri.parse(url);
+      _address.isAssigned ? _address.$ : _address.$Safe = Uri.parse(url);
 
   E6Preview({
     required super.width,

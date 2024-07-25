@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'dart:io';
@@ -80,7 +82,7 @@ Future<void> init() async {
                 Future.sync(() => null);
           }),
       );
-  if (mainFile.itemSafe != null) {
+  if (mainFile.$Safe != null) {
     Logger.root.onRecord.listen(
       (event) {
         mainFile.$?.writeAsString(event.message, mode: FileMode.append);
@@ -131,7 +133,7 @@ class FileLogger implements Logger {
         );
     $.onRecord.listen(
       (e) {
-        file.itemSafe?.writeAsString(e.message, mode: FileMode.append);
+        file.$Safe?.writeAsString(e.message, mode: FileMode.append);
         dev.log(
           e.message,
           time: e.time,
@@ -162,7 +164,7 @@ class FileLogger implements Logger {
         );
     $.onRecord.listen(
       (event) {
-        file.itemSafe?.writeAsString(event.message, mode: FileMode.append);
+        file.$Safe?.writeAsString(event.message, mode: FileMode.append);
       },
     );
   }

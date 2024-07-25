@@ -355,7 +355,7 @@ class WFabBuilder extends StatelessWidget {
               .sendRequest(e621.Api.initAddToSetRequest(
                 v.id,
                 [postListing.id],
-                credentials: (E621.accessData.itemSafe ??=
+                credentials: (E621.accessData.$Safe ??=
                         await E621AccessData.devAccessData.getItem())
                     .cred,
               ))

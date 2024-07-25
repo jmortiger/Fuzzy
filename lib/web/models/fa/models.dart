@@ -106,7 +106,7 @@ class ImageInfoBare implements IImageInfoBare {
   final _address = LateFinal<Uri>();
   @override
   Uri get address =>
-      _address.isAssigned ? _address.$ : _address.itemSafe = Uri.parse(url);
+      _address.isAssigned ? _address.$ : _address.$Safe = Uri.parse(url);
 
   @override
   String get extension => url.substring(url.lastIndexOf(".") + 1);

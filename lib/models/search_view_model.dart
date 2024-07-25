@@ -128,14 +128,14 @@ class MultiSearch {
     if (!s1.isAssigned || !s2.isAssigned) {
       return false;
     }
-    if (s1.item.posts.first.id > s2.item.posts.first.id) {
-      if (s1.item.posts.last.id <= s2.item.posts.last.id) {
+    if (s1.$.posts.first.id > s2.$.posts.first.id) {
+      if (s1.$.posts.last.id <= s2.$.posts.last.id) {
         return true;
       } else {
         return false;
       }
-    } else if (s2.item.posts.first.id > s1.item.posts.first.id) {
-      if (s2.item.posts.last.id <= s1.item.posts.last.id) {
+    } else if (s2.$.posts.first.id > s1.$.posts.first.id) {
+      if (s2.$.posts.last.id <= s1.$.posts.last.id) {
         return true;
       } else {
         return false;
@@ -150,16 +150,16 @@ class MultiSearch {
       return null;
     }
     int start, end;
-    if (s1.item.posts.first.id > s2.item.posts.first.id) {
-      start = s2.item.posts.first.id;
+    if (s1.$.posts.first.id > s2.$.posts.first.id) {
+      start = s2.$.posts.first.id;
     } else {
-      //if (s2.item.posts.first.id >= s1.item.posts.first.id) {
-      start = s1.item.posts.first.id;
+      //if (s2.$.posts.first.id >= s1.$.posts.first.id) {
+      start = s1.$.posts.first.id;
     }
-    if (s1.item.posts.last.id <= s2.item.posts.last.id) {
-      end = s2.item.posts.last.id;
+    if (s1.$.posts.last.id <= s2.$.posts.last.id) {
+      end = s2.$.posts.last.id;
     } else {
-      end = s1.item.posts.last.id;
+      end = s1.$.posts.last.id;
     }
     return (startId: start, endId: end);
   }
@@ -169,16 +169,16 @@ class MultiSearch {
       return null;
     }
     int start, end;
-    if (search1.item.idRange.largest > search2.item.idRange.largest) {
-      start = search2.item.idRange.largest;
+    if (search1.$.idRange.largest > search2.$.idRange.largest) {
+      start = search2.$.idRange.largest;
     } else {
-      //if (search2.item.idRange.largest >= search1.item.idRange.largest) {
-      start = search1.item.idRange.largest;
+      //if (search2.$.idRange.largest >= search1.$.idRange.largest) {
+      start = search1.$.idRange.largest;
     }
-    if (search1.item.idRange.smallest <= search2.item.idRange.smallest) {
-      end = search2.item.idRange.smallest;
+    if (search1.$.idRange.smallest <= search2.$.idRange.smallest) {
+      end = search2.$.idRange.smallest;
     } else {
-      end = search1.item.idRange.smallest;
+      end = search1.$.idRange.smallest;
     }
     if (start < end) return (startId: -1, endId: -1);
     return (startId: start, endId: end);

@@ -119,7 +119,7 @@ final class E621AccessData with Storable<E621AccessData> {
   }
 
   static Future<bool> tryClear([E621AccessData? data]) async {
-    data ??= userData.itemSafe;
+    data ??= userData.$Safe;
     if (data != null) {
       if (Platform.isWeb) {
         logger.info("Can't access file storage on web. "
@@ -189,7 +189,7 @@ final class E621AccessData with Storable<E621AccessData> {
           apiKey: apiKey,
           username: username,
           userAgent: userAgent ??
-              "fuzzy/${version.itemSafe} by atotaltirefire@gmail.com");
+              "fuzzy/${version.$Safe} by atotaltirefire@gmail.com");
   static Future<E621AccessData> withDefaultAssured({
     required String apiKey,
     required String username,

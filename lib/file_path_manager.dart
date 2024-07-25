@@ -5,7 +5,7 @@ import 'package:fuzzy/models/saved_data.dart';
 enum MyFile {
   settings(AppSettings.fileName),
   cachedFavorites(CachedFavorites.fileName),
-  savedSearches(SavedDataE6Legacy.fileName),
+  savedSearches(SavedDataE6.fileName),
   ;
 
   final String fileName;

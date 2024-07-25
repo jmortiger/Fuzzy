@@ -104,8 +104,8 @@ class UserProfileLoaderPage extends StatefulWidget implements IRoute<UserProfile
     if (_user != null) return _user;
     logger.finest("No User obj, trying access data");
     var d = (data ??
-                E621AccessData.userData.itemSafe ??
-                (isDebug ? E621AccessData.devAccessData.itemSafe : null))
+                E621AccessData.userData.$Safe ??
+                (isDebug ? E621AccessData.devAccessData.$Safe : null))
             ?.cred,
         username = d?.username ?? this.username;
     if (d == null) {
@@ -158,8 +158,8 @@ class UserProfileLoaderPage extends StatefulWidget implements IRoute<UserProfile
       logger.finest("No User obj, trying id");
     }
     var d = (data ??
-            E621AccessData.userData.itemSafe ??
-            (isDebug ? E621AccessData.devAccessData.itemSafe : null))
+            E621AccessData.userData.$Safe ??
+            (isDebug ? E621AccessData.devAccessData.$Safe : null))
         ?.cred;
     if (id != null) {
       if (d == null) {
@@ -233,8 +233,8 @@ class UserProfileLoaderPage extends StatefulWidget implements IRoute<UserProfile
   static Future<UserDetailed?> getUserDetailedFromId(int id,
       [E6Credentials? c]) {
     var d = c ??
-        (E621AccessData.userData.itemSafe ??
-                (isDebug ? E621AccessData.devAccessData.itemSafe : null))
+        (E621AccessData.userData.$Safe ??
+                (isDebug ? E621AccessData.devAccessData.$Safe : null))
             ?.cred;
     if (d == null) {
       logger.finest("No access data");

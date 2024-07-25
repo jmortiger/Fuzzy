@@ -104,10 +104,9 @@ sealed class E621 extends Site {
       savedSearchInsertion,
       (match) {
         try {
-          return SavedDataE6Legacy.$Safe?.all
-                  .singleWhere((element) => element.uniqueId == match.group(1))
-                  .searchString ??
-              "";
+          return SavedDataE6.all
+              .singleWhere((element) => element.uniqueId == match.group(1))
+              .searchString;
         } catch (e) {
           return "";
         }
@@ -644,10 +643,9 @@ enum PostActions {
 }
 
 Future<({String username, String apiKey})?> launchLogInDialog(
-  BuildContext context, [
-  BuildContext Function()? getMountedContext,
-  Duration snackbarDuration = const Duration(seconds: 6)
-]) =>
+        BuildContext context,
+        [BuildContext Function()? getMountedContext,
+        Duration snackbarDuration = const Duration(seconds: 6)]) =>
     showDialog<({String username, String apiKey})>(
       context: context,
       builder: (context) {
