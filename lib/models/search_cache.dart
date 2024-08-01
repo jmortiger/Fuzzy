@@ -18,7 +18,6 @@ class SearchCache extends ChangeNotifier {
   int? get firstPostIdCached => _firstPostIdCached;
   set firstPostIdCached(int? v) =>
       (this.._firstPostIdCached = v)..notifyListeners();
-  int? get firstPostOnPageId => posts?.tryGet(0)?.id;
   int? _lastPostIdCached;
   int? get lastPostIdCached => _lastPostIdCached;
   set lastPostIdCached(int? v) =>
@@ -31,6 +30,7 @@ class SearchCache extends ChangeNotifier {
   bool? get hasNextPageCached => _hasNextPageCached;
   set hasNextPageCached(bool? v) =>
       (this.._hasNextPageCached = v)..notifyListeners();
+  int? get firstPostOnPageId => posts?.tryGet(0)?.id;
   bool? get hasPriorPage =>
       firstPostIdCached != null &&
       firstPostIdCached! > (firstPostOnPageId ?? firstPostIdCached!);
@@ -92,7 +92,7 @@ class SearchCache extends ChangeNotifier {
         // setState(() {
         hasNextPageCached = false;
         // });
-      } /* on Exception */ catch (e) {
+      } catch (e) {
         print(e);
         hasNextPageCached = false;
       }
@@ -100,17 +100,15 @@ class SearchCache extends ChangeNotifier {
     }
     if (out.posts.length != 1) {
       logger.warning(
-          "Last post search gave not 1 but ${out.posts.length} results.");
+        "Last post search gave not 1 but ${out.posts.length} results.",
+      );
     }
     try {
-      // setState(() {
-      lastPostIdCached = out.posts.last.id;
-      hasNextPageCached = (lastPostId != lastPostIdCached);
-      // });
+      return hasNextPageCached =
+          (lastPostId != (lastPostIdCached = out.posts.last.id));
     } catch (e) {
       lastPostIdCached = out.posts.last.id;
       return hasNextPageCached = (lastPostId != out.posts.last.id);
     }
-    return (lastPostId != out.posts.last.id);
   }
 }
