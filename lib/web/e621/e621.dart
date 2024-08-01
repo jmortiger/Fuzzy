@@ -458,7 +458,7 @@ sealed class E621 extends Site {
           : accessData.isAssigned
               ? accessData.$.cred
               : null;
-  static addPostToSetHeavyLifter(
+  static Future<void> addPostToSetHeavyLifter(
       BuildContext context, PostListing postListing) async {
     print("Adding ${postListing.id} to a set");
     // ScaffoldMessenger.of(context).showSnackBar(

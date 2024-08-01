@@ -1307,7 +1307,7 @@ Future<SavedElementRecord?> showSavedElementEditDialogue(
               keyboardType: isNumeric ? TextInputType.number : null,
             ),
             const Text("Parent:"),
-            // TODO: Autocomplete
+            // TODO: Add Autocomplete
             // TextField(
             //   onChanged: (value) => parent = value,
             //   controller: defaultSelection(initialParent),
@@ -1319,7 +1319,7 @@ Future<SavedElementRecord?> showSavedElementEditDialogue(
                 parent = value;
               },
               // controller: controller, //defaultSelection(initialParent),
-              // viewonTap: () => controller.openView(),
+              // onTap: () => controller.openView(),
               // onTapOutside: (e) => controller.closeView(null),
               searchController: searchController,
               builder: (context, controller) {
