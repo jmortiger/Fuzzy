@@ -68,7 +68,7 @@ Future<void> init() async {
         (v) => Platform.isWeb
             ? null
             : Storable.handleInitStorageAsync(
-                "$v/$mainFileName-${DateTime.timestamp().toIso8601DateString()}$logFileExt",
+                "$v$mainFileName-${DateTime.timestamp().toIso8601DateString()}$logFileExt",
               )
           ?..onError(
             (error, stackTrace) => mainFile.$ = null,
@@ -119,7 +119,7 @@ class FileLogger implements Logger {
     logPath.getItem().then(
           (v) => Platform.isWeb
               ? null
-              : Storable.handleInitStorageAsync("$v/$fileName")
+              : Storable.handleInitStorageAsync("$v$fileName")
             ?..then((v2) {
               file.$ = v2;
               return v2?.writeAsString(
@@ -152,7 +152,7 @@ class FileLogger implements Logger {
     logPath.getItem().then(
           (v) => Platform.isWeb
               ? null
-              : Storable.handleInitStorageAsync("$v/$fileName")
+              : Storable.handleInitStorageAsync("$v$fileName")
             ?..then((v2) {
               file.$ = v2;
               return v2?.writeAsString(

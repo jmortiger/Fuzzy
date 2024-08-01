@@ -14,9 +14,10 @@ import '../../models/image_listing.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-late final thing = lm.genLogger("E6Models");
-late final print = thing.print;
-late final logger = thing.logger;
+late final lRecord = lm.genLogger("E6Models");
+lm.Printer get print => lRecord.print;
+lm.FileLogger get logger => lRecord.logger;
+
 typedef JsonOut = Map<String, dynamic>;
 
 abstract class E6Posts {

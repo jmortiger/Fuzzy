@@ -586,11 +586,10 @@ class SearchResultArgs extends SearchArgs {
 
 class PostActionArgs extends JEventArgs {
   PostActionArgs({
-    required E6PostResponse post,
+    required E6PostResponse this.post,
     required this.responseBody,
     required this.statusCode,
-  })  : postId = post.id,
-        post = post;
+  }) : postId = post.id;
   PostActionArgs.withoutPost({
     required this.postId,
     required this.responseBody,

@@ -149,7 +149,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                 (screenWidth + 1)) >=
             screenWidth) {
           i = e6Post
-              .sample.alternates!.alternates[AlternateResolution.$720p.name]!;
+              .sample.alternates!.alternates[AlternateResolution.$720p.toString()]!;
         }
       }
     }

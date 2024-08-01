@@ -1014,7 +1014,8 @@ final class SavedSetData extends SavedListData {
 
   @override
   SavedSetData validateUniqueness() {
-    var all = SavedDataE6Legacy._instance.$.all;
+    // var all = SavedDataE6Legacy._instance.$.all;
+    var all = SavedDataE6.all;
     var ret = this;
     while (all
         .any((e) => e.searchString != searchString && e.uniqueId == uniqueId)) {
@@ -1028,7 +1029,8 @@ final class SavedSetData extends SavedListData {
   }
 
   @override
-  bool verifyUniqueness() => !SavedDataE6Legacy._instance.$.all.any(
+  // bool verifyUniqueness() => !SavedDataE6Legacy._instance.$.all.any(
+  bool verifyUniqueness() => !SavedDataE6.all.any(
         (e) => e.searchString != searchString && e.uniqueId == uniqueId,
       );
 }
@@ -1090,7 +1092,8 @@ final class SavedPoolData extends SavedListData {
   }
 
   @override
-  bool verifyUniqueness() => !SavedDataE6Legacy._instance.$.all.any(
+  // bool verifyUniqueness() => !SavedDataE6Legacy._instance.$.all.any(
+  bool verifyUniqueness() => !SavedDataE6.all.any(
         (e) => e.searchString != searchString && e.uniqueId == uniqueId,
       );
 }

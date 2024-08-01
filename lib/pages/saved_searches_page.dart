@@ -341,7 +341,7 @@ class _SavedSearchesPageSingletonState
   }
 }
 
-class SavedSearchesPageProviderLegacy extends StatelessWidget {
+/* class SavedSearchesPageProviderLegacy extends StatelessWidget {
   const SavedSearchesPageProviderLegacy({super.key});
 
   @override
@@ -621,3 +621,4 @@ class _SavedSearchesPageSingletonLegacyState
     );
   }
 }
+ */
