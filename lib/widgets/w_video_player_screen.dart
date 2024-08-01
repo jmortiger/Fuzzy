@@ -450,7 +450,7 @@ class _WVideoTimeCodeUnitState extends State<WVideoTimeCodeUnit> {
   }
 }
 
-// TODO: Make interactive
+// TODO: Improve scrubbing
 class WTimeline extends StatefulWidget {
   const WTimeline({
     super.key,
@@ -494,7 +494,7 @@ class _WTimelineState extends State<WTimeline> {
   }
 
   bool? cachedPlayState;
-  bool? seeking;
+  // bool? seeking;
   Future<void>? seekFuture;
   @override
   Widget build(BuildContext context) {
@@ -510,15 +510,25 @@ class _WTimelineState extends State<WTimeline> {
             });
           },
           onChanged: (value) {
-            seeking = true;
+            // setState(() {
+            //   seeking = true;
+            // });
             setState(() {
-              seekFuture = widget._controller
-                  .seekTo(position * value)
-                  .then((d) => seeking = false);
+              seekFuture = widget._controller.seekTo(duration * value)
+                ..then((d) => setState(() {
+                      //seeking = false;
+                      seekFuture = null;
+                    }));
             });
           },
           onChangeEnd: (value) {
-            if (cachedPlayState ?? false) widget._controller.play();
+            if (cachedPlayState ?? false) {
+              if (seekFuture == null) {
+                widget._controller.play();
+              } else {
+                seekFuture!.then((v) => widget._controller.play());
+              }
+            }
             setState(() {
               cachedPlayState = null;
             });
@@ -533,51 +543,3 @@ class _WTimelineState extends State<WTimeline> {
     );
   }
 }
-
-/* class WVideoSpeedOld extends StatelessWidget {
-  const WVideoSpeedOld({
-    super.key,
-    required this.height,
-    required VideoPlayerController controller,
-  }) : _controller = controller;
-
-  final double height;
-  final VideoPlayerController _controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Flexible(
-      flex: 1,
-      child: Padding(
-        padding: const EdgeInsets.only(right: 8),
-        child: Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: SizedBox.fromSize(
-            size: Size(
-                calculateTextSize(
-                  text: "0.000",
-                  style: DefaultTextStyle.of(context).style,
-                ).width,
-                height),
-            child: TextField(
-      keyboardType: const TextInputType.numberWithOptions(
-        decimal: true,
-      ),
-      controller: TextEditingController(
-          text: _controller.value.playbackSpeed.toString(),
-      ),
-      maxLength: 4,
-      maxLines: 1,
-      inputFormatters: [getParsableDecimalFormatter((p0) => p0 > 0)],
-      onChanged: (value) => num.tryParse(value)?.isFinite ?? false
-          ? _controller.setPlaybackSpeed(
-              num.parse(value).abs().toDouble(),
-            )
-          : "",
-    ),
-          ),
-        ),
-      ),
-    );
-  }
-} */

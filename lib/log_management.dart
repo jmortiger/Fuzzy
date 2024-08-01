@@ -134,16 +134,16 @@ class FileLogger implements Logger {
     $.onRecord.listen(
       (e) {
         file.$Safe?.writeAsString("${e.time.toLocal().toIso8601String()} [${e.level.toString().toUpperCase()}]: ${e.message}\n", mode: FileMode.append);
-        dev.log(
-          e.message,
-          time: e.time,
-          sequenceNumber: e.sequenceNumber,
-          error: e.error,
-          level: e.level.value,
-          name: e.loggerName,
-          stackTrace: e.stackTrace,
-          zone: e.zone,
-        );
+        // dev.log(
+        //   e.message,
+        //   time: e.time,
+        //   sequenceNumber: e.sequenceNumber,
+        //   error: e.error,
+        //   level: e.level.value,
+        //   name: e.loggerName,
+        //   stackTrace: e.stackTrace,
+        //   zone: e.zone,
+        // );
       },
     );
   }
