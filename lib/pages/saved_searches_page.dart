@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/tws_interop.dart' as tws;
 import 'package:fuzzy/web/e621/e621.dart' as mye6;
@@ -49,7 +50,6 @@ class SavedSearchesPageSingleton extends StatefulWidget {
 
 class _SavedSearchesPageSingletonState
     extends State<SavedSearchesPageSingleton> {
-  
   // #region Logger
   static late final lRecord = lm.genLogger("SavedSearchesPage");
   static lm.Printer get print => lRecord.print;
@@ -279,6 +279,18 @@ class _SavedSearchesPageSingletonState
                 TextButton(
                     onPressed: () => Navigator.pop<String>(
                           context,
+                          "Add to clipboard",
+                        ),
+                    child: const Text("Add to clipboard")),
+                TextButton(
+                    onPressed: () => Navigator.pop<String>(
+                          context,
+                          "Add Unique Id to clipboard",
+                        ),
+                    child: const Text("Add Unique Id to clipboard")),
+                TextButton(
+                    onPressed: () => Navigator.pop<String>(
+                          context,
                           "Edit",
                         ),
                     child: const Text("Edit")),
@@ -300,6 +312,23 @@ class _SavedSearchesPageSingletonState
                   context,
                   "${mye6.E621.delimiter}${entry.uniqueId}",
                 ),
+              "Add to clipboard" =>
+                Clipboard.setData(ClipboardData(text: entry.searchString))
+                    .then((v) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text("${entry.searchString} added to clipboard."),
+                  ));
+                  Navigator.pop(context);
+                }),
+              "Add Unique Id to clipboard" => Clipboard.setData(ClipboardData(
+                  text: "${mye6.E621.delimiter}${entry.uniqueId}",
+                )).then((v) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(
+                    "${mye6.E621.delimiter}${entry.uniqueId} added to clipboard.",
+                  )));
+                  Navigator.pop(context);
+                }),
               "Delete" => data.$ /* SavedDataE6 */ .removeEntry(entry),
               "Edit" => showSavedElementEditDialogue(context,
                         initialTitle: entry.title,

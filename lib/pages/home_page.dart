@@ -51,29 +51,16 @@ class _HomePageState extends State<HomePage> {
     }
     super.initState();
   }
-
-  // void workThroughSnackbarQueue() {
-  //   if (util.snackbarMessageQueue.isNotEmpty) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       util.snackbarMessageQueue.removeLast(),
-  //     );
-  //   }
-  //   if (util.snackbarBuilderMessageQueue.isNotEmpty) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       util.snackbarBuilderMessageQueue.removeLast()(context),
-  //     );
-  //   }
-  // }
+  
   @override
   Widget build(BuildContext context) {
-    // workThroughSnackbarQueue();
     return Scaffold(
       appBar: AppBar(
-        title: const Padding(
-          padding: EdgeInsets.all(8.0),
+        title: Padding(
+          padding: const EdgeInsets.all(8.0),
           // child: simpleTextField(),
           child: WSearchBar(
-            // initialValue: Provider.of<SearchViewModel>(context).searchText,
+            initialValue: Provider.of<SearchViewModel>(context).searchText,
             // onSelected: () => setState(() {}),
           ),
         ),
@@ -83,12 +70,13 @@ class _HomePageState extends State<HomePage> {
             Navigator.push<String>(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const SavedSearchesPageProvider/* Legacy */(),
+                  builder: (context) =>
+                      const SavedSearchesPageProvider /* Legacy */ (),
                 )).then(
               (value) => value == null
                   ? null
                   : setState(() {
-                      svm.searchText = value;
+                      Provider.of<SearchViewModel>(context, listen: false).searchText = value;
                       // svm.fillTextBarWithSearchString = true;
                       (svm.searchText.isNotEmpty)
                           ? _sendSearchAndUpdateState(tags: value)
@@ -133,7 +121,8 @@ class _HomePageState extends State<HomePage> {
   String get priorSearchText => svm.priorSearchText;
   set priorSearchText(String value) => svm.priorSearchText = value;
   // #region SearchCache
-  SearchCacheLegacy get sc => Provider.of<SearchCacheLegacy>(context, listen: false);
+  SearchCacheLegacy get sc =>
+      Provider.of<SearchCacheLegacy>(context, listen: false);
   E6Posts? get posts => sc.posts;
   int? get firstPostOnPageId => sc.firstPostOnPageId;
   set posts(E6Posts? value) => sc.posts = value;

@@ -35,7 +35,55 @@ class CachedSearches {
     var t = await (await file.getItem())?.readAsString();
     return (t != null)
         ? CachedSearches.loadFromJson(jsonDecode(t))
-        : _searches = const <SearchData>[];
+        : await loadFromPref(); // _searches = const <SearchData>[];
+  }
+
+  static const localStoragePrefix = 'cs';
+  static const localStorageLengthKey = '$localStoragePrefix.length';
+  static Future<bool> writeToPref([List<SearchData>? searches]) {
+    searches ??= CachedSearches.searches;
+    return pref.getItem().then((v) {
+      final l = v.setInt(localStorageLengthKey, searches!.length);
+      final success = <Future<bool>>[];
+      for (var i = 0; i < searches.length; i++) {
+        final e1 = searches[i];
+        final e = e1.toJson();
+        success.add(v.setString("$localStoragePrefix.$i", e));
+      }
+      return success.fold(
+          l,
+          (previousValue, element) => (previousValue is Future<bool>)
+              ? previousValue.then((s) => element.then((s1) => s && s1))
+              : element.then((s1) => previousValue && s1));
+    });
+  }
+
+  static Future<List<SearchData>> loadFromPref() => pref.getItem().then((v) {
+        final length = v.getInt(localStorageLengthKey) ?? 0;
+        var data = <SearchData>[];
+        for (var i = 0; i < length; i++) {
+          data.add(
+            SearchData.fromString(
+              searchString:
+                  v.getString("$localStoragePrefix.$i.searchString") ??
+                      "FAILURE",
+            ),
+          );
+        }
+        return data;
+      });
+  static List<SearchData>? loadFromPrefSync() {
+    if (!pref.isAssigned) return null;
+    final length = pref.$.getInt(localStorageLengthKey) ?? 0;
+    var data = <SearchData>[];
+    for (var i = 0; i < length; i++) {
+      data.add(
+        SearchData.fromString(
+          searchString: pref.$.getString("$localStoragePrefix.$i") ?? "FAILURE",
+        ),
+      );
+    }
+    return data;
   }
 
   static List<SearchData> loadFromJson(List json) =>
@@ -70,9 +118,12 @@ class CachedSearches {
     print("Writing search cache");
     file
         .getItem()
-        .then<Object?>((v) =>
-            v?.writeAsString(jsonEncode(CachedSearches.toJson())) ??
-            Future.sync(() => null))
+        .then<async_lib.FutureOr<Object?>>(
+          (v) =>
+              v?.writeAsString(jsonEncode(CachedSearches.toJson())) ??
+              // Future.sync(() => null)
+              writeToPref().then((v1) => v1 ? v1 : null),
+        )
         .then(
           (value) => print(
               "Write ${value == null ? "not performed" : "presumably successful"}"),

@@ -25,12 +25,12 @@ class WSearchBar extends StatefulWidget {
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger
-  // final String? initialValue;
+  final String? initialValue;
   final VoidFunction? onSelected;
 
   const WSearchBar({
     super.key,
-    // this.initialValue,
+    this.initialValue,
     this.onSelected,
   });
 
@@ -50,12 +50,18 @@ class _WSearchBarState extends State<WSearchBar> {
     lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
     final currSubString = currText.substring(lastTermIndex);
     final currPrefix = currText.substring(0, lastTermIndex);
+    logger.info("$currText = currText");
+    logger.info("$lastTermIndex = lastTermIndex");
+    logger.info("$currSubString = currSubString");
+    logger.info("$currPrefix = currPrefix");
     if (allSuggestionSourcesEmpty() || currText.isEmpty) {
       return const Iterable<String>.empty();
     }
     var db = retrieveTagDB();
     if (db == null) {
-      var r = allModifierTagsList.map((e) => "$currPrefix $e");
+      var r = allModifierTagsList
+          .map((e) => "$currPrefix$e")
+          .where((v) => v.contains(currText));
       if ((AppSettings.i?.favoriteTags.isEmpty ?? true) &&
           !SavedDataE6.isInit &&
           CachedSearches.searches.isEmpty) {
@@ -66,7 +72,6 @@ class _WSearchBarState extends State<WSearchBar> {
       }
       return {
         currText,
-        ...r,
         if (CachedSearches.searches.isNotEmpty)
           ...(() {
             var relatedSearches = CachedSearches.searches.where(
@@ -93,11 +98,20 @@ class _WSearchBarState extends State<WSearchBar> {
                       "${E621.delimiter}${v.uniqueId}",
                     ),
               )
-              .map((v) => "$currPrefix ${E621.delimiter}${v.uniqueId}"),
+              .map((v) => "$currPrefix ${E621.delimiter}${v.uniqueId}")
+              .toList()
+            ..sort(
+              util.getFineInverseSimilarityComparator(currText),
+            ),
+        ...r,
         if (AppSettings.i?.favoriteTags.isNotEmpty ?? false)
           ...AppSettings.i!.favoriteTags
               .where((element) => !currText.contains(element))
-              .map((e) => "$currPrefix$e"),
+              .map((e) => "$currPrefix$e")
+              .toList()
+            ..sort(
+              util.getFineInverseSimilarityComparator(currText),
+            ),
       };
     }
     return genSearchOptionsFromTagDB(
@@ -123,6 +137,9 @@ class _WSearchBarState extends State<WSearchBar> {
     }
 
     void onSubmitted(String s) {
+      setState(() {
+        currentText = s;
+      });
       closeAndUnfocus();
       // svm.searchText = s;//controller.text;
       // (svm.searchText.isNotEmpty)
@@ -142,23 +159,6 @@ class _WSearchBarState extends State<WSearchBar> {
       viewHintText: "Search",
       isFullScreen: true,
       searchController: searchController,
-      // builder: (context, controller) {
-      //   // return SearchBar(
-      //   //   controller: controller,
-      //   //   onTapOutside: (event) => closeAndUnfocus(),
-      //   //   onTap: () => controller.openView(),
-      //   //   focusNode: fn,
-      //   //   textInputAction: TextInputAction.newline,
-      //   //   onSubmitted: onSubmitted,
-      //   //   onChanged: (value) => setState(() {
-      //   //     currentText = value;
-      //   //   }),
-      //   // );
-      //   return IconButton(
-      //     icon: const Icon(Icons.search),
-      //     onPressed: controller.openView,
-      //   );
-      // },
       suggestionsBuilder: (context, controller) {
         logger.finer("Text: ${controller.text}");
 
@@ -242,7 +242,8 @@ class _WSearchBarState extends State<WSearchBar> {
   void initState() {
     super.initState();
     autofocus = true;
-    searchController = SearchController()..text = currentText;
+    searchController = SearchController()
+      ..text = currentText = (widget.initialValue ?? "");
   }
 
   // SearchViewModel get svm =>
