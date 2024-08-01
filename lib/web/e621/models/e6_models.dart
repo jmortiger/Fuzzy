@@ -177,9 +177,6 @@ final class E6PostResponse implements PostListing, e621.Post {
   @override
   final E6PostTags tags;
 
-  @override
-  ITagData get tagData => tags;
-
   /// A JSON array of tags that are locked on the post.
   @override
   final List<String> lockedTags;
@@ -243,10 +240,38 @@ final class E6PostResponse implements PostListing, e621.Post {
   final num? duration;
   // #endregion Not Documented
   // #endregion Json Fields
+
+  @override
+  ITagData get tagData => tags;
   @override
   List<String> get tagList => tags.allTags;
   bool get isAnimatedGif =>
       file.extension == "gif" && tags.meta.contains("animated");
+  static late final error = E6PostResponse(
+    id: -1,
+    createdAt: DateTime.now(),
+    updatedAt: DateTime.now(),
+    file: E6FileResponse.error,
+    preview: E6Preview.error,
+    sample: E6Sample.error,
+    score: E6Score.error,
+    tags: E6PostTags.error,
+    lockedTags: [],
+    changeSeq: -1,
+    flags: E6Flags.error,
+    rating: "",
+    favCount: -1,
+    sources: [],
+    pools: [],
+    relationships: E6Relationships.error,
+    approverId: -1,
+    uploaderId: -1,
+    description: "",
+    commentCount: -1,
+    isFavorited: false,
+    hasNotes: false,
+    duration: -1,
+  );
   E6PostResponse({
     required this.id,
     required this.createdAt,
@@ -382,8 +407,15 @@ class E6FileResponse extends E6Preview implements e621.File {
   final Late<Uri> _address = Late();
   @override
   Uri get address => Uri.parse(url); */
-
-  E6FileResponse({
+  static const error = E6FileResponse(
+    width: -1,
+    height: -1,
+    ext: "",
+    size: -1,
+    md5: "",
+    url: "",
+  );
+  const E6FileResponse({
     required super.width,
     required super.height,
     required this.ext,
@@ -408,7 +440,8 @@ class E6Preview extends e621.Preview implements IImageInfo {
   @override
   bool get isAVideo => extension == "webm" || extension == "mp4";
 
-  @override
+  // #region Non-Const
+  /* @override
   bool get hasValidUrl =>
       url.isNotEmpty &&
       (_address.isAssigned
@@ -418,9 +451,23 @@ class E6Preview extends e621.Preview implements IImageInfo {
   final _address = LateFinal<Uri>();
   @override
   Uri get address =>
-      _address.isAssigned ? _address.$ : _address.$Safe = Uri.parse(url);
+      _address.isAssigned ? _address.$ : _address.$Safe = Uri.parse(url); */
+  // #endregion Non-Const
+  // #region Const
+  @override
+  bool get hasValidUrl => url.isNotEmpty && Uri.tryParse(url) != null;
 
-  E6Preview({
+  @override
+  Uri get address => Uri.parse(url);
+
+  static const error = E6Preview(
+    width: -1,
+    height: -1,
+    url: "",
+  );
+  // #endregion Const
+
+  const E6Preview({
     required super.width,
     required super.height,
     required super.url,
@@ -442,7 +489,14 @@ class E6Sample extends E6Preview implements ISampleInfo, e621.Sample {
   @override
   bool get isAVideo => extension == "webm" || extension == "mp4";
 
-  E6Sample({
+  static const error = E6Sample(
+    has: false,
+    width: -1,
+    height: -1,
+    url: "",
+  );
+
+  const E6Sample({
     required this.has,
     required super.width,
     required super.height,
@@ -461,7 +515,13 @@ class E6Sample extends E6Preview implements ISampleInfo, e621.Sample {
 }
 
 class E6Score extends e621.Score {
-  E6Score({
+  static const error = E6Score(
+    up: -1,
+    down: -1,
+    total: -1,
+  );
+
+  const E6Score({
     required super.up,
     required super.down,
     required super.total,
@@ -478,6 +538,18 @@ class E6Score extends e621.Score {
         "down": down,
         "total": total,
       };
+
+  @override
+  E6Score copyWith({
+    int? up,
+    int? down,
+    int? total,
+  }) =>
+      E6Score(
+        up: up ?? this.up,
+        down: down ?? this.down,
+        total: total ?? this.total,
+      );
 }
 
 class E6PostTags extends e621.PostTags implements ITagData {
@@ -506,8 +578,17 @@ class E6PostTags extends e621.PostTags implements ITagData {
         e621.TagCategory.copyright => copyright,
         _ => null,
       };
-
-  E6PostTags({
+  static const error = E6PostTags(
+    general: [],
+    species: [],
+    character: [],
+    artist: [],
+    invalid: [],
+    lore: [],
+    meta: [],
+    copyright: [],
+  );
+  const E6PostTags({
     required super.general,
     required super.species,
     required super.character,
@@ -542,7 +623,15 @@ class E6PostTags extends e621.PostTags implements ITagData {
 }
 
 class E6Flags extends e621.PostFlags {
-  E6Flags({
+  static const error = E6Flags(
+    pending: true,
+    flagged: true,
+    noteLocked: true,
+    statusLocked: true,
+    ratingLocked: true,
+    deleted: true,
+  );
+  const E6Flags({
     required super.pending,
     required super.flagged,
     required super.noteLocked,
@@ -557,6 +646,24 @@ class E6Flags extends e621.PostFlags {
         statusLocked: json["status_locked"] as bool,
         ratingLocked: json["rating_locked"] as bool,
         deleted: json["deleted"] as bool,
+      );
+
+  // @override
+  E6Flags copyWith({
+    bool? pending,
+    bool? flagged,
+    bool? noteLocked,
+    bool? statusLocked,
+    bool? ratingLocked,
+    bool? deleted,
+  }) =>
+      E6Flags(
+        pending: pending ?? this.pending,
+        flagged: flagged ?? this.flagged,
+        noteLocked: noteLocked ?? this.noteLocked,
+        statusLocked: statusLocked ?? this.statusLocked,
+        ratingLocked: ratingLocked ?? this.ratingLocked,
+        deleted: deleted ?? this.deleted,
       );
 }
 
@@ -675,10 +782,34 @@ class E6FlagsBit implements E6Flags {
   static const int statusLockedFlag = 8; //int.parse("001000", radix: 2);
   static const int ratingLockedFlag = 16; //int.parse("010000", radix: 2);
   static const int deletedFlag = 32; //int.parse("100000", radix: 2);
+
+  @override
+  E6FlagsBit copyWith({
+    bool? pending,
+    bool? flagged,
+    bool? noteLocked,
+    bool? statusLocked,
+    bool? ratingLocked,
+    bool? deleted,
+  }) =>
+      E6FlagsBit(
+        pending: pending ?? this.pending,
+        flagged: flagged ?? this.flagged,
+        noteLocked: noteLocked ?? this.noteLocked,
+        statusLocked: statusLocked ?? this.statusLocked,
+        ratingLocked: ratingLocked ?? this.ratingLocked,
+        deleted: deleted ?? this.deleted,
+      );
 }
 
 class E6Relationships extends e621.PostRelationships {
-  E6Relationships({
+  static const error = E6Relationships(
+    parentId: -1,
+    hasChildren: false,
+    hasActiveChildren: false,
+    children: [],
+  );
+  const E6Relationships({
     required super.parentId,
     required super.hasChildren,
     required super.hasActiveChildren,
