@@ -150,19 +150,35 @@ class _WSearchBarState extends State<WSearchBar> {
       //   );
       // },
       suggestionsBuilder: (context, controller) {
+        logger.finer("Text: ${controller.text}");
+
+        /// USING THE LIBRARY CAUSES THE ERROR.
         return generateSortedOptions(controller.text).map(
-          (e) => ListTile(
-            dense: true,
-            title: Text(e.split(RegExpExt.whitespace).last),
-            subtitle: Text(e),
-            onTap: /* closeAndUnfocus */ () {
-              // setState(() {
-              //   currentText = e;
-              // });
-              if (controller.isAttached) controller.closeView(e);
-              // closeAndUnfocus();
-            },
-          ),
+          (e) {
+            logger.finer("e = $e Length: ${e.length}");
+            e = e.trim();
+            logger.finer("e.trim() = $e Length: ${e.length}");
+            logger.finer(
+                e.contains(RegExp(r'[\u2028\n\r\u000B\f\u2029\u0085 	]'))
+                    ? e.split(RegExp(r'[\u2028\n\r\u000B\f\u2029\u0085 	]'))
+                    : [e]);
+            return ListTile(
+              dense: true,
+              title: Text((e.contains(
+                          RegExp(r'[\u2028\n\r\u000B\f\u2029\u0085 	]'))
+                      ? e.split(RegExp(r'[\u2028\n\r\u000B\f\u2029\u0085 	]'))
+                      : [e])
+                  .last),
+              subtitle: Text(e),
+              onTap: /* closeAndUnfocus */ () {
+                // setState(() {
+                //   currentText = e;
+                // });
+                if (controller.isAttached) controller.closeView(e);
+                // closeAndUnfocus();
+              },
+            );
+          },
         );
       },
       onSubmitted: onSubmitted,
@@ -297,7 +313,8 @@ class _WSearchBarState extends State<WSearchBar> {
     int? pageNumber,
   }) {
     SearchViewModel svm = Provider.of<SearchViewModel>(context, listen: false);
-    SearchCache sc = Provider.of<SearchCache>(context, listen: false);
+    SearchCacheLegacy sc =
+        Provider.of<SearchCacheLegacy>(context, listen: false);
     SearchResultsNotifier sr =
         Provider.of<SearchResultsNotifier>(context, listen: false);
     bool isNewRequest = false;
@@ -314,7 +331,7 @@ class _WSearchBarState extends State<WSearchBar> {
       out = "Request For Same Terms: ${svm.priorSearchText} ($out";
     }
     sr.selectedIndices.clear();
-    logger.finer(out);
+    logger.info(out);
     sc.hasNextPageCached = null;
     sc.lastPostOnPageIdCached = null;
     // var (:username, :apiKey) = devGetAuth()

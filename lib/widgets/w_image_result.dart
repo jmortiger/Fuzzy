@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart' show SearchView;
 import 'package:fuzzy/models/saved_data.dart' show SavedDataE6;
-import 'package:fuzzy/models/search_cache.dart' show SearchCache;
+import 'package:fuzzy/models/search_cache.dart' show SearchCacheLegacy;
 import 'package:fuzzy/models/search_results.dart' show SearchResultsNotifier;
 import 'package:fuzzy/models/search_view_model.dart' show SearchViewModel;
 import 'package:fuzzy/pages/post_swipe_page.dart' as old;
@@ -37,8 +37,8 @@ class WImageResult extends StatelessWidget {
 
   final void Function(int index)? onSelectionToggle;
   final Iterable<E6PostResponse>? postsCache;
-  SearchCache getSc(BuildContext context, [bool listen = false]) =>
-      Provider.of<SearchCache>(context, listen: listen);
+  SearchCacheLegacy getSc(BuildContext context, [bool listen = false]) =>
+      Provider.of<SearchCacheLegacy>(context, listen: listen);
   const WImageResult({
     super.key,
     required this.imageListing,
@@ -264,7 +264,7 @@ class WImageResult extends StatelessWidget {
                             : old.PostSwipePage.postsCollection(
                                 initialIndex: index,
                                 posts: postsCache ??
-                                    Provider.of<SearchCache>(context,
+                                    Provider.of<SearchCacheLegacy>(context,
                                             listen: false)
                                         .posts!
                                         .posts,

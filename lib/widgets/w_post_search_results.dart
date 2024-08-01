@@ -120,7 +120,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
   // #region Notifiers
   Set<int> _selectedIndices = {};
 
-  SearchCache get sc => Provider.of<SearchCache>(context, listen: false);
+  SearchCacheLegacy get sc => Provider.of<SearchCacheLegacy>(context, listen: false);
   SearchResultsNotifier get sr =>
       Provider.of<SearchResultsNotifier>(context, listen: false);
   SearchResultsNotifier get srl =>

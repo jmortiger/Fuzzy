@@ -99,7 +99,7 @@ Widget buildHomePageWithProviders({
         ChangeNotifierProvider(
           create: (context) => SearchViewModel(searchText: searchText),
         ),
-        ChangeNotifierProvider(create: (context) => SearchCache()),
+        ChangeNotifierProvider(create: (context) => SearchCacheLegacy()),
         ChangeNotifierProvider(create: (context) => SearchResultsNotifier()),
         ChangeNotifierProvider(
             create: (context) => CachedFavorites.loadFromStorageSync()),

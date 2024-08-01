@@ -110,7 +110,7 @@ class _HomePageState extends State<HomePage> {
         getMountedContext: () => this.context,
       ), //_buildDrawer(context),
       floatingActionButton: WFabBuilder.multiplePosts(
-        posts: Provider.of<SearchCache>(context, listen: true)
+        posts: Provider.of<SearchCacheLegacy>(context, listen: true)
                 .posts
                 ?.posts
                 .where((e) =>
@@ -133,7 +133,7 @@ class _HomePageState extends State<HomePage> {
   String get priorSearchText => svm.priorSearchText;
   set priorSearchText(String value) => svm.priorSearchText = value;
   // #region SearchCache
-  SearchCache get sc => Provider.of<SearchCache>(context, listen: false);
+  SearchCacheLegacy get sc => Provider.of<SearchCacheLegacy>(context, listen: false);
   E6Posts? get posts => sc.posts;
   int? get firstPostOnPageId => sc.firstPostOnPageId;
   set posts(E6Posts? value) => sc.posts = value;

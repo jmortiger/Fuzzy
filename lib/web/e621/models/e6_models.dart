@@ -6,6 +6,7 @@ import 'dart:math';
 
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/web/e621/e621.dart';
+import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
@@ -29,6 +30,23 @@ abstract class E6Posts {
     bool checkForValidFileUrl = true,
   });
   Set<int> get restrictedIndices;
+
+  void advanceToEnd();
+}
+
+abstract class E6PostEntries {
+  Iterable<E6PostEntry> get posts;
+
+  E6PostEntry operator [](int index);
+  int get count;
+  // E6Posts fromJsonConstructor(JsonOut json);
+  E6PostEntry? tryGet(
+    int index, {
+    bool checkForValidFileUrl = true,
+  });
+  Set<int> get restrictedIndices;
+
+  void advanceToEnd();
 }
 
 class FullyIteratedArgs extends JEventArgs {
@@ -104,6 +122,11 @@ final class E6PostsLazy extends E6Posts {
   static Iterable<E6PostResponse> lazyConvertFromJson(JsonOut json) =>
       ((json["posts"] ?? json) as Iterable)
           .map((e) => E6PostResponse.fromJson(e));
+
+  @override
+  void advanceToEnd() {
+    tryGet(E621.maxPostsPerSearch + 5);
+  }
 }
 
 final class E6PostsSync implements E6Posts {
@@ -144,9 +167,13 @@ final class E6PostsSync implements E6Posts {
   factory E6PostsSync.fromJson(JsonOut json) => E6PostsSync(
       posts: (json["posts"] as List)
           .mapAsList((e, i, l) => E6PostResponse.fromJson(e)));
+
+  /// Already fully loaded, so does nothing.
+  @override
+  void advanceToEnd() {}
 }
 
-final class E6PostResponse implements PostListing, e621.Post {
+class E6PostResponse implements PostListing, e621.Post {
   // #region Json Fields
   /// The ID number of the post.
   @override

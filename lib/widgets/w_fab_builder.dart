@@ -667,7 +667,7 @@ class _WFabWrapperState extends State<WFabWrapper> {
   @override
   Widget build(BuildContext context) {
     return WFabBuilder.multiplePosts(
-      posts: Provider.of<SearchCache>(context, listen: true)
+      posts: Provider.of<SearchCacheLegacy>(context, listen: true)
               .posts
               ?.posts
               .where((e) =>

@@ -112,11 +112,11 @@ sealed class E621 extends Site {
         }
       },
     );
-    print("fillTagTemplate: After: $tags");
+    print("fillTagTemplate: After: $tags", lm.LogLevel.INFO);
     tags +=
         AppSettings.i?.blacklistedTags.map((e) => "-$e").foldToString(" ") ??
             "";
-    print("fillTagTemplate: After Blacklist: $tags");
+    print("fillTagTemplate: After Blacklist: $tags", lm.LogLevel.INFO);
     return tags;
   }
 

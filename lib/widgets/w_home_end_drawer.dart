@@ -42,7 +42,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
   SearchViewModel get svm =>
       Provider.of<SearchViewModel>(context, listen: false);
   // #region SearchCache
-  SearchCache get sc => Provider.of<SearchCache>(context, listen: false);
+  SearchCacheLegacy get sc => Provider.of<SearchCacheLegacy>(context, listen: false);
   E6Posts? get posts => sc.posts;
   int? get firstPostOnPageId => sc.firstPostOnPageId;
   set posts(E6Posts? value) => sc.posts = value;
