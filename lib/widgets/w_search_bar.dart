@@ -318,11 +318,12 @@ class _WSearchBarState extends State<WSearchBar> {
   /// Call inside of setState
   void _sendSearchAndUpdateState({
     String tags = "",
-    int limit = 50,
+    int? limit,
     String? pageModifier,
     int? postId,
     int? pageNumber,
   }) {
+    limit ??= SearchView.i.postsPerPage;
     SearchViewModel svm = Provider.of<SearchViewModel>(context, listen: false);
     SearchCacheLegacy sc =
         Provider.of<SearchCacheLegacy>(context, listen: false);

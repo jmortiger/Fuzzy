@@ -11,6 +11,7 @@ import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/saved_searches_page.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
+import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/widgets/w_fab_builder.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:fuzzy/widgets/w_search_result_page_navigation.dart';
@@ -51,7 +52,7 @@ class _HomePageState extends State<HomePage> {
     }
     super.initState();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -76,7 +77,8 @@ class _HomePageState extends State<HomePage> {
               (value) => value == null
                   ? null
                   : setState(() {
-                      Provider.of<SearchViewModel>(context, listen: false).searchText = value;
+                      Provider.of<SearchViewModel>(context, listen: false)
+                          .searchText = value;
                       // svm.fillTextBarWithSearchString = true;
                       (svm.searchText.isNotEmpty)
                           ? _sendSearchAndUpdateState(tags: value)
@@ -182,20 +184,30 @@ class _HomePageState extends State<HomePage> {
             print("BUILDING PAGE NAVIGATION");
             return WSearchResultPageNavigation(
               onNextPage: sc.hasNextPageCached ?? false
-                  ? () => _sendSearchAndUpdateState(
+                  ? () {
+                      if (sc is ManagedPostCollection) {
+                        (sc as ManagedPostCollection).nextPage();
+                      }
+                      _sendSearchAndUpdateState(
                         limit: SearchView.i.postsPerPage,
                         pageModifier: 'b',
                         postId: sc.lastPostOnPageIdCached,
                         tags: svm.priorSearchText,
-                      )
+                      );
+                    }
                   : null,
               onPriorPage: sc.hasPriorPage ?? false
-                  ? () => _sendSearchAndUpdateState(
+                  ? () {
+                      if (sc is ManagedPostCollection) {
+                        (sc as ManagedPostCollection).priorPage();
+                      }
+                      _sendSearchAndUpdateState(
                         limit: SearchView.i.postsPerPage,
                         pageModifier: 'a',
                         postId: sc.firstPostOnPageId,
                         tags: svm.priorSearchText,
-                      )
+                      );
+                    }
                   : null,
             );
           })(),
@@ -206,11 +218,12 @@ class _HomePageState extends State<HomePage> {
   /// Call inside of setState
   void _sendSearchAndUpdateState({
     String tags = "",
-    int limit = 50,
+    int? limit,
     String? pageModifier,
     int? postId,
     int? pageNumber,
   }) {
+    limit ??= SearchView.i.postsPerPage;
     bool isNewRequest = false;
     var out = "pageModifier = $pageModifier, "
         "postId = $postId, "

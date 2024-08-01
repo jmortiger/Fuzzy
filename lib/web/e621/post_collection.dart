@@ -6,6 +6,8 @@ import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
+import 'post_search_parameters.dart';
+
 class PostCollectionEvent extends JEventArgs {
   final List<FutureOr<E6PostResponse>> posts;
 
@@ -13,7 +15,7 @@ class PostCollectionEvent extends JEventArgs {
 }
 
 class PostCollection with ListMixin<E6PostEntry> {
-  final LinkedList<E6PostEntry> _posts = LinkedList();
+  final LinkedList<E6PostEntry> _posts;
   LinkedList<E6PostEntry> get posts => _posts;
   @Event(name: "addPosts")
   final addPosts = JOwnedEvent<PostCollection, PostCollectionEvent>();
@@ -43,6 +45,153 @@ class PostCollection with ListMixin<E6PostEntry> {
   @override
   int get length => _posts.length;
   // #endregion Collection Overrides
+  PostCollection() : _posts = LinkedList();
+  PostCollection.withPosts({
+    required Iterable<E6PostResponse> posts,
+  }) : _posts = LinkedList()..addAll(posts.map((e) => E6PostEntry(value: e)));
+}
+
+class ManagedPostCollection extends SearchCacheLegacy {
+  ManagedPostCollection({
+    int currentPageOffset = 0,
+    PostSearchParametersSlim parameters = const PostSearchParametersSlim(),
+    super.firstPostIdCached,
+    super.lastPostIdCached,
+    super.lastPostOnPageIdCached,
+    super.hasNextPageCached,
+  })  : _parameters = PostPageSearchParameters.fromSlim(s: parameters, page: 0),
+        _currentPageOffset = currentPageOffset,
+        collection = PostCollection();
+  ManagedPostCollection.withE6Posts({
+    int currentPageOffset = 0,
+    required E6Posts posts,
+    PostSearchParametersSlim parameters = const PostSearchParametersSlim(),
+    super.firstPostIdCached,
+    super.lastPostIdCached,
+    super.lastPostOnPageIdCached,
+    super.hasNextPageCached,
+  })  : _parameters = PostPageSearchParameters.fromSlim(s: parameters, page: 0),
+        _currentPageOffset = currentPageOffset,
+        collection = PostCollection.withPosts(posts: posts.posts);
+  ManagedPostCollection.withPosts({
+    int currentPageOffset = 0,
+    required Iterable<E6PostResponse> posts,
+    PostSearchParametersSlim parameters = const PostSearchParametersSlim(),
+    super.firstPostIdCached,
+    super.lastPostIdCached,
+    super.lastPostOnPageIdCached,
+    super.hasNextPageCached,
+  })  : _parameters = PostPageSearchParameters.fromSlim(s: parameters, page: 0),
+        _currentPageOffset = currentPageOffset,
+        collection = PostCollection.withPosts(posts: posts);
+  bool treatAsNull = true;
+  final PostCollection collection;
+  PostPageSearchParameters _parameters;
+  PostPageSearchParameters get parameters => _parameters;
+  set parameters(PostPageSearchParameters value) {
+    _parameters = value;
+    notifyListeners();
+  }
+
+  Future<void> nextPage({
+    String? username,
+    String? apiKey,
+  }) async {
+    if (await getHasNextPage(tags: parameters.tags ?? "")) {
+      _currentPageOffset++;
+      parameters = _parameters.copyWith(page: _parameters.pageNumber! + 1);
+    }
+  }
+  Future<void> priorPage({
+    String? username,
+    String? apiKey,
+  }) async {
+    if (hasPriorPage ?? await getHasNextPage(tags: parameters.tags ?? "").then((v) => hasPriorPage!)) {
+      _currentPageOffset--;
+      parameters = _parameters.copyWith(page: _parameters.pageNumber! - 1);
+    }
+  }
+
+  int _currentPageOffset;
+  E6Posts? _e6posts;
+  @override
+  E6Posts? get posts => treatAsNull
+      ? null
+      : _e6posts != null &&
+              _e6posts!.tryGet(0) ==
+                  collection._posts
+                      .elementAtOrNull(
+                          SearchView.i.postsPerPage * _currentPageOffset)
+                      ?.inst
+                      .$
+          ? _e6posts
+          : _e6posts = E6PostsSync(
+              posts: collection._posts
+                  .skip(SearchView.i.postsPerPage * _currentPageOffset)
+                  .take(SearchView.i.postsPerPage)
+                  .map(
+                    (e) => e.$,
+                  ).toList());
+  @override
+  set posts(E6Posts? v) {
+    if (v == null) {
+      treatAsNull = true;
+      return;
+    }
+    treatAsNull = false;
+    v.advanceToEnd();
+    if (v.count > collection._posts.length) {
+      for (var e in v.posts) {
+        collection._posts.add(E6PostEntry(value: e));
+      }
+      return;
+    }
+    var /* i = 0,  */unlinkIndices = <int>[];
+    // for (var element in collection._posts
+    //     .skip(SearchView.i.postsPerPage * _currentPageOffset)
+    //     .take(SearchView.i.postsPerPage)) {
+    //   var t = v.tryGet(i);
+    //   if (t != null) {
+    //     element.$ = t;
+    //   } else {
+    //     unlinkIndices.add(i);
+    //     // element.unlink();
+    //     // var temp = element.next;
+    //     // element.next = element.previous
+    //   }
+    //   i++;
+    // }
+    var subset = collection._posts
+        .skip(SearchView.i.postsPerPage * _currentPageOffset)
+        .take(SearchView.i.postsPerPage);
+    for (var i = 0; v.tryGet(i) != null; i++) {
+      var element = subset.elementAtOrNull(i);
+      var t = v.tryGet(i);
+      if (element != null) {
+        if (t != null) {
+          element.$ = t;
+        } else {
+          unlinkIndices.add(i);
+          // element.unlink();
+          // var temp = element.next;
+          // element.next = element.previous
+        }
+      } else {
+        if (t != null) {
+          collection._posts.add(E6PostEntry(value: t));
+        }
+      }
+    }
+    for (var element in unlinkIndices) {
+      collection._posts
+          .skip(SearchView.i.postsPerPage * _currentPageOffset)
+          .take(SearchView.i.postsPerPage)
+          .elementAt(element)
+          .unlink();
+      // var temp = element.next;
+      // element.next = element.previous
+    }
+  }
 }
 
 class SelfManagedPostCollectionBad extends SearchCache
@@ -80,7 +229,7 @@ class SelfManagedPostCollectionBad extends SearchCache
 
   @override
   E6PostEntry operator [](int index) {
-    // TODO: implement 
+    // TODO: implement
     // if (_postsStash!.length <= index && !_postCapacity.isAssigned) {
     //   bool mn = false;
     //   for (var i = _postsStash!.length;
@@ -111,36 +260,6 @@ final class E6PostEntry extends LinkedListEntry<E6PostEntry>
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger
-  // final ValueAsync<E6PostResponse> _inst;
-  // @override
-  // bool get isValue => _inst.isValue;
-  // @override
-  // bool get isFuture => _inst.isFuture;
-  // @override
-  // bool get isComplete => _inst.isComplete;
-  // @override
-  // Future<E6PostResponse>? get futureSafe => _inst.futureSafe;
-  // @override
-  // Future<E6PostResponse> get future => _inst.future;
-  // @override
-  // E6PostResponse? get $Safe => _inst.$Safe;
-  // @override
-  // E6PostResponse get $ => _inst.$;
-  // @override
-  // set $(E6PostResponse v) => _inst.$;
-
-  // @override
-  // clearErrorData() => _inst.clearErrorData();
-
-  // @override
-  // ({Object error, StackTrace? stackTrace})? get errorData => _inst.errorData;
-
-  // @override
-  // Function makeDefaultCatchError([bool trySilenceErrors = false]) =>
-  //     _inst.makeDefaultCatchError(trySilenceErrors);
-
-  // @override
-  // FutureOr<E6PostResponse> get value => _inst.value;
 
   @override
   final ValueAsync<E6PostResponse> inst;
@@ -154,68 +273,3 @@ final class E6PostEntry extends LinkedListEntry<E6PostEntry>
               return E6PostResponse.error;
             });
 }
-
-/* final class E6PostEntry extends LinkedListEntry<E6PostEntry> {
-  // #region Logger
-  static late final lRecord = lm.genLogger("E6PostEntry");
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
-  // #endregion Logger
-  final FutureOr<E6PostResponse> value;
-  final _value = LateInstance<E6PostResponse>();
-  // late dynamic _error;
-  // late StackTrace _stackTrace;
-  bool get isValue => value is E6PostResponse;
-  bool get isFuture => value is Future<E6PostResponse>;
-  bool get isComplete => _value.isAssigned;
-  Future<E6PostResponse>? get futureSafe => value as Future<E6PostResponse>?;
-  Future<E6PostResponse> get future => value as Future<E6PostResponse>;
-  E6PostResponse? get $Safe => _value.$Safe;
-  E6PostResponse get $ => _value.$;
-  set $(E6PostResponse v) => _value.$ = v;
-
-  E6PostEntry({required this.value}) {
-    if (isFuture) {
-      future.catchError((e, s) {
-        // _error = e;
-        // _stackTrace = s;
-        logger.severe("Failed to resolve post", e, s);
-        return E6PostResponse.error;
-      }).then((v) => _value.$ = v);
-    } else if (isValue) {
-      _value.$ = value as E6PostResponse;
-    }
-  }
-} 
-class E6PostOrFuture {
-  // #region Logger
-  static late final lRecord = lm.genLogger("E6PostOrFuture");
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
-  // #endregion Logger
-  final FutureOr<E6PostResponse> value;
-  final _value = LateInstance<E6PostResponse>();
-  // late dynamic _error;
-  // late StackTrace _stackTrace;
-  bool get isValue => value is E6PostResponse;
-  bool get isFuture => value is Future<E6PostResponse>;
-  bool get isComplete => _value.isAssigned;
-  Future<E6PostResponse>? get futureSafe => value as Future<E6PostResponse>?;
-  Future<E6PostResponse> get future => value as Future<E6PostResponse>;
-  E6PostResponse? get $Safe => _value.$Safe;
-  E6PostResponse get $ => _value.$;
-  set $(E6PostResponse v) => _value.$ = v;
-
-  E6PostOrFuture({required this.value}) {
-    if (isFuture) {
-      future.catchError((e, s) {
-        // _error = e;
-        // _stackTrace = s;
-        logger.severe("Failed to resolve post", e, s);
-        return E6PostResponse.error;
-      }).then((v) => _value.$ = v);
-    } else if (isValue) {
-      _value.$ = value as E6PostResponse;
-    }
-  }
-} */

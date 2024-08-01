@@ -10,6 +10,7 @@ import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:j_util/platform_finder.dart';
 import 'package:j_util/serialization.dart' as storable;
 import 'package:path_provider/path_provider.dart' as path;
@@ -41,11 +42,10 @@ void main() async {
   if (Platform.isWeb) registerImgElement();
   pathSoundOff();
   await appDataPath.getItem() /* .ignore() */;
-  AppSettings.instance
-      .then(
-        (value) => print("Can Use AppSettings singleton"),
-      )
-      .ignore();
+  await AppSettings.instance.then(
+    (value) => print("Can Use AppSettings singleton"),
+  );
+  //.ignore();
   CachedFavorites.fileFullPath.getItem().ignore();
   CachedSearches.loadFromStorageAsync();
   // SavedDataE6Legacy.$Safe;
@@ -99,7 +99,8 @@ Widget buildHomePageWithProviders({
         ChangeNotifierProvider(
           create: (context) => SearchViewModel(searchText: searchText),
         ),
-        ChangeNotifierProvider(create: (context) => SearchCacheLegacy()),
+        ChangeNotifierProvider<SearchCacheLegacy>(
+            create: (context) => SearchCacheLegacy()),//ManagedPostCollection()),
         ChangeNotifierProvider(create: (context) => SearchResultsNotifier()),
         ChangeNotifierProvider(
             create: (context) => CachedFavorites.loadFromStorageSync()),
