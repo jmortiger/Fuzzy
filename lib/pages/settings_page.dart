@@ -224,6 +224,15 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                     "Load a low-quality preview before loading the main image?",
                 setVal: (bool val) => SearchView.i.useProgressiveImages = val,
               ),
+              WIntegerField(
+                getVal: () => SearchView.i.numSavedSearchesInSearchBar,
+                name: "# of prior searches in search bar",
+                subtitle: "Limits the # of prior searches in the search "
+                    "bar's suggestions to prevent it from clogging results",
+                setVal: (int val) =>
+                    SearchView.i.numSavedSearchesInSearchBar = val,
+                validateVal: (int? val) => (val ?? -1) >= 0,
+              ),
             ]),
         ExpansionTile(
           title: Text(
@@ -742,6 +751,7 @@ class _WEnumListFieldContentState<T extends Enum>
 
 class WIntegerField extends StatefulWidget {
   final String name;
+  final String? subtitle;
 
   final int Function() getVal;
 
@@ -754,6 +764,7 @@ class WIntegerField extends StatefulWidget {
     required this.getVal,
     required this.setVal,
     this.validateVal,
+    this.subtitle,
   });
 
   @override
@@ -762,6 +773,7 @@ class WIntegerField extends StatefulWidget {
 
 class _WIntegerFieldState extends State<WIntegerField> {
   String get name => widget.name;
+  String? get subtitle => widget.subtitle;
 
   int get getVal => widget.getVal();
 
@@ -773,6 +785,7 @@ class _WIntegerFieldState extends State<WIntegerField> {
     return ListTile(
       key: ValueKey(getVal),
       title: Text(name),
+      subtitle: subtitle == null ? null : Text(subtitle!),
       trailing: Text(getVal.toString()),
       leadingAndTrailingTextStyle:
           SettingsPage.titleStyle.copyWith(fontSize: 20),

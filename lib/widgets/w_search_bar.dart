@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_searches.dart';
@@ -63,9 +64,26 @@ class _WSearchBarState extends State<WSearchBar> {
             currText,
           ));
       }
-      return [
+      return {
         currText,
         ...r,
+        if (CachedSearches.searches.isNotEmpty)
+          ...(() {
+            var relatedSearches = CachedSearches.searches.where(
+              (element) => element.searchString.contains(currText),
+            );
+            return relatedSearches.mapAsList((e, i, l) => e.searchString)
+              ..sort(
+                util.getFineInverseSimilarityComparator(currText),
+              )
+              ..removeRange(
+                min(
+                  SearchView.i.numSavedSearchesInSearchBar,
+                  relatedSearches.length,
+                ),
+                relatedSearches.length,
+              );
+          })(),
         if (SavedDataE6.isInit)
           ...SavedDataE6.all
               .where(
@@ -80,15 +98,7 @@ class _WSearchBarState extends State<WSearchBar> {
           ...AppSettings.i!.favoriteTags
               .where((element) => !currText.contains(element))
               .map((e) => "$currPrefix$e"),
-        if (CachedSearches.searches.isNotEmpty)
-          ...CachedSearches.searches
-              .where(
-                (element) => element.searchString.contains(currText),
-              )
-              .map((e) => e.searchString),
-      ]..sort(
-          util.getFineInverseSimilarityComparator(currText),
-        );
+      };
     }
     return genSearchOptionsFromTagDB(
       db: db,

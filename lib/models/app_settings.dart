@@ -98,6 +98,7 @@ class AppSettings implements AppSettingsRecord {
       _ => throw UnsupportedError("platform not supported"),
     };
   }
+
   /* static Future<String?> loadStringAsync() async {
     !Platform.isWeb ? await (await myFile.getItem()).readAsString()
     : (() {
@@ -134,7 +135,7 @@ class AppSettings implements AppSettingsRecord {
   factory AppSettings.fromJson(JsonOut json) =>
       AppSettings.fromRecord(AppSettingsRecord.fromJson(json));
   // #endregion JSON (indirect, don't need updating w/ new fields)
-  
+
   // static List<(String, dynamic Function(), void Function(dynamic))> getFields(AppSettings i) => [
   //   ("postView", () => i.postView as dynamic, (v) => i.postView = v),
   //   ("searchView", () => i.searchView as dynamic, (v) => i.searchView = v),
@@ -142,7 +143,7 @@ class AppSettings implements AppSettingsRecord {
   //   ("blacklistedTags", () => i.blacklistedTags as dynamic, (v) => i.blacklistedTags = v),
   // ];
   // static String? loadFromLocalStorage() {
-    
+
   // }
   factory AppSettings.fromRecord(AppSettingsRecord r) => AppSettings.all(
         postView: PostView.fromData(r.postView),
@@ -290,9 +291,7 @@ class PostViewData {
         startWithDescriptionExpanded: json["startWithDescriptionExpanded"] ??
             defaultData.startWithDescriptionExpanded,
         imageQuality: FilterQuality.values.singleWhere((e) =>
-            e.name ==
-            (json["imageQuality"] ??
-                defaultData.imageQuality.name)),
+            e.name == (json["imageQuality"] ?? defaultData.imageQuality.name)),
         useProgressiveImages:
             json["useProgressiveImages"] ?? defaultData.useProgressiveImages,
         imageFilterQuality: FilterQuality.values.singleWhere((e) =>
@@ -479,18 +478,21 @@ class SearchViewData {
     postInfoBannerItems: PostInfoPaneItem.values,
     widthToHeightRatio: 1,
     useProgressiveImages: true,
+    numSavedSearchesInSearchBar: 5,
   );
   final int postsPerPage;
   final int postsPerRow;
   final List<PostInfoPaneItem> postInfoBannerItems;
   final double widthToHeightRatio;
   final bool useProgressiveImages;
+  final int numSavedSearchesInSearchBar;
   const SearchViewData({
     required this.postsPerPage,
     required this.postsPerRow,
     required this.postInfoBannerItems,
     required this.widthToHeightRatio,
     required this.useProgressiveImages,
+    required this.numSavedSearchesInSearchBar,
   });
   factory SearchViewData.fromJson(JsonOut json) => SearchViewData(
         postsPerPage: json["postsPerPage"] ?? defaultData.postsPerPage,
@@ -504,6 +506,8 @@ class SearchViewData {
             json["widthToHeightRatio"] ?? defaultData.widthToHeightRatio,
         useProgressiveImages:
             json["useProgressiveImages"] ?? defaultData.useProgressiveImages,
+        numSavedSearchesInSearchBar: json["numSavedSearchesInSearchBar"] ??
+            defaultData.numSavedSearchesInSearchBar,
       );
   JsonOut toJson() => {
         "postsPerPage": postsPerPage,
@@ -516,6 +520,7 @@ class SearchViewData {
         ),
         "widthToHeightRatio": widthToHeightRatio,
         "useProgressiveImages": useProgressiveImages,
+        "numSavedSearchesInSearchBar": numSavedSearchesInSearchBar,
       };
 }
 
@@ -548,17 +553,23 @@ class SearchView implements SearchViewData {
   @override
   bool get useProgressiveImages => _useProgressiveImages;
   set useProgressiveImages(bool v) => _useProgressiveImages = v;
-  SearchView(
-      {required int postsPerPage,
-      required int postsPerRow,
-      required List<PostInfoPaneItem> postInfoBannerItems,
-      required double widthToHeightRatio,
-      required bool useProgressiveImages})
-      : _postsPerPage = postsPerPage,
+  int _numSavedSearchesInSearchBar;
+  @override
+  int get numSavedSearchesInSearchBar => _numSavedSearchesInSearchBar;
+  set numSavedSearchesInSearchBar(int v) => _numSavedSearchesInSearchBar = v;
+  SearchView({
+    required int postsPerPage,
+    required int postsPerRow,
+    required List<PostInfoPaneItem> postInfoBannerItems,
+    required double widthToHeightRatio,
+    required bool useProgressiveImages,
+    required int numSavedSearchesInSearchBar,
+  })  : _postsPerPage = postsPerPage,
         _postsPerRow = postsPerRow,
         _postInfoBannerItems = postInfoBannerItems,
         _widthToHeightRatio = widthToHeightRatio,
-        _useProgressiveImages = useProgressiveImages;
+        _useProgressiveImages = useProgressiveImages,
+        _numSavedSearchesInSearchBar = numSavedSearchesInSearchBar;
 
   factory SearchView.fromData(SearchViewData postView) => SearchView(
         postsPerPage: postView.postsPerPage,
@@ -566,6 +577,7 @@ class SearchView implements SearchViewData {
         postInfoBannerItems: postView.postInfoBannerItems,
         widthToHeightRatio: postView.widthToHeightRatio,
         useProgressiveImages: postView.useProgressiveImages,
+        numSavedSearchesInSearchBar: postView.numSavedSearchesInSearchBar,
       );
   void overwriteWithData(SearchViewData searchView) {
     _postsPerPage = searchView.postsPerPage;
@@ -573,6 +585,7 @@ class SearchView implements SearchViewData {
     _postInfoBannerItems = searchView.postInfoBannerItems.toList();
     _widthToHeightRatio = searchView.widthToHeightRatio;
     _useProgressiveImages = searchView.useProgressiveImages;
+    _numSavedSearchesInSearchBar = searchView.numSavedSearchesInSearchBar;
   }
 
   SearchViewData toData() => SearchViewData(
@@ -581,6 +594,7 @@ class SearchView implements SearchViewData {
         postInfoBannerItems: postInfoBannerItems,
         widthToHeightRatio: widthToHeightRatio,
         useProgressiveImages: useProgressiveImages,
+        numSavedSearchesInSearchBar: numSavedSearchesInSearchBar,
       );
 
   // #region JSON (indirect, don't need updating w/ new fields)
