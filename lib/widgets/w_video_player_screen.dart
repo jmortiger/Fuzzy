@@ -324,6 +324,7 @@ class WVideoSpeed extends StatelessWidget {
     );
   }
 }
+
 class WNewSpeed extends StatefulWidget {
   const WNewSpeed({
     super.key,
@@ -463,6 +464,9 @@ class WTimeline extends StatefulWidget {
 }
 
 class _WTimelineState extends State<WTimeline> {
+  set position(Duration value) => widget._controller.seekTo(value);
+  Duration get position => widget._controller.value.position;
+  Duration get duration => widget._controller.value.duration;
   double value = 0;
   @override
   void initState() {
@@ -489,15 +493,42 @@ class _WTimelineState extends State<WTimeline> {
     }
   }
 
+  bool? cachedPlayState;
+  bool? seeking;
+  Future<void>? seekFuture;
   @override
   Widget build(BuildContext context) {
     return Flexible(
       fit: FlexFit.loose,
       child: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: LinearProgressIndicator(
+        child: Slider(
+          onChangeStart: (value) {
+            widget._controller.removeListener(onValueChanged);
+            setState(() {
+              cachedPlayState = widget._controller.value.isPlaying;
+            });
+          },
+          onChanged: (value) {
+            seeking = true;
+            setState(() {
+              seekFuture = widget._controller
+                  .seekTo(position * value)
+                  .then((d) => seeking = false);
+            });
+          },
+          onChangeEnd: (value) {
+            if (cachedPlayState ?? false) widget._controller.play();
+            setState(() {
+              cachedPlayState = null;
+            });
+            widget._controller.addListener(onValueChanged);
+          },
           value: value,
         ),
+        // child: LinearProgressIndicator(
+        //   value: value,
+        // ),
       ),
     );
   }
