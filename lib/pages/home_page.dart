@@ -122,22 +122,8 @@ class _HomePageState extends State<HomePage> {
 
   String get priorSearchText => svm.priorSearchText;
   set priorSearchText(String value) => svm.priorSearchText = value;
-  // #region SearchCache
   SearchCacheLegacy get sc =>
       Provider.of<SearchCacheLegacy>(context, listen: false);
-  E6Posts? get posts => sc.posts;
-  int? get firstPostOnPageId => sc.firstPostOnPageId;
-  set posts(E6Posts? value) => sc.posts = value;
-  int? get firstPostIdCached => sc.firstPostIdCached;
-  set firstPostIdCached(int? value) => sc.firstPostIdCached = value;
-  int? get lastPostIdCached => sc.lastPostIdCached;
-  set lastPostIdCached(int? value) => sc.lastPostIdCached = value;
-  int? get lastPostOnPageIdCached => sc.lastPostOnPageIdCached;
-  set lastPostOnPageIdCached(int? value) => sc.lastPostOnPageIdCached = value;
-  bool? get hasNextPageCached => sc.hasNextPageCached;
-  set hasNextPageCached(bool? value) => sc.hasNextPageCached = value;
-  bool? get hasPriorPage => sc.hasPriorPage;
-  // #endregion SearchCache
   SearchResultsNotifier get sr =>
       Provider.of<SearchResultsNotifier>(context, listen: false);
 
@@ -162,7 +148,14 @@ class _HomePageState extends State<HomePage> {
             //   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No Results. Did you mean to login?")));
             // }
             return Expanded(
-              child: WPostSearchResults(
+              child: sc is ManagedPostCollection ? WPostSearchResultsSwiper(
+                key: ObjectKey(sc.posts!),
+                posts: sc/* .posts! */as ManagedPostCollection,
+                // expectedCount:
+                    // svm.lazyLoad ? SearchView.i.postsPerPage : sc.posts!.count,
+                onSelectionCleared: onSelectionCleared,
+                useLazyBuilding: svm.lazyBuilding,
+              ) : WPostSearchResults(
                 key: ObjectKey(sc.posts!),
                 posts: sc.posts!,
                 expectedCount:
@@ -186,7 +179,7 @@ class _HomePageState extends State<HomePage> {
               onNextPage: sc.hasNextPageCached ?? false
                   ? () {
                       if (sc is ManagedPostCollection) {
-                        (sc as ManagedPostCollection).nextPage();
+                        (sc as ManagedPostCollection).goToNextPage();
                       }
                       _sendSearchAndUpdateState(
                         limit: SearchView.i.postsPerPage,
@@ -199,7 +192,7 @@ class _HomePageState extends State<HomePage> {
               onPriorPage: sc.hasPriorPage ?? false
                   ? () {
                       if (sc is ManagedPostCollection) {
-                        (sc as ManagedPostCollection).priorPage();
+                        (sc as ManagedPostCollection).goToPriorPage();
                       }
                       _sendSearchAndUpdateState(
                         limit: SearchView.i.postsPerPage,

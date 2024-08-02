@@ -10,6 +10,8 @@ import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/models/tag_d_b.dart';
+import 'package:fuzzy/web/e621/post_collection.dart';
+import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/web/e621/search_helper.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
@@ -148,6 +150,14 @@ class _WSearchBarState extends State<WSearchBar> {
           : _sendSearchAndUpdateState();
       widget.onSelected?.call();
       svm.searchText = s;
+      final t = Provider.of<SearchCacheLegacy>(context, listen: false);
+      if (t is ManagedPostCollection) {
+        t.parameters = PostPageSearchParameters(
+          limit: SearchView.i.postsPerPage,
+          tags: s,
+          page: 0,
+        );
+      }
     }
 
     return SearchAnchor.bar(

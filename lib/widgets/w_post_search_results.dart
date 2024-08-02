@@ -3,25 +3,28 @@ import 'dart:convert' as dc;
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_results.dart';
+import 'package:fuzzy/pages/error_page.dart';
+import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
+import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
 import '../models/search_cache.dart';
 
-late final lRecord = lm.genLogger("WPostSearchResults");
-late final print = lRecord.print;
-late final logger = lRecord.logger;
-// #endregion Logger
-
 class WPostSearchResults extends StatefulWidget {
+  // #region Logger
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("WPostSearchResults");
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // #endregion Logger
   final E6Posts posts;
   final int expectedCount;
   final void Function(Set<int> indices, int newest)? onPostsSelected;
@@ -37,7 +40,7 @@ class WPostSearchResults extends StatefulWidget {
   const WPostSearchResults({
     super.key,
     required this.posts,
-    this.expectedCount = 50,
+    required this.expectedCount, // = 50,
     this.onPostsSelected,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
@@ -66,6 +69,7 @@ class WPostSearchResults extends StatefulWidget {
               return WPostSearchResults(
                 posts: snapshot.data!,
                 disallowSelections: true,
+                expectedCount: E621.maxPostsPerSearch,
               );
             } catch (e, s) {
               return Scaffold(
@@ -96,6 +100,7 @@ class WPostSearchResults extends StatefulWidget {
               return WPostSearchResults(
                 posts: snapshot.data!,
                 disallowSelections: true,
+                expectedCount: E621.maxPostsPerSearch,
               );
             } catch (e, s) {
               return Scaffold(
@@ -116,11 +121,18 @@ class WPostSearchResults extends StatefulWidget {
 }
 
 class _WPostSearchResultsState extends State<WPostSearchResults> {
+  // #region Logger
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("_WPostSearchResultsState");
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // #endregion Logger
   // Set<int> restrictedIndices = {};
   // #region Notifiers
   Set<int> _selectedIndices = {};
 
-  SearchCacheLegacy get sc => Provider.of<SearchCacheLegacy>(context, listen: false);
+  SearchCacheLegacy get sc =>
+      Provider.of<SearchCacheLegacy>(context, listen: false);
   SearchResultsNotifier get sr =>
       Provider.of<SearchResultsNotifier>(context, listen: false);
   SearchResultsNotifier get srl =>
@@ -238,19 +250,17 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
             crossAxisSpacing: 4,
             mainAxisSpacing: 4,
             childAspectRatio: SearchView.i.widthToHeightRatio,
-            children:
-                (Iterable<int>.generate(estimatedCount)).reduceUntilTrue(
-                    (accumulator, _, index, __) => posts.tryGet(index) != null
-                        ? (
-                            accumulator
-                              ..add(
-                                constructImageResult(
-                                    posts.tryGet(index)!, index),
-                              ),
-                            false
-                          )
-                        : (accumulator, true),
-                    []),
+            children: (Iterable<int>.generate(estimatedCount)).reduceUntilTrue(
+                (accumulator, _, index, __) => posts.tryGet(index) != null
+                    ? (
+                        accumulator
+                          ..add(
+                            constructImageResult(posts.tryGet(index)!, index),
+                          ),
+                        false
+                      )
+                    : (accumulator, true),
+                []),
           );
   }
 
@@ -273,4 +283,237 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
         //     : null,
         // areAnySelected: selectedIndices.isNotEmpty,
       );
+}
+
+class WPostSearchResultsSwiper extends StatefulWidget {
+  // final int expectedCount;
+  // final E6Posts posts;
+  final ManagedPostCollection posts;
+  final void Function(Set<int> indices, int newest)? onPostsSelected;
+
+  final JPureEvent? _onSelectionCleared;
+  final bool useLazyBuilding;
+
+  final bool disallowSelections;
+
+  final bool stripToGridView;
+
+  final JPureEvent? _fireRebuild;
+  const WPostSearchResultsSwiper({
+    super.key,
+    required this.posts,
+    // this.expectedCount = 50,
+    this.onPostsSelected,
+    this.useLazyBuilding = false,
+    this.disallowSelections = false,
+    JPureEvent? onSelectionCleared,
+    this.stripToGridView = false,
+    JPureEvent? fireRebuild,
+  })  : _onSelectionCleared = onSelectionCleared,
+        _fireRebuild = fireRebuild;
+
+  @override
+  State<WPostSearchResultsSwiper> createState() =>
+      _WPostSearchResultsSwiperState();
+}
+
+class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
+    with TickerProviderStateMixin {
+  // #region Logger
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("_WPostSearchResultsSwiperState");
+  // #endregion Logger
+  late PageController _pageViewController;
+  late TabController _tabController;
+  int _currentPageIndex = 0;
+  int _numPages = 7;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageViewController = PageController();
+    _tabController = TabController(length: _numPages, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _pageViewController.dispose();
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      children: <Widget>[
+        PageView.builder(
+          /// [PageView.scrollDirection] defaults to [Axis.horizontal].
+          /// Use [Axis.vertical] to scroll vertically.
+          controller: _pageViewController,
+          onPageChanged: _handlePageViewChanged,
+          itemBuilder: (context, index) {
+            var ps = widget.posts[index], t = ps.$Safe;
+            if (ps.isComplete && t == null) {
+              return null;
+            } else if (!ps.isComplete) {
+              return FutureBuilder(
+                future: ps.future,
+                builder: (context, snapshot) {
+                  logger.info(
+                      "Index: $index snapshot complete ${snapshot.hasData || snapshot.hasError} ${snapshot.data}");
+                  if (snapshot.hasData) {
+                    if (snapshot.data != null) {
+                      return WPostSearchResults(
+                        posts: snapshot.data!,
+                        expectedCount: SearchView.i.postsPerPage,
+                        disallowSelections: widget.disallowSelections,
+                        fireRebuild: widget._fireRebuild,
+                        onPostsSelected: widget.onPostsSelected,
+                        onSelectionCleared: widget._onSelectionCleared,
+                        stripToGridView: widget.stripToGridView,
+                        useLazyBuilding: widget.useLazyBuilding,
+                      );
+                    } else {
+                      return const Column(
+                        children: [
+                          Expanded(
+                            child: Text("No Results"),
+                          ),
+                        ],
+                      );
+                    }
+                  } else if (snapshot.hasError) {
+                    // return ErrorPage(
+                    //   error: snapshot.error,
+                    //   stackTrace: snapshot.stackTrace,
+                    // );
+                    return Column(
+                      children: [
+                        Text("ERROR: ${snapshot.error}"),
+                        Text("StackTrace: ${snapshot.stackTrace}"),
+                      ],
+                    );
+                  } else {
+                    return const AspectRatio(
+                      aspectRatio: 1,
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+                },
+              );
+            } else {
+              return WPostSearchResults(
+                posts: t!,
+                expectedCount: SearchView.i.postsPerPage,
+                disallowSelections: widget.disallowSelections,
+                fireRebuild: widget._fireRebuild,
+                onPostsSelected: widget.onPostsSelected,
+                onSelectionCleared: widget._onSelectionCleared,
+                stripToGridView: widget.stripToGridView,
+                useLazyBuilding: widget.useLazyBuilding,
+              );
+            }
+          },
+        ),
+        PageIndicator(
+          tabController: _tabController,
+          currentPageIndex: _currentPageIndex,
+          onUpdateCurrentPageIndex: _updateCurrentPageIndex,
+        ),
+      ],
+    );
+  }
+
+  void _handlePageViewChanged(int currentPageIndex) {
+    if (!Platform.isDesktop) {
+      return;
+    }
+    _tabController.index = currentPageIndex;
+    setState(() {
+      _currentPageIndex = currentPageIndex;
+    });
+  }
+
+  void _updateCurrentPageIndex(int index) {
+    _tabController.index = index;
+    _pageViewController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
+}
+
+/// Page indicator for desktop and web platforms.
+///
+/// On Desktop and Web, drag gesture for horizontal scrolling in a PageView is disabled by default.
+/// You can defined a custom scroll behavior to activate drag gestures,
+/// see https://docs.flutter.dev/release/breaking-changes/default-scroll-behavior-drag.
+///
+/// In this sample, we use a TabPageSelector to navigate between pages,
+/// in order to build natural behavior similar to other desktop applications.
+class PageIndicator extends StatelessWidget {
+  const PageIndicator({
+    super.key,
+    required this.tabController,
+    required this.currentPageIndex,
+    required this.onUpdateCurrentPageIndex,
+  });
+
+  final int currentPageIndex;
+  final TabController tabController;
+  final void Function(int) onUpdateCurrentPageIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Platform.isDesktop) {
+      return const SizedBox.shrink();
+    }
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          IconButton(
+            splashRadius: 16.0,
+            padding: EdgeInsets.zero,
+            onPressed: () {
+              if (currentPageIndex == 0) {
+                return;
+              }
+              onUpdateCurrentPageIndex(currentPageIndex - 1);
+            },
+            icon: const Icon(
+              Icons.arrow_left_rounded,
+              size: 32.0,
+            ),
+          ),
+          TabPageSelector(
+            controller: tabController,
+            color: colorScheme.surface,
+            selectedColor: colorScheme.primary,
+          ),
+          IconButton(
+            splashRadius: 16.0,
+            padding: EdgeInsets.zero,
+            onPressed: () {
+              if (currentPageIndex == tabController.length - 1) {
+                return;
+              }
+              onUpdateCurrentPageIndex(currentPageIndex + 1);
+            },
+            icon: const Icon(
+              Icons.arrow_right_rounded,
+              size: 32.0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

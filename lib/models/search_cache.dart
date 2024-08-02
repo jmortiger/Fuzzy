@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:fuzzy/log_management.dart' as lm;
@@ -31,7 +32,7 @@ class SearchCache extends ChangeNotifier {
   bool? get hasNextPageCached => _hasNextPageCached;
   set hasNextPageCached(bool? v) =>
       (this.._hasNextPageCached = v)..notifyListeners();
-  int? get firstPostOnPageId => posts?./* tryGet(0) */firstOrNull?.$Safe?.id;
+  int? get firstPostOnPageId => posts?. /* tryGet(0) */ firstOrNull?.$Safe?.id;
   bool? get hasPriorPage =>
       firstPostIdCached != null &&
       firstPostIdCached! > (firstPostOnPageId ?? firstPostIdCached!);
@@ -116,6 +117,7 @@ class SearchCache extends ChangeNotifier {
     }
   }
 }
+
 class SearchCacheLegacy extends ChangeNotifier {
   // #region Logger
   // ignore: unnecessary_late
@@ -127,6 +129,8 @@ class SearchCacheLegacy extends ChangeNotifier {
   E6Posts? get posts => _posts;
   set posts(E6Posts? v) => (this.._posts = v)..notifyListeners();
   int? _firstPostIdCached;
+
+  /// This should be set immediately upon changing the search terms.
   int? get firstPostIdCached => _firstPostIdCached;
   set firstPostIdCached(int? v) =>
       (this.._firstPostIdCached = v)..notifyListeners();
@@ -143,6 +147,8 @@ class SearchCacheLegacy extends ChangeNotifier {
   set hasNextPageCached(bool? v) =>
       (this.._hasNextPageCached = v)..notifyListeners();
   int? get firstPostOnPageId => posts?.tryGet(0)?.id;
+
+  /// Assuming the [firstPostIdCached] was correctly assigned, this should always be non-null.
   bool? get hasPriorPage =>
       firstPostIdCached != null &&
       firstPostIdCached! > (firstPostOnPageId ?? firstPostIdCached!);
@@ -158,17 +164,17 @@ class SearchCacheLegacy extends ChangeNotifier {
         _lastPostOnPageIdCached = lastPostOnPageIdCached,
         _hasNextPageCached = hasNextPageCached;
 
-  Future<bool> getHasNextPage({
+  FutureOr<bool> getHasNextPage({
     required String tags,
     int? lastPostId,
     // required BuildContext context,
     // required String priorSearchText,
-  }) async {
+  }) {
     if (posts == null) throw StateError("No current posts");
     if (lastPostId == null) {
       if (posts.runtimeType == E6PostsLazy) {
         // Advance to the end, fully load the list
-        posts?.tryGet(E621.maxPostsPerSearch + 5);
+        posts!.advanceToEnd();
       }
       lastPostId ??= posts!.tryGet(posts!.count - 1)?.id;
     }
@@ -185,42 +191,74 @@ class SearchCacheLegacy extends ChangeNotifier {
       print(e);
       lastPostOnPageIdCached = lastPostId;
     }
-    // var (:username, :apiKey) = devGetAuth();
-    var out = E6PostsSync.fromJson(
-      jsonDecode(
-        (await (await E621.sendRequest(
+    // var out = E6PostsSync.fromJson(
+    //   jsonDecode(
+    //     (await (await E621.sendRequest(
+    //       E621.initSearchForLastPostRequest(
+    //         tags: tags, //priorSearchText,
+    //       ),
+    //     ))
+    //         .stream
+    //         .bytesToString()),
+    //   ) as JsonOut,
+    // );
+    // if (out.posts.isEmpty) {
+    //   try {
+    //     // setState(() {
+    //     hasNextPageCached = false;
+    //     // });
+    //   } catch (e) {
+    //     print(e);
+    //     hasNextPageCached = false;
+    //   }
+    //   return hasNextPageCached = false;
+    // }
+    // if (out.posts.length != 1) {
+    //   logger.warning(
+    //     "Last post search gave not 1 but ${out.posts.length} results.",
+    //   );
+    // }
+    // try {
+    //   return hasNextPageCached =
+    //       (lastPostId != (lastPostIdCached = out.posts.last.id));
+    // } catch (e) {
+    //   lastPostIdCached = out.posts.last.id;
+    //   return hasNextPageCached = (lastPostId != out.posts.last.id);
+    // };
+    return E621
+        .sendRequest(
           E621.initSearchForLastPostRequest(
             tags: tags, //priorSearchText,
-            // apiKey: apiKey,
-            // username: username,
           ),
-        ))
-            .stream
-            .bytesToString()),
-      ) as JsonOut,
-    );
-    if (out.posts.isEmpty) {
-      try {
-        // setState(() {
-        hasNextPageCached = false;
-        // });
-      } catch (e) {
-        print(e);
-        hasNextPageCached = false;
+        )
+        .then((v) => v.stream.bytesToString())
+        .then((v) => E6PostsSync.fromJson(
+              jsonDecode(v) as JsonOut,
+            ))
+        .then((out) {
+      if (out.posts.isEmpty) {
+        try {
+          // setState(() {
+          hasNextPageCached = false;
+          // });
+        } catch (e) {
+          print(e);
+          hasNextPageCached = false;
+        }
+        return hasNextPageCached = false;
       }
-      return hasNextPageCached = false;
-    }
-    if (out.posts.length != 1) {
-      logger.warning(
-        "Last post search gave not 1 but ${out.posts.length} results.",
-      );
-    }
-    try {
-      return hasNextPageCached =
-          (lastPostId != (lastPostIdCached = out.posts.last.id));
-    } catch (e) {
-      lastPostIdCached = out.posts.last.id;
-      return hasNextPageCached = (lastPostId != out.posts.last.id);
-    }
+      if (out.posts.length != 1) {
+        logger.warning(
+          "Last post search gave not 1 but ${out.posts.length} results.",
+        );
+      }
+      try {
+        return hasNextPageCached =
+            (lastPostId != (lastPostIdCached = out.posts.last.id));
+      } catch (e) {
+        lastPostIdCached = out.posts.last.id;
+        return hasNextPageCached = (lastPostId != out.posts.last.id);
+      }
+    });
   }
 }

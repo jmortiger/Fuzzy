@@ -308,7 +308,8 @@ sealed class E621 extends Site {
       )).toResponse();
   static http.Request initSearchRequest({
     String tags = "",
-    int limit = 50,
+    // int limit = 50,
+    int? limit,
     String? pageModifier, //pageModifier.contains(RegExp(r'a|b'))
     int? postId,
     int? pageNumber,
@@ -318,7 +319,7 @@ sealed class E621 extends Site {
       e621.Api.initSearchPostsRequest(
         credentials: getAuth(username, apiKey),
         tags: fillTagTemplate(tags),
-        limit: limit,
+        limit: limit ?? SearchView.i.postsPerPage,
         page: (postId != null && (pageModifier == 'a' || pageModifier == 'b'))
             ? "$pageModifier$postId"
             : pageNumber != null
@@ -328,13 +329,15 @@ sealed class E621 extends Site {
 
   static Future<SearchResultArgs> performPostSearch({
     String tags = "",
-    int limit = 50,
+    // int limit = 50,
+    int? limit,
     String? pageModifier, //pageModifier.contains(RegExp(r'a|b'))
     int? postId,
     int? pageNumber,
     String? username,
     String? apiKey,
   }) async {
+    limit ??= SearchView.i.postsPerPage;
     print(tags);
     var a1 = SearchArgs(
         tags: [tags], //tags.split(RegExpExt.whitespace),
@@ -374,13 +377,15 @@ sealed class E621 extends Site {
 
   static Future<SearchResultArgs> performUserPostSearch({
     String tags = "",
-    int limit = 50,
+    // int limit = 50,
+    int? limit,
     String? pageModifier, //pageModifier.contains(RegExp(r'a|b'))
     int? postId,
     int? pageNumber,
     String? username,
     String? apiKey,
   }) async {
+    limit ??= SearchView.i.postsPerPage;
     print(tags);
     var a1 = SearchArgs(
         tags: [tags], //tags.split(RegExpExt.whitespace),
@@ -420,7 +425,8 @@ sealed class E621 extends Site {
 
   static http.Request initSearchForLastPageRequest({
     String tags = "",
-    int limit = 50,
+    // int limit = 50,
+    int? limit,
     String? username,
     String? apiKey,
   }) =>

@@ -14,9 +14,12 @@ import '../../models/image_listing.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-late final lRecord = lm.genLogger("E6Models");
-lm.Printer get print => lRecord.print;
-lm.FileLogger get logger => lRecord.logger;
+// #region Logger
+lm.Printer get _print => _lRecord.print;
+lm.FileLogger get _logger => _lRecord.logger;
+// ignore: unnecessary_late
+late final _lRecord = lm.genLogger("E6Models");
+// #endregion Logger
 
 typedef JsonOut = Map<String, dynamic>;
 
@@ -950,6 +953,12 @@ enum PostType {
 }
 
 class PoolModel extends e621.Pool {
+  // #region Logger
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("PoolModel");
+  // #endregion Logger
   PoolModel({
     required super.id,
     required super.name,

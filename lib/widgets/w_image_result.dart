@@ -18,18 +18,17 @@ import 'package:j_util/j_util_full.dart';
 import 'package:progressive_image/progressive_image.dart' show ProgressiveImage;
 import 'package:provider/provider.dart' show Provider;
 
-// #region Logger
-
-late final lRecord = lm.genLogger("WImageResult");
-late final print = lRecord.print;
-late final logger = lRecord.logger;
-// #endregion Logger
-
 BoxFit imageFit = BoxFit.cover;
 const bool allowPostViewNavigation = true;
 const bool useLinkedList = false;
 
 class WImageResult extends StatelessWidget {
+  // #region Logger
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("WImageResult");
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // #endregion Logger
   final PostListing imageListing;
   final int index;
   final bool isSelected;

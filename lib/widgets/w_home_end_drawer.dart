@@ -6,7 +6,6 @@ import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/pages/user_profile_page.dart';
 import 'package:fuzzy/web/e621/e621.dart';
-import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:fuzzy/widgets/w_search_pool.dart';
 import 'package:fuzzy/widgets/w_search_set.dart';
@@ -14,7 +13,6 @@ import 'package:j_util/e621.dart' as e621;
 import 'package:provider/provider.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
-import '../models/search_cache.dart';
 import '../web/e621/e621_access_data.dart';
 
 class WHomeEndDrawer extends StatefulWidget {
@@ -41,21 +39,6 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
   // #endregion Logger
   SearchViewModel get svm =>
       Provider.of<SearchViewModel>(context, listen: false);
-  // #region SearchCache
-  SearchCacheLegacy get sc => Provider.of<SearchCacheLegacy>(context, listen: false);
-  E6Posts? get posts => sc.posts;
-  int? get firstPostOnPageId => sc.firstPostOnPageId;
-  set posts(E6Posts? value) => sc.posts = value;
-  int? get firstPostIdCached => sc.firstPostIdCached;
-  set firstPostIdCached(int? value) => sc.firstPostIdCached = value;
-  int? get lastPostIdCached => sc.lastPostIdCached;
-  set lastPostIdCached(int? value) => sc.lastPostIdCached = value;
-  int? get lastPostOnPageIdCached => sc.lastPostOnPageIdCached;
-  set lastPostOnPageIdCached(int? value) => sc.lastPostOnPageIdCached = value;
-  bool? get hasNextPageCached => sc.hasNextPageCached;
-  set hasNextPageCached(bool? value) => sc.hasNextPageCached = value;
-  bool? get hasPriorPage => sc.hasPriorPage;
-  // #endregion SearchCache
   /// It's better to directly check if [E621AccessData.userData] is assigned,
   /// but this forces the end drawer to rebuild when changed.
   bool isLoggedIn = false;

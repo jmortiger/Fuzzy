@@ -3,9 +3,13 @@ import 'package:j_util/j_util_full.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-late final print = lm.genPrint("SearchResultsNotifier");
-
 class SearchResultsNotifier with ChangeNotifier {
+  // #region Logger
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("SearchResultsNotifier");
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // #endregion Logger
   SearchResultsNotifier({
     Set<int>? selectedIndices,
     Set<int>? selectedPostIds,
@@ -95,6 +99,12 @@ class SearchResultsNotifier with ChangeNotifier {
 }
 
 class SearchResults with ChangeNotifier {
+  // #region Logger
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("SearchResults");
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // #endregion Logger
   var _selectedIndices = <int>{};
   Set<int> get selectedIndices => _selectedIndices;
   set selectedIndices(Set<int> value) {
