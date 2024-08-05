@@ -42,6 +42,7 @@ class HomePage extends StatefulWidget implements IRoute<HomePage> {
 class _HomePageState extends State<HomePage> {
   @override
   void initState() {
+    super.initState();
     onSelectionCleared.subscribe(() {
       setState(() {
         sr.clearSelections();
@@ -50,18 +51,22 @@ class _HomePageState extends State<HomePage> {
     if (!E621AccessData.devAccessData.isAssigned) {
       E621AccessData.devAccessData.getItem();
     }
-    super.initState();
+    toFillSearchWith = sc.searchText;
   }
 
+  String? toFillSearchWith;
   @override
   Widget build(BuildContext context) {
+    final tfsw = toFillSearchWith;
+    toFillSearchWith = null;
     return Scaffold(
       appBar: AppBar(
         title: Padding(
           padding: const EdgeInsets.all(8.0),
           // child: simpleTextField(),
           child: WSearchBar(
-            initialValue: scWatch.searchText,
+            key: ObjectKey(tfsw ?? scWatch.searchText),
+            initialValue: tfsw ?? scWatch.searchText,
             // onSelected: () => setState(() {}),
           ),
         ),
@@ -77,11 +82,9 @@ class _HomePageState extends State<HomePage> {
               (value) => value == null
                   ? null
                   : setState(() {
-                      sc.searchText = value;
+                      toFillSearchWith = sc.searchText = value;
                       // svm.fillTextBarWithSearchString = true;
-                      (sc.searchText.isNotEmpty)
-                          ? _sendSearchAndUpdateState(tags: value)
-                          : _sendSearchAndUpdateState();
+                      _sendSearchAndUpdateState(tags: value);
                     }),
             );
           },
@@ -90,9 +93,9 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(child: buildSearchView(context)),
       endDrawer: WHomeEndDrawer(
         onSearchRequested: (searchText) {
-          sc.searchText = searchText;
-          // svm.fillTextBarWithSearchString = true;
           setState(() {
+            toFillSearchWith = sc.searchText = searchText;
+            // svm.fillTextBarWithSearchString = true;
             _sendSearchAndUpdateState(tags: searchText);
           });
         },
@@ -186,46 +189,46 @@ class _HomePageState extends State<HomePage> {
             alignment: AlignmentDirectional.topCenter,
             child: Text("No Results"),
           ),
-        if (sc.posts != null &&
-            (sc.posts.runtimeType == E6PostsSync ||
-                (sc.posts as E6PostsLazy).isFullyProcessed))
-          (() {
-            print("BUILDING PAGE NAVIGATION");
-            return WSearchResultPageNavigation(
-              onNextPage: sc.hasNextPageCached ?? false
-                  ? () {
-                      /* if (sc.isMpc) {
-                        (sc.mpc).goToNextPage();
-                      } else  */
-                      if (sc.isMpcSync) {
-                        (sc.mpcSync).goToNextPage();
-                      }
-                      _sendSearchAndUpdateState(
-                        limit: SearchView.i.postsPerPage,
-                        pageModifier: 'b',
-                        postId: sc.lastPostOnPageIdCached,
-                        tags: sc.priorSearchText,
-                      );
-                    }
-                  : null,
-              onPriorPage: sc.hasPriorPage ?? false
-                  ? () {
-                      /* if (sc.isMpc) {
-                        sc.mpc.goToPriorPage();
-                      } else  */
-                      if (sc.isMpcSync) {
-                        sc.mpcSync.goToPriorPage();
-                      }
-                      _sendSearchAndUpdateState(
-                        limit: SearchView.i.postsPerPage,
-                        pageModifier: 'a',
-                        postId: sc.firstPostOnPageId,
-                        tags: sc.priorSearchText,
-                      );
-                    }
-                  : null,
-            );
-          })(),
+        // if (sc.posts != null &&
+        //     (sc.posts.runtimeType == E6PostsSync ||
+        //         (sc.posts as E6PostsLazy).isFullyProcessed))
+        //   (() {
+        //     print("BUILDING PAGE NAVIGATION");
+        //     return WSearchResultPageNavigation(
+        //       onNextPage: sc.hasNextPageCached ?? false
+        //           ? () {
+        //               /* if (sc.isMpc) {
+        //                 (sc.mpc).goToNextPage();
+        //               } else  */
+        //               if (sc.isMpcSync) {
+        //                 (sc.mpcSync).goToNextPage();
+        //               }
+        //               _sendSearchAndUpdateState(
+        //                 limit: SearchView.i.postsPerPage,
+        //                 pageModifier: 'b',
+        //                 postId: sc.lastPostOnPageIdCached,
+        //                 tags: sc.priorSearchText,
+        //               );
+        //             }
+        //           : null,
+        //       onPriorPage: sc.hasPriorPage ?? false
+        //           ? () {
+        //               /* if (sc.isMpc) {
+        //                 sc.mpc.goToPriorPage();
+        //               } else  */
+        //               if (sc.isMpcSync) {
+        //                 sc.mpcSync.goToPriorPage();
+        //               }
+        //               _sendSearchAndUpdateState(
+        //                 limit: SearchView.i.postsPerPage,
+        //                 pageModifier: 'a',
+        //                 postId: sc.firstPostOnPageId,
+        //                 tags: sc.priorSearchText,
+        //               );
+        //             }
+        //           : null,
+        //     );
+        //   })(),
       ],
     );
   }
@@ -238,92 +241,17 @@ class _HomePageState extends State<HomePage> {
     int? postId,
     int? pageNumber,
   }) {
-    limit ??= SearchView.i.postsPerPage;
-    bool isNewRequest = false;
-    var out = "pageModifier = $pageModifier, "
-        "postId = $postId, "
-        "pageNumber = $pageNumber,"
-        "projectedTrueTags = ${E621.fillTagTemplate(tags)})";
-    if (isNewRequest = (sc.priorSearchText != tags)) {
-      out = "Request For New Terms: ${sc.priorSearchText} -> $tags ($out";
-      sc.lastPostIdCached = null;
-      sc.firstPostIdCached = null;
-      try {
-        sc.priorSearchText = tags;
-      } catch (e, s) {
-        logger.severe(
-            "Failed to set sc.priorSearchText ${sc.priorSearchText} to $tags",
-            e,
-            s);
-      }
-    } else {
-      out = "Request For Same Terms: ${sc.priorSearchText} ($out";
-    }
-    print(out);
-    //sr.selectedIndices.clear();
-    // context.watch<SearchResultsNotifier?>()?.clearSelections();
-//     try {
-//   Provider.of(context, listen: false)<SearchResultsNotifier?>()
-//       ?.clearSelections();
-// } catch (e,s) {
-//         logger.severe(
-//             "Failed to clearSelections",
-//             e,
-//             s);
-    Provider.of<SearchResultsNotifier?>(context, listen: false)
-      ?.clearSelections();
-// }
-    sc.hasNextPageCached = null;
-    sc.lastPostOnPageIdCached = null;
-    var username = E621AccessData.fallback?.username,
-        apiKey = E621AccessData.fallback?.apiKey;
-    sc.pr = E621.performUserPostSearch(
-      tags: svm.forceSafe ? "$tags rating:safe" : tags,
+    var sc = Provider.of<ManagedPostCollectionSync>(context, listen: false);
+    sc.launchSearch(
+      context: context,
+      searchViewNotifier:
+          Provider.of<SearchResultsNotifier?>(context, listen: false),
       limit: limit,
       pageModifier: pageModifier,
       pageNumber: pageNumber,
       postId: postId,
-      apiKey: apiKey,
-      username: username,
+      tags: tags,
     );
-    sc.pr!.then((v) {
-      setState(() {
-        print("pr reset");
-        sc.pr = null;
-        var json = jsonDecode(v.responseBody);
-        if (json["success"] == false) {
-          print("_sendSearchAndUpdateState: Response failed: $json");
-          if (json["reason"].contains("Access Denied")) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text("Access Denied. Did you mean to login?"),
-            ));
-          }
-          sc.posts = E6PostsSync(posts: []);
-        } else {
-          sc.posts = svm.lazyLoad
-              ? E6PostsLazy.fromJson(json as Map<String, dynamic>)
-              : E6PostsSync.fromJson(json as Map<String, dynamic>);
-        }
-        if (sc.posts?.posts.firstOrNull != null) {
-          if (sc.posts.runtimeType == E6PostsLazy) {
-            (sc.posts as E6PostsLazy)
-                .onFullyIterated
-                .subscribe((a) => sc.getHasNextPage(
-                      tags: sc.priorSearchText,
-                      lastPostId: a.posts.last.id,
-                    ));
-          } else {
-            sc.getHasNextPage(
-                tags: sc.priorSearchText,
-                lastPostId: (sc.posts as E6PostsSync).posts.last.id);
-          }
-        }
-        if (isNewRequest) sc.firstPostIdCached = sc.firstPostOnPageId;
-      });
-    }).catchError((err, st) {
-      print(err);
-      print(st);
-    });
   }
   // #endregion From WSearchView
 }

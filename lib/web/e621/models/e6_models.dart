@@ -40,21 +40,6 @@ abstract class E6Posts with ListMixin<E6PostResponse> {
   void advanceToEnd();
 }
 
-abstract class E6PostEntries {
-  Iterable<E6PostEntry> get posts;
-
-  E6PostEntry operator [](int index);
-  int get count;
-  // E6Posts fromJsonConstructor(JsonOut json);
-  E6PostEntry? tryGet(
-    int index, {
-    bool checkForValidFileUrl = true,
-  });
-  Set<int> get restrictedIndices;
-
-  void advanceToEnd();
-}
-
 class FullyIteratedArgs extends JEventArgs {
   final List<E6PostResponse> posts;
 

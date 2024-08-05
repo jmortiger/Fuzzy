@@ -233,6 +233,12 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                     SearchView.i.numSavedSearchesInSearchBar = val,
                 validateVal: (int? val) => (val ?? -1) >= 0,
               ),
+              WBooleanField(
+                getVal: () => SearchView.i.lazyLoad,
+                name: "Lazy Load Images in view",
+                // subtitle: "",
+                setVal: (bool val) => SearchView.i.lazyLoad = val,
+              ),
             ]),
         ExpansionTile(
           title: Text(

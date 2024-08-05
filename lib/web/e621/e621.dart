@@ -310,7 +310,7 @@ sealed class E621 extends Site {
     String tags = "",
     // int limit = 50,
     int? limit,
-    String? pageModifier, //pageModifier.contains(RegExp(r'a|b'))
+    String? pageModifier,
     int? postId,
     int? pageNumber,
     String? username,
@@ -331,7 +331,7 @@ sealed class E621 extends Site {
     String tags = "",
     // int limit = 50,
     int? limit,
-    String? pageModifier, //pageModifier.contains(RegExp(r'a|b'))
+    String? pageModifier,
     int? postId,
     int? pageNumber,
     String? username,
@@ -340,7 +340,8 @@ sealed class E621 extends Site {
     limit ??= SearchView.i.postsPerPage;
     print(tags);
     var a1 = SearchArgs(
-        tags: [tags], //tags.split(RegExpExt.whitespace),
+        // tags: [tags], //tags.split(RegExpExt.whitespace),
+        tags: tags.split(RegExp(RegExpExt.whitespacePattern)),
         limit: limit,
         pageModifier: pageModifier,
         postId: postId,
@@ -379,7 +380,7 @@ sealed class E621 extends Site {
     String tags = "",
     // int limit = 50,
     int? limit,
-    String? pageModifier, //pageModifier.contains(RegExp(r'a|b'))
+    String? pageModifier,
     int? postId,
     int? pageNumber,
     String? username,
@@ -388,7 +389,8 @@ sealed class E621 extends Site {
     limit ??= SearchView.i.postsPerPage;
     print(tags);
     var a1 = SearchArgs(
-        tags: [tags], //tags.split(RegExpExt.whitespace),
+        // tags: [tags], //tags.split(RegExpExt.whitespace),
+        tags: tags.split(RegExp(RegExpExt.whitespacePattern)),
         limit: limit,
         pageModifier: pageModifier,
         postId: postId,

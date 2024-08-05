@@ -15,6 +15,7 @@ class AppSettingsRecord {
   final PostViewData postView;
   final Set<String> favoriteTags;
   final Set<String> blacklistedTags;
+  final bool forceSafe;
   final SearchViewData searchView;
 
   const AppSettingsRecord({
@@ -22,6 +23,7 @@ class AppSettingsRecord {
     required this.favoriteTags,
     required this.blacklistedTags,
     required this.searchView,
+    required this.forceSafe,
   });
   static const defaultSettings = AppSettingsRecord(
     postView: PostViewData.defaultData,
@@ -30,6 +32,7 @@ class AppSettingsRecord {
     blacklistedTags: {
       "type:swf",
     },
+    forceSafe: false,
   );
   factory AppSettingsRecord.fromJson(JsonOut json) => AppSettingsRecord(
         postView: PostViewData.fromJson(
@@ -41,12 +44,14 @@ class AppSettingsRecord {
         blacklistedTags:
             (json["blacklistedTags"] as List?)?.cast<String>().toSet() ??
                 defaultSettings.blacklistedTags,
+        forceSafe: json["forceSafe"] ?? defaultSettings.forceSafe,
       );
   JsonOut toJson() => {
         "postView": postView,
         "searchView": searchView,
         "favoriteTags": favoriteTags.toList(),
         "blacklistedTags": blacklistedTags.toList(),
+        "forceSafe": forceSafe,
       };
 }
 
@@ -150,22 +155,26 @@ class AppSettings implements AppSettingsRecord {
         searchView: SearchView.fromData(r.searchView),
         favoriteTags: Set<String>.from(r.favoriteTags),
         blacklistedTags: Set<String>.from(r.blacklistedTags),
+        forceSafe: r.forceSafe,
       );
   AppSettingsRecord toRecord() => AppSettingsRecord(
         postView: _postView.toData(),
         searchView: _searchView.toData(),
         favoriteTags: Set.unmodifiable(_favoriteTags),
         blacklistedTags: Set.unmodifiable(_blacklistedTags),
+        forceSafe: _forceSafe,
       );
   AppSettings({
     PostView? postView,
     SearchView? searchView,
     Set<String>? favoriteTags,
     Set<String>? blacklistedTags,
+    bool? forceSafe,
   })  : _postView = postView ?? defaultSettings.postView,
         _searchView = searchView ?? defaultSettings.searchView,
         _favoriteTags = favoriteTags ?? defaultSettings._favoriteTags,
-        _blacklistedTags = blacklistedTags ?? defaultSettings._blacklistedTags;
+        _blacklistedTags = blacklistedTags ?? defaultSettings._blacklistedTags,
+        _forceSafe = forceSafe ?? defaultSettings._forceSafe;
   void overwriteWithRecord([
     AppSettingsRecord r = AppSettingsRecord.defaultSettings,
   ]) {
@@ -173,6 +182,7 @@ class AppSettings implements AppSettingsRecord {
     _searchView.overwriteWithData(r.searchView);
     _favoriteTags = Set.of(r.favoriteTags);
     _blacklistedTags = Set.of(r.blacklistedTags);
+    _forceSafe = r.forceSafe;
   }
 
   AppSettings.all({
@@ -180,10 +190,12 @@ class AppSettings implements AppSettingsRecord {
     required SearchView searchView,
     required Set<String> favoriteTags,
     required Set<String> blacklistedTags,
+    required bool forceSafe,
   })  : _postView = postView,
         _searchView = searchView,
         _favoriteTags = favoriteTags,
-        _blacklistedTags = blacklistedTags;
+        _blacklistedTags = blacklistedTags,
+        _forceSafe = forceSafe;
   PostView _postView;
   @override
   PostView get postView => _postView;
@@ -199,9 +211,11 @@ class AppSettings implements AppSettingsRecord {
   Set<String> _blacklistedTags;
   @override
   Set<String> get blacklistedTags => _blacklistedTags;
-  set blacklistedTags(Set<String> value) {
-    _blacklistedTags = value;
-  }
+  set blacklistedTags(Set<String> value) => _blacklistedTags = value;
+  bool _forceSafe;
+  @override
+  bool get forceSafe => _forceSafe;
+  set forceSafe(bool value) => _forceSafe = value;
 }
 
 class PostViewData {
@@ -479,6 +493,7 @@ class SearchViewData {
     widthToHeightRatio: 1,
     useProgressiveImages: true,
     numSavedSearchesInSearchBar: 5,
+    lazyLoad: false,
   );
   final int postsPerPage;
   final int postsPerRow;
@@ -486,6 +501,7 @@ class SearchViewData {
   final double widthToHeightRatio;
   final bool useProgressiveImages;
   final int numSavedSearchesInSearchBar;
+  final bool lazyLoad;
   const SearchViewData({
     required this.postsPerPage,
     required this.postsPerRow,
@@ -493,6 +509,7 @@ class SearchViewData {
     required this.widthToHeightRatio,
     required this.useProgressiveImages,
     required this.numSavedSearchesInSearchBar,
+    required this.lazyLoad,
   });
   factory SearchViewData.fromJson(JsonOut json) => SearchViewData(
         postsPerPage: json["postsPerPage"] ?? defaultData.postsPerPage,
@@ -508,6 +525,7 @@ class SearchViewData {
             json["useProgressiveImages"] ?? defaultData.useProgressiveImages,
         numSavedSearchesInSearchBar: json["numSavedSearchesInSearchBar"] ??
             defaultData.numSavedSearchesInSearchBar,
+        lazyLoad: json["lazyLoad"] ?? defaultData.lazyLoad,
       );
   JsonOut toJson() => {
         "postsPerPage": postsPerPage,
@@ -521,6 +539,7 @@ class SearchViewData {
         "widthToHeightRatio": widthToHeightRatio,
         "useProgressiveImages": useProgressiveImages,
         "numSavedSearchesInSearchBar": numSavedSearchesInSearchBar,
+        "lazyLoad": lazyLoad,
       };
 }
 
@@ -557,6 +576,10 @@ class SearchView implements SearchViewData {
   @override
   int get numSavedSearchesInSearchBar => _numSavedSearchesInSearchBar;
   set numSavedSearchesInSearchBar(int v) => _numSavedSearchesInSearchBar = v;
+  bool _lazyLoad;
+  @override
+  bool get lazyLoad => _lazyLoad;
+  set lazyLoad(bool v) => _lazyLoad = v;
   SearchView({
     required int postsPerPage,
     required int postsPerRow,
@@ -564,20 +587,23 @@ class SearchView implements SearchViewData {
     required double widthToHeightRatio,
     required bool useProgressiveImages,
     required int numSavedSearchesInSearchBar,
+    required bool lazyLoad,
   })  : _postsPerPage = postsPerPage,
         _postsPerRow = postsPerRow,
         _postInfoBannerItems = postInfoBannerItems,
         _widthToHeightRatio = widthToHeightRatio,
         _useProgressiveImages = useProgressiveImages,
-        _numSavedSearchesInSearchBar = numSavedSearchesInSearchBar;
+        _numSavedSearchesInSearchBar = numSavedSearchesInSearchBar,
+        _lazyLoad = lazyLoad;
 
-  factory SearchView.fromData(SearchViewData postView) => SearchView(
-        postsPerPage: postView.postsPerPage,
-        postsPerRow: postView.postsPerRow,
-        postInfoBannerItems: postView.postInfoBannerItems,
-        widthToHeightRatio: postView.widthToHeightRatio,
-        useProgressiveImages: postView.useProgressiveImages,
-        numSavedSearchesInSearchBar: postView.numSavedSearchesInSearchBar,
+  factory SearchView.fromData(SearchViewData searchView) => SearchView(
+        postsPerPage: searchView.postsPerPage,
+        postsPerRow: searchView.postsPerRow,
+        postInfoBannerItems: searchView.postInfoBannerItems,
+        widthToHeightRatio: searchView.widthToHeightRatio,
+        useProgressiveImages: searchView.useProgressiveImages,
+        numSavedSearchesInSearchBar: searchView.numSavedSearchesInSearchBar,
+        lazyLoad: searchView.lazyLoad,
       );
   void overwriteWithData(SearchViewData searchView) {
     _postsPerPage = searchView.postsPerPage;
@@ -586,6 +612,7 @@ class SearchView implements SearchViewData {
     _widthToHeightRatio = searchView.widthToHeightRatio;
     _useProgressiveImages = searchView.useProgressiveImages;
     _numSavedSearchesInSearchBar = searchView.numSavedSearchesInSearchBar;
+    _lazyLoad = searchView.lazyLoad;
   }
 
   SearchViewData toData() => SearchViewData(
@@ -595,6 +622,7 @@ class SearchView implements SearchViewData {
         widthToHeightRatio: widthToHeightRatio,
         useProgressiveImages: useProgressiveImages,
         numSavedSearchesInSearchBar: numSavedSearchesInSearchBar,
+        lazyLoad: lazyLoad,
       );
 
   // #region JSON (indirect, don't need updating w/ new fields)

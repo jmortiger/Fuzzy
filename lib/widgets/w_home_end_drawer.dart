@@ -149,23 +149,23 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 });
               },
             ),
-          ListTile(
-            title: const Text("Toggle Lazy Loading"),
-            leading:
-                Provider.of<SearchViewModel>(context, listen: false).lazyLoad
-                    ? const Icon(Icons.check_box)
-                    : const Icon(Icons.check_box_outline_blank),
-            onTap: () {
-              print(
-                  "Before: ${Provider.of<SearchViewModel>(context, listen: false).lazyLoad}");
-              setState(() =>
-                  Provider.of<SearchViewModel>(context, listen: false)
-                      .toggleLazyLoad());
-              print(
-                  "After: ${Provider.of<SearchViewModel>(context, listen: false).lazyLoad}");
-              // Navigator.pop(context);
-            },
-          ),
+          // ListTile(
+          //   title: const Text("Toggle Lazy Loading"),
+          //   leading:
+          //       Provider.of<SearchViewModel>(context, listen: false).lazyLoad
+          //           ? const Icon(Icons.check_box)
+          //           : const Icon(Icons.check_box_outline_blank),
+          //   onTap: () {
+          //     print(
+          //         "Before: ${Provider.of<SearchViewModel>(context, listen: false).lazyLoad}");
+          //     setState(() =>
+          //         Provider.of<SearchViewModel>(context, listen: false)
+          //             .toggleLazyLoad());
+          //     print(
+          //         "After: ${Provider.of<SearchViewModel>(context, listen: false).lazyLoad}");
+          //     // Navigator.pop(context);
+          //   },
+          // ),
           ListTile(
             title: const Text("Toggle Lazy Building"),
             leading: Provider.of<SearchViewModel>(context, listen: false)
@@ -205,23 +205,23 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
               // Navigator.pop(context);
             },
           ),
-          ListTile(
-            title: const Text("Toggle Force Safe"),
-            leading:
-                Provider.of<SearchViewModel>(context, listen: false).forceSafe
-                    ? const Icon(Icons.check_box)
-                    : const Icon(Icons.check_box_outline_blank),
-            onTap: () {
-              print(
-                  "Before: ${Provider.of<SearchViewModel>(context, listen: false).forceSafe}");
-              setState(() =>
-                  Provider.of<SearchViewModel>(context, listen: false)
-                      .toggleForceSafe());
-              print(
-                  "After: ${Provider.of<SearchViewModel>(context, listen: false).forceSafe}");
-              // Navigator.pop(context);
-            },
-          ),
+          // ListTile(
+          //   title: const Text("Toggle Force Safe"),
+          //   leading:
+          //       Provider.of<SearchViewModel>(context, listen: false).forceSafe
+          //           ? const Icon(Icons.check_box)
+          //           : const Icon(Icons.check_box_outline_blank),
+          //   onTap: () {
+          //     print(
+          //         "Before: ${Provider.of<SearchViewModel>(context, listen: false).forceSafe}");
+          //     setState(() =>
+          //         Provider.of<SearchViewModel>(context, listen: false)
+          //             .toggleForceSafe());
+          //     print(
+          //         "After: ${Provider.of<SearchViewModel>(context, listen: false).forceSafe}");
+          //     // Navigator.pop(context);
+          //   },
+          // ),
           ListTile(
             title: const Text("Toggle Image Display Method"),
             onTap: () {
