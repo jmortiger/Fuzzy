@@ -61,7 +61,7 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.all(8.0),
           // child: simpleTextField(),
           child: WSearchBar(
-            initialValue: Provider.of<SearchViewModel>(context).searchText,
+            initialValue: scWatch.searchText,
             // onSelected: () => setState(() {}),
           ),
         ),
@@ -77,10 +77,9 @@ class _HomePageState extends State<HomePage> {
               (value) => value == null
                   ? null
                   : setState(() {
-                      Provider.of<SearchViewModel>(context, listen: false)
-                          .searchText = value;
+                      sc.searchText = value;
                       // svm.fillTextBarWithSearchString = true;
-                      (svm.searchText.isNotEmpty)
+                      (sc.searchText.isNotEmpty)
                           ? _sendSearchAndUpdateState(tags: value)
                           : _sendSearchAndUpdateState();
                     }),
@@ -91,7 +90,7 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(child: buildSearchView(context)),
       endDrawer: WHomeEndDrawer(
         onSearchRequested: (searchText) {
-          svm.searchText = searchText;
+          sc.searchText = searchText;
           // svm.fillTextBarWithSearchString = true;
           setState(() {
             _sendSearchAndUpdateState(tags: searchText);
@@ -100,15 +99,26 @@ class _HomePageState extends State<HomePage> {
         getMountedContext: () => this.context,
       ), //_buildDrawer(context),
       floatingActionButton: WFabBuilder.multiplePosts(
-        posts: Provider.of<SearchCacheLegacy>(context, listen: true)
-                .posts
-                ?.posts
-                .where((e) =>
-                    Provider.of<SearchResultsNotifier>(context, listen: true)
-                        .selectedPostIds
-                        .contains(e.id))
-                .toList() ??
-            [],
+        posts: sc.isMpcSync
+                ? scWatch
+                    .mpcSync
+                    .collection
+                    .where((e) =>
+                        Provider.of<SearchResultsNotifier>(context, listen: true)
+                            .selectedPostIds
+                            .contains(e.inst.$Safe?.id))
+                    .map((e) => e.inst.$)
+                    .toList()
+                : Provider.of<SearchCacheLegacy>(context, listen: true)
+                        .posts
+                        ?.posts
+                        .where((e) => Provider.of<SearchResultsNotifier>(
+                                context,
+                                listen: true)
+                            .selectedPostIds
+                            .contains(e.id))
+                        .toList() ??
+                    [],
         // onClearSelections: () => onSelectionCleared.invoke(),
       ),
     );
@@ -122,16 +132,21 @@ class _HomePageState extends State<HomePage> {
 
   String get priorSearchText => svm.priorSearchText;
   set priorSearchText(String value) => svm.priorSearchText = value;
-  SearchCacheLegacy get sc =>
-      Provider.of<SearchCacheLegacy>(context, listen: false);
+  // SearchCacheLegacy get sc =>
+      // Provider.of<SearchCacheLegacy>(context, listen: false);
+  ManagedPostCollectionSync get sc =>
+      Provider.of<ManagedPostCollectionSync>(context, listen: false);
+  ManagedPostCollectionSync get scWatch =>
+      Provider.of<ManagedPostCollectionSync>(context, listen: true);
   SearchResultsNotifier get sr =>
       Provider.of<SearchResultsNotifier>(context, listen: false);
 
   @widgetFactory
   Widget buildSearchView(BuildContext context) {
     return Column(
+      key: ObjectKey(sc.mpcSync.parameters.tags),
       children: [
-        if (sc.posts == null && svm.pr != null)
+        if (sc.posts == null && sc.pr != null)
           const Expanded(
             child: Center(
                 child: AspectRatio(
@@ -141,28 +156,36 @@ class _HomePageState extends State<HomePage> {
           ),
         if (sc.posts != null)
           (() {
-            if (svm.pr != null) {
+            if (sc.pr != null) {
               logger.finer("Results Came back: ${svm.priorSearchText}");
             }
             // if (sc.posts!.posts.firstOrNull == null) {
             //   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No Results. Did you mean to login?")));
             // }
             return Expanded(
-              child: sc is ManagedPostCollection ? WPostSearchResultsSwiper(
-                key: ObjectKey(sc.posts!),
-                posts: sc/* .posts! */as ManagedPostCollection,
-                // expectedCount:
-                    // svm.lazyLoad ? SearchView.i.postsPerPage : sc.posts!.count,
-                onSelectionCleared: onSelectionCleared,
-                useLazyBuilding: svm.lazyBuilding,
-              ) : WPostSearchResults(
-                key: ObjectKey(sc.posts!),
-                posts: sc.posts!,
-                expectedCount:
-                    svm.lazyLoad ? SearchView.i.postsPerPage : sc.posts!.count,
-                onSelectionCleared: onSelectionCleared,
-                useLazyBuilding: svm.lazyBuilding,
-              ),
+              key: ObjectKey(sc.mpcSync.parameters.tags),
+              child: sc.isMpcSync
+                  ? WPostSearchResultsSwiper(
+                      // key: ObjectKey(sc.posts!),
+                      // key: ObjectKey(svm.searchText),
+                      key: ObjectKey(sc.mpcSync.parameters.tags),
+                      // posts: sc /* .posts! */.mpcSync,
+                      // posts: Provider.of<SearchCacheLegacy>(context).mpcSync,
+                      posts: sc.mpcSync,
+                      // expectedCount:
+                      // svm.lazyLoad ? SearchView.i.postsPerPage : sc.posts!.count,
+                      onSelectionCleared: onSelectionCleared,
+                      useLazyBuilding: svm.lazyBuilding,
+                    )
+                  : WPostSearchResults(
+                      key: ObjectKey(sc.posts!),
+                      posts: sc.posts!,
+                      expectedCount: svm.lazyLoad
+                          ? SearchView.i.postsPerPage
+                          : sc.posts!.count,
+                      onSelectionCleared: onSelectionCleared,
+                      useLazyBuilding: svm.lazyBuilding,
+                    ),
             );
           })(),
         if (sc.posts?.posts.firstOrNull == null)
@@ -178,8 +201,10 @@ class _HomePageState extends State<HomePage> {
             return WSearchResultPageNavigation(
               onNextPage: sc.hasNextPageCached ?? false
                   ? () {
-                      if (sc is ManagedPostCollection) {
-                        (sc as ManagedPostCollection).goToNextPage();
+                      /* if (sc.isMpc) {
+                        (sc.mpc).goToNextPage();
+                      } else  */if (sc.isMpcSync) {
+                        (sc.mpcSync).goToNextPage();
                       }
                       _sendSearchAndUpdateState(
                         limit: SearchView.i.postsPerPage,
@@ -191,8 +216,10 @@ class _HomePageState extends State<HomePage> {
                   : null,
               onPriorPage: sc.hasPriorPage ?? false
                   ? () {
-                      if (sc is ManagedPostCollection) {
-                        (sc as ManagedPostCollection).goToPriorPage();
+                      /* if (sc.isMpc) {
+                        sc.mpc.goToPriorPage();
+                      } else  */if (sc.isMpcSync) {
+                        sc.mpcSync.goToPriorPage();
                       }
                       _sendSearchAndUpdateState(
                         limit: SearchView.i.postsPerPage,
@@ -216,6 +243,12 @@ class _HomePageState extends State<HomePage> {
     int? postId,
     int? pageNumber,
   }) {
+    var svmWatch = Provider.of<SearchViewModel>(context),
+        svm = Provider.of<SearchViewModel>(context, listen: false),
+        scWatch = Provider.of<ManagedPostCollectionSync>(context),
+        sc = Provider.of<ManagedPostCollectionSync>(context, listen: false);
+        // scWatch = Provider.of<SearchCacheLegacy>(context),
+        // sc = Provider.of<SearchCacheLegacy>(context, listen: false);
     limit ??= SearchView.i.postsPerPage;
     bool isNewRequest = false;
     var out = "pageModifier = $pageModifier, "
@@ -226,27 +259,19 @@ class _HomePageState extends State<HomePage> {
       out = "Request For New Terms: ${svm.priorSearchText} -> $tags ($out";
       sc.lastPostIdCached = null;
       sc.firstPostIdCached = null;
-      svm.priorSearchText = tags;
+      svmWatch.priorSearchText = tags;
     } else {
       out = "Request For Same Terms: ${svm.priorSearchText} ($out";
     }
-    sr.selectedIndices.clear();
     print(out);
+    //sr.selectedIndices.clear();
+    // context.watch<SearchResultsNotifier?>()?.clearSelections();
+    Provider.of(context)<SearchResultsNotifier?>()?.clearSelections();
     sc.hasNextPageCached = null;
     sc.lastPostOnPageIdCached = null;
-    // var (:username, :apiKey) = svm.sendAuthHeaders &&
-    //         (E621AccessData.userData.isAssigned ||
-    //             E621AccessData.devAccessData.isAssigned)
-    //     ? (
-    //         username: E621AccessData.userData.$Safe?.username ??
-    //             E621AccessData.devAccessData.$.username,
-    //         apiKey: E621AccessData.userData.$Safe?.apiKey ??
-    //             E621AccessData.devAccessData.$.apiKey,
-    //       )
-    //     : (username: null, apiKey: null);
     var username = E621AccessData.fallback?.username,
         apiKey = E621AccessData.fallback?.apiKey;
-    svm.pr = E621.performUserPostSearch(
+    scWatch.pr = E621.performUserPostSearch(
       tags: svm.forceSafe ? "$tags rating:safe" : tags,
       limit: limit,
       pageModifier: pageModifier,
@@ -255,10 +280,10 @@ class _HomePageState extends State<HomePage> {
       apiKey: apiKey,
       username: username,
     );
-    svm.pr!.then((v) {
+    sc.pr!.then((v) {
       setState(() {
         print("pr reset");
-        svm.pr = null;
+        sc.pr = null;
         var json = jsonDecode(v.responseBody);
         if (json["success"] == false) {
           print("_sendSearchAndUpdateState: Response failed: $json");

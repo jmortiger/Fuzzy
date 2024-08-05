@@ -1,6 +1,7 @@
 // https://www.liquid-technologies.com/online-json-to-schema-converter
 // https://app.quicktype.io/
 // import 'package:fuzzy/web/e621/models/tag_d_b.dart';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:math';
 
@@ -23,9 +24,10 @@ late final _lRecord = lm.genLogger("E6Models");
 
 typedef JsonOut = Map<String, dynamic>;
 
-abstract class E6Posts {
+abstract class E6Posts with ListMixin<E6PostResponse> {
   Iterable<E6PostResponse> get posts;
 
+  @override
   E6PostResponse operator [](int index);
   int get count;
   // E6Posts fromJsonConstructor(JsonOut json);
@@ -83,9 +85,6 @@ final class E6PostsLazy extends E6Posts {
         }
       }
       return this[index];
-      // return (!checkForValidFileUrl || this[index].file.url != "")
-      //     ? this[index]
-      //     : this[index + 1];
     } catch (e) {
       return null;
     }
@@ -93,14 +92,6 @@ final class E6PostsLazy extends E6Posts {
 
   @override
   E6PostResponse operator [](int index) {
-    // bool advance() {
-    //   try {
-    //     return _postListIterator.moveNext();
-    //   } catch (e) {
-    //     // Show that these failed b/c they're not signed in https://e621.net/help/global_blacklist
-    //     return advance();
-    //   }
-    // }
     if (_postList.length <= index && !_postCapacity.isAssigned) {
       bool mn = false;
       for (var i = _postList.length;
@@ -128,16 +119,22 @@ final class E6PostsLazy extends E6Posts {
           .map((e) => E6PostResponse.fromJson(e));
 
   @override
-  void advanceToEnd() {
-    tryGet(E621.maxPostsPerSearch + 5);
-  }
+  void advanceToEnd() => tryGet(E621.maxPostsPerSearch + 5);
+
+  @override
+  int get length => count;
+  @override
+  set length(int l) => throw "Non-Modifiable";
+
+  @override
+  void operator []=(int index, E6PostResponse value) => throw "Non-Modifiable";
 }
 
-final class E6PostsSync implements E6Posts {
+final class E6PostsSync extends E6Posts {
   @override
   final Set<int> restrictedIndices /*  = {} */;
   @override
-  final int count;
+  int get count => posts.length;
   @override
   E6PostResponse? tryGet(
     int index, {
@@ -165,8 +162,7 @@ final class E6PostsSync implements E6Posts {
   final List<E6PostResponse> posts;
 
   E6PostsSync({required this.posts})
-      : count = posts.length,
-        restrictedIndices =
+      : restrictedIndices =
             posts.indicesWhere((e, i, l) => !e.file.hasValidUrl).toSet();
   factory E6PostsSync.fromJson(JsonOut json) => E6PostsSync(
       posts: (json["posts"] as List)
@@ -175,6 +171,15 @@ final class E6PostsSync implements E6Posts {
   /// Already fully loaded, so does nothing.
   @override
   void advanceToEnd() {}
+
+  @override
+  int get length => posts.length;
+  @override
+  set length(int l) => posts.length = l; //throw "Non-Modifiable";
+
+  @override
+  void operator []=(int index, E6PostResponse value) =>
+      posts[index] = value; //throw "Non-Modifiable";
 }
 
 class E6PostResponse implements PostListing, e621.Post {

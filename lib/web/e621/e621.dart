@@ -33,7 +33,7 @@ sealed class E621 extends Site {
   @event
   static final favAdded = JEvent<PostActionArgs>();
   @event
-  static final searchBegan = JEvent<SearchArgs>();
+  static final searchBegan = JEvent<SearchArgs>([(SearchArgs e) => logger.info("New User Search initiated\n\tTags: ${e.tags.foldToString()}")]);
   @event
   static final searchEnded = JEvent<SearchResultArgs>();
   @event

@@ -50,12 +50,12 @@ class _WSearchBarState extends State<WSearchBar> {
     final currText = currentTextValue;
     var lastTermIndex = currText.lastIndexOf(RegExpExt.whitespace);
     lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
-    final currSubString = currText.substring(lastTermIndex);
+    // final currSubString = currText.substring(lastTermIndex);
     final currPrefix = currText.substring(0, lastTermIndex);
-    logger.info("$currText = currText");
-    logger.info("$lastTermIndex = lastTermIndex");
-    logger.info("$currSubString = currSubString");
-    logger.info("$currPrefix = currPrefix");
+    logger.finest("currText: $currText");
+    logger.finest("lastTermIndex: $lastTermIndex");
+    // logger.finest("currSubString: $currSubString");
+    logger.finest("currPrefix: $currPrefix");
     if (allSuggestionSourcesEmpty() || currText.isEmpty) {
       return const Iterable<String>.empty();
     }
@@ -123,12 +123,16 @@ class _WSearchBarState extends State<WSearchBar> {
     );
   }
 
+  ManagedPostCollectionSync get sc =>
+      Provider.of<ManagedPostCollectionSync>(context, listen: false);
+  ManagedPostCollectionSync get scWatch =>
+      Provider.of<ManagedPostCollectionSync>(context, listen: true);
   String currentText = "";
   late SearchController searchController;
   // TODO: Just launch tag search requests for autocomplete, wrap in a class
   @override
   Widget build(BuildContext context) {
-    SearchViewModel svm = Provider.of<SearchViewModel>(context, listen: false);
+    var svm = Provider.of<SearchViewModel>(context, listen: false);
     var fn = FocusNode();
     // searchController.text = currentText;
     void closeAndUnfocus() {
@@ -149,15 +153,13 @@ class _WSearchBarState extends State<WSearchBar> {
           ? _sendSearchAndUpdateState(tags: s) //svm.searchText)
           : _sendSearchAndUpdateState();
       widget.onSelected?.call();
-      svm.searchText = s;
-      final t = Provider.of<SearchCacheLegacy>(context, listen: false);
-      if (t is ManagedPostCollection) {
-        t.parameters = PostPageSearchParameters(
-          limit: SearchView.i.postsPerPage,
-          tags: s,
-          page: 0,
-        );
-      }
+      // sc.searchText = s;
+      sc.parameters = PostPageSearchParameters(
+        limit: SearchView.i.postsPerPage,
+        tags: s,
+        page: 0,
+      );
+      //}
     }
 
     return SearchAnchor.bar(
@@ -213,7 +215,7 @@ class _WSearchBarState extends State<WSearchBar> {
   }
 
   Widget _buildAutocomplete(BuildContext context) {
-    SearchViewModel svm = Provider.of<SearchViewModel>(context, listen: false);
+    var svm = Provider.of<SearchViewModel>(context, listen: false);
     return Autocomplete<String>(
       fieldViewBuilder: (
         BuildContext context,
@@ -221,16 +223,16 @@ class _WSearchBarState extends State<WSearchBar> {
         FocusNode focusNode,
         void Function() onFieldSubmitted,
       ) {
-        textEditingController.text = svm.searchText;
+        textEditingController.text = sc.searchText;
         return TextField(
           controller: textEditingController,
           focusNode: focusNode,
           autofocus: autofocus ? !(autofocus = false) : autofocus,
           onSubmitted: (s) => setState(() {
             // onFieldSubmitted();
-            svm.searchText = textEditingController.text;
-            (svm.searchText.isNotEmpty)
-                ? _sendSearchAndUpdateState(tags: svm.searchText)
+            sc.searchText = textEditingController.text;
+            (sc.searchText.isNotEmpty)
+                ? _sendSearchAndUpdateState(tags: sc.searchText)
                 : _sendSearchAndUpdateState();
             widget.onSelected?.call();
           }),
@@ -240,8 +242,7 @@ class _WSearchBarState extends State<WSearchBar> {
           generateSortedOptions(textEditingValue.text),
       displayStringForOption: (option) => option,
       onSelected: (option) => setState(() {
-        Provider.of<SearchViewModel>(context, listen: false).searchText =
-            option;
+        sc.searchText = option;
       }),
     );
   }
@@ -334,11 +335,9 @@ class _WSearchBarState extends State<WSearchBar> {
     int? pageNumber,
   }) {
     limit ??= SearchView.i.postsPerPage;
-    SearchViewModel svm = Provider.of<SearchViewModel>(context, listen: false);
-    SearchCacheLegacy sc =
-        Provider.of<SearchCacheLegacy>(context, listen: false);
-    SearchResultsNotifier sr =
-        Provider.of<SearchResultsNotifier>(context, listen: false);
+    var svm = Provider.of<SearchViewModel>(context, listen: false),
+        sc = Provider.of<ManagedPostCollectionSync>(context, listen: false),
+        sr = Provider.of<SearchResultsNotifier>(context, listen: false);
     bool isNewRequest = false;
     var out = "pageModifier = $pageModifier, "
         "postId = $postId, "
@@ -356,10 +355,9 @@ class _WSearchBarState extends State<WSearchBar> {
     logger.info(out);
     sc.hasNextPageCached = null;
     sc.lastPostOnPageIdCached = null;
-    // var (:username, :apiKey) = devGetAuth()
     var username = E621AccessData.fallback?.username,
         apiKey = E621AccessData.fallback?.apiKey;
-    svm.pr = E621.performUserPostSearch(
+    sc.pr = E621.performUserPostSearch(
       tags: svm.forceSafe ? "$tags rating:safe" : tags,
       limit: limit,
       pageModifier: pageModifier,
@@ -368,10 +366,10 @@ class _WSearchBarState extends State<WSearchBar> {
       apiKey: apiKey,
       username: username,
     );
-    svm.pr!.then((v) {
+    sc.pr!.then((v) {
       setState(() {
         logger.finer("pr reset");
-        svm.pr = null;
+        sc.pr = null;
         var json = jsonDecode(v.responseBody);
         if (json["success"] == false) {
           logger.severe("_sendSearchAndUpdateState: Response failed: $json");
@@ -406,12 +404,4 @@ class _WSearchBarState extends State<WSearchBar> {
       logger.severe(err, err, st);
     });
   }
-
-  // static ({String? username, String? apiKey}) devGetAuth() => (
-  // E621AccessData.useLoginData
-  //     ? (
-  //         username: E621AccessData.fallback?.username,
-  //         apiKey: E621AccessData.fallback?.apiKey,
-  //       )
-  //     : (username: null, apiKey: null);
 }

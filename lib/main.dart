@@ -11,12 +11,11 @@ import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/web/e621/post_collection.dart';
+import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:j_util/platform_finder.dart';
 import 'package:j_util/serialization.dart' as storable;
 import 'package:path_provider/path_provider.dart' as path;
 import 'package:provider/provider.dart';
-
-import 'models/search_cache.dart';
 import 'pages/home_page.dart';
 import 'web/e621/e621_access_data.dart';
 
@@ -32,7 +31,8 @@ lm.FileLogger get routeLogger => lRRecord.logger;
 // late final Map<String, Route<dynamic>? Function(RouteSettings)> routeJumpTable = {
 //   PoolViewPageBuilder.routeNameString: (settings) =>
 // };
-void main() async {
+/// TODO: https://pub.dev/packages/args
+void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
   storable.Storable.beSilent = true;
   await lm.init().then((v) {
@@ -83,7 +83,7 @@ void main() async {
           return MaterialPageRoute(builder: (ctx) => const HomePage());
         },
         theme: ThemeData.dark(),
-        home: buildHomePageWithProviders(),
+        home: buildHomePageWithProviders(searchText: args.firstOrNull),
       ),
     );
   } catch (e, s) {
@@ -97,10 +97,10 @@ Widget buildHomePageWithProviders({
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (context) => SearchViewModel(searchText: searchText),
+          create: (context) => SearchViewModel(),
         ),
-        ChangeNotifierProvider<SearchCacheLegacy>(
-            create: (context) => /* SearchCacheLegacy()), */ManagedPostCollection()),
+        ChangeNotifierProvider(
+            create: (context) => ManagedPostCollectionSync(parameters: PostSearchParametersSlim(tags: searchText))),
         ChangeNotifierProvider(create: (context) => SearchResultsNotifier()),
         ChangeNotifierProvider(
             create: (context) => CachedFavorites.loadFromStorageSync()),

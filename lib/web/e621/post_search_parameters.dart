@@ -1,14 +1,11 @@
 import 'package:fuzzy/util/extensions.dart';
+import 'package:j_util/j_util.dart';
 
-final class IPostSearchParameters {
-  final String? tags;
-  final int? limit;
-
-  const IPostSearchParameters({
-    this.tags,
-    this.limit,
-  });
-
+abstract final class IPostSearchParameters {
+  String? get tags;
+  Set<String>? get tagSet;
+  int? get limit;
+  const IPostSearchParameters();
   IPostSearchParameters copyWith({
     String? tags,
     int? limit,
@@ -17,13 +14,14 @@ final class IPostSearchParameters {
         tags: tags ?? this.tags,
         limit: limit ?? this.limit,
       );
-
-  PostSearchParametersSlim get tighten => this as PostSearchParametersSlim;
 }
 
 final class PostSearchParametersSlim implements IPostSearchParameters {
   @override
   final String? tags;
+  @override
+  Set<String>? get tagSet =>
+      tags?.split(RegExp(RegExpExt.whitespacePattern)).toSet();
   @override
   final int? limit;
 
@@ -41,9 +39,6 @@ final class PostSearchParametersSlim implements IPostSearchParameters {
         tags: tags ?? this.tags,
         limit: limit ?? this.limit,
       );
-
-  @override
-  PostSearchParametersSlim get tighten => this as PostSearchParametersSlim;
 }
 
 base mixin _Auth on IPostSearchParameters {
@@ -52,23 +47,30 @@ base mixin _Auth on IPostSearchParameters {
 }
 
 /// if [page] is used, must be a page number, not an id & modifier.
-final class PostPageSearchParameters extends IPostSearchParameters
-    with PageSearchParameter {
+final class PostPageSearchParameters
+    with PageSearchParameter
+    implements IPostSearchParameters {
+  @override
+  final int? limit;
+  @override
+  final String? tags;
   @override
   String? get page => pageNumber?.toString();
   @override
   final int? pageNumber;
+  @override
+  Set<String>? get tagSet =>
+      tags?.split(RegExp(RegExpExt.whitespacePattern)).toSet();
 
   const PostPageSearchParameters({
-    super.tags,
+    this.tags,
     int? page,
-    super.limit,
+    this.limit,
   }) : pageNumber = page;
   PostPageSearchParameters.fromSlim({
     PostSearchParametersSlim? s,
     int? page,
-  })  : pageNumber = page,
-        super(limit: s?.limit, tags: s?.tags);
+  }) : this(tags: s?.tags, limit: s?.limit, page: page);
 
   @override
   PostPageSearchParameters copyWith({
@@ -126,11 +128,20 @@ final class PostSearchParametersFull extends IPostSearchParameters
   final String? username;
   @override
   final String? apiKey;
+  @override
+  Set<String>? get tagSet =>
+      tags?.split(RegExp(RegExpExt.whitespacePattern)).toSet();
+
+  @override
+  final int? limit;
+
+  @override
+  final String? tags;
 
   const PostSearchParametersFull({
-    super.tags,
+    this.tags,
     this.page,
-    super.limit,
+    this.limit,
     this.username,
     this.apiKey,
   });

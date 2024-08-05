@@ -4,6 +4,7 @@ import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
+import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:fuzzy/widgets/w_search_set.dart';
 import 'package:j_util/e621.dart' as e621;
@@ -667,7 +668,7 @@ class _WFabWrapperState extends State<WFabWrapper> {
   @override
   Widget build(BuildContext context) {
     return WFabBuilder.multiplePosts(
-      posts: Provider.of<SearchCacheLegacy>(context, listen: true)
+      posts: Provider.of<ManagedPostCollectionSync>(context, listen: true)
               .posts
               ?.posts
               .where((e) =>

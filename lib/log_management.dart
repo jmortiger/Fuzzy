@@ -24,7 +24,7 @@ void Function(Object? message,
     Zone? zone]) genPrint(
   String fileName, [
   String? className,
-  Level? level,
+  Level level = Level.INFO,
 ]) =>
     genLogger(fileName, className, level).print;
 
@@ -34,10 +34,10 @@ void Function(Object? message,
 }) genLogger(
   String fileName, [
   String? className,
-  Level? level,
+  Level level = Level.INFO,
 ]) {
-  final l = FileLogger(className ?? fileName, "$fileName.txt");
-  l.$.level = level ?? Level.INFO;
+  final l = FileLogger(className ?? fileName, "$fileName.txt", level);
+  // l.$.level = level ?? Level.INFO;
   return (
     print: (Object? message,
             [LogLevel logLevel = Level.FINEST,

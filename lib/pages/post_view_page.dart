@@ -12,10 +12,9 @@ import 'package:fuzzy/main.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
 import 'package:j_util/e621.dart';
 import 'package:j_util/j_util_full.dart';
-// import 'package:j_util/platform_finder.dart' as ui_web;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
-import 'package:progressive_image/progressive_image.dart';
+import 'package:progressive_image/progressive_image.dart' show ProgressiveImage;
 
 import '../web/e621/e621.dart';
 import '../widgets/w_fab_builder.dart';
@@ -82,8 +81,7 @@ class PostViewPage extends StatefulWidget
 
 class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
   // #region Logger
-  // static get lRecord => PostViewPage.lRecord;
-  static lm.Printer get print => PoolViewPage.print;
+  static lm.Printer get print => PostViewPage.print;
   static lm.FileLogger get logger => PostViewPage.logger;
   // #endregion Logger
   @override
@@ -148,8 +146,8 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                     .alternates[AlternateResolution.$720p.toString()]?.width ??
                 (screenWidth + 1)) >=
             screenWidth) {
-          i = e6Post
-              .sample.alternates!.alternates[AlternateResolution.$720p.toString()]!;
+          i = e6Post.sample.alternates!
+              .alternates[AlternateResolution.$720p.toString()]!;
         }
       }
     }
@@ -181,7 +179,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
         dpr = MediaQuery.devicePixelRatioOf(context),
         screenWidth = width * dpr;
     logger.log(
-        lm.LogLevel.INFO,
+        lm.LogLevel.FINE,
         "sizeOf.width: $width\n"
         "devicePixelRatioOf: $dpr\n"
         "Calculated pixel width (w * dpr): $screenWidth");
@@ -243,11 +241,11 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
     final maxHeight = (h / w) * maxWidth;
     final ar = w / h;
     logger.log(
-      lm.LogLevel.INFO,
+      lm.LogLevel.FINE,
       "Content: w $w h $h ratio $ar",
     );
     logger.log(
-      lm.LogLevel.INFO,
+      lm.LogLevel.FINE,
       "Constraints: maxWidth $maxWidth maxHeight $maxHeight ratio ${maxWidth / maxHeight}",
     );
     return ListView(
@@ -456,6 +454,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
     }
   }
 
+  static const progressiveImageBlur = 10.0;
   @widgetFactory
   Widget _buildImageContent({
     required final String url,
@@ -487,6 +486,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
     );
     if (url == e6Post.preview.url) {
       return ProgressiveImage(
+        blur: progressiveImageBlur,
         placeholder: placeholder,
         thumbnail: iFinal,
         image: iFinal,
@@ -508,6 +508,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
           NetworkImage(e6Post.sample.url, scale: e6Post.sample.width / cWidth),
         );
         return ProgressiveImage(
+          blur: progressiveImageBlur,
           // placeholder: placeholder,
           placeholder: iPreview,
           thumbnail: iSample,
@@ -519,6 +520,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
         );
       } else {
         return ProgressiveImage(
+          blur: progressiveImageBlur,
           placeholder: placeholder,
           thumbnail: iPreview,
           image: iFinal,
@@ -781,7 +783,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                               if (value != null) {
                                 SavedDataE6.$editAndSave(
                                   original: e,
-                                  edited:  SavedSearchData.fromTagsString(
+                                  edited: SavedSearchData.fromTagsString(
                                     searchString: value.mainData,
                                     title: value.title,
                                     uniqueId: value.uniqueId ?? "",

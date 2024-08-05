@@ -56,52 +56,54 @@ class SearchViewModel extends ChangeNotifier {
     return E621AccessData.useLoginData; //_sendAuthHeaders;
   }
 
-  String _searchText;
-  String get searchText => _searchText;
-  set searchText(String value) {
-    _searchText = value;
-    notifyListeners();
-  }
+  // String _searchText;
+  // String get searchText => _searchText;
+  // set searchText(String value) {
+  //   _searchText = value;
+  //   notifyListeners();
+  // }
 
-  Future<SearchResultArgs>? _pr;
-  Future<SearchResultArgs>? get pr => _pr;
-  set pr(Future<SearchResultArgs>? value) {
-    _pr = value;
-    notifyListeners();
-  }
+  // Future<SearchResultArgs>? _pr;
+  // Future<SearchResultArgs>? get pr => _pr;
+  // set pr(Future<SearchResultArgs>? value) {
+  //   _pr = value;
+  //   notifyListeners();
+  // }
 
   String _priorSearchText = "";
+  @Deprecated("Refactor to ManagedCollection")
   String get priorSearchText => _priorSearchText;
+  @Deprecated("Refactor to ManagedCollection")
   set priorSearchText(String value) {
     _priorSearchText = value;
     notifyListeners();
   }
 
-  bool _fillTextBarWithSearchString;
-  bool get fillTextBarWithSearchString => _fillTextBarWithSearchString;
-  set fillTextBarWithSearchString(bool value) {
-    _fillTextBarWithSearchString = value;
-    notifyListeners();
-  }
+  // bool _fillTextBarWithSearchString;
+  // bool get fillTextBarWithSearchString => _fillTextBarWithSearchString;
+  // set fillTextBarWithSearchString(bool value) {
+  //   _fillTextBarWithSearchString = value;
+  //   notifyListeners();
+  // }
 
   SearchViewModel({
     bool? lazyLoad,
     bool? lazyBuilding,
     bool? forceSafe,
     String? priorSearchText,
-    String? searchText,
+    // String? searchText,
     // bool? sendAuthHeaders,
-    bool? fillTextBarWithSearchString,
-    Future<SearchResultArgs>? pr,
+    // bool? fillTextBarWithSearchString,
+    // Future<SearchResultArgs>? pr,
   })  : _lazyLoad = lazyLoad ?? false,
         _lazyBuilding = lazyBuilding ?? false,
         _forceSafe = forceSafe ?? false,
-        _priorSearchText = priorSearchText ?? "",
-        _searchText = searchText ?? "",
-        // _sendAuthHeaders = E621AccessData.useLoginData =
-        //     sendAuthHeaders ?? E621AccessData.useLoginData,
-        _fillTextBarWithSearchString = fillTextBarWithSearchString ?? false,
-        _pr = pr;
+        _priorSearchText = priorSearchText ?? "";
+  // _sendAuthHeaders = E621AccessData.useLoginData =
+  //     sendAuthHeaders ?? E621AccessData.useLoginData,
+  // _searchText = searchText ?? "",
+  // _pr = pr,
+  // _fillTextBarWithSearchString = fillTextBarWithSearchString ?? false;
 }
 
 class MultiSearch {

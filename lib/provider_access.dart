@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+/* import 'package:flutter/material.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
@@ -41,3 +41,4 @@ mixin ProviderAccessState<T extends StatefulWidget> on State<T> {
     _srl.$ = Provider.of<SearchResultsNotifier>(context, listen: true);
   }
 }
+ */

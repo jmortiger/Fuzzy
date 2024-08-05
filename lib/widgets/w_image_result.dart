@@ -12,6 +12,7 @@ import 'package:fuzzy/pages/post_view_page.dart'
     show IReturnsTags, PostViewPage;
 import 'package:fuzzy/util/util.dart' show placeholder;
 import 'package:fuzzy/web/e621/models/e6_models.dart' show E6PostResponse;
+import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/models/image_listing.dart'
     show IImageInfo, PostListing;
 import 'package:j_util/j_util_full.dart';
@@ -25,7 +26,8 @@ const bool useLinkedList = false;
 class WImageResult extends StatelessWidget {
   // #region Logger
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("WImageResult");
+  static late final lRecord =
+      lm.genLogger("WImageResult", "WImageResult", lm.LogLevel.INFO);
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger
@@ -34,15 +36,15 @@ class WImageResult extends StatelessWidget {
   final bool isSelected;
   final bool disallowSelections;
 
-  final void Function(int index)? onSelectionToggle;
+  // final void Function(int index)? onSelectionToggle;
   final Iterable<E6PostResponse>? postsCache;
   SearchCacheLegacy getSc(BuildContext context, [bool listen = false]) =>
-      Provider.of<SearchCacheLegacy>(context, listen: listen);
+      Provider.of<ManagedPostCollectionSync>(context, listen: listen);
   const WImageResult({
     super.key,
     required this.imageListing,
     required this.index,
-    this.onSelectionToggle,
+    // this.onSelectionToggle,
     this.isSelected = false,
     this.disallowSelections = false,
     this.postsCache,
@@ -91,7 +93,7 @@ class WImageResult extends StatelessWidget {
     final sizeHeight = sizeWidth.isFinite
         ? sizeWidth / SearchView.i.widthToHeightRatio
         : size.height;
-    logger.info(
+    logger.finest(
       "Estimated height ${sizeWidth * SearchView.i.widthToHeightRatio}"
       "Alleged height ${size.height}",
     );
@@ -226,11 +228,18 @@ class WImageResult extends StatelessWidget {
     SearchResultsNotifier? srl;
     if (!disallowSelections) srl = Provider.of<SearchResultsNotifier>(context);
     void toggle() {
-      onSelectionToggle?.call(index);
-      srl?.toggleSelection(
+      // onSelectionToggle?.call(index);
+      logger.info(
+          "Toggling ${imageListing.id} selection, was selected: ${srl?.getIsPostSelected(imageListing.id)}, is selected: ${srl?.toggleSelection(
         index: index,
         postId: imageListing.id,
-      );
+      )} ");
+      // srl?.toggleSelection(
+      //   index: index,
+      //   postId: imageListing.id,
+      // );
+      logger.finest("Currently selected post ids: ${srl?.selectedPostIds}");
+      logger.finest("Currently selected indices: ${srl?.selectedIndices}");
     }
 
     return Positioned.fill(
@@ -241,46 +250,66 @@ class WImageResult extends StatelessWidget {
           //   // tooltip: _buildTooltipString,
           // },
           onLongPress: () {
-            print("OnLongPress");
+            print("[$index] OnLongPress", lm.LogLevel.INFO);
             toggle();
           },
           onDoubleTap: () {
-            print("onDoubleTap");
+            print("[$index] onDoubleTap", lm.LogLevel.FINE);
             toggle();
           },
-          onTap: () {
-            print("OnTap");
+          onTap: () async {
+            print("[$index] OnTap", lm.LogLevel.INFO);
             if (isSelected || (srl?.areAnySelected ?? false)) {
               toggle();
             } else {
               SavedDataE6.init();
+              if (getSc(context, false)
+                  .isMpcSync) {
+                await getSc(context, false)
+                    .mpcSync
+                    .updateCurrentPostIndex(index);
+              }
               Navigator.push<IReturnsTags>(
                   context,
                   MaterialPageRoute(
                     builder: (_) => allowPostViewNavigation
                         ? useLinkedList
                             ? const Placeholder() //_buildLinkedSwiper(context)
-                            : old.PostSwipePage.postsCollection(
+                            : /* Provider.of<SearchCacheLegacy>(context,
+                                        listen: false)
+                                    .isMpcSync
+                                ?  */
+                            old.PostSwipePageManaged(
                                 initialIndex: index,
-                                posts: postsCache ??
-                                    Provider.of<SearchCacheLegacy>(context,
-                                            listen: false)
-                                        .posts!
-                                        .posts,
+                                initialPageIndex:
+                                    getSc(context, false)
+                                        .mpcSync
+                                        .currentPage,
+                                posts: getSc(context, false)
+                                    .mpcSync,
                                 onAddToSearch: getOnAddToSearch(context),
                                 tagsToAdd: [],
+                                // initialPageIndex: ,
                               )
-                        : PostViewPage(
+                        : old.PostSwipePage.postsCollection(
+                            initialIndex: index,
+                            posts: postsCache ??
+                                Provider.of<SearchCacheLegacy>(context,
+                                        listen: false)
+                                    .posts!
+                                    .posts,
+                            onAddToSearch: getOnAddToSearch(context),
+                            tagsToAdd: [],
+                          )
+                    /* : PostViewPage(
                             postListing: imageListing,
                             onAddToSearch: getOnAddToSearch(context),
                             tagsToAdd: [],
-                          ),
+                          ) */
+                    ,
                   )).then<void>((v) {
                 if (v?.tagsToAdd?.firstOrNull != null) {
-                  Provider.of<SearchViewModel>(
-                    context,
-                    listen: false,
-                  ).searchText += v!.tagsToAdd!.foldToString();
+                  getSc(context, false).mpcSync.searchText += v!.tagsToAdd!.foldToString();
                 }
               });
             }
@@ -293,22 +322,19 @@ class WImageResult extends StatelessWidget {
   void Function(String) getOnAddToSearch(BuildContext context) =>
       (String addition) {
         print("WImageResult: onAddToSearch:");
-        print("Before: ${Provider.of<SearchViewModel>(
+        print("Before: ${Provider.of<ManagedPostCollectionSync>(
           context,
           listen: false,
         ).searchText}");
-        Provider.of<SearchViewModel>(
-          context,
-          listen: false,
-        ).fillTextBarWithSearchString = true;
+        // Provider.of<SearchViewModel>(
+        //   context,
+        //   listen: false,
+        // ).fillTextBarWithSearchString = true;
         print(
-          "After: ${Provider.of<SearchViewModel>(
-            context,
-            listen: false,
-          ).searchText += " $addition"}",
+          "After: ${getSc(context, false).mpcSync.searchText += " $addition"}",
         );
       };
-
+  static const progressiveImageBlur = 5.0;
   @widgetFactory
   Widget _buildPane(BuildContext ctx, int w, int h, String url) {
     if (url == "") {
@@ -367,6 +393,7 @@ class WImageResult extends StatelessWidget {
         "\nh: $h"
         "\nh2: $h2");
     i = ProgressiveImage(
+      blur: progressiveImageBlur,
       placeholder: placeholder,
       thumbnail: ResizeImage.resizeIfNeeded(
         cacheWidth2?.toInt(),
