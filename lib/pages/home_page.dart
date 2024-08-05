@@ -100,25 +100,22 @@ class _HomePageState extends State<HomePage> {
       ), //_buildDrawer(context),
       floatingActionButton: WFabBuilder.multiplePosts(
         posts: sc.isMpcSync
-                ? scWatch
-                    .mpcSync
-                    .collection
-                    .where((e) =>
-                        Provider.of<SearchResultsNotifier>(context, listen: true)
-                            .selectedPostIds
-                            .contains(e.inst.$Safe?.id))
-                    .map((e) => e.inst.$)
-                    .toList()
-                : Provider.of<SearchCacheLegacy>(context, listen: true)
-                        .posts
-                        ?.posts
-                        .where((e) => Provider.of<SearchResultsNotifier>(
-                                context,
-                                listen: true)
-                            .selectedPostIds
-                            .contains(e.id))
-                        .toList() ??
-                    [],
+            ? scWatch.mpcSync.collection
+                .where((e) =>
+                    Provider.of<SearchResultsNotifier>(context, listen: true)
+                        .selectedPostIds
+                        .contains(e.inst.$Safe?.id))
+                .map((e) => e.inst.$)
+                .toList()
+            : Provider.of<SearchCacheLegacy>(context, listen: true)
+                    .posts
+                    ?.posts
+                    .where((e) => Provider.of<SearchResultsNotifier>(context,
+                            listen: true)
+                        .selectedPostIds
+                        .contains(e.id))
+                    .toList() ??
+                [],
         // onClearSelections: () => onSelectionCleared.invoke(),
       ),
     );
@@ -130,10 +127,6 @@ class _HomePageState extends State<HomePage> {
 
   JPureEvent onSelectionCleared = JPureEvent();
 
-  String get priorSearchText => svm.priorSearchText;
-  set priorSearchText(String value) => svm.priorSearchText = value;
-  // SearchCacheLegacy get sc =>
-      // Provider.of<SearchCacheLegacy>(context, listen: false);
   ManagedPostCollectionSync get sc =>
       Provider.of<ManagedPostCollectionSync>(context, listen: false);
   ManagedPostCollectionSync get scWatch =>
@@ -157,7 +150,7 @@ class _HomePageState extends State<HomePage> {
         if (sc.posts != null)
           (() {
             if (sc.pr != null) {
-              logger.finer("Results Came back: ${svm.priorSearchText}");
+              logger.finer("Results Came back: ${sc.priorSearchText}");
             }
             // if (sc.posts!.posts.firstOrNull == null) {
             //   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No Results. Did you mean to login?")));
@@ -203,14 +196,15 @@ class _HomePageState extends State<HomePage> {
                   ? () {
                       /* if (sc.isMpc) {
                         (sc.mpc).goToNextPage();
-                      } else  */if (sc.isMpcSync) {
+                      } else  */
+                      if (sc.isMpcSync) {
                         (sc.mpcSync).goToNextPage();
                       }
                       _sendSearchAndUpdateState(
                         limit: SearchView.i.postsPerPage,
                         pageModifier: 'b',
                         postId: sc.lastPostOnPageIdCached,
-                        tags: svm.priorSearchText,
+                        tags: sc.priorSearchText,
                       );
                     }
                   : null,
@@ -218,14 +212,15 @@ class _HomePageState extends State<HomePage> {
                   ? () {
                       /* if (sc.isMpc) {
                         sc.mpc.goToPriorPage();
-                      } else  */if (sc.isMpcSync) {
+                      } else  */
+                      if (sc.isMpcSync) {
                         sc.mpcSync.goToPriorPage();
                       }
                       _sendSearchAndUpdateState(
                         limit: SearchView.i.postsPerPage,
                         pageModifier: 'a',
                         postId: sc.firstPostOnPageId,
-                        tags: svm.priorSearchText,
+                        tags: sc.priorSearchText,
                       );
                     }
                   : null,
@@ -243,35 +238,46 @@ class _HomePageState extends State<HomePage> {
     int? postId,
     int? pageNumber,
   }) {
-    var svmWatch = Provider.of<SearchViewModel>(context),
-        svm = Provider.of<SearchViewModel>(context, listen: false),
-        scWatch = Provider.of<ManagedPostCollectionSync>(context),
-        sc = Provider.of<ManagedPostCollectionSync>(context, listen: false);
-        // scWatch = Provider.of<SearchCacheLegacy>(context),
-        // sc = Provider.of<SearchCacheLegacy>(context, listen: false);
     limit ??= SearchView.i.postsPerPage;
     bool isNewRequest = false;
     var out = "pageModifier = $pageModifier, "
         "postId = $postId, "
         "pageNumber = $pageNumber,"
         "projectedTrueTags = ${E621.fillTagTemplate(tags)})";
-    if (isNewRequest = (svm.priorSearchText != tags)) {
-      out = "Request For New Terms: ${svm.priorSearchText} -> $tags ($out";
+    if (isNewRequest = (sc.priorSearchText != tags)) {
+      out = "Request For New Terms: ${sc.priorSearchText} -> $tags ($out";
       sc.lastPostIdCached = null;
       sc.firstPostIdCached = null;
-      svmWatch.priorSearchText = tags;
+      try {
+        sc.priorSearchText = tags;
+      } catch (e, s) {
+        logger.severe(
+            "Failed to set sc.priorSearchText ${sc.priorSearchText} to $tags",
+            e,
+            s);
+      }
     } else {
-      out = "Request For Same Terms: ${svm.priorSearchText} ($out";
+      out = "Request For Same Terms: ${sc.priorSearchText} ($out";
     }
     print(out);
     //sr.selectedIndices.clear();
     // context.watch<SearchResultsNotifier?>()?.clearSelections();
-    Provider.of(context)<SearchResultsNotifier?>()?.clearSelections();
+//     try {
+//   Provider.of(context, listen: false)<SearchResultsNotifier?>()
+//       ?.clearSelections();
+// } catch (e,s) {
+//         logger.severe(
+//             "Failed to clearSelections",
+//             e,
+//             s);
+    Provider.of<SearchResultsNotifier?>(context, listen: false)
+      ?.clearSelections();
+// }
     sc.hasNextPageCached = null;
     sc.lastPostOnPageIdCached = null;
     var username = E621AccessData.fallback?.username,
         apiKey = E621AccessData.fallback?.apiKey;
-    scWatch.pr = E621.performUserPostSearch(
+    sc.pr = E621.performUserPostSearch(
       tags: svm.forceSafe ? "$tags rating:safe" : tags,
       limit: limit,
       pageModifier: pageModifier,
@@ -303,12 +309,12 @@ class _HomePageState extends State<HomePage> {
             (sc.posts as E6PostsLazy)
                 .onFullyIterated
                 .subscribe((a) => sc.getHasNextPage(
-                      tags: svm.priorSearchText,
+                      tags: sc.priorSearchText,
                       lastPostId: a.posts.last.id,
                     ));
           } else {
             sc.getHasNextPage(
-                tags: svm.priorSearchText,
+                tags: sc.priorSearchText,
                 lastPostId: (sc.posts as E6PostsSync).posts.last.id);
           }
         }

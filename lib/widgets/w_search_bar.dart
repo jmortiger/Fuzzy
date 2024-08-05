@@ -343,13 +343,13 @@ class _WSearchBarState extends State<WSearchBar> {
         "postId = $postId, "
         "pageNumber = $pageNumber,"
         "projectedTrueTags = ${E621.fillTagTemplate(tags)})";
-    if (isNewRequest = (svm.priorSearchText != tags)) {
-      out = "Request For New Terms: ${svm.priorSearchText} -> $tags ($out";
+    if (isNewRequest = (sc.priorSearchText != tags)) {
+      out = "Request For New Terms: ${sc.priorSearchText} -> $tags ($out";
       sc.lastPostIdCached = null;
       sc.firstPostIdCached = null;
-      svm.priorSearchText = tags;
+      sc.priorSearchText = tags;
     } else {
-      out = "Request For Same Terms: ${svm.priorSearchText} ($out";
+      out = "Request For Same Terms: ${sc.priorSearchText} ($out";
     }
     sr.selectedIndices.clear();
     logger.info(out);
@@ -389,12 +389,12 @@ class _WSearchBarState extends State<WSearchBar> {
             (sc.posts as E6PostsLazy)
                 .onFullyIterated
                 .subscribe((a) => sc.getHasNextPage(
-                      tags: svm.priorSearchText,
+                      tags: sc.priorSearchText,
                       lastPostId: a.posts.last.id,
                     ));
           } else {
             sc.getHasNextPage(
-                tags: svm.priorSearchText,
+                tags: sc.priorSearchText,
                 lastPostId: (sc.posts as E6PostsSync).posts.last.id);
           }
         }

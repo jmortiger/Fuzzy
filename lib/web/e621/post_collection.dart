@@ -685,6 +685,13 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     }
   }
 
+  String _priorSearchText = "";
+  String get priorSearchText => _priorSearchText;
+  set priorSearchText(String value) {
+    _priorSearchText = value;
+    // notifyListeners();
+  }
+
   @override
   E6Posts? get posts => treatAsNull
       ? null

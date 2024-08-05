@@ -70,14 +70,14 @@ class SearchViewModel extends ChangeNotifier {
   //   notifyListeners();
   // }
 
-  String _priorSearchText = "";
-  @Deprecated("Refactor to ManagedCollection")
-  String get priorSearchText => _priorSearchText;
-  @Deprecated("Refactor to ManagedCollection")
-  set priorSearchText(String value) {
-    _priorSearchText = value;
-    notifyListeners();
-  }
+  // String _priorSearchText = "";
+  // @Deprecated("Refactor to ManagedCollection")
+  // String get priorSearchText => _priorSearchText;
+  // @Deprecated("Refactor to ManagedCollection")
+  // set priorSearchText(String value) {
+  //   _priorSearchText = value;
+  //   notifyListeners();
+  // }
 
   // bool _fillTextBarWithSearchString;
   // bool get fillTextBarWithSearchString => _fillTextBarWithSearchString;
@@ -90,17 +90,17 @@ class SearchViewModel extends ChangeNotifier {
     bool? lazyLoad,
     bool? lazyBuilding,
     bool? forceSafe,
-    String? priorSearchText,
+    // String? priorSearchText,
     // String? searchText,
     // bool? sendAuthHeaders,
     // bool? fillTextBarWithSearchString,
     // Future<SearchResultArgs>? pr,
   })  : _lazyLoad = lazyLoad ?? false,
         _lazyBuilding = lazyBuilding ?? false,
-        _forceSafe = forceSafe ?? false,
-        _priorSearchText = priorSearchText ?? "";
+        _forceSafe = forceSafe ?? false;
   // _sendAuthHeaders = E621AccessData.useLoginData =
   //     sendAuthHeaders ?? E621AccessData.useLoginData,
+  // _priorSearchText = priorSearchText ?? "",
   // _searchText = searchText ?? "",
   // _pr = pr,
   // _fillTextBarWithSearchString = fillTextBarWithSearchString ?? false;
