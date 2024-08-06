@@ -18,34 +18,7 @@ lm.FileLogger get logger => lRecord.logger;
 // #endregion Logger
 
 class SearchViewModel extends ChangeNotifier {
-  bool _lazyLoad;
-  bool get lazyLoad => _lazyLoad;
-  bool toggleLazyLoad() {
-    _lazyLoad = !_lazyLoad;
-    notifyListeners();
-    return _lazyLoad;
-  }
-
-  bool _lazyBuilding;
-  bool get lazyBuilding => _lazyBuilding;
-  bool toggleLazyBuilding() {
-    _lazyBuilding = !_lazyBuilding;
-    notifyListeners();
-    return _lazyBuilding;
-  }
-
-  bool _forceSafe;
-  bool get forceSafe => _forceSafe;
-  bool toggleForceSafe() {
-    _forceSafe = !_forceSafe;
-    notifyListeners();
-    return _forceSafe;
-  }
-
-  // bool _sendAuthHeaders;
-  // bool get sendAuthHeaders => E621AccessData.useLoginData; //_sendAuthHeaders;
   bool toggleSendAuthHeaders() {
-    // _sendAuthHeaders = !_sendAuthHeaders;
     E621AccessData.useLoginData = !E621AccessData.useLoginData;
     notifyListeners();
     if (E621AccessData.useLoginData && E621AccessData.fallback == null) {
@@ -53,57 +26,10 @@ class SearchViewModel extends ChangeNotifier {
             (v) => logger.fine("Dev e621 Auth Loaded"),
           );
     }
-    return E621AccessData.useLoginData; //_sendAuthHeaders;
+    return E621AccessData.useLoginData;
   }
 
-  // String _searchText;
-  // String get searchText => _searchText;
-  // set searchText(String value) {
-  //   _searchText = value;
-  //   notifyListeners();
-  // }
-
-  // Future<SearchResultArgs>? _pr;
-  // Future<SearchResultArgs>? get pr => _pr;
-  // set pr(Future<SearchResultArgs>? value) {
-  //   _pr = value;
-  //   notifyListeners();
-  // }
-
-  // String _priorSearchText = "";
-  // @Deprecated("Refactor to ManagedCollection")
-  // String get priorSearchText => _priorSearchText;
-  // @Deprecated("Refactor to ManagedCollection")
-  // set priorSearchText(String value) {
-  //   _priorSearchText = value;
-  //   notifyListeners();
-  // }
-
-  // bool _fillTextBarWithSearchString;
-  // bool get fillTextBarWithSearchString => _fillTextBarWithSearchString;
-  // set fillTextBarWithSearchString(bool value) {
-  //   _fillTextBarWithSearchString = value;
-  //   notifyListeners();
-  // }
-
-  SearchViewModel({
-    bool? lazyLoad,
-    bool? lazyBuilding,
-    bool? forceSafe,
-    // String? priorSearchText,
-    // String? searchText,
-    // bool? sendAuthHeaders,
-    // bool? fillTextBarWithSearchString,
-    // Future<SearchResultArgs>? pr,
-  })  : _lazyLoad = lazyLoad ?? false,
-        _lazyBuilding = lazyBuilding ?? false,
-        _forceSafe = forceSafe ?? false;
-  // _sendAuthHeaders = E621AccessData.useLoginData =
-  //     sendAuthHeaders ?? E621AccessData.useLoginData,
-  // _priorSearchText = priorSearchText ?? "",
-  // _searchText = searchText ?? "",
-  // _pr = pr,
-  // _fillTextBarWithSearchString = fillTextBarWithSearchString ?? false;
+  SearchViewModel();
 }
 
 class MultiSearch {

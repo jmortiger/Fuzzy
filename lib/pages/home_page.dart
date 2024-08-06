@@ -169,18 +169,18 @@ class _HomePageState extends State<HomePage> {
                       // posts: Provider.of<SearchCacheLegacy>(context).mpcSync,
                       posts: sc.mpcSync,
                       // expectedCount:
-                      // svm.lazyLoad ? SearchView.i.postsPerPage : sc.posts!.count,
+                      // SearchView.i.lazyLoad ? SearchView.i.postsPerPage : sc.posts!.count,
                       onSelectionCleared: onSelectionCleared,
-                      useLazyBuilding: svm.lazyBuilding,
+                      useLazyBuilding: SearchView.i.lazyBuilding,
                     )
                   : WPostSearchResults(
                       key: ObjectKey(sc.posts!),
                       posts: sc.posts!,
-                      expectedCount: svm.lazyLoad
+                      expectedCount: SearchView.i.lazyLoad
                           ? SearchView.i.postsPerPage
                           : sc.posts!.count,
                       onSelectionCleared: onSelectionCleared,
-                      useLazyBuilding: svm.lazyBuilding,
+                      useLazyBuilding: SearchView.i.lazyBuilding,
                     ),
             );
           })(),

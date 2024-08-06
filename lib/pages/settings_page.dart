@@ -2,19 +2,18 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/j_util_full.dart';
-
-// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
+// #region Logger
+lm.Printer get print => lRecord.print;
+lm.FileLogger get logger => lRecord.logger;
+// ignore: unnecessary_late
 late final lRecord = lm.genLogger("SettingsPage");
-late final print = lRecord.print;
-late final logger = lRecord.logger;
 // #endregion Logger
 
 class SettingsPage extends StatelessWidget implements IRoute<SettingsPage> {
@@ -235,9 +234,15 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               ),
               WBooleanField(
                 getVal: () => SearchView.i.lazyLoad,
-                name: "Lazy Load Images in view",
+                name: "Lazily load search results",
                 // subtitle: "",
                 setVal: (bool val) => SearchView.i.lazyLoad = val,
+              ),
+              WBooleanField(
+                getVal: () => SearchView.i.lazyBuilding,
+                name: "Lazily build tiles in grid view",
+                // subtitle: "",
+                setVal: (bool val) => SearchView.i.lazyBuilding = val,
               ),
             ]),
         ExpansionTile(

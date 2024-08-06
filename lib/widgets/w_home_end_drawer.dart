@@ -39,6 +39,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
   // #endregion Logger
   SearchViewModel get svm =>
       Provider.of<SearchViewModel>(context, listen: false);
+
   /// It's better to directly check if [E621AccessData.userData] is assigned,
   /// but this forces the end drawer to rebuild when changed.
   bool isLoggedIn = false;
@@ -46,7 +47,8 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
   @override
   void initState() {
     super.initState();
-    isLoggedIn = E621AccessData.userData.isAssigned && E621AccessData.useLoginData;
+    isLoggedIn =
+        E621AccessData.userData.isAssigned && E621AccessData.useLoginData;
   }
 
   @override
@@ -57,7 +59,9 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
           !isLoggedIn
               ? const DrawerHeader(child: Text("Menu"))
               // : DrawerHeader(child: Text(E621AccessData.fallback?.username ?? "FAIL")),
-              : DrawerHeader(child: Text(E621AccessData.userData.$Safe?.username ?? "FAIL")),
+              : DrawerHeader(
+                  child:
+                      Text(E621AccessData.userData.$Safe?.username ?? "FAIL")),
           ListTile(
             title: const Text("Go to settings"),
             onTap: () {
@@ -91,9 +95,8 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => UserProfileLoaderPage.getByName(
-                          username:
-                              E621AccessData.userData.$Safe?.username ??
-                                  E621AccessData.devAccessData.$.username),
+                          username: E621AccessData.userData.$Safe?.username ??
+                              E621AccessData.devAccessData.$.username),
                     ));
               },
             ),
@@ -166,42 +169,32 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
           //     // Navigator.pop(context);
           //   },
           // ),
-          ListTile(
-            title: const Text("Toggle Lazy Building"),
-            leading: Provider.of<SearchViewModel>(context, listen: false)
-                    .lazyBuilding
-                ? const Icon(Icons.check_box)
-                : const Icon(Icons.check_box_outline_blank),
-            onTap: () {
-              print(
-                  "Before: ${Provider.of<SearchViewModel>(context, listen: false).lazyBuilding}");
-              setState(() =>
-                  Provider.of<SearchViewModel>(context, listen: false)
-                      .toggleLazyBuilding());
-              print(
-                  "After: ${Provider.of<SearchViewModel>(context, listen: false).lazyBuilding}");
-              // Navigator.pop(context);
-            },
-          ),
+          // ListTile(
+          //   title: const Text("Toggle Lazy Building"),
+          //   leading: SearchView.i.lazyBuilding
+          //       ? const Icon(Icons.check_box)
+          //       : const Icon(Icons.check_box_outline_blank),
+          //   onTap: () {
+          //     print("Before: ${SearchView.i.lazyBuilding}");
+          //     setState(
+          //         () => SearchView.i.lazyBuilding = !SearchView.i.lazyBuilding);
+          //     print("After: ${SearchView.i.lazyBuilding}");
+          //     // Navigator.pop(context);
+          //   },
+          // ),
           ListTile(
             title: const Text("Toggle Auth headers"),
             leading: E621AccessData.useLoginData
-                /* Provider.of<SearchViewModel>(context, listen: false)
-                    .sendAuthHeaders */
                 ? const Icon(Icons.check_box)
                 : const Icon(Icons.check_box_outline_blank),
             onTap: () {
               print("Before: ${E621AccessData.useLoginData}");
-              // print(
-              //     "Before: ${Provider.of<SearchViewModel>(context, listen: false).sendAuthHeaders}");
               setState(
                 () => //E621AccessData.toggleUseLoginData
                     Provider.of<SearchViewModel>(context, listen: false)
                         .toggleSendAuthHeaders(),
-              );// Just to trigger rebuild
+              ); // Just to trigger rebuild
               print("After: ${E621AccessData.useLoginData}");
-              // print(
-              //     "After: ${Provider.of<SearchViewModel>(context, listen: false).sendAuthHeaders}");
               // Navigator.pop(context);
             },
           ),
