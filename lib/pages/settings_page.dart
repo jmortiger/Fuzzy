@@ -403,6 +403,53 @@ class _WBooleanFieldState extends State<WBooleanField> {
     );
   }
 }
+class WBooleanTristateField extends StatefulWidget {
+  final String name;
+  final String? subtitle;
+
+  final bool? Function() getVal;
+
+  final void Function(bool? p1) setVal;
+
+  final bool Function(bool? p1)? validateVal;
+
+  const WBooleanTristateField({
+    super.key,
+    required this.name,
+    this.subtitle,
+    required this.getVal,
+    required this.setVal,
+    // required this.settings,
+    this.validateVal,
+  });
+
+  // final AppSettings settings;
+
+  @override
+  State<WBooleanTristateField> createState() => _WBooleanTristateFieldState();
+}
+
+class _WBooleanTristateFieldState extends State<WBooleanTristateField> {
+  void onChanged([bool? value]) =>
+      widget.validateVal?.call(value) ?? true
+          ? setState(() {
+              widget.setVal(value);
+            })
+          : null;
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Text(widget.name),
+      subtitle: widget.subtitle != null ? Text(widget.subtitle!) : null,
+      onTap: onChanged,
+      trailing: Checkbox(
+        tristate: true,
+        onChanged: onChanged,
+        value: widget.getVal(),
+      ),
+    );
+  }
+}
 
 class WSetStringField extends StatefulWidget {
   final String name;

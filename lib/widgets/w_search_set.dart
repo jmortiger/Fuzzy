@@ -103,7 +103,7 @@ class _WSearchSetState extends State<WSearchSet> {
     );
     _control = ExpansionTileController();
     if (widget.hasInitialSearch) launchSearch(false);
-    if (widget.initiallyExpanded) _control.expand();
+    // if (widget.initiallyExpanded) _control.expand();
   }
 
   void launchSearch([bool collapse = true]) {
@@ -162,6 +162,7 @@ class _WSearchSetState extends State<WSearchSet> {
             title: const Text("Search Options"),
             controller: _control,
             dense: true,
+            initiallyExpanded: widget.initiallyExpanded,
             children: [
               ListTile(
                 title: TextField(
@@ -199,7 +200,7 @@ class _WSearchSetState extends State<WSearchSet> {
               WIntegerField(
                 name: "Set Creator Id",
                 getVal: () => searchCreatorId ?? -1,
-                setVal: (v) => searchCreatorId,
+                setVal: (v) => searchCreatorId = v,
                 validateVal: (p1) => p1 != null && p1 >= 0,
               ),
               WEnumField(
@@ -211,13 +212,13 @@ class _WSearchSetState extends State<WSearchSet> {
               WIntegerField(
                 name: "Limit",
                 getVal: () => limit ?? 50,
-                setVal: (v) => limit,
+                setVal: (v) => limit = v,
                 validateVal: (p1) => p1 != null && p1 > 0 && p1 <= 320,
               ),
               WIntegerField(
                 name: "Page Number",
                 getVal: () => p.pageNumber ?? 50,
-                setVal: (v) => p.pageNumber,
+                setVal: (v) => p.page = v.toString(),
                 validateVal: (p1) => p1 != null && p1 > 0,
               ),
               TextButton(

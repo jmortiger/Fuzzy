@@ -1,16 +1,12 @@
-// ignore_for_file: avoid_print
-
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_results.dart';
-import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/saved_searches_page.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/widgets/w_fab_builder.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
-import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
 
 import '../models/search_cache.dart';
@@ -38,11 +34,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    onSelectionCleared.subscribe(() {
-      setState(() {
-        sr.clearSelections();
-      });
-    });
     if (!E621AccessData.devAccessData.isAssigned) {
       E621AccessData.devAccessData.getItem();
     }
@@ -52,17 +43,15 @@ class _HomePageState extends State<HomePage> {
   String? toFillSearchWith;
   @override
   Widget build(BuildContext context) {
-    final tfsw = toFillSearchWith;
+    final fsw = toFillSearchWith;
     toFillSearchWith = null;
     return Scaffold(
       appBar: AppBar(
         title: Padding(
           padding: const EdgeInsets.all(8.0),
-          // child: simpleTextField(),
           child: WSearchBar(
-            key: ObjectKey(tfsw ?? scWatch.searchText),
-            initialValue: tfsw ?? scWatch.searchText,
-            // onSelected: () => setState(() {}),
+            key: ObjectKey(fsw ?? scWatch.searchText),
+            initialValue: fsw ?? scWatch.searchText,
           ),
         ),
         leading: IconButton(
@@ -71,14 +60,12 @@ class _HomePageState extends State<HomePage> {
             Navigator.push<String>(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      const SavedSearchesPageProvider /* Legacy */ (),
+                  builder: (context) => const SavedSearchesPageProvider(),
                 )).then(
               (value) => value == null
                   ? null
                   : setState(() {
                       toFillSearchWith = sc.searchText = value;
-                      // svm.fillTextBarWithSearchString = true;
                       _sendSearchAndUpdateState(tags: value);
                     }),
             );
@@ -90,12 +77,11 @@ class _HomePageState extends State<HomePage> {
         onSearchRequested: (searchText) {
           setState(() {
             toFillSearchWith = sc.searchText = searchText;
-            // svm.fillTextBarWithSearchString = true;
             _sendSearchAndUpdateState(tags: searchText);
           });
         },
         getMountedContext: () => this.context,
-      ), //_buildDrawer(context),
+      ),
       floatingActionButton: WFabBuilder.multiplePosts(
         posts: sc.isMpcSync
             ? scWatch.mpcSync.collection
@@ -114,13 +100,12 @@ class _HomePageState extends State<HomePage> {
                         .contains(e.id))
                     .toList() ??
                 [],
-        // onClearSelections: () => onSelectionCleared.invoke(),
       ),
     );
   }
 
   // #region From WSearchView
-  JPureEvent onSelectionCleared = JPureEvent();
+  // JPureEvent onSelectionCleared = JPureEvent();
 
   ManagedPostCollectionSync get sc =>
       Provider.of<ManagedPostCollectionSync>(context, listen: false);
@@ -151,7 +136,6 @@ class _HomePageState extends State<HomePage> {
                     posts: sc.mpcSync,
                     // expectedCount:
                     // SearchView.i.lazyLoad ? SearchView.i.postsPerPage : sc.posts!.count,
-                    // onSelectionCleared: onSelectionCleared,
                     useLazyBuilding: SearchView.i.lazyBuilding,
                   )
                 : WPostSearchResults(
@@ -160,55 +144,9 @@ class _HomePageState extends State<HomePage> {
                     expectedCount: SearchView.i.lazyLoad
                         ? SearchView.i.postsPerPage
                         : sc.posts!.count,
-                    // onSelectionCleared: onSelectionCleared,
                     useLazyBuilding: SearchView.i.lazyBuilding,
                   ),
           ),
-        // if (sc.posts?.posts.firstOrNull == null)
-        //   const Align(
-        //     alignment: AlignmentDirectional.topCenter,
-        //     child: Text("No Results"),
-        //   ),
-        // if (sc.posts != null &&
-        //     (sc.posts.runtimeType == E6PostsSync ||
-        //         (sc.posts as E6PostsLazy).isFullyProcessed))
-        //   (() {
-        //     print("BUILDING PAGE NAVIGATION");
-        //     return WSearchResultPageNavigation(
-        //       onNextPage: sc.hasNextPageCached ?? false
-        //           ? () {
-        //               /* if (sc.isMpc) {
-        //                 (sc.mpc).goToNextPage();
-        //               } else  */
-        //               if (sc.isMpcSync) {
-        //                 (sc.mpcSync).goToNextPage();
-        //               }
-        //               _sendSearchAndUpdateState(
-        //                 limit: SearchView.i.postsPerPage,
-        //                 pageModifier: 'b',
-        //                 postId: sc.lastPostOnPageIdCached,
-        //                 tags: sc.priorSearchText,
-        //               );
-        //             }
-        //           : null,
-        //       onPriorPage: sc.hasPriorPage ?? false
-        //           ? () {
-        //               /* if (sc.isMpc) {
-        //                 sc.mpc.goToPriorPage();
-        //               } else  */
-        //               if (sc.isMpcSync) {
-        //                 sc.mpcSync.goToPriorPage();
-        //               }
-        //               _sendSearchAndUpdateState(
-        //                 limit: SearchView.i.postsPerPage,
-        //                 pageModifier: 'a',
-        //                 postId: sc.firstPostOnPageId,
-        //                 tags: sc.priorSearchText,
-        //               );
-        //             }
-        //           : null,
-        //     );
-        //   })(),
       ],
     );
   }
@@ -221,8 +159,7 @@ class _HomePageState extends State<HomePage> {
     int? postId,
     int? pageNumber,
   }) {
-    var sc = Provider.of<ManagedPostCollectionSync>(context, listen: false);
-    sc.launchSearch(
+    Provider.of<ManagedPostCollectionSync>(context, listen: false).launchSearch(
       context: context,
       searchViewNotifier:
           Provider.of<SearchResultsNotifier?>(context, listen: false),

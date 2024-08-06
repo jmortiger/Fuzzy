@@ -50,11 +50,9 @@ class WPostSearchResults extends StatefulWidget {
     this.onPostsSelected,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
-    // JPureEvent? onSelectionCleared,
     this.stripToGridView = false,
     JPureEvent? fireRebuild,
-  })  : //_onSelectionCleared = onSelectionCleared,
-        _fireRebuild = fireRebuild,
+  })  : _fireRebuild = fireRebuild,
         usesLazyPosts = null;
   const WPostSearchResults.sync({
     super.key,
@@ -65,11 +63,9 @@ class WPostSearchResults extends StatefulWidget {
     this.onPostsSelected,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
-    // JPureEvent? onSelectionCleared,
     this.stripToGridView = false,
     JPureEvent? fireRebuild,
-  })  : //_onSelectionCleared = onSelectionCleared,
-        _fireRebuild = fireRebuild,
+  })  : _fireRebuild = fireRebuild,
         usesLazyPosts = false;
   const WPostSearchResults.lazy({
     super.key,
@@ -80,11 +76,9 @@ class WPostSearchResults extends StatefulWidget {
     this.onPostsSelected,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
-    // JPureEvent? onSelectionCleared,
     this.stripToGridView = false,
     JPureEvent? fireRebuild,
-  })  : //_onSelectionCleared = onSelectionCleared,
-        _fireRebuild = fireRebuild,
+  })  : _fireRebuild = fireRebuild,
         usesLazyPosts = true;
 
   @override
@@ -312,16 +306,14 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
             crossAxisSpacing: 4,
             mainAxisSpacing: 4,
             childAspectRatio: SearchView.i.widthToHeightRatio,
-            children: sc.isMpcSync
-                // ? sc.mpcSync[widget.pageIndex /* sc.mpcSync.currentPage */]
-                //         .$Safe?.posts.mapAsList(
+            children: !widget.stripToGridView// sc.isMpcSync
                 ? sc.mpcSync
                         .getPostsOnPageSync(widget.pageIndex)
                         ?.mapAsList((e, i, l) => constructImageResult(
                               e,
                               i +
                                   sc.mpcSync.getPageFirstPostIndex(widget
-                                      .pageIndex), //sc.mpcSync.currentPageFirstPostIndex,
+                                      .pageIndex),
                             ))
                         .toList() ??
                     []
@@ -357,7 +349,6 @@ class WPostSearchResultsSwiper extends StatefulWidget {
   final ManagedPostCollectionSync posts;
   final void Function(Set<int> indices, int newest)? onPostsSelected;
 
-  // final JPureEvent? _onSelectionCleared;
   final bool useLazyBuilding;
 
   final bool disallowSelections;
@@ -372,11 +363,9 @@ class WPostSearchResultsSwiper extends StatefulWidget {
     this.onPostsSelected,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
-    // JPureEvent? onSelectionCleared,
     this.stripToGridView = false,
     JPureEvent? fireRebuild,
-  })  : //_onSelectionCleared = onSelectionCleared,
-        _fireRebuild = fireRebuild;
+  })  : _fireRebuild = fireRebuild;
 
   @override
   State<WPostSearchResultsSwiper> createState() =>
@@ -487,7 +476,6 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
                               pageIndex: index,
                               indexOffset: index * SearchView.i.postsPerPage,
                               onPostsSelected: widget.onPostsSelected,
-                              // onSelectionCleared: widget._onSelectionCleared,
                               stripToGridView: widget.stripToGridView,
                               useLazyBuilding: widget.useLazyBuilding,
                             );
@@ -524,7 +512,6 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
                       pageIndex: index,
                       indexOffset: index * SearchView.i.postsPerPage,
                       onPostsSelected: widget.onPostsSelected,
-                      // onSelectionCleared: widget._onSelectionCleared,
                       stripToGridView: widget.stripToGridView,
                       useLazyBuilding: widget.useLazyBuilding,
                     );
@@ -555,8 +542,6 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
 
   void _handlePageViewChanged(int currentPageIndex) {
     _currentPageIndex = currentPageIndex;
-    // widget.posts.currentPostIndex =
-    //     _currentPageIndex * SearchView.i.postsPerPage;
     if (!Platform.isDesktop) {
       return;
     }

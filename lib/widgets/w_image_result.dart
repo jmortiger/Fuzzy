@@ -262,7 +262,7 @@ class WImageResult extends StatelessWidget {
               toggle();
             } else {
               SavedDataE6.init();
-              if (getSc(context, false).isMpcSync) {
+              if (!disallowSelections && getSc(context, false).isMpcSync) {
                 await getSc(context, false)
                     .mpcSync
                     .updateCurrentPostIndex(index);
@@ -270,7 +270,7 @@ class WImageResult extends StatelessWidget {
               Navigator.push<IReturnsTags>(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => allowPostViewNavigation
+                    builder: (_) => allowPostViewNavigation && !disallowSelections
                         ? useLinkedList
                             ? const Placeholder() //_buildLinkedSwiper(context)
                             : /* Provider.of<SearchCacheLegacy>(context,

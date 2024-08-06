@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:http/http.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
@@ -18,8 +20,15 @@ class WSearchPool extends StatefulWidget {
   final e621.PoolCategory? initialSearchCategory;
   final e621.PoolOrder? initialSearchOrder;
   final int? initialLimit;
-
+  final bool initiallyExpanded;
+  final bool hasInitialSearch;
+  final int? limit;
   final void Function(e621.Pool pool) onSelected;
+  // final bool Function(e621.Pool pool)? disableResults;
+  final bool Function(e621.Pool pool)? filterResults;
+  final Future<bool> Function(e621.Pool pool)? filterResultsAsync;
+  final Future<List<e621.Pool>> Function(List<e621.Pool> pool)?
+      customFilterResultsAsync;
   const WSearchPool({
     super.key,
     required this.onSelected,
@@ -32,7 +41,30 @@ class WSearchPool extends StatefulWidget {
     this.initialSearchCategory,
     this.initialSearchOrder,
     this.initialLimit,
-  });
+    this.initiallyExpanded = true,
+    this.limit,
+    this.filterResults,
+    this.filterResultsAsync,
+    this.customFilterResultsAsync,
+  }) : hasInitialSearch = true;
+  const WSearchPool.noInitialSearch({
+    super.key,
+    required this.onSelected,
+    this.initiallyExpanded = true,
+    this.limit,
+    this.filterResults,
+    this.filterResultsAsync,
+    this.customFilterResultsAsync,
+  })  : hasInitialSearch = false,
+        initialSearchNameMatches = null,
+        initialSearchId = null,
+        initialSearchDescriptionMatches = null,
+        initialSearchCreatorName = null,
+        initialSearchCreatorId = null,
+        initialSearchIsActive = null,
+        initialSearchCategory = null,
+        initialSearchOrder = null,
+        initialLimit = null;
 
   void _defaultOnSelected() {}
 
@@ -41,7 +73,9 @@ class WSearchPool extends StatefulWidget {
 }
 
 class _WSearchPoolState extends State<WSearchPool> {
-  PoolSearchParameterModel p = PoolSearchParameterModel();
+  late PoolSearchParameterModel p;
+
+  late ExpansionTileController _control;
   String? get searchNameMatches => p.searchNameMatches;
   set searchNameMatches(String? value) => p.searchNameMatches = value;
   List<int>? get searchId => p.searchId;
@@ -66,45 +100,89 @@ class _WSearchPoolState extends State<WSearchPool> {
   @override
   void initState() {
     super.initState();
-    searchNameMatches = widget.initialSearchNameMatches;
-    searchId = widget.initialSearchId;
-    searchDescriptionMatches = widget.initialSearchDescriptionMatches;
-    searchCreatorName = widget.initialSearchCreatorName;
-    searchCreatorId = widget.initialSearchCreatorId;
-    searchIsActive = widget.initialSearchIsActive;
-    searchCategory = widget.initialSearchCategory;
-    searchOrder = widget.initialSearchOrder;
-    limit = widget.initialLimit;
-    loadingPools = e621.Api.initSearchPoolsRequest(
-      searchNameMatches: searchNameMatches,
-      searchId: searchId,
-      searchDescriptionMatches: searchDescriptionMatches,
-      searchCreatorName: searchCreatorName,
-      searchCreatorId: searchCreatorId,
-      searchIsActive: searchIsActive,
-      searchCategory: searchCategory,
-      searchOrder: searchOrder,
-      limit: limit,
-      credentials: E621AccessData.devAccessData.$.cred,
-    ).send().then((v) async {
-      var t = await ByteStream(v.stream.asBroadcastStream()).bytesToString();
-      var step = jsonDecode(t);
-      try {
-        return (step as List).mapAsList(
-          (e, index, list) => e621.Pool.fromJson(e),
-        );
-      } catch (e) {
-        return <e621.Pool>[];
-      }
-    })
-      ..then((v) {
-        setState(() {
-          pools = v;
-          loadingPools = null;
-        });
-      });
+    p = PoolSearchParameterModel(
+      searchNameMatches: widget.initialSearchNameMatches,
+      searchId: widget.initialSearchId,
+      searchDescriptionMatches: widget.initialSearchDescriptionMatches,
+      searchCreatorName: widget.initialSearchCreatorName,
+      searchCreatorId: widget.initialSearchCreatorId,
+      searchIsActive: widget.initialSearchIsActive,
+      searchCategory: widget.initialSearchCategory,
+      searchOrder: widget.initialSearchOrder,
+      limit: widget.initialLimit,
+    );
+    _control = ExpansionTileController();
+    if (widget.hasInitialSearch) launchSearch(false);
+    // if (widget.initiallyExpanded) _control.expand();
   }
 
+  void launchSearch([bool collapse = true]) {
+    setState(() {
+      pools = null;
+      loadingPools = e621.Api.initSearchPoolsRequest(
+        searchNameMatches: searchNameMatches,
+        searchId: searchId,
+        searchDescriptionMatches: searchDescriptionMatches,
+        searchCreatorName: searchCreatorName,
+        searchCreatorId: searchCreatorId,
+        searchIsActive: searchIsActive,
+        searchCategory: searchCategory,
+        searchOrder: searchOrder,
+        limit: limit,
+        credentials: E621AccessData.devAccessData.$.cred,
+      ).send().then((v) async {
+        var t = await ByteStream(v.stream.asBroadcastStream()).bytesToString();
+        var step = jsonDecode(t);
+        try {
+          return (step as List).mapAsList(
+            (e, index, list) => e621.Pool.fromJson(e),
+          );
+        } catch (e) {
+          return <e621.Pool>[];
+        }
+      })
+        ..then((v) async {
+          if (widget.filterResultsAsync == null) return v;
+          final r = <e621.Pool>[];
+          for (var e in v) {
+            if (await widget.filterResultsAsync!(e)) r.add(e);
+          }
+          return r;
+        })
+        ..then((v) {
+          setState(() {
+            pools = widget.filterResults == null
+                ? v
+                : v.where(widget.filterResults!).toList();
+            loadingPools = null;
+          });
+        });
+      if (collapse) _control.collapse();
+      // category =
+    });
+  }
+
+  static const _categoryText = ["Series", "Collection", "Any"];
+  static String displayCategory(e621.PoolCategory? searchCategory) =>
+      switch (searchCategory) {
+        e621.PoolCategory.series => _categoryText[0],
+        e621.PoolCategory.collection => _categoryText[1],
+        _ => _categoryText[2],
+      };
+  static e621.PoolCategory? determineCategory(bool? searchCategory) =>
+      switch (searchCategory) {
+        true => e621.PoolCategory.series,
+        false => e621.PoolCategory.collection,
+        null => null,
+      };
+  static bool? determineCategoryVal(e621.PoolCategory? searchCategory) =>
+      switch (searchCategory) {
+        e621.PoolCategory.series => true,
+        e621.PoolCategory.collection => false,
+        null => null,
+      };
+  String get categoryText => displayCategory(searchCategory);
+  // String category = "Series";
   bool isExpanded = false;
   @override
   Widget build(BuildContext context) {
@@ -113,10 +191,110 @@ class _WSearchPoolState extends State<WSearchPool> {
       height: double.maxFinite,
       child: ListView(
         children: [
-          AppBar(
-            title: const Text("Pools"),
-            actions: const [
-              // TODO: Filter buttons
+          AppBar(title: const Text("Pools")),
+          ExpansionTile(
+            title: const Text("Search Options"),
+            controller: _control,
+            dense: true,
+            initiallyExpanded: widget.initiallyExpanded,
+            children: [
+              ListTile(
+                title: TextField(
+                  maxLines: 1,
+                  onChanged: (v) => searchNameMatches = v,
+                  decoration:
+                      const InputDecoration.collapsed(hintText: "Pool Name"),
+                  controller: searchNameMatches != null
+                      ? TextEditingController(text: searchNameMatches!)
+                      : null,
+                ),
+              ),
+              // WIntegerField(
+              //   name: "Pool Ids",
+              //   getVal: () => searchId ?? -1,
+              //   setVal: (v) => searchId,
+              //   validateVal: (p1) => p1 != null && p1 >= 0,
+              // ),
+              ListTile(
+                title: TextField(
+                  maxLines: 1,
+                  onChanged: (v) => searchDescriptionMatches = v,
+                  decoration: const InputDecoration.collapsed(
+                      hintText: "Pool Description"),
+                  controller: searchDescriptionMatches != null
+                      ? TextEditingController(text: searchDescriptionMatches!)
+                      : null,
+                ),
+              ),
+              ListTile(
+                title: TextField(
+                  maxLines: 1,
+                  onChanged: (v) => searchCreatorName = v,
+                  decoration: const InputDecoration.collapsed(
+                      hintText: "Pool Creator Name"),
+                  controller: searchCreatorName != null
+                      ? TextEditingController(text: searchCreatorName!)
+                      : null,
+                ),
+              ),
+              WIntegerField(
+                name: "Pool Creator Id",
+                getVal: () => searchCreatorId ?? -1,
+                setVal: (v) => searchCreatorId = v,
+                validateVal: (p1) => p1 != null && p1 >= 0,
+              ),
+              WBooleanTristateField(
+                name: "Pool Is Active",
+                subtitle: "${searchIsActive ?? "N/A"}",
+                getVal: () =>
+                    searchIsActive /*  == true
+                    ? true
+                    : searchIsActive ?? true
+                        ? false
+                        : null */
+                ,
+                setVal: (v) => searchIsActive =
+                    v /*  == true
+                    ? true
+                    : v ?? true
+                        ? false
+                        : null */
+                ,
+              ),
+              // WEnumField<e621.PoolCategory>(
+              //   name: "Pool Category",
+              //   getVal: () => searchCategory ?? e621.PoolCategory.c,
+              //   setVal: (Enum v) => searchCategory = v as e621.PoolCategory,
+              //   values: e621.PoolCategory.values,
+              // ),
+              WBooleanTristateField(
+                name: "Pool Category",
+                subtitle: categoryText,
+                getVal: () => determineCategoryVal(searchCategory),
+                setVal: (v) => searchCategory = determineCategory(v),
+              ),
+              WEnumField(
+                name: "Order",
+                getVal: () => searchOrder ?? e621.PoolOrder.updatedAt,
+                setVal: (Enum v) => searchOrder = v as e621.PoolOrder,
+                values: e621.PoolOrder.values,
+              ),
+              WIntegerField(
+                name: "Limit",
+                getVal: () => limit ?? 50,
+                setVal: (v) => limit,
+                validateVal: (p1) => p1 != null && p1 > 0 && p1 <= 320,
+              ),
+              WIntegerField(
+                name: "Page Number",
+                getVal: () => p.pageNumber ?? 50,
+                setVal: (v) => p.pageNumber,
+                validateVal: (p1) => p1 != null && p1 > 0,
+              ),
+              TextButton(
+                onPressed: launchSearch,
+                child: const Text("Search"),
+              ),
             ],
           ),
           if (loadingPools != null)
@@ -124,7 +302,8 @@ class _WSearchPoolState extends State<WSearchPool> {
               aspectRatio: 1,
               child: CircularProgressIndicator(),
             ),
-          if (pools?.firstOrNull == null) const Text("No Results"),
+          if (loadingPools == null && pools?.firstOrNull == null)
+            const Text("No Results"),
           if (pools?.firstOrNull != null)
             ...pools!.map((e) {
               return WPoolTile(
@@ -190,7 +369,7 @@ class WPoolTile extends StatelessWidget {
   }
 }
 
-class PoolSearchParameterModel extends ChangeNotifier {
+class PoolSearchParameterModel extends ChangeNotifier with PageSearchParameter {
   String? _searchNameMatches;
   String? get searchNameMatches => _searchNameMatches;
   set searchNameMatches(String? value) {
@@ -255,6 +434,7 @@ class PoolSearchParameterModel extends ChangeNotifier {
   }
 
   String? _page;
+  @override
   String? get page => _page;
   set page(String? value) {
     _page = value;
