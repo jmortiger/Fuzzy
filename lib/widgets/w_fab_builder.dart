@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
@@ -11,12 +12,11 @@ import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
 
-// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
-import '../models/search_cache.dart';
 import '../web/e621/e621_access_data.dart';
 
+// #region Logger
 late final lRecord = lm.genLogger("WFabBuilder");
 lm.Printer get print => lRecord.print;
 lm.FileLogger get logger => lRecord.logger;
@@ -310,16 +310,123 @@ class WFabBuilder extends StatelessWidget {
 
   static ActionButton getMultiplePostsAddToSetAction(
     BuildContext context,
-    List<E6PostResponse> postListings,
+    List<E6PostResponse> posts,
   ) {
     return ActionButton(
       icon: const Icon(Icons.add),
       tooltip: "Add selected to set",
-      onPressed: () {
-        print("To Be Implemented");
+      onPressed: () async {
+        print("Adding ${posts.length}"
+            " posts to a set, selecting set");
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("To Be Implemented")),
+          SnackBar(
+            content: Text("Adding ${posts.length}"
+                " posts to a set, selecting set"),
+          ),
         );
+        var v = await showDialog<e621.PostSet>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              content: WSearchSet(
+                initialLimit: 10,
+                initialPage: null,
+                initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
+                    E621AccessData.fallbackForced?.username,
+                initialSearchOrder: e621.SetOrder.updatedAt,
+                initialSearchName: null,
+                initialSearchShortname: null,
+                onSelected: (e621.PostSet set) => Navigator.pop(context, set),
+              ),
+              // scrollable: true,
+            );
+          },
+        );
+        if (v != null) {
+          print("Adding ${posts.length}"
+              " posts to set ${v.id} (${v.shortname}, length ${v.postCount})");
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Adding ${posts.length}"
+                    " posts to set ${v.id} (${v.shortname}, length ${v.postCount})"),
+              ),
+            );
+          }
+          var res = await E621
+              .sendRequest(e621.Api.initAddToSetRequest(
+                v.id,
+                posts.map((e) => e.id).toList(),
+                credentials: (E621.accessData.$Safe ??=
+                        await E621AccessData.devAccessData.getItem())
+                    .cred,
+              ))
+              .toResponse();
+
+          util.logResponse(res, logger, lm.LogLevel.INFO);
+          // if (res.statusCode == 201) {
+          if (res.statusCodeInfo.isSuccessful) {
+            final out =
+                "${res.statusCode}: ${posts.length} posts successfully added to set ${v.id} (${v.shortname})";
+            print(out);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(out),
+                  action: SnackBarAction(
+                    label: "See Set",
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Scaffold(
+                          appBar: AppBar(
+                            title: Text("Set ${v.id}: ${v.shortname}"),
+                          ),
+                          body: WPostSearchResults.directResultFromSearch(
+                            "set:${v.shortname}",
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+          } else {
+            final out =
+                "${res.statusCode}: Failed to add posts to set ${v.id} (${v.shortname})";
+            print(out);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(out),
+                  action: SnackBarAction(
+                    label: "See Set",
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Scaffold(
+                          appBar: AppBar(),
+                          body: WPostSearchResults.directResultFromSearch(
+                            "set:${v.shortname}",
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+          }
+        } else {
+          const out = "No Set Selected, canceling.";
+          print(out);
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text(out)),
+            );
+          }
+        }
       },
     );
   }
@@ -340,7 +447,8 @@ class WFabBuilder extends StatelessWidget {
               content: WSearchSet(
                 initialLimit: 10,
                 initialPage: null,
-                initialSearchCreatorName: "***REMOVED***,
+                initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
+                    E621AccessData.fallbackForced?.username,
                 initialSearchOrder: e621.SetOrder.updatedAt,
                 initialSearchName: null,
                 initialSearchShortname: null,
@@ -351,7 +459,15 @@ class WFabBuilder extends StatelessWidget {
           },
         );
         if (v != null) {
-          print("Adding ${postListing.id} to set ${v.id}");
+          print("Adding ${postListing.id} to set ${v.id} (${v.shortname}, length ${v.postCount})");
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Adding ${postListing.id}"
+                    " to set ${v.id} (${v.shortname}, length ${v.postCount})"),
+              ),
+            );
+          }
           var res = await E621
               .sendRequest(e621.Api.initAddToSetRequest(
                 v.id,
@@ -362,12 +478,13 @@ class WFabBuilder extends StatelessWidget {
               ))
               .toResponse();
           if (res.statusCode == 201) {
-            print("${postListing.id} successfully added to set ${v.id}");
+            print(
+                "${postListing.id} successfully added to set ${v.id} (${v.shortname}, length ${v.postCount})");
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                      "${postListing.id} successfully added to set ${v.id}"),
+                      "${postListing.id} successfully added to set ${v.id} (${v.shortname}, length ${v.postCount})"),
                   action: SnackBarAction(
                     label: "See Set",
                     onPressed: () => Navigator.push(
@@ -404,25 +521,244 @@ class WFabBuilder extends StatelessWidget {
     return ActionButton(
       icon: const Icon(Icons.delete),
       tooltip: "Remove selected from set",
-      onPressed: () {
-        print("To Be Implemented");
+      onPressed: () async {
+        print("Removing ${posts.length}"
+            " posts from a set, selecting set");
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("To Be Implemented")),
+          SnackBar(
+            content: Text("Removing ${posts.length}"
+                " posts from a set, selecting set"),
+          ),
         );
+        var v = await showDialog<e621.PostSet>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              content: WSearchSet(
+                initialLimit: 10,
+                initialPage: null,
+                initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
+                    E621AccessData.fallbackForced?.username,
+                initialSearchOrder: e621.SetOrder.updatedAt,
+                initialSearchName: null,
+                initialSearchShortname: null,
+                onSelected: (e621.PostSet set) => Navigator.pop(context, set),
+                filterResults: (set) => posts.reduceUntilTrue(
+                    (accumulator, elem, index, list) =>
+                        set.postIds.contains(elem.id)
+                            ? (true, true)
+                            : (accumulator, false),
+                    false),
+              ),
+              // scrollable: true,
+            );
+          },
+        );
+        if (v != null) {
+          print("Removing ${posts.length}"
+              " posts from set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})");
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Removing ${posts.length}"
+                    " posts from set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})"),
+              ),
+            );
+          }
+          var res = await E621
+              .sendRequest(e621.Api.initRemoveFromSetRequest(
+                v.id,
+                posts.map((e) => e.id).toList(),
+                credentials: (E621.accessData.$Safe ??=
+                        await E621AccessData.devAccessData.getItem())
+                    .cred,
+              ))
+              .toResponse();
+
+          util.logResponse(res, logger, lm.LogLevel.INFO);
+          // if (res.statusCode == 201) {
+          if (res.statusCodeInfo.isSuccessful) {
+            final out =
+                "${res.statusCode}: Posts successfully removed from set ${v.id} (${v.shortname}, length ${v.postCount})";
+            print(out);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(out),
+                  action: SnackBarAction(
+                    label: "See Set",
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Scaffold(
+                          appBar: AppBar(
+                            title: Text("Set ${v.id}: ${v.shortname}"),
+                          ),
+                          body: WPostSearchResults.directResultFromSearch(
+                            "set:${v.shortname}",
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+          } else {
+            final out =
+                "${res.statusCode}: Failed to remove posts to set ${v.id} (${v.shortname}, length ${v.postCount})";
+            print(out);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(out),
+                  action: SnackBarAction(
+                    label: "See Set",
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Scaffold(
+                          appBar: AppBar(),
+                          body: WPostSearchResults.directResultFromSearch(
+                            "set:${v.shortname}",
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+          }
+        } else {
+          const out = "No Set Selected, canceling.";
+          print(out);
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text(out)),
+            );
+          }
+        }
       },
     );
   }
 
   static ActionButton getSinglePostRemoveFromSetAction(
-      BuildContext context, E6PostResponse e6postResponse) {
+      BuildContext context, E6PostResponse post) {
     return ActionButton(
       icon: const Icon(Icons.delete),
       tooltip: "Remove selected from set",
-      onPressed: () {
-        print("To Be Implemented");
+      onPressed: () async {
+        print("Removing ${post.id} from a set, selecting set");
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("To Be Implemented")),
+          SnackBar(
+            content: Text("Removing ${post.id} from a set, selecting set"),
+          ),
         );
+        var v = await showDialog<e621.PostSet>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              content: WSearchSet(
+                initialLimit: 10,
+                initialPage: null,
+                initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
+                    E621AccessData.fallbackForced?.username,
+                initialSearchOrder: e621.SetOrder.updatedAt,
+                initialSearchName: null,
+                initialSearchShortname: null,
+                onSelected: (e621.PostSet set) => Navigator.pop(context, set),
+                filterResults: (set) => set.postIds.contains(post.id),
+              ),
+              // scrollable: true,
+            );
+          },
+        );
+        if (v != null) {
+          print("Removing ${post.id}"
+              " from set ${v.id} (${v.shortname}, length ${v.postCount})");
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Removing ${post.id}"
+                    " from set ${v.id} (${v.shortname}, length ${v.postCount})"),
+              ),
+            );
+          }
+          var res = await E621
+              .sendRequest(e621.Api.initRemoveFromSetRequest(
+                v.id,
+                [post.id],
+                credentials: (E621.accessData.$Safe ??=
+                        await E621AccessData.devAccessData.getItem())
+                    .cred,
+              ))
+              .toResponse();
+
+          util.logResponse(res, logger, lm.LogLevel.INFO);
+          // if (res.statusCode == 201) {
+          if (res.statusCodeInfo.isSuccessful) {
+            final out =
+                "${res.statusCode}: Post successfully removed from set ${v.id} (${v.shortname}, length ${v.postCount})";
+            print(out);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(out),
+                  action: SnackBarAction(
+                    label: "See Set",
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Scaffold(
+                          appBar: AppBar(
+                            title: Text("Set ${v.id}: ${v.shortname}"),
+                          ),
+                          body: WPostSearchResults.directResultFromSearch(
+                            "set:${v.shortname}",
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+          } else {
+            final out =
+                "${res.statusCode}: Failed to remove posts to set ${v.id} (${v.shortname}, length ${v.postCount})";
+            print(out);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(out),
+                  action: SnackBarAction(
+                    label: "See Set",
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Scaffold(
+                          appBar: AppBar(),
+                          body: WPostSearchResults.directResultFromSearch(
+                            "set:${v.shortname}",
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+          }
+        } else {
+          const out = "No Set Selected, canceling.";
+          print(out);
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text(out)),
+            );
+          }
+        }
       },
     );
   }

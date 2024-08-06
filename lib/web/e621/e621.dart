@@ -33,7 +33,12 @@ sealed class E621 extends Site {
   @event
   static final favAdded = JEvent<PostActionArgs>();
   @event
-  static final searchBegan = JEvent<SearchArgs>([(SearchArgs e) => logger.info("New User Search initiated\n\tTags: ${e.tags.foldToString()}")]);
+  static final searchBegan = JEvent<SearchArgs>([
+    (e) => logger.info("New User Search initiated"
+        "\n\tTags: ${e.tags.foldToString()},"
+        "\n\tPage: ${e.page},\n\t"
+        "Limit: ${e.limit}")
+  ]);
   @event
   static final searchEnded = JEvent<SearchResultArgs>();
   @event
@@ -287,25 +292,6 @@ sealed class E621 extends Site {
             }).toList()));
   }
 
-  static const initSearchSetsRequest = e621.Api.initSearchSetsRequest;
-  static Future<http.BaseResponse> sendSearchSetsRequest({
-    String? searchName,
-    String? searchShortname,
-    String? searchCreatorName,
-    String? searchCreatorId,
-    e621.SetOrder? searchOrder,
-    int? limit = 75,
-    String? page,
-    e621.BaseCredentials? credentials,
-  }) =>
-      sendRequest(e621.Api.initSearchSetsRequest(
-        searchName: searchName,
-        searchShortname: searchShortname,
-        searchCreatorName: searchCreatorName,
-        searchOrder: searchOrder,
-        limit: limit,
-        page: page,
-      )).toResponse();
   static http.Request initSearchRequest({
     String tags = "",
     // int limit = 50,
@@ -553,6 +539,11 @@ class SearchArgs extends JEventArgs {
   final String? pageModifier;
   final int? postId;
   final int? pageNumber;
+  String? get page =>
+      pageNumber?.toString() ??
+      (pageModifier != null && postId != null
+          ? "$pageModifier$pageNumber"
+          : null);
   final String? username;
   final String? apiKey;
 }

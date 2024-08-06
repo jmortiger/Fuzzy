@@ -42,20 +42,23 @@ class WSearchBar extends StatefulWidget {
 
 class _WSearchBarState extends State<WSearchBar> {
   // #region Logger
-  static late final lRecord = lm.genLogger("_WSearchBarState");
+  static late final lRecord = lm.genLogger("_WSearchBarState", "_WSearchBarState", lm.LogLevel.FINER);
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger
+  static const whitespaceCharacters = r'\u2028\n\r\u000B\f\u2029\u0085 	';
   Iterable<String> generateSortedOptions(String currentTextValue) {
     final currText = currentTextValue;
-    var lastTermIndex = currText.lastIndexOf(RegExpExt.whitespace);
+    // var lastTermIndex = currText.lastIndexOf(RegExpExt.whitespace);
+    var lastTermIndex =
+        currText.lastIndexOf(RegExp('[$whitespaceCharacters$tagModifiersRegexString]'));
     lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
     // final currSubString = currText.substring(lastTermIndex);
     final currPrefix = currText.substring(0, lastTermIndex);
-    logger.finest("currText: $currText");
-    logger.finest("lastTermIndex: $lastTermIndex");
-    // logger.finest("currSubString: $currSubString");
-    logger.finest("currPrefix: $currPrefix");
+    logger.finer("currText: $currText");
+    logger.finer("lastTermIndex: $lastTermIndex");
+    // logger.finer("currSubString: $currSubString");
+    logger.finer("currPrefix: $currPrefix");
     if (allSuggestionSourcesEmpty() || currText.isEmpty) {
       return const Iterable<String>.empty();
     }
@@ -123,6 +126,9 @@ class _WSearchBarState extends State<WSearchBar> {
     );
   }
 
+  static const tagModifiers = ['+', '~', '-'];
+  static const tagModifiersString = '+~-';
+  static const tagModifiersRegexString = '\+\~\-';
   ManagedPostCollectionSync get sc =>
       Provider.of<ManagedPostCollectionSync>(context, listen: false);
   ManagedPostCollectionSync get scWatch =>
@@ -132,9 +138,7 @@ class _WSearchBarState extends State<WSearchBar> {
   // TODO: Just launch tag search requests for autocomplete, wrap in a class
   @override
   Widget build(BuildContext context) {
-    var svm = Provider.of<SearchViewModel>(context, listen: false);
     var fn = FocusNode();
-    // searchController.text = currentText;
     void closeAndUnfocus() {
       fn.unfocus();
       if (searchController.isAttached && searchController.isOpen) {
@@ -147,19 +151,15 @@ class _WSearchBarState extends State<WSearchBar> {
         currentText = s;
       });
       closeAndUnfocus();
-      // svm.searchText = s;//controller.text;
-      // (svm.searchText.isNotEmpty)
       (s.isNotEmpty)
-          ? _sendSearchAndUpdateState(tags: s) //svm.searchText)
+          ? _sendSearchAndUpdateState(tags: s)
           : _sendSearchAndUpdateState();
       widget.onSelected?.call();
-      // sc.searchText = s;
       sc.parameters = PostPageSearchParameters(
         limit: SearchView.i.postsPerPage,
         tags: s,
         page: 0,
       );
-      //}
     }
 
     return SearchAnchor.bar(
@@ -177,20 +177,15 @@ class _WSearchBarState extends State<WSearchBar> {
         /// USING THE LIBRARY CAUSES THE ERROR.
         return generateSortedOptions(controller.text).map(
           (e) {
-            logger.finer("e = $e Length: ${e.length}");
+            const ws = r'[\u2028\n\r\u000B\f\u2029\u0085 	]';
+            logger.finest("e = $e Length: ${e.length}");
             e = e.trim();
-            logger.finer("e.trim() = $e Length: ${e.length}");
-            logger.finer(
-                e.contains(RegExp(r'[\u2028\n\r\u000B\f\u2029\u0085 	]'))
-                    ? e.split(RegExp(r'[\u2028\n\r\u000B\f\u2029\u0085 	]'))
-                    : [e]);
+            logger.finest("e.trim() = $e Length: ${e.length}");
+            logger.finest(e.contains(RegExp(ws)) ? e.split(RegExp(ws)) : [e]);
             return ListTile(
               dense: true,
-              title: Text((e.contains(
-                          RegExp(r'[\u2028\n\r\u000B\f\u2029\u0085 	]'))
-                      ? e.split(RegExp(r'[\u2028\n\r\u000B\f\u2029\u0085 	]'))
-                      : [e])
-                  .last),
+              title: Text(
+                  (e.contains(RegExp(ws)) ? e.split(RegExp(ws)) : [e]).last),
               subtitle: Text(e),
               onTap: /* closeAndUnfocus */ () {
                 // setState(() {
@@ -215,7 +210,6 @@ class _WSearchBarState extends State<WSearchBar> {
   }
 
   Widget _buildAutocomplete(BuildContext context) {
-    var svm = Provider.of<SearchViewModel>(context, listen: false);
     return Autocomplete<String>(
       fieldViewBuilder: (
         BuildContext context,

@@ -825,7 +825,7 @@ class _WIntegerFieldState extends State<WIntegerField> {
                     text: t,
                     selection: TextSelection(
                       baseOffset: 0,
-                      extentOffset: t.length - 1,
+                      extentOffset: t.length,
                     ),
                   ),
                 ),
@@ -844,11 +844,11 @@ class _WIntegerFieldState extends State<WIntegerField> {
           },
         ).then<void>((value) {
           if (validateVal?.call(value) ?? value != null) {
-            print("Before: ${getVal}");
+            print("Before: $getVal");
             setState(() {
               setVal(value!);
             });
-            print("After: ${getVal}");
+            print("After: $getVal");
             print(jsonEncode(AppSettings.i));
           }
         }).onError((error, stackTrace) => print(error));

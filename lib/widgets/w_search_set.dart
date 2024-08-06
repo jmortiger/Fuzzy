@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/pages/settings_page.dart';
+import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:http/http.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
@@ -12,37 +13,72 @@ class WSearchSet extends StatefulWidget {
   final String? initialSearchName;
   final String? initialSearchShortname;
   final String? initialSearchCreatorName;
+  final int? initialSearchCreatorId;
   final e621.SetOrder? initialSearchOrder;
   final int? initialLimit;
   final String? initialPage;
+  final bool initiallyExpanded;
+  final bool hasInitialSearch;
+  final int? limit;
 
   final void Function(e621.PostSet set) onSelected;
+  // final bool Function(e621.PostSet set)? disableResults;
+  final bool Function(e621.PostSet set)? filterResults;
+  final Future<bool> Function(e621.PostSet set)? filterResultsAsync;
+  final Future<List<e621.PostSet>> Function(List<e621.PostSet> set)? customFilterResultsAsync;
   const WSearchSet({
     super.key,
     required this.onSelected,
     this.initialSearchName,
     this.initialSearchShortname,
     this.initialSearchCreatorName,
+    this.initialSearchCreatorId,
     this.initialSearchOrder,
     this.initialLimit,
     this.initialPage,
-  });
+    this.initiallyExpanded = false,
+    this.limit,
+    this.filterResults,
+    this.filterResultsAsync,
+    this.customFilterResultsAsync,
+  }) : hasInitialSearch = true;
+  const WSearchSet.noInitialSearch({
+    super.key,
+    required this.onSelected,
+    this.initiallyExpanded = true,
+    this.limit,
+    this.filterResults,
+    this.filterResultsAsync,
+    this.customFilterResultsAsync,
+  })  : hasInitialSearch = false,
+        initialSearchName = null,
+        initialSearchShortname = null,
+        initialSearchCreatorName = null,
+        initialSearchCreatorId = null,
+        initialSearchOrder = null,
+        initialLimit = null,
+        initialPage = null;
 
   void _defaultOnSelected() {}
 
   @override
   State<WSearchSet> createState() => _WSearchSetState();
+
+  // static Future<List<e621.PostSet>> filterHasMaintenancePrivileges(List<e621.PostSet> set) {
+    
+  // }
 }
 
 class _WSearchSetState extends State<WSearchSet> {
-  SetSearchParameterModel p = SetSearchParameterModel();
-  // late ChangeNotifierProvider prov;
+  late SetSearchParameterModel p;
   String? get searchName => p.searchName;
   set searchName(String? value) => p.searchName = value;
   String? get searchShortname => p.searchShortname;
   set searchShortname(String? value) => p.searchShortname = value;
   String? get searchCreatorName => p.searchCreatorName;
   set searchCreatorName(String? value) => p.searchCreatorName = value;
+  int? get searchCreatorId => p.searchCreatorId;
+  set searchCreatorId(int? value) => p.searchCreatorId = value;
   e621.SetOrder? get searchOrder => p.searchOrder;
   set searchOrder(e621.SetOrder? value) => p.searchOrder = value;
   int? get limit => p.limit;
@@ -52,45 +88,65 @@ class _WSearchSetState extends State<WSearchSet> {
 
   Future<List<e621.PostSet>>? loadingSets;
   List<e621.PostSet>? sets;
+  late ExpansionTileController _control;
   @override
   void initState() {
     super.initState();
-    searchName = widget.initialSearchName;
-    searchShortname = widget.initialSearchShortname;
-    searchCreatorName = widget.initialSearchCreatorName;
-    searchOrder = widget.initialSearchOrder;
-    limit = widget.initialLimit;
-    page = widget.initialPage;
-    loadingSets = e621.Api.initSearchSetsRequest(
+    p = SetSearchParameterModel(
       searchName: widget.initialSearchName,
       searchShortname: widget.initialSearchShortname,
       searchCreatorName: widget.initialSearchCreatorName,
+      searchCreatorId: widget.initialSearchCreatorId,
       searchOrder: widget.initialSearchOrder,
       limit: widget.initialLimit,
       page: widget.initialPage,
-      credentials: E621AccessData.devAccessData.$.cred,
-    ).send().then((v) async {
-      var t = await ByteStream(v.stream.asBroadcastStream()).bytesToString();
-      var step = jsonDecode(t);
-      try {
-        return (step as List).mapAsList(
-          (e, index, list) => e621.PostSet.fromJson(e),
-        );
-      } catch (e) {
-        return <e621.PostSet>[];
-      }
-    })
-      ..then((v) {
-        setState(() {
-          sets = v;
-          loadingSets = null;
+    );
+    _control = ExpansionTileController();
+    if (widget.hasInitialSearch) launchSearch(false);
+    if (widget.initiallyExpanded) _control.expand();
+  }
+
+  void launchSearch([bool collapse = true]) {
+    setState(() {
+      sets = null;
+      loadingSets = e621.Api.initSearchSetsRequest(
+        searchName: searchName,
+        searchShortname: searchShortname,
+        searchCreatorName: searchCreatorName,
+        searchCreatorId: searchCreatorId,
+        searchOrder: searchOrder,
+        limit: limit,
+        page: page,
+        credentials: E621AccessData.devAccessData.$.cred,
+      ).send().then((v) async {
+        var t = await ByteStream(v.stream.asBroadcastStream()).bytesToString();
+        var step = jsonDecode(t);
+        try {
+          return (step as List).mapAsList(
+            (e, index, list) => e621.PostSet.fromJson(e),
+          );
+        } catch (e) {
+          return <e621.PostSet>[];
+        }
+      })
+        ..then((v) async {
+          if (widget.filterResultsAsync == null) return v;
+          final r = <e621.PostSet>[];
+          for (var e in v) {
+            if (await widget.filterResultsAsync!(e)) r.add(e);
+          }
+          return r;
+        })
+        ..then((v) {
+          setState(() {
+            sets = widget.filterResults == null
+                ? v
+                : v.where(widget.filterResults!).toList();
+            loadingSets = null;
+          });
         });
-      });
-    // prov = ChangeNotifierProvider(
-    //     create: (context) => p,
-    //     builder: (context, child) {
-    //       return const WSetSearchParameters();
-    //     });
+      if (collapse) _control.collapse();
+    });
   }
 
   bool isExpanded = false;
@@ -101,197 +157,82 @@ class _WSearchSetState extends State<WSearchSet> {
       height: double.maxFinite,
       child: ListView(
         children: [
-          AppBar(
-            title: const Text("Sets"),
-            // title: ExpansionPanelList(
-            //   expansionCallback: (panelIndex, isExpanded) => setState(() {
-            //     this.isExpanded = isExpanded;
-            //   }),
-            //   children: [
-            //     ExpansionPanel(
-            //       headerBuilder: (context, isExpanded) {
-            //         return const Text("Sets");
-            //       },
-            //       isExpanded: isExpanded,
-            //       body: ListView(
-            //         children: [
-            //           Row(
-            //             children: [
-            //               const Text("Set Name"),
-            //               TextField(
-            //                 maxLines: 1,
-            //                 onChanged: (v) => searchName = v,
-            //                 controller: searchName != null
-            //                     ? TextEditingController(text: searchName!)
-            //                     : null,
-            //               ),
-            //             ],
-            //           ),
-            //           Row(
-            //             children: [
-            //               const Text("Set Shortname"),
-            //               TextField(
-            //                 maxLines: 1,
-            //                 onChanged: (v) => searchShortname = v,
-            //                 controller: searchShortname != null
-            //                     ? TextEditingController(text: searchShortname!)
-            //                     : null,
-            //               ),
-            //             ],
-            //           ),
-            //           Row(
-            //             children: [
-            //               const Text("Set CreatorName"),
-            //               TextField(
-            //                 maxLines: 1,
-            //                 onChanged: (v) => searchCreatorName = v,
-            //                 controller: searchCreatorName != null
-            //                     ? TextEditingController(
-            //                         text: searchCreatorName!,
-            //                       )
-            //                     : null,
-            //               ),
-            //             ],
-            //           ),
-            //           // TODO: Allow order changing
-            //           // Row(
-            //           //   children: [
-            //           //     const Text("Set Order"),
-            //           //     TextField(
-            //           //       maxLines: 1,
-            //           //       onChanged: (v) => searchOrder = v,
-            //           //       controller: searchOrder != null
-            //           //           ? TextEditingController(
-            //           //               text: searchOrder!.toString(),
-            //           //             )
-            //           //           : null,
-            //           //     ),
-            //           //   ],
-            //           // ),
-            //           Row(
-            //             children: [
-            //               const Text("limit"),
-            //               TextField(
-            //                 maxLines: 1,
-            //                 onChanged: (v) => limit = int.tryParse(v) ?? limit,
-            //                 controller: limit != null
-            //                     ? TextEditingController(text: limit!.toString())
-            //                     : null,
-            //                 keyboardType: TextInputType.number,
-            //               ),
-            //             ],
-            //           ),
-            //           Row(
-            //             children: [
-            //               const Text("page"),
-            //               TextField(
-            //                 maxLines: 1,
-            //                 onChanged: (v) => page = v,
-            //                 controller: page != null
-            //                     ? TextEditingController(text: page!)
-            //                     : null,
-            //               ),
-            //             ],
-            //           ),
-            //         ],
-            //       ),
-            //     ),
-            //   ],
-            // ),
-            actions: const [
-              // TODO: Filter buttons
+          AppBar(title: const Text("Sets")),
+          ExpansionTile(
+            title: const Text("Search Options"),
+            controller: _control,
+            dense: true,
+            children: [
+              ListTile(
+                title: TextField(
+                  maxLines: 1,
+                  onChanged: (v) => searchName = v,
+                  decoration:
+                      const InputDecoration.collapsed(hintText: "Set Name"),
+                  controller: searchName != null
+                      ? TextEditingController(text: searchName!)
+                      : null,
+                ),
+              ),
+              ListTile(
+                title: TextField(
+                  maxLines: 1,
+                  onChanged: (v) => searchShortname = v,
+                  decoration: const InputDecoration.collapsed(
+                      hintText: "Set Short Name"),
+                  controller: searchShortname != null
+                      ? TextEditingController(text: searchShortname!)
+                      : null,
+                ),
+              ),
+              ListTile(
+                title: TextField(
+                  maxLines: 1,
+                  onChanged: (v) => searchCreatorName = v,
+                  decoration: const InputDecoration.collapsed(
+                      hintText: "Set Creator Name"),
+                  controller: searchCreatorName != null
+                      ? TextEditingController(text: searchCreatorName!)
+                      : null,
+                ),
+              ),
+              WIntegerField(
+                name: "Set Creator Id",
+                getVal: () => searchCreatorId ?? -1,
+                setVal: (v) => searchCreatorId,
+                validateVal: (p1) => p1 != null && p1 >= 0,
+              ),
+              WEnumField(
+                name: "Order",
+                getVal: () => searchOrder ?? e621.SetOrder.updatedAt,
+                setVal: (Enum v) => searchOrder = v as e621.SetOrder,
+                values: e621.SetOrder.values,
+              ),
+              WIntegerField(
+                name: "Limit",
+                getVal: () => limit ?? 50,
+                setVal: (v) => limit,
+                validateVal: (p1) => p1 != null && p1 > 0 && p1 <= 320,
+              ),
+              WIntegerField(
+                name: "Page Number",
+                getVal: () => p.pageNumber ?? 50,
+                setVal: (v) => p.pageNumber,
+                validateVal: (p1) => p1 != null && p1 > 0,
+              ),
+              TextButton(
+                onPressed: launchSearch,
+                child: const Text("Search"),
+              ),
             ],
           ),
-          // if (isExpanded)
-          //   ListView(
-          //     children: [
-          //       Row(
-          //         children: [
-          //           const Text("Set Name"),
-          //           TextField(
-          //             maxLines: 1,
-          //             onChanged: (v) => searchName = v,
-          //             controller: searchName != null
-          //                 ? TextEditingController(text: searchName!)
-          //                 : null,
-          //           ),
-          //         ],
-          //       ),
-          //       Row(
-          //         children: [
-          //           const Text("Set Shortname"),
-          //           TextField(
-          //             maxLines: 1,
-          //             onChanged: (v) => searchShortname = v,
-          //             controller: searchShortname != null
-          //                 ? TextEditingController(text: searchShortname!)
-          //                 : null,
-          //           ),
-          //         ],
-          //       ),
-          //       Row(
-          //         children: [
-          //           const Text("Set CreatorName"),
-          //           TextField(
-          //             maxLines: 1,
-          //             onChanged: (v) => searchCreatorName = v,
-          //             controller: searchCreatorName != null
-          //                 ? TextEditingController(
-          //                     text: searchCreatorName!,
-          //                   )
-          //                 : null,
-          //           ),
-          //         ],
-          //       ),
-          //       // TODO: Allow order changing
-          //       // Row(
-          //       //   children: [
-          //       //     const Text("Set Order"),
-          //       //     TextField(
-          //       //       maxLines: 1,
-          //       //       onChanged: (v) => searchOrder = v,
-          //       //       controller: searchOrder != null
-          //       //           ? TextEditingController(
-          //       //               text: searchOrder!.toString(),
-          //       //             )
-          //       //           : null,
-          //       //     ),
-          //       //   ],
-          //       // ),
-          //       Row(
-          //         children: [
-          //           const Text("limit"),
-          //           TextField(
-          //             maxLines: 1,
-          //             onChanged: (v) => limit = int.tryParse(v) ?? limit,
-          //             controller: limit != null
-          //                 ? TextEditingController(text: limit!.toString())
-          //                 : null,
-          //             keyboardType: TextInputType.number,
-          //           ),
-          //         ],
-          //       ),
-          //       Row(
-          //         children: [
-          //           const Text("page"),
-          //           TextField(
-          //             maxLines: 1,
-          //             onChanged: (v) => page = v,
-          //             controller: page != null
-          //                 ? TextEditingController(text: page!)
-          //                 : null,
-          //           ),
-          //         ],
-          //       ),
-          //     ],
-          //   ),
-          // prov,
           if (loadingSets != null)
             const AspectRatio(
               aspectRatio: 1,
               child: CircularProgressIndicator(),
             ),
-          if (sets?.firstOrNull == null) const Text("No Results"),
+          if (loadingSets == null && sets?.firstOrNull == null)
+            const Text("No Results"),
           if (sets?.firstOrNull != null)
             ...sets!.map((e) {
               return WSetTile(
@@ -303,33 +244,6 @@ class _WSearchSetState extends State<WSearchSet> {
       ),
     );
   }
-
-  Future<List<e621.PostSet>> sendSearch() =>
-      loadingSets = e621.Api.initSearchSetsRequest(
-        searchName: searchName,
-        searchShortname: searchShortname,
-        searchCreatorName: searchCreatorName,
-        searchOrder: searchOrder,
-        limit: limit,
-        page: page,
-      ).send().onError(onErrorPrintAndRethrow).then((v) async {
-        var t = await ByteStream(v.stream.asBroadcastStream())
-            .bytesToString()
-            .onError(onErrorPrintAndRethrow);
-        // return Response(
-        //   t,
-        //   v.statusCode,
-        //   headers: v.headers,
-        //   isRedirect: v.isRedirect,
-        //   persistentConnection: v.persistentConnection,
-        //   reasonPhrase: v.reasonPhrase,
-        //   request: v.request,
-        // );
-        loadingSets = null;
-        return sets = (jsonDecode(t) as List).mapAsList(
-          (e, index, list) => e621.PostSet.fromJson(e),
-        );
-      }).onError(onErrorPrintAndRethrow);
 }
 
 class WSetTile extends StatelessWidget {
@@ -347,189 +261,119 @@ class WSetTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       title: Text("${set.id}: ${set.name}"),
-      subtitle: Text("Posts: ${set.postCount}, Last Updated: ${set.updatedAt}"),
+      subtitle: Text(
+          "Posts: ${set.postCount}, Last Updated: ${set.updatedAt}, Created: ${set.createdAt}, CreatorId: ${set.creatorId}"),
       onTap: () => onSelected(set),
     );
   }
 }
 
-class SetSearchParameterModel extends ChangeNotifier {
+class SetSearchParameterModel with PageSearchParameter {
   SetSearchParameterModel({
+    this.searchName,
+    this.searchShortname,
+    this.searchCreatorName,
+    this.searchCreatorId,
+    this.searchOrder,
+    this.limit,
+    this.page,
+  });
+
+  String? searchName;
+
+  String? searchShortname;
+
+  String? searchCreatorName;
+
+  int? searchCreatorId;
+
+  e621.SetOrder? searchOrder;
+
+  int? limit;
+
+  @override
+  String? page;
+}
+
+class SetSearchParameterNotifier extends ChangeNotifier
+    with PageSearchParameter
+    implements SetSearchParameterModel {
+  SetSearchParameterNotifier({
     String? searchName,
     String? searchShortname,
     String? searchCreatorName,
+    int? searchCreatorId,
     e621.SetOrder? searchOrder,
     int? limit,
     String? page,
   })  : _searchName = searchName,
         _searchShortname = searchShortname,
         _searchCreatorName = searchCreatorName,
+        _searchCreatorId = searchCreatorId,
         _searchOrder = searchOrder,
         _limit = limit,
         _page = page;
 
   String? _searchName;
+  @override
   String? get searchName => _searchName;
+  @override
   set searchName(String? value) {
     _searchName = value;
     notifyListeners();
   }
 
   String? _searchShortname;
+  @override
   String? get searchShortname => _searchShortname;
+  @override
   set searchShortname(String? value) {
     _searchShortname = value;
     notifyListeners();
   }
 
   String? _searchCreatorName;
+  @override
   String? get searchCreatorName => _searchCreatorName;
+  @override
   set searchCreatorName(String? value) {
     _searchCreatorName = value;
     notifyListeners();
   }
 
+  int? _searchCreatorId;
+  @override
+  int? get searchCreatorId => _searchCreatorId;
+  @override
+  set searchCreatorId(int? value) {
+    _searchCreatorId = value;
+    notifyListeners();
+  }
+
   e621.SetOrder? _searchOrder;
+  @override
   e621.SetOrder? get searchOrder => _searchOrder;
+  @override
   set searchOrder(e621.SetOrder? value) {
     _searchOrder = value;
     notifyListeners();
   }
 
   int? _limit;
+  @override
   int? get limit => _limit;
+  @override
   set limit(int? value) {
     _limit = value;
     notifyListeners();
   }
 
   String? _page;
+  @override
   String? get page => _page;
+  @override
   set page(String? value) {
     _page = value;
     notifyListeners();
   }
 }
-
-// class WSetSearchParameters extends StatefulWidget {
-//   const WSetSearchParameters({super.key});
-
-//   @override
-//   State<WSetSearchParameters> createState() => _WSetSearchParametersState();
-// }
-
-// class _WSetSearchParametersState extends State<WSetSearchParameters> {
-//   bool isExpanded = false;
-//   SetSearchParameterModel get p =>
-//       Provider.of<SetSearchParameterModel>(context, listen: false);
-//   String? get searchName => p.searchName;
-//   set searchName(String? value) => p.searchName = value;
-//   String? get searchShortname => p.searchShortname;
-//   set searchShortname(String? value) => p.searchShortname = value;
-//   String? get searchCreatorName => p.searchCreatorName;
-//   set searchCreatorName(String? value) => p.searchCreatorName = value;
-//   e621.SetOrder? get searchOrder => p.searchOrder;
-//   set searchOrder(e621.SetOrder? value) => p.searchOrder = value;
-//   int? get limit => p.limit;
-//   set limit(int? value) => p.limit = value;
-//   String? get page => p.page;
-//   set page(String? value) => p.page = value;
-//   @override
-//   Widget build(BuildContext context) {
-//     return ExpansionPanelList(
-//       expansionCallback: (panelIndex, isExpanded) => setState(() {
-//         this.isExpanded = isExpanded;
-//       }),
-//       children: [
-//         ExpansionPanel(
-//           headerBuilder: (context, isExpanded) {
-//             return const Text("Sets");
-//           },
-//           isExpanded: isExpanded,
-//           body: ListView(
-//             children: [
-//               Row(
-//                 children: [
-//                   const Text("Set Name"),
-//                   TextField(
-//                     maxLines: 1,
-//                     onChanged: (v) => searchName = v,
-//                     controller: searchName != null
-//                         ? TextEditingController(text: searchName!)
-//                         : null,
-//                   ),
-//                 ],
-//               ),
-//               Row(
-//                 children: [
-//                   const Text("Set Shortname"),
-//                   TextField(
-//                     maxLines: 1,
-//                     onChanged: (v) => searchShortname = v,
-//                     controller: searchShortname != null
-//                         ? TextEditingController(text: searchShortname!)
-//                         : null,
-//                   ),
-//                 ],
-//               ),
-//               Row(
-//                 children: [
-//                   const Text("Set CreatorName"),
-//                   TextField(
-//                     maxLines: 1,
-//                     onChanged: (v) => searchCreatorName = v,
-//                     controller: searchCreatorName != null
-//                         ? TextEditingController(
-//                             text: searchCreatorName!,
-//                           )
-//                         : null,
-//                   ),
-//                 ],
-//               ),
-//               // TODO: Allow order changing
-//               // Row(
-//               //   children: [
-//               //     const Text("Set Order"),
-//               //     TextField(
-//               //       maxLines: 1,
-//               //       onChanged: (v) => searchOrder = v,
-//               //       controller: searchOrder != null
-//               //           ? TextEditingController(
-//               //               text: searchOrder!.toString(),
-//               //             )
-//               //           : null,
-//               //     ),
-//               //   ],
-//               // ),
-//               Row(
-//                 children: [
-//                   const Text("limit"),
-//                   TextField(
-//                     maxLines: 1,
-//                     onChanged: (v) => limit = int.tryParse(v) ?? limit,
-//                     controller: limit != null
-//                         ? TextEditingController(text: limit!.toString())
-//                         : null,
-//                     keyboardType: TextInputType.number,
-//                   ),
-//                 ],
-//               ),
-//               Row(
-//                 children: [
-//                   const Text("page"),
-//                   TextField(
-//                     maxLines: 1,
-//                     onChanged: (v) => page = v,
-//                     controller: page != null
-//                         ? TextEditingController(text: page!)
-//                         : null,
-//                   ),
-//                 ],
-//               ),
-//             ],
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-// }
