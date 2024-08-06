@@ -9,15 +9,12 @@ import 'package:fuzzy/log_management.dart' as lm;
 import 'package:j_util/e621.dart';
 import 'package:j_util/j_util_full.dart';
 
-late final lRecord = lm.genLogger("pool_view_page.dart");
-lm.Printer get print => lRecord.print;
-lm.FileLogger get logger => lRecord.logger;
-
 class PoolViewPage extends StatefulWidget implements IRoute<PoolViewPage> {
   // #region Logger
-  static late final lRecord = lm.genLogger("PoolViewPage");
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("PoolViewPage");
   // #endregion Logger
   static const routeNameString = "/poolView";
   @override
@@ -33,9 +30,9 @@ var forcePostUniqueness = true;
 
 class _PoolViewPageState extends State<PoolViewPage> {
   // #region Logger
-  static late final lRecord = lm.genLogger("_PoolViewPageState");
-  static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("_PoolViewPageState");
   // #endregion Logger
   PoolModel get pool => widget.pool;
   List<E6PostResponse> posts = [];

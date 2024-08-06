@@ -7,7 +7,6 @@ import 'dart:math';
 
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/web/e621/e621.dart';
-import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
@@ -412,12 +411,15 @@ class E6PostMutable implements E6PostResponse {
   DateTime updatedAt;
 
   /// (array group)
+  @override
   E6FileResponse file;
 
   /// (array group)
+  @override
   E6Preview preview;
 
   /// (array group)
+  @override
   E6Sample sample;
 
   /// (array group)
@@ -496,8 +498,10 @@ class E6PostMutable implements E6PostResponse {
   ITagData get tagData => tags;
   @override
   List<String> get tagList => tags.allTags;
+  @override
   bool get isAnimatedGif =>
       file.extension == "gif" && tags.meta.contains("animated");
+  // ignore: unnecessary_late
   static late final error = E6PostMutable(
     id: -1,
     createdAt: DateTime.now(),

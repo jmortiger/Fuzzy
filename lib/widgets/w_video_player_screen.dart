@@ -3,6 +3,7 @@ import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:video_player/video_player.dart';
+import 'package:fuzzy/log_management.dart' as lm;
 
 class WVideoPlayerScreen extends StatefulWidget {
   final Uri resourceUri;
@@ -19,6 +20,12 @@ class WVideoPlayerScreen extends StatefulWidget {
 
 class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
     with TickerProviderStateMixin {
+  // #region Logger
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("WVideoPlayerScreen");
+  // #endregion Logger
   static const fadeInTime = Duration(milliseconds: 750);
   late AnimationController _fadeInController;
   late VideoPlayerController _controller;
@@ -156,7 +163,7 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
                   Positioned.fill(
                     child: InkWell(
                       onTap: () {
-                        print("LowerInkWell onTap");
+                        logger.fine("LowerInkWell onTap");
                         togglePlayState();
                       },
                       onHover: (value) => setState(() {
@@ -207,7 +214,7 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
           // hoverColor: colorAnim.value,
           onHover: (value) => setState(() {
             isHoveringInControlsInkWell = value;
-            print("isHoveringInControlsInkWell: $value");
+            logger.fine("isHoveringInControlsInkWell: $value");
           }),
           child: _buildNewControls(),
         ),

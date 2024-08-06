@@ -55,6 +55,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   // #region Fields
   bool treatAsNull = true;
   final PostCollectionSync collection;
+  final onPageRetrievalFailure = JEvent<PostCollectionEvent>();
   PostPageSearchParameters _parameters;
   int _startingPage = 0;
   int _currentPageOffset;
@@ -828,6 +829,10 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       tags: parameters.tags ?? "",
     )
         .then((v) {
+      if (v.results == null) {
+        onPageRetrievalFailure.invoke(
+            PostCollectionEvent(parameters: parameters!, posts: collection));
+      }
       return v.results?.posts;
     });
   }
@@ -932,9 +937,13 @@ class PostCollectionSync with ListMixin<E6PostEntrySync> {
 }
 
 class PostCollectionEvent extends JEventArgs {
-  final List<FutureOr<E6PostResponse>> posts;
+  final PostCollectionSync posts;
+  final PostPageSearchParameters parameters;
 
-  PostCollectionEvent({required this.posts});
+  PostCollectionEvent({
+    required this.parameters,
+    required this.posts,
+  });
 }
 
 abstract interface class ISearchResultSwipePageData {

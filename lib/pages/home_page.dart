@@ -1,7 +1,5 @@
 // ignore_for_file: avoid_print
 
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
@@ -9,12 +7,9 @@ import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/saved_searches_page.dart';
-import 'package:fuzzy/web/e621/e621.dart';
-import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/widgets/w_fab_builder.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
-import 'package:fuzzy/widgets/w_search_result_page_navigation.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
 
@@ -125,9 +120,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   // #region From WSearchView
-  SearchViewModel get svm =>
-      Provider.of<SearchViewModel>(context, listen: false);
-
   JPureEvent onSelectionCleared = JPureEvent();
 
   ManagedPostCollectionSync get sc =>
@@ -151,44 +143,32 @@ class _HomePageState extends State<HomePage> {
             )),
           ),
         if (sc.posts != null)
-          (() {
-            if (sc.pr != null) {
-              logger.finer("Results Came back: ${sc.priorSearchText}");
-            }
-            // if (sc.posts!.posts.firstOrNull == null) {
-            //   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No Results. Did you mean to login?")));
-            // }
-            return Expanded(
-              key: ObjectKey(sc.mpcSync.parameters.tags),
-              child: sc.isMpcSync
-                  ? WPostSearchResultsSwiper(
-                      // key: ObjectKey(sc.posts!),
-                      // key: ObjectKey(svm.searchText),
-                      key: ObjectKey(sc.mpcSync.parameters.tags),
-                      // posts: sc /* .posts! */.mpcSync,
-                      // posts: Provider.of<SearchCacheLegacy>(context).mpcSync,
-                      posts: sc.mpcSync,
-                      // expectedCount:
-                      // SearchView.i.lazyLoad ? SearchView.i.postsPerPage : sc.posts!.count,
-                      onSelectionCleared: onSelectionCleared,
-                      useLazyBuilding: SearchView.i.lazyBuilding,
-                    )
-                  : WPostSearchResults(
-                      key: ObjectKey(sc.posts!),
-                      posts: sc.posts!,
-                      expectedCount: SearchView.i.lazyLoad
-                          ? SearchView.i.postsPerPage
-                          : sc.posts!.count,
-                      onSelectionCleared: onSelectionCleared,
-                      useLazyBuilding: SearchView.i.lazyBuilding,
-                    ),
-            );
-          })(),
-        if (sc.posts?.posts.firstOrNull == null)
-          const Align(
-            alignment: AlignmentDirectional.topCenter,
-            child: Text("No Results"),
+          Expanded(
+            key: ObjectKey(sc.mpcSync.parameters.tags),
+            child: sc.isMpcSync
+                ? WPostSearchResultsSwiper(
+                    key: ObjectKey(sc.mpcSync.parameters.tags),
+                    posts: sc.mpcSync,
+                    // expectedCount:
+                    // SearchView.i.lazyLoad ? SearchView.i.postsPerPage : sc.posts!.count,
+                    // onSelectionCleared: onSelectionCleared,
+                    useLazyBuilding: SearchView.i.lazyBuilding,
+                  )
+                : WPostSearchResults(
+                    key: ObjectKey(sc.posts!),
+                    posts: sc.posts!,
+                    expectedCount: SearchView.i.lazyLoad
+                        ? SearchView.i.postsPerPage
+                        : sc.posts!.count,
+                    // onSelectionCleared: onSelectionCleared,
+                    useLazyBuilding: SearchView.i.lazyBuilding,
+                  ),
           ),
+        // if (sc.posts?.posts.firstOrNull == null)
+        //   const Align(
+        //     alignment: AlignmentDirectional.topCenter,
+        //     child: Text("No Results"),
+        //   ),
         // if (sc.posts != null &&
         //     (sc.posts.runtimeType == E6PostsSync ||
         //         (sc.posts as E6PostsLazy).isFullyProcessed))

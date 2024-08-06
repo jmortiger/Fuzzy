@@ -38,10 +38,10 @@ const headerStyle = TextStyle(
 class PostViewPage extends StatefulWidget
     implements IReturnsTags, IRoute<PostViewPage> {
   // #region Logger
-  // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("PostViewPage");
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("PostViewPage");
   // #endregion Logger
   static const routeNameString = "/post";
   final PostListing postListing;
@@ -80,10 +80,7 @@ class PostViewPage extends StatefulWidget
 }
 
 class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
-  // #region Logger
-  static lm.Printer get print => PostViewPage.print;
   static lm.FileLogger get logger => PostViewPage.logger;
-  // #endregion Logger
   @override
   List<String>? get tagsToAdd => widget.tagsToAdd;
   E6PostResponse get e6Post => widget.postListing as E6PostResponse;

@@ -12,9 +12,10 @@ import 'package:fuzzy/log_management.dart' as lm;
 import '../web/e621/e621_access_data.dart';
 
 // #region Logger
-late final lRecord = lm.genLogger("SearchViewModel");
 lm.Printer get print => lRecord.print;
 lm.FileLogger get logger => lRecord.logger;
+// ignore: unnecessary_late
+late final lRecord = lm.genLogger("SearchViewModel");
 // #endregion Logger
 
 class SearchViewModel extends ChangeNotifier {

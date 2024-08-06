@@ -6,19 +6,18 @@ import 'package:fuzzy/util/util.dart';
 import 'package:http/http.dart';
 import 'package:j_util/e621.dart';
 
-// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:j_util/j_util_full.dart';
 
 import '../web/e621/e621_access_data.dart';
 
-late final lRecord =
-    lm.genLogger("UserProfilePage" /* , null, lm.LogLevel.FINEST */);
-late final print = lRecord.print;
-late final logger = lRecord.logger;
-// #endregion Logger
-
 class UserProfilePage extends StatelessWidget implements IRoute<UserProfilePage> {
+  // #region Logger
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("UserProfilePage");
+  // #endregion Logger
   static const routeNameString = "/";
   @override
   get routeName => routeNameString;
@@ -67,6 +66,7 @@ class UserProfilePage extends StatelessWidget implements IRoute<UserProfilePage>
 }
 
 class UserProfileLoaderPage extends StatefulWidget implements IRoute<UserProfileLoaderPage> {
+  static lm.FileLogger get logger => lRecord.logger;
   static const routeNameString = "/";
   @override
   get routeName => routeNameString;

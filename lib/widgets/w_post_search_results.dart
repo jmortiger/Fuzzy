@@ -19,21 +19,21 @@ import '../models/search_cache.dart';
 
 class WPostSearchResults extends StatefulWidget {
   // #region Logger
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
   static late final lRecord = lm.genLogger("WPostSearchResults");
+  // #endregion Logger
 
   final int pageIndex;
   final int indexOffset;
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
-  // #endregion Logger
   final E6Posts posts;
   final int expectedCount;
   final void Function(Set<int> indices, int newest)? onPostsSelected;
 
   final bool? usesLazyPosts;
 
-  final JPureEvent? _onSelectionCleared;
+  // final JPureEvent? _onSelectionCleared;
   final bool useLazyBuilding;
 
   final bool disallowSelections;
@@ -50,10 +50,10 @@ class WPostSearchResults extends StatefulWidget {
     this.onPostsSelected,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
-    JPureEvent? onSelectionCleared,
+    // JPureEvent? onSelectionCleared,
     this.stripToGridView = false,
     JPureEvent? fireRebuild,
-  })  : _onSelectionCleared = onSelectionCleared,
+  })  : //_onSelectionCleared = onSelectionCleared,
         _fireRebuild = fireRebuild,
         usesLazyPosts = null;
   const WPostSearchResults.sync({
@@ -65,10 +65,10 @@ class WPostSearchResults extends StatefulWidget {
     this.onPostsSelected,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
-    JPureEvent? onSelectionCleared,
+    // JPureEvent? onSelectionCleared,
     this.stripToGridView = false,
     JPureEvent? fireRebuild,
-  })  : _onSelectionCleared = onSelectionCleared,
+  })  : //_onSelectionCleared = onSelectionCleared,
         _fireRebuild = fireRebuild,
         usesLazyPosts = false;
   const WPostSearchResults.lazy({
@@ -80,10 +80,10 @@ class WPostSearchResults extends StatefulWidget {
     this.onPostsSelected,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
-    JPureEvent? onSelectionCleared,
+    // JPureEvent? onSelectionCleared,
     this.stripToGridView = false,
     JPureEvent? fireRebuild,
-  })  : _onSelectionCleared = onSelectionCleared,
+  })  : //_onSelectionCleared = onSelectionCleared,
         _fireRebuild = fireRebuild,
         usesLazyPosts = true;
 
@@ -159,14 +159,14 @@ class WPostSearchResults extends StatefulWidget {
 
 class _WPostSearchResultsState extends State<WPostSearchResults> {
   // #region Logger
-  // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("_WPostSearchResultsState");
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("_WPostSearchResultsState");
   // #endregion Logger
-  // Set<int> restrictedIndices = {};
   // #region Notifiers
   Set<int> _selectedIndices = {};
+  Set<int> _selectedPostIds = {};
 
   SearchCacheLegacy get sc =>
       Provider.of<ManagedPostCollectionSync>(context, listen: false);
@@ -178,13 +178,25 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
       Provider.of<SearchResultsNotifier>(context, listen: true);
   Set<int> get selectedIndices =>
       widget.disallowSelections ? _selectedIndices : sr.selectedIndices;
+  Set<int> get selectedPostIds =>
+      widget.disallowSelections ? _selectedPostIds : sr.selectedPostIds;
 
   set selectedIndices(Set<int> value) => widget.disallowSelections
-      ? _selectedIndices = value
+      ? setState(() {
+        _selectedIndices = value;
+      })
       : srl.selectedIndices = SetNotifier.from(value);
+  set selectedPostIds(Set<int> value) => widget.disallowSelections
+      ? setState(() {
+        _selectedPostIds = value;
+      })
+      : srl.selectedPostIds = SetNotifier.from(value);
   bool getIsIndexSelected(int index) => widget.disallowSelections
       ? _selectedIndices.contains(index)
       : sr.getIsSelected(index);
+  bool getIsPostIdSelected(int index) => widget.disallowSelections
+      ? _selectedPostIds.contains(index)
+      : sr.getIsPostSelected(index);
   // #endregion Notifiers
 
   int? trueCount;
@@ -195,11 +207,11 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
   E6PostsLazy? get postLazy => (widget.posts.runtimeType == E6PostsLazy)
       ? (widget.posts as E6PostsLazy)
       : null;
-  // SearchViewModel get svm => Provider.of<SearchViewModel>(context, listen: false);
   void _clearSelectionsCallback() {
     if (mounted) {
       setState(() {
         selectedIndices.clear();
+        selectedPostIds.clear();
       });
     } else {
       print("Dismounted?");
@@ -212,7 +224,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
   void initState() {
     super.initState();
     trueCount = postSync?.posts.length;
-    widget._onSelectionCleared?.subscribe(_clearSelectionsCallback);
+    // widget._onSelectionCleared?.subscribe(_clearSelectionsCallback);
     widget._fireRebuild?.subscribe(_rebuildCallback);
     postLazy?.onFullyIterated.subscribe(
       (FullyIteratedArgs posts) => setState(() {
@@ -223,7 +235,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
 
   @override
   void dispose() {
-    widget._onSelectionCleared?.unsubscribe(_clearSelectionsCallback);
+    // widget._onSelectionCleared?.unsubscribe(_clearSelectionsCallback);
     widget._fireRebuild?.unsubscribe(_rebuildCallback);
     super.dispose();
   }
@@ -345,7 +357,7 @@ class WPostSearchResultsSwiper extends StatefulWidget {
   final ManagedPostCollectionSync posts;
   final void Function(Set<int> indices, int newest)? onPostsSelected;
 
-  final JPureEvent? _onSelectionCleared;
+  // final JPureEvent? _onSelectionCleared;
   final bool useLazyBuilding;
 
   final bool disallowSelections;
@@ -360,10 +372,10 @@ class WPostSearchResultsSwiper extends StatefulWidget {
     this.onPostsSelected,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
-    JPureEvent? onSelectionCleared,
+    // JPureEvent? onSelectionCleared,
     this.stripToGridView = false,
     JPureEvent? fireRebuild,
-  })  : _onSelectionCleared = onSelectionCleared,
+  })  : //_onSelectionCleared = onSelectionCleared,
         _fireRebuild = fireRebuild;
 
   @override
@@ -464,7 +476,7 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
                         logger.info("Index: $index snapshot complete "
                             "${snapshot.hasData || snapshot.hasError} "
                             "${logE6Posts(snapshot.data)}");
-                        if (snapshot.hasData) {
+                        if (snapshot.hasData || ps.isComplete) {
                           if (snapshot.data != null) {
                             return WPostSearchResults(
                               key: key,
@@ -475,7 +487,7 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
                               pageIndex: index,
                               indexOffset: index * SearchView.i.postsPerPage,
                               onPostsSelected: widget.onPostsSelected,
-                              onSelectionCleared: widget._onSelectionCleared,
+                              // onSelectionCleared: widget._onSelectionCleared,
                               stripToGridView: widget.stripToGridView,
                               useLazyBuilding: widget.useLazyBuilding,
                             );
@@ -512,7 +524,7 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
                       pageIndex: index,
                       indexOffset: index * SearchView.i.postsPerPage,
                       onPostsSelected: widget.onPostsSelected,
-                      onSelectionCleared: widget._onSelectionCleared,
+                      // onSelectionCleared: widget._onSelectionCleared,
                       stripToGridView: widget.stripToGridView,
                       useLazyBuilding: widget.useLazyBuilding,
                     );

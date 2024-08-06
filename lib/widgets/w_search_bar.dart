@@ -1,14 +1,11 @@
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/models/search_results.dart';
-import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
-import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
@@ -18,14 +15,13 @@ import 'package:provider/provider.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-import '../models/search_cache.dart';
-import '../web/e621/e621_access_data.dart';
 
 class WSearchBar extends StatefulWidget {
   // #region Logger
-  static late final lRecord = lm.genLogger("WSearchBar");
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("WSearchBar");
   // #endregion Logger
   final String? initialValue;
   final VoidFunction? onSelected;
@@ -41,11 +37,7 @@ class WSearchBar extends StatefulWidget {
 }
 
 class _WSearchBarState extends State<WSearchBar> {
-  // #region Logger
-  static late final lRecord = lm.genLogger("_WSearchBarState", "_WSearchBarState"/* , lm.LogLevel.FINER */);
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
-  // #endregion Logger
+  static lm.FileLogger get logger => WSearchBar.logger;
   static const whitespaceCharacters = r'\u2028\n\r\u000B\f\u2029\u0085 	';
 
   @override
@@ -136,7 +128,7 @@ class _WSearchBarState extends State<WSearchBar> {
 
   static const tagModifiers = ['+', '~', '-'];
   static const tagModifiersString = '+~-';
-  static const tagModifiersRegexString = '\+\~\-';
+  static const tagModifiersRegexString = r'\+\~\-';
   ManagedPostCollectionSync get sc =>
       Provider.of<ManagedPostCollectionSync>(context, listen: false);
   ManagedPostCollectionSync get scWatch =>

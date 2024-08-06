@@ -16,12 +16,14 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 
-// #region Logger
-import 'package:fuzzy/log_management.dart' as lm;
 import 'package:string_similarity/string_similarity.dart';
+import 'package:fuzzy/log_management.dart' as lm;
+
+// #region Logger
+lm.Printer get _print => lRecord.print;
+lm.FileLogger get _logger => lRecord.logger;
+// ignore: unnecessary_late
 late final lRecord = lm.genLogger("Util");
-late final print = lRecord.print;
-late final logger = lRecord.logger;
 // #endregion Logger
 
 typedef JsonMap = Map<String, dynamic>;
@@ -45,7 +47,7 @@ final devDataString = LazyInitializer<String>(() => (rootBundle.loadString("asse
 final devData = LazyInitializer<JsonMap>(() async => dc.jsonDecode(await devDataString.getItem()));
 final tagDb = LateFinal<TagDB>();
 Future<TagDB> _androidCallback(http.StreamedResponse value) => decompressGzPlainTextStream(value).then((vf) {
-              print("Tag Database Decompressed!");
+              _print("Tag Database Decompressed!");
               return TagDB.makeFromCsvString(
                   vf);
             });
@@ -53,14 +55,14 @@ Future<TagDB> _webCallback(ByteData data) => http.ByteStream.fromBytes(
             archive.GZipDecoder().decodeBuffer(archive.InputStream(data)))
         .bytesToString()
         .then((vf) {
-      print("Tag Database Decompressed!");
+      _print("Tag Database Decompressed!");
       return TagDB.makeFromCsvString(vf);
     });
 const bool DO_NOT_USE_TAG_DB = true;
 final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
   if (Platform.isWeb) {
     var data = await rootBundle.load("assets/tags-2024-06-05.csv.gz");
-    print("Tag Database Loaded!");
+    _print("Tag Database Loaded!");
     return compute(_webCallback, data);
   } else {
     return 
@@ -74,13 +76,13 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
 });
 final pref = LazyInitializer<SharedPreferences>(() => SharedPreferences.getInstance());
 FutureOr<T> onErrorPrintAndRethrow<T>(Object? e, StackTrace stackTrace) {
-  print(e);
-  print(stackTrace);
+  _print(e);
+  _print(stackTrace);
   throw e!;
 }
 T defaultOnError<T>(Object? error, StackTrace trace) {
-  print(error);
-  return print(trace) as T;
+  _print(error);
+  return _print(trace) as T;
 }
 
 final List<SnackBar> snackbarMessageQueue = <SnackBar>[];
@@ -112,7 +114,7 @@ dynamic colorToJson(Color c) => c.value;
 Color colorFromJson(json) => Color(json as int);
 extension StringPrint on String {
   String printMe() {
-    print(this);
+    _print(this);
     return this;
   }
 }

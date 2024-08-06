@@ -602,11 +602,6 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
     temp = List.of(getVal);
   }
 
-  // void addElement() {
-  //   setState(() {
-  //     temp.add(widget.values.first);
-  //   });
-  // }
   @override
   Widget build(BuildContext context) {
     return ListTile(
@@ -656,27 +651,6 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
         ).onError(
             (error, stackTrace) => logger.severe(error, error, stackTrace));
       },
-    );
-  }
-
-  TextField _buildTextEntry(String t) {
-    validation(String value) {
-      validateVal?.call(convertInputToValue(value)) ?? true ? t = value : null;
-    }
-
-    return TextField(
-      maxLines: null,
-      onChanged: validation,
-      onSubmitted: validation,
-      controller: TextEditingController.fromValue(
-        TextEditingValue(
-          text: t,
-          selection: TextSelection(
-            baseOffset: 0,
-            extentOffset: t.length - 1,
-          ),
-        ),
-      ),
     );
   }
 }

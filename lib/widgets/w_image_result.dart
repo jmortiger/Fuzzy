@@ -6,10 +6,8 @@ import 'package:fuzzy/models/app_settings.dart' show SearchView;
 import 'package:fuzzy/models/saved_data.dart' show SavedDataE6;
 import 'package:fuzzy/models/search_cache.dart' show SearchCacheLegacy;
 import 'package:fuzzy/models/search_results.dart' show SearchResultsNotifier;
-import 'package:fuzzy/models/search_view_model.dart' show SearchViewModel;
 import 'package:fuzzy/pages/post_swipe_page.dart' as old;
-import 'package:fuzzy/pages/post_view_page.dart'
-    show IReturnsTags, PostViewPage;
+import 'package:fuzzy/pages/post_view_page.dart' show IReturnsTags;
 import 'package:fuzzy/util/util.dart' show placeholder;
 import 'package:fuzzy/web/e621/models/e6_models.dart' show E6PostResponse;
 import 'package:fuzzy/web/e621/post_collection.dart';
@@ -80,7 +78,9 @@ class WImageResult extends StatelessWidget {
         if (SearchView.i.postInfoBannerItems.isNotEmpty)
           PostInfoPane(post: imageListing),
         if (isSelected ||
-            (!disallowSelections && sr(context).getIsSelected(index)))
+            // (!disallowSelections && sr(context).getIsSelected(index)))
+            (!disallowSelections &&
+                sr(context).getIsPostSelected(imageListing.id)))
           _buildCheckmark(context),
         _buildInputDetector(context, w, h, url),
       ],
@@ -224,7 +224,6 @@ class WImageResult extends StatelessWidget {
       Provider.of<SearchResultsNotifier>(context);
 
   Widget _buildInputDetector(BuildContext context, int w, int h, String url) {
-    // SearchResults sr() => Provider.of<SearchResults>(context, listen: false);
     SearchResultsNotifier? srl;
     if (!disallowSelections) srl = Provider.of<SearchResultsNotifier>(context);
     void toggle() {
@@ -263,8 +262,7 @@ class WImageResult extends StatelessWidget {
               toggle();
             } else {
               SavedDataE6.init();
-              if (getSc(context, false)
-                  .isMpcSync) {
+              if (getSc(context, false).isMpcSync) {
                 await getSc(context, false)
                     .mpcSync
                     .updateCurrentPostIndex(index);
@@ -282,11 +280,8 @@ class WImageResult extends StatelessWidget {
                             old.PostSwipePageManaged(
                                 initialIndex: index,
                                 initialPageIndex:
-                                    getSc(context, false)
-                                        .mpcSync
-                                        .currentPage,
-                                posts: getSc(context, false)
-                                    .mpcSync,
+                                    getSc(context, false).mpcSync.currentPage,
+                                posts: getSc(context, false).mpcSync,
                                 onAddToSearch: getOnAddToSearch(context),
                                 tagsToAdd: [],
                                 // initialPageIndex: ,
@@ -309,7 +304,14 @@ class WImageResult extends StatelessWidget {
                     ,
                   )).then<void>((v) {
                 if (v?.tagsToAdd?.firstOrNull != null) {
-                  getSc(context, false).mpcSync.searchText += v!.tagsToAdd!.foldToString();
+                  try {
+                    getSc(context, false).mpcSync.searchText +=
+                        v!.tagsToAdd!.foldToString();
+                  } catch (e, s) {
+                    logger.severe(e, e, s);
+                    getSc(context, false).mpcSync.searchText +=
+                        v!.tagsToAdd!.foldToString();
+                  }
                 }
               });
             }
@@ -463,25 +465,6 @@ class WImageResult extends StatelessWidget {
       },
     );
   }
-
-  // @widgetFactory
-  // PostSwipePage _buildLinkedSwiper(BuildContext context) {
-  //   PostLle t = PostLle(
-  //     post: imageListing as E6PostResponse,
-  //   );
-  //   LinkedList<PostLle>().addAll(
-  //       Provider.of<SearchCache>(context, listen: false).posts!.posts.map((e) {
-  //     return e == (imageListing as E6PostResponse) ? t : PostLle(post: e);
-  //   }));
-  //   return PostSwipePage(
-  //     length:
-  //         Provider.of<SearchCache>(context, listen: false).posts!.posts.length,
-  //     initialIndex: index,
-  //     post: t,
-  //     onAddToSearch: getOnAddToSearch(context),
-  //     tagsToAdd: [],
-  //   );
-  // }
 }
 
 class PostInfoPane extends StatelessWidget {
@@ -524,6 +507,7 @@ enum PostInfoPaneItem {
   hasParent,
   hasChildren,
   isFavorited,
+  isInPools,
   ;
 
   String toJson() => name;
@@ -535,6 +519,7 @@ enum PostInfoPaneItem {
         String j when j == hasParent.name => hasParent,
         String j when j == hasChildren.name => hasChildren,
         String j when j == isFavorited.name => isFavorited,
+        String j when j == isInPools.name => isInPools,
         _ => throw UnsupportedError("type not supported"),
       };
   InlineSpan getMyTextSpan(E6PostResponse e6Post) => switch (this) {
@@ -591,6 +576,13 @@ enum PostInfoPaneItem {
                 text: "♥ ",
                 style: TextStyle(
                   color: Colors.red,
+                ))
+            : const TextSpan(),
+        isInPools => (e6Post.pools.isNotEmpty)
+            ? TextSpan(
+                text: "P(${e6Post.pools.length}) ",
+                style: const TextStyle(
+                  color: Colors.green,
                 ))
             : const TextSpan(),
       };

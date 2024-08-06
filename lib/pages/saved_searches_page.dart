@@ -51,9 +51,9 @@ class SavedSearchesPageSingleton extends StatefulWidget {
 class _SavedSearchesPageSingletonState
     extends State<SavedSearchesPageSingleton> {
   // #region Logger
-  static late final lRecord = lm.genLogger("SavedSearchesPage");
-  static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.genLogger("SavedSearchesPage");
   // #endregion Logger
   var data = LateInstance<SavedDataE6>();
   @override
@@ -63,7 +63,7 @@ class _SavedSearchesPageSingletonState
     } else {
       switch (SavedDataE6.loadOrRecycle()) {
         case Future<SavedDataE6> t:
-          print("async");
+          logger.finer("async");
           t.then(
             (v) {
               setState(() {
@@ -73,7 +73,7 @@ class _SavedSearchesPageSingletonState
           ).onError(util.defaultOnError);
           break;
         case SavedDataE6 t:
-          print("sync");
+          logger.finer("sync");
           data.$ = t;
           break;
       }

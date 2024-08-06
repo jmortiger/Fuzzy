@@ -47,7 +47,6 @@ class PostSwipePage extends StatefulWidget
   State<PostSwipePage> createState() => _PostSwipePageState();
 }
 
-/// TODO: Use PointerDeviceKind (through Listener/MouseRegion?) instead of Platform to enable mouse controls
 class _PostSwipePageState extends State<PostSwipePage>
     with TickerProviderStateMixin {
   late PageController _pageViewController;
@@ -209,7 +208,6 @@ class PostSwipePageManaged extends StatefulWidget
 class _PostSwipePageManagedState extends State<PostSwipePageManaged>
     with TickerProviderStateMixin {
   // #region Logger
-  static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
   static late final lRecord = lm.genLogger("_PostSwipePageManagedState");
@@ -217,7 +215,6 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
   late PageController _pageViewController;
   late TabController _tabController;
   late int _currentPostPageIndex;
-  // late int _currentPageIndex;
   String toReturn = "";
   bool isFullscreen = false;
   @override
@@ -228,15 +225,14 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
       initialPage: widget.initialIndex,
       keepPage: false,
     );
-    _currentPostPageIndex = widget.initialIndex; //widget.initialPageIndex;
+    _currentPostPageIndex = widget.initialIndex;
     if (Platform.isDesktop) {
       _tabController = TabController(
-        initialIndex: widget.initialIndex, // % SearchView.i.postsPerPage,
+        initialIndex: widget.initialIndex,
         length: widget.postsObj.collection.length,
         vsync: this,
       );
     }
-    // _currentPageIndex = widget.initialPageIndex;
     widget.postsObj.currentPostIndex = widget.initialIndex;
   }
 
@@ -362,9 +358,8 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
 
   void _handlePageViewChanged(int currentPageIndex) {
     logger.info(
-        "PageView changed from $_currentPostPageIndex to $currentPageIndex");
-    // widget.postsObj.currentPostIndex =
-    //     currentPageIndex + widget.initialPageIndex * SearchView.i.postsPerPage;
+      "PageView changed from $_currentPostPageIndex to $currentPageIndex",
+    );
     widget.postsObj.currentPostIndex =
         currentPageIndex + widget.initialPageIndex * SearchView.i.postsPerPage;
     if (!Platform.isDesktop) {
