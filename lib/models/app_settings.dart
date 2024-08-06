@@ -495,6 +495,7 @@ class SearchViewData {
     numSavedSearchesInSearchBar: 5,
     lazyLoad: false,
     lazyBuilding: false,
+    preferSetShortname: true,
   );
   final int postsPerPage;
   final int postsPerRow;
@@ -504,6 +505,7 @@ class SearchViewData {
   final int numSavedSearchesInSearchBar;
   final bool lazyLoad;
   final bool lazyBuilding;
+  final bool preferSetShortname;
   const SearchViewData({
     required this.postsPerPage,
     required this.postsPerRow,
@@ -513,6 +515,7 @@ class SearchViewData {
     required this.numSavedSearchesInSearchBar,
     required this.lazyLoad,
     required this.lazyBuilding,
+    required this.preferSetShortname,
   });
   factory SearchViewData.fromJson(JsonOut json) => SearchViewData(
         postsPerPage: json["postsPerPage"] ?? defaultData.postsPerPage,
@@ -530,6 +533,7 @@ class SearchViewData {
             defaultData.numSavedSearchesInSearchBar,
         lazyLoad: json["lazyLoad"] ?? defaultData.lazyLoad,
         lazyBuilding: json["lazyBuilding"] ?? defaultData.lazyBuilding,
+        preferSetShortname: json["preferSetShortname"] ?? defaultData.preferSetShortname,
       );
   JsonOut toJson() => {
         "postsPerPage": postsPerPage,
@@ -545,6 +549,7 @@ class SearchViewData {
         "numSavedSearchesInSearchBar": numSavedSearchesInSearchBar,
         "lazyLoad": lazyLoad,
         "lazyBuilding": lazyBuilding,
+        "preferSetShortname": preferSetShortname,
       };
 }
 /// TODO: Integrate ChangeNotifier?
@@ -589,6 +594,10 @@ class SearchView implements SearchViewData {
   @override
   bool get lazyBuilding => _lazyBuilding;
   set lazyBuilding(bool v) => _lazyBuilding = v;
+  bool _preferSetShortname;
+  @override
+  bool get preferSetShortname => _preferSetShortname;
+  set preferSetShortname(bool v) => _preferSetShortname = v;
   SearchView({
     required int postsPerPage,
     required int postsPerRow,
@@ -598,6 +607,7 @@ class SearchView implements SearchViewData {
     required int numSavedSearchesInSearchBar,
     required bool lazyLoad,
     required bool lazyBuilding,
+    required bool preferSetShortname,
   })  : _postsPerPage = postsPerPage,
         _postsPerRow = postsPerRow,
         _postInfoBannerItems = postInfoBannerItems,
@@ -605,7 +615,8 @@ class SearchView implements SearchViewData {
         _useProgressiveImages = useProgressiveImages,
         _numSavedSearchesInSearchBar = numSavedSearchesInSearchBar,
         _lazyLoad = lazyLoad,
-        _lazyBuilding = lazyBuilding;
+        _lazyBuilding = lazyBuilding,
+        _preferSetShortname = preferSetShortname;
 
   factory SearchView.fromData(SearchViewData searchView) => SearchView(
         postsPerPage: searchView.postsPerPage,
@@ -616,6 +627,7 @@ class SearchView implements SearchViewData {
         numSavedSearchesInSearchBar: searchView.numSavedSearchesInSearchBar,
         lazyLoad: searchView.lazyLoad,
         lazyBuilding: searchView.lazyBuilding,
+        preferSetShortname: searchView.preferSetShortname,
       );
   void overwriteWithData(SearchViewData searchView) {
     _postsPerPage = searchView.postsPerPage;
@@ -626,6 +638,7 @@ class SearchView implements SearchViewData {
     _numSavedSearchesInSearchBar = searchView.numSavedSearchesInSearchBar;
     _lazyLoad = searchView.lazyLoad;
     _lazyBuilding = searchView.lazyBuilding;
+    _preferSetShortname = searchView.preferSetShortname;
   }
 
   SearchViewData toData() => SearchViewData(
@@ -637,6 +650,7 @@ class SearchView implements SearchViewData {
         numSavedSearchesInSearchBar: numSavedSearchesInSearchBar,
         lazyLoad: lazyLoad,
         lazyBuilding: lazyBuilding,
+        preferSetShortname: preferSetShortname,
       );
 
   // #region JSON (indirect, don't need updating w/ new fields)

@@ -250,7 +250,10 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                   );
                 },
               ).then((v) => v != null
-                  ? widget.onSearchRequested?.call(v.searchById)
+                  ? widget.onSearchRequested?.call(
+                      SearchView.i.preferSetShortname
+                          ? v.searchByShortname
+                          : v.searchById)
                   : null);
             },
           ),

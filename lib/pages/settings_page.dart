@@ -244,6 +244,12 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                 // subtitle: "",
                 setVal: (bool val) => SearchView.i.lazyBuilding = val,
               ),
+              WBooleanField(
+                getVal: () => SearchView.i.preferSetShortname,
+                name: "Prefer set shortname",
+                subtitle: 'Wherever possible, search using a set\'s shortname instead its id (e.g. "set:my_set" over "set:123"). This will break saved searches if the shortname changes.',
+                setVal: (bool val) => SearchView.i.preferSetShortname = val,
+              ),
             ]),
         ExpansionTile(
           title: Text(
