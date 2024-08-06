@@ -42,11 +42,19 @@ class WSearchBar extends StatefulWidget {
 
 class _WSearchBarState extends State<WSearchBar> {
   // #region Logger
-  static late final lRecord = lm.genLogger("_WSearchBarState", "_WSearchBarState", lm.LogLevel.FINER);
+  static late final lRecord = lm.genLogger("_WSearchBarState", "_WSearchBarState"/* , lm.LogLevel.FINER */);
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger
   static const whitespaceCharacters = r'\u2028\n\r\u000B\f\u2029\u0085 	';
+
+  @override
+  void initState() {
+    super.initState();
+    searchController = SearchController()
+      ..text = currentText = (widget.initialValue ?? "");
+  }
+
   Iterable<String> generateSortedOptions(String currentTextValue) {
     final currText = currentTextValue;
     // var lastTermIndex = currText.lastIndexOf(RegExpExt.whitespace);
@@ -138,9 +146,9 @@ class _WSearchBarState extends State<WSearchBar> {
   // TODO: Just launch tag search requests for autocomplete, wrap in a class
   @override
   Widget build(BuildContext context) {
-    var fn = FocusNode();
+    // var fn = FocusNode();
     void closeAndUnfocus() {
-      fn.unfocus();
+      // fn.unfocus();
       if (searchController.isAttached && searchController.isOpen) {
         searchController.closeView(currentText);
       }
@@ -209,49 +217,6 @@ class _WSearchBarState extends State<WSearchBar> {
     );
   }
 
-  Widget _buildAutocomplete(BuildContext context) {
-    return Autocomplete<String>(
-      fieldViewBuilder: (
-        BuildContext context,
-        TextEditingController textEditingController,
-        FocusNode focusNode,
-        void Function() onFieldSubmitted,
-      ) {
-        textEditingController.text = sc.searchText;
-        return TextField(
-          controller: textEditingController,
-          focusNode: focusNode,
-          autofocus: autofocus ? !(autofocus = false) : autofocus,
-          onSubmitted: (s) => setState(() {
-            // onFieldSubmitted();
-            sc.searchText = textEditingController.text;
-            (sc.searchText.isNotEmpty)
-                ? _sendSearchAndUpdateState(tags: sc.searchText)
-                : _sendSearchAndUpdateState();
-            widget.onSelected?.call();
-          }),
-        );
-      },
-      optionsBuilder: (TextEditingValue textEditingValue) =>
-          generateSortedOptions(textEditingValue.text),
-      displayStringForOption: (option) => option,
-      onSelected: (option) => setState(() {
-        sc.searchText = option;
-      }),
-    );
-  }
-
-  bool autofocus = true;
-
-  @override
-  void initState() {
-    super.initState();
-    autofocus = true;
-    searchController = SearchController()
-      ..text = currentText = (widget.initialValue ?? "");
-  }
-
-  // SearchViewModel get svm =>
   bool allSuggestionSourcesEmpty() =>
       (util.DO_NOT_USE_TAG_DB || util.tagDbLazy.$Safe == null) &&
       (AppSettings.i?.favoriteTags.isEmpty ?? true) &&
