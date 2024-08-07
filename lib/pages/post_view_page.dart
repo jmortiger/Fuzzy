@@ -289,9 +289,12 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                           builder: (context, snapshot) {
                             if (snapshot.hasData) {
                               try {
+                                final accessor = snapshot.data["post"] != null
+                                    ? "post"
+                                    : "posts";
                                 return PostViewPage(
                                   postListing: E6PostResponse.fromJson(
-                                    snapshot.data["posts"],
+                                    snapshot.data[accessor],
                                   ),
                                 );
                               } catch (e, s) {
