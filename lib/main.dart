@@ -7,7 +7,9 @@ import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
+import 'package:fuzzy/pages/edit_post_page.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
+import 'package:fuzzy/pages/post_view_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/web/e621/post_collection.dart';
@@ -48,7 +50,6 @@ void main(List<String> args) async {
   //.ignore();
   CachedFavorites.fileFullPath.getItem().ignore();
   CachedSearches.loadFromStorageAsync();
-  // SavedDataE6Legacy.$Safe;
   SavedDataE6.init();
   E621AccessData.tryLoad().ignore();
   try {
@@ -61,12 +62,46 @@ void main(List<String> args) async {
               case HomePage.routeNameString:
                 return MaterialPageRoute(builder: (ctx) => const HomePage());
               case PoolViewPageBuilder.routeNameString:
-                final t = int.tryParse(url.queryParameters["poolId"] ?? "");
+                final t = int.tryParse(url.queryParameters["poolId"] ??
+                    url.queryParameters["id"] ??
+                    "");
                 if (t != null) {
                   return MaterialPageRoute(
                     settings: settings,
                     builder: (cxt) => PoolViewPageBuilder(
                       poolId: t,
+                    ),
+                  );
+                } else {
+                  routeLogger
+                      .severe("routing failure\nRoute: ${settings.name}");
+                  return null;
+                }
+              case PostViewPageLoader.routeNameString:
+                final t = int.tryParse(url.queryParameters["postId"] ??
+                    url.queryParameters["id"] ??
+                    "");
+                if (t != null) {
+                  return MaterialPageRoute(
+                    settings: settings,
+                    builder: (cxt) => PostViewPageLoader(
+                      postId: t,
+                    ),
+                  );
+                } else {
+                  routeLogger
+                      .severe("routing failure\nRoute: ${settings.name}");
+                  return null;
+                }
+              case EditPostPageLoader.routeNameString:
+                final t = int.tryParse(url.queryParameters["postId"] ??
+                    url.queryParameters["id"] ??
+                    "");
+                if (t != null) {
+                  return MaterialPageRoute(
+                    settings: settings,
+                    builder: (cxt) => EditPostPageLoader(
+                      postId: t,
                     ),
                   );
                 } else {

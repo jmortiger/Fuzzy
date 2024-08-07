@@ -6,6 +6,7 @@ import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
+import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
 import 'package:fuzzy/web/site.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
@@ -306,12 +307,38 @@ sealed class E621 extends Site {
         credentials: getAuth(username, apiKey),
         tags: fillTagTemplate(tags),
         limit: limit ?? SearchView.i.postsPerPage,
-        page: (postId != null && (pageModifier == 'a' || pageModifier == 'b'))
-            ? "$pageModifier$postId"
-            : pageNumber != null
-                ? "$pageNumber"
-                : null,
+        page: encodePageParameterFromOptions(
+          pageModifier: pageModifier,
+          id: postId,
+          pageNumber: pageNumber,
+        ),
       );
+  static Future<SearchResultArgs> performPostSearchWithPage({
+    String tags = "",
+    // int limit = 50,
+    int? limit,
+    String? page,
+    String? username,
+    String? apiKey,
+  }) {
+    final p = parsePageParameterDirectly(page);
+    String? pageModifier;
+    int? pageNumber, postId;
+    if (p is int) {
+      pageNumber = p;
+    } else {
+      (:pageModifier, id: postId) = p as PageOffset;
+    }
+    return performPostSearch(
+      tags: tags,
+      limit: limit,
+      pageModifier: pageModifier,
+      pageNumber: pageNumber,
+      postId: postId,
+      username: username,
+      apiKey: apiKey,
+    );
+  }
 
   static Future<SearchResultArgs> performPostSearch({
     String tags = "",

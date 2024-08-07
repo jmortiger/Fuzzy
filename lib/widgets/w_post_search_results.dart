@@ -1,6 +1,7 @@
 import 'dart:convert' as dc;
 
 import 'package:flutter/material.dart';
+import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/pages/error_page.dart';
@@ -8,6 +9,7 @@ import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
+import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:fuzzy/widgets/w_page_indicator.dart';
 import 'package:j_util/j_util_full.dart';
@@ -120,21 +122,66 @@ class WPostSearchResults extends StatefulWidget {
           }
         },
       );
-  static Widget directResultFromSearch(String tags) => FutureBuilder(
+  static Widget directResultFromSearchWithPage(
+    String tags, {
+    String? page,
+    int? limit,
+    bool stripToWidget = true,
+  }) {
+    var (:String? pageModifier, :int? pageNumber, id: int? postId) =
+        parsePageParameter(page);
+    return directResultFromSearch(
+      tags,
+      pageModifier: pageModifier,
+      postId: postId,
+      pageNumber: pageNumber,
+      limit: limit,
+      stripToWidget: stripToWidget,
+    );
+  }
+
+  static Widget directResultFromSearch(
+    String tags, {
+    String? pageModifier,
+    int? postId,
+    int? pageNumber,
+    int? limit,
+    bool stripToWidget = true,
+  }) =>
+      FutureBuilder(
         future: (E621
             .performPostSearch(
               tags: tags,
-              limit: E621.maxPostsPerSearch,
+              pageModifier: pageModifier,
+              postId: postId,
+              pageNumber: pageNumber,
+              limit: limit /*  ?? E621.maxPostsPerSearch */,
             )
             .then((v) => E6PostsSync.fromJson(dc.jsonDecode(v.responseBody)))),
         builder: (context, snapshot) {
           if (snapshot.hasData) {
             try {
-              return WPostSearchResults(
+              final r = WPostSearchResults(
                 posts: snapshot.data!,
                 disallowSelections: true,
                 expectedCount: E621.maxPostsPerSearch,
+                stripToGridView: true,
               );
+              return stripToWidget
+                  ? r
+                  : SafeArea(
+                      child: Scaffold(
+                      appBar: AppBar(
+                        title: Text("[${encodePageParameterFromOptions(
+                              pageModifier: pageModifier,
+                              id: postId,
+                              pageNumber: pageNumber,
+                            ) ?? 1}]$tags"),
+                      ),
+                      body: Column(
+                        children: [Expanded(child: r)],
+                      ),
+                    ));
             } catch (e, s) {
               return Scaffold(
                 body: Text("$e\n$s\n${snapshot.data}\n${snapshot.stackTrace}"),
@@ -560,4 +607,20 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
       curve: Curves.easeInOut,
     );
   }
+}
+
+class PostSearchResultsBuilder extends StatelessWidget implements IRoute<PostSearchResultsBuilder>{
+  final String? tags;
+  final int? limit;
+  final String? page;
+  const PostSearchResultsBuilder({super.key, this.tags, this.limit, this.page});
+
+  @override
+  Widget build(BuildContext context) {
+    return WPostSearchResults.directResultFromSearchWithPage(tags ?? "", limit: limit, page: page, stripToWidget: false);
+  }
+  
+  @override
+  String get routeName => routeNameString;
+  static const routeNameString = "/posts";
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
 import 'package:fuzzy/models/search_results.dart';
+import 'package:fuzzy/pages/edit_post_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
@@ -920,6 +921,48 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
+  static ActionButton getSinglePostEditAction(
+      BuildContext context, E6PostResponse post) {
+    return ActionButton(
+      icon: const Icon(Icons.edit),
+      tooltip: "Edit",
+      onPressed: () async {
+        print("Editing ${post.id}...");
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text("Editing ${post.id}..."),
+        //   ),
+        // );
+        Navigator.pushNamed(
+          context,
+          "${EditPostPageLoader.routeNameString}?postId=${post.id}",
+          // MaterialPageRoute(
+          //   builder: (context) => EditPostPageLoader(postId: post.id),
+          // ),
+        );
+        // Navigator.push(
+        //     context,
+        //     MaterialPageRoute(
+        //       builder: (context) => EditPostPage(post: post),
+        //     ));
+        //     .onError(defaultOnError)
+        //     .then(
+        //       (value) => ScaffoldMessenger.of(context).showSnackBar(
+        //         SnackBar(
+        //           content: Text(
+        //             "${value.statusCode}: ${value.reasonPhrase}",
+        //           ),
+        //         ),
+        //       ),
+        //     )
+        //     .onError((error, stackTrace) {
+        //   print(error);
+        //   throw error!;
+        // });
+      },
+    );
+  }
+
   static ActionButton getPrintSelectionsAction(
     BuildContext context,
     E6PostResponse? post,
@@ -983,6 +1026,7 @@ class WFabBuilder extends StatelessWidget {
                 getSinglePostRemoveFavAction(context, post!),
               if (isSinglePost) getSinglePostUpvoteAction(context, post!),
               if (isSinglePost) getSinglePostDownvoteAction(context, post!),
+              if (isSinglePost) getSinglePostEditAction(context, post!),
               // getPrintSelectionsAction(context, post, posts),
             ]
           : [],

@@ -182,6 +182,24 @@ mixin PageSearchParameter {
 
   int? get pageNumber => usesPageNumber ? int.parse(page!) : null;
 }
+bool isValidPage(String? page) =>
+    (page?.isNotEmpty ?? false) &&
+    (page!.hasOnlyNumeric ||
+        ((page[0] == "a" || page[0] == "b") &&
+            page.substring(1).hasOnlyNumeric));
+bool usesPageNumber(String? page) =>
+    (page?.isNotEmpty ?? false) && page!.hasOnlyNumeric;
+bool usesPageOffset(String? page) =>
+    (page?.isNotEmpty ?? false) &&
+    (page![0] == "a" || page[0] == "b") &&
+    page.substring(1).hasOnlyNumeric;
+String? toPageModifier(String? page) => usesPageOffset(page) ? page![0] : null;
+
+int? toId(String? page) =>
+    usesPageOffset(page) ? int.parse(page!.substring(1)) : null;
+
+int? toPageNumber(String? page) =>
+    usesPageNumber(page) ? int.parse(page!) : null;
 mixin PageSearchParameterStrict implements PageSearchParameter {
   @override
   String get page;
@@ -207,6 +225,25 @@ mixin PageSearchParameterStrict implements PageSearchParameter {
   @override
   int? get pageNumber => usesPageNumber ? int.parse(page) : null;
 }
+bool isValidPageStrict(String page) =>
+    page.isNotEmpty &&
+    (page.hasOnlyNumeric ||
+        ((page[0] == "a" || page[0] == "b") &&
+            page.substring(1).hasOnlyNumeric));
+bool usesPageNumberStrict(String page) =>
+    page.isNotEmpty && page.hasOnlyNumeric;
+bool usesPageOffsetStrict(String page) =>
+    page.isNotEmpty &&
+    (page[0] == "a" || page[0] == "b") &&
+    page.substring(1).hasOnlyNumeric;
+String? toPageModifierStrict(String page) =>
+    usesPageOffsetStrict(page) ? page[0] : null;
+
+int? toIdStrict(String page) =>
+    usesPageOffsetStrict(page) ? int.parse(page.substring(1)) : null;
+
+int? toPageNumberStrict(String page) =>
+    usesPageNumberStrict(page) ? int.parse(page) : null;
 
 /* abstract interface class IHasNullablePostSearchParameter<
     T extends IPostSearchParameters> {
@@ -217,3 +254,39 @@ mixin ModifyPageParameter<T extends PostPageSearchParameters>
     on IHasNullablePostSearchParameter<T> {
   set pageNumber(int? value);
 } */
+final class PageParameter with PageSearchParameter {
+  @override
+  final String? page;
+
+  const PageParameter(this.page);
+}
+
+final class PageParameterStrict with PageSearchParameterStrict {
+  @override
+  final String page;
+
+  const PageParameterStrict(this.page);
+}
+
+/// If all parameters are valid, prioritizes the page offset over page number.
+String? encodePageParameterFromOptions({
+  String? pageModifier,
+  int? id,
+  int? pageNumber,
+}) =>
+    (id != null && (pageModifier == 'a' || pageModifier == 'b'))
+        ? "$pageModifier$id"
+        : pageNumber != null
+            ? "$pageNumber"
+            : null;
+typedef PageOffset = ({String pageModifier, int id});
+typedef PageParsed = ({String? pageModifier, int? id, int? pageNumber});
+dynamic parsePageParameterDirectly(String? page) => !isValidPage(page)
+    ? null
+    : usesPageOffsetStrict(page!)
+        ? (pageModifier: toPageModifierStrict(page)!, id: toIdStrict(page)!)
+        : toPageNumberStrict(page)!;
+PageParsed? parsePageParameterStrict(String? page) => !isValidPage(page)
+    ? null
+    : (pageModifier: toPageModifierStrict(page!), id: toIdStrict(page!), pageNumber: toPageNumberStrict(page!));
+PageParsed parsePageParameter(String? page) => (pageModifier: toPageModifierStrict(page!), id: toIdStrict(page!), pageNumber: toPageNumberStrict(page!));

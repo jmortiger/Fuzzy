@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/saved_data.dart';
+import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/main.dart';
@@ -272,62 +273,39 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                 "ID: ${e6Post.id}, W: $w, H: $h, screenWidth: ${maxWidth.toStringAsPrecision(5)}, MQWidth: ${MediaQuery.sizeOf(context).width.toStringAsPrecision(5)}"),
           ],
         ),
-        if (e6Post.relationships.hasActiveChildren)
-          Row(children: [
-            const Text("Children: "),
-            ...e6Post.relationships.children.map(
-              (e) => TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => FutureBuilder(
-                          future: E621
-                              .sendRequest(Api.initSearchPostRequest(e))
-                              .toResponse()
-                              .then((v) => jsonDecode(v.body)),
-                          builder: (context, snapshot) {
-                            if (snapshot.hasData) {
-                              try {
-                                final accessor = snapshot.data["post"] != null
-                                    ? "post"
-                                    : "posts";
-                                return PostViewPage(
-                                  postListing: E6PostResponse.fromJson(
-                                    snapshot.data[accessor],
-                                  ),
-                                );
-                              } catch (e, s) {
-                                PostViewPage.logger
-                                    .severe("Failed: ${snapshot.data}", e, s);
-                                return Scaffold(
-                                  appBar: AppBar(),
-                                  body: Text("$e\n$s\n${snapshot.data}"),
-                                );
-                              }
-                            } else if (snapshot.hasError) {
-                              PostViewPage.logger.severe(
-                                "Failed: ${snapshot.data}",
-                                snapshot.error,
-                                snapshot.stackTrace,
-                              );
-                              return Scaffold(
-                                appBar: AppBar(),
-                                body: Text(
-                                  "${snapshot.error}\n${snapshot.stackTrace}",
-                                ),
-                              );
-                            } else {
-                              return fullPageSpinner;
-                            }
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                  child: Text(e.toString())),
-            ),
-          ]),
+        if (e6Post.relationships.hasParent ||
+            e6Post.relationships.hasActiveChildren)
+          // TODO: Render a sliver
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              if (e6Post.relationships.hasParent) const Text("Parent: "),
+              if (e6Post.relationships.hasParent)
+                _buildSinglePostViewButton(
+                    context, e6Post.relationships.parentId!),
+              if (e6Post.relationships.hasActiveChildren)
+                const Text("Children: "),
+              if (e6Post.relationships.hasActiveChildren)
+                ...e6Post.relationships.children.map(
+                  (e) => _buildSinglePostViewButton(context, e),
+                ),
+            ]),
+          ),
+        // if (e6Post.relationships.hasParent)
+        //   Row(
+        //     children: [
+        //       const Text("Parent: "),
+        //       _buildSinglePostViewButton(
+        //           context, e6Post.relationships.parentId!),
+        //     ],
+        //   ),
+        // if (e6Post.relationships.hasActiveChildren)
+        //   Row(children: [
+        //     const Text("Children: "),
+        //     ...e6Post.relationships.children.map(
+        //       (e) => _buildSinglePostViewButton(context, e),
+        //     ),
+        //   ]),
         if (e6Post.pools.firstOrNull != null)
           Row(children: [
             const Text("Pools: "),
@@ -362,6 +340,56 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
     );
   }
 
+  TextButton _buildSinglePostViewButton(BuildContext context, int e) =>
+      TextButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => FutureBuilder(
+                  future: E621
+                      .sendRequest(Api.initSearchPostRequest(e))
+                      .toResponse()
+                      .then((v) => jsonDecode(v.body)),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      try {
+                        final accessor =
+                            snapshot.data["post"] != null ? "post" : "posts";
+                        return PostViewPage(
+                          postListing: E6PostResponse.fromJson(
+                            snapshot.data[accessor],
+                          ),
+                        );
+                      } catch (e, s) {
+                        PostViewPage.logger
+                            .severe("Failed: ${snapshot.data}", e, s);
+                        return Scaffold(
+                          appBar: AppBar(),
+                          body: Text("$e\n$s\n${snapshot.data}"),
+                        );
+                      }
+                    } else if (snapshot.hasError) {
+                      PostViewPage.logger.severe(
+                        "Failed: ${snapshot.data}",
+                        snapshot.error,
+                        snapshot.stackTrace,
+                      );
+                      return Scaffold(
+                        appBar: AppBar(),
+                        body: Text(
+                          "${snapshot.error}\n${snapshot.stackTrace}",
+                        ),
+                      );
+                    } else {
+                      return fullPageSpinner;
+                    }
+                  },
+                ),
+              ),
+            );
+          },
+          child: Text(e.toString()));
   @widgetFactory
   Widget _buildMainContent(
     final String url,
@@ -867,6 +895,39 @@ class WPostViewBackButton extends StatelessWidget {
       //     shadowColor: WidgetStatePropertyAll(Colors.black),
       //   ),
       // ),
+    );
+  }
+}
+
+class PostViewPageLoader extends StatelessWidget
+    implements IRoute<PostViewPageLoader> {
+  static const routeNameString = PostViewPage.routeNameString;
+  @override
+  String get routeName => routeNameString;
+  final int postId;
+
+  const PostViewPageLoader({super.key, required this.postId});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: Api.sendRequest(Api.initSearchPostRequest(
+        postId,
+        credentials: E621.accessData.$Safe?.cred,
+      )),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          return PostViewPage(
+              postListing: E6PostResponse.fromRawJson(snapshot.data!.body));
+        } else if (snapshot.hasError) {
+          return ErrorPage(
+            error: snapshot.error,
+            stackTrace: snapshot.stackTrace,
+          );
+        } else {
+          return fullPageSpinner;
+        }
+      },
     );
   }
 }

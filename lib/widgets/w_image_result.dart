@@ -506,6 +506,7 @@ enum PostInfoPaneItem {
   scoreUpAndDown,
   hasParent,
   hasChildren,
+  hasActiveChildren,
   isFavorited,
   isInPools,
   ;
@@ -518,6 +519,7 @@ enum PostInfoPaneItem {
         String j when j == scoreUpAndDown.name => scoreUpAndDown,
         String j when j == hasParent.name => hasParent,
         String j when j == hasChildren.name => hasChildren,
+        String j when j == hasActiveChildren.name => hasActiveChildren,
         String j when j == isFavorited.name => isFavorited,
         String j when j == isInPools.name => isInPools,
         _ => throw UnsupportedError("type not supported"),
@@ -564,6 +566,14 @@ enum PostInfoPaneItem {
                 ))
             : const TextSpan(),
         hasChildren => (e6Post.relationships.hasChildren)
+            ? TextSpan(
+                text: "C${e6Post.relationships.children.length} ",
+                style: const TextStyle(
+                  color: Colors.amber,
+                  decoration: TextDecoration.underline,
+                ))
+            : const TextSpan(),
+        hasActiveChildren => (e6Post.relationships.hasActiveChildren)
             ? TextSpan(
                 text: "C${e6Post.relationships.children.length} ",
                 style: const TextStyle(

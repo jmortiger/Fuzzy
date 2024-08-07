@@ -317,7 +317,12 @@ class E6PostResponse implements PostListing, e621.Post {
     required this.hasNotes,
     required this.duration,
   });
-
+  factory E6PostResponse.fromRawJson(String json) {
+    final t = jsonDecode(json);
+    return t["post"] != null
+        ? E6PostResponse.fromJson(t["post"])
+        : E6PostResponse.fromJson(t);
+  }
   factory E6PostResponse.fromJson(JsonOut json) => E6PostResponse(
         id: json["id"] as int,
         createdAt: DateTime.parse(json["created_at"]),
