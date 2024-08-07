@@ -247,19 +247,11 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
       "Constraints: maxWidth $maxWidth maxHeight $maxHeight ratio ${maxWidth / maxHeight}",
     );
     return ListView(
-      // padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
       children: [
         Container(
           constraints: BoxConstraints(
             maxWidth: maxWidth,
             maxHeight: maxHeight,
-            // maxHeight: (MediaQuery.of(context).size.width / w) * h.toDouble(),
-            // maxWidth: pvs.allowOverflow
-            //     ? MediaQuery.of(context).size.width
-            //     : (MediaQuery.of(context).size.height / h) * w.toDouble(),
-            // maxHeight: pvs.allowOverflow
-            //     ? (MediaQuery.of(context).size.width / w) * h.toDouble()
-            //     : MediaQuery.of(context).size.height,
           ),
           child: AspectRatio(
             aspectRatio: ar,
@@ -291,21 +283,6 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                 ),
             ]),
           ),
-        // if (e6Post.relationships.hasParent)
-        //   Row(
-        //     children: [
-        //       const Text("Parent: "),
-        //       _buildSinglePostViewButton(
-        //           context, e6Post.relationships.parentId!),
-        //     ],
-        //   ),
-        // if (e6Post.relationships.hasActiveChildren)
-        //   Row(children: [
-        //     const Text("Children: "),
-        //     ...e6Post.relationships.children.map(
-        //       (e) => _buildSinglePostViewButton(context, e),
-        //     ),
-        //   ]),
         if (e6Post.pools.firstOrNull != null)
           Row(children: [
             const Text("Pools: "),

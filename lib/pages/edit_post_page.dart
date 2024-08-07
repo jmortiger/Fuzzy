@@ -1,9 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/settings_page.dart';
-import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
@@ -13,6 +14,7 @@ import 'package:j_util/j_util.dart';
 import 'package:j_util/j_util_full.dart';
 
 /// TODO: separate tags by category
+/// TODO: improve Performance
 /// TODO: Add children using `child:12345` https://e621.net/help/post_relationships
 class EditPostPage extends StatefulWidget {
   final E6PostResponse post;
@@ -30,16 +32,44 @@ class _EditPostPageState extends State<EditPostPage> {
   // #endregion Logger
   E6PostResponse get post => widget.post;
   late List<String> editedTags;
-  String? postTagStringDiff;
-  String? postSourceDiff;
-  String? postParentId;
-  String? get postOldParentId => post.relationships.parentId?.toString();
+  late List<String> editedSources;
+  String? get postTagStringDiff {
+    final origTags = post.tags.allTags.toSet();
+    final editedTagSet = editedTags.toSet();
+    final newTags = editedTagSet.difference(origTags).fold("", _folder);
+    final removedTags =
+        origTags.difference(editedTagSet).fold("", _minusFolder);
+    final combined = _folder(newTags, removedTags);
+    return combined.isEmpty ? null : combined;
+  }
+
+  // String? get postTagStringDiff => _postTagStringDiff;
+  // set postTagStringDiff(String? v) =>
+  //     _postTagStringDiff = v?.isEmpty ?? true ? null : v;
+  String? get postSourceDiff {
+    final origSources = post.sources.toSet();
+    final editedSourcesSet = editedSources.toSet();
+    final newSources =
+        editedSourcesSet.difference(origSources).fold("", _folder);
+    final removedSources =
+        origSources.difference(editedSourcesSet).fold("", _minusFolder);
+    final combined = _folder(newSources, removedSources);
+    return combined.isEmpty ? null : combined;
+  }
+
+  // String? get postSourceDiff => _postSourceDiff;
+  // set postSourceDiff(String? v) =>
+  //     _postSourceDiff = v?.isEmpty ?? true ? null : v;
+  int? postParentId;
+  // int? get postParentId => _postParentId;
+  // set postParentId(int? v) => _postParentId = v == postOldParentId ? -1 : v;
   String? postDescription;
-  String get postOldDescription => post.description;
   String? postRating;
+  int? get postOldParentId => post.relationships.parentId;
+  String get postOldDescription => post.description;
   String? get postOldRating => post.rating;
-  String? postIsRatingLocked;
-  String? postIsNoteLocked;
+  bool? postIsRatingLocked;
+  bool? postIsNoteLocked;
   String? postEditReason;
   late TextEditingController controllerDescription;
   late TextEditingController controllerParentId;
@@ -47,11 +77,25 @@ class _EditPostPageState extends State<EditPostPage> {
   @override
   void initState() {
     super.initState();
+    // _postParentId = postOldParentId;
+    // postTagStringDiff = postTagStringDiff;
+    // postSourceDiff = postSourceDiff;
+    postParentId = postOldParentId;
+    postDescription = postOldDescription;
+    postRating = postOldRating;
     editedTags = post.tags.allTags;
+    editedSources = post.sources;
     controllerDescription = TextEditingController(text: post.description);
     controllerParentId = post.relationships.parentId != null
         ? TextEditingController(text: post.relationships.parentId!.toString())
         : TextEditingController();
+  }
+
+  void validate() {
+    setState(() {
+      editedTags = editedTags.toSet().toList();
+      editedSources = editedSources.toSet().toList();
+    });
   }
 
   static String _folder(acc, e) => "$acc${acc.isEmpty ? "" : " "}$e";
@@ -66,15 +110,15 @@ class _EditPostPageState extends State<EditPostPage> {
       persistentFooterButtons: [
         IconButton(
           onPressed: () async {
-            final origTags = post.tags.allTags.toSet();
-            final editedTagSet = editedTags.toSet();
-            final newTags = editedTagSet.difference(origTags).fold("", _folder);
-            final removedTags =
-                origTags.difference(editedTagSet).fold("", _minusFolder);
-            final postTagStringDiff = _folder(newTags, removedTags);
+            validate();
             logger.info("postTagStringDiff: $postTagStringDiff");
-            final req = e621.Api.initUpdatePostRequest(
-              postId: post.id,
+            // if ((postTagStringDiff ??
+            //             postDescription ??
+            //             postRating ??
+            //             postSourceDiff) !=
+            //         null ||
+            //     postParentId != postOldParentId) {
+            if (e621.Api.doesPostUpdateHaveChanges(
               postTagStringDiff: postTagStringDiff,
               postSourceDiff: postSourceDiff,
               postParentId: postParentId,
@@ -83,18 +127,48 @@ class _EditPostPageState extends State<EditPostPage> {
               postOldDescription: post.description,
               postRating: postRating,
               postOldRating: post.rating,
-              postIsRatingLocked: postIsRatingLocked,
-              postIsNoteLocked: postIsNoteLocked,
-              postEditReason: postEditReason,
-              credentials: E621AccessData.fallback?.cred,
-            );
-            logRequest(req, logger, lm.LogLevel.INFO);
-            if (debugDeactivate) return;
-            final res = await e621.Api.sendRequest(req);
-            logResponse(res, logger, lm.LogLevel.INFO);
-            Navigator.pop(
-              context,
-            );
+            )) {
+              final req = e621.Api.initUpdatePostRequest(
+                postId: post.id,
+                postTagStringDiff: postTagStringDiff,
+                postSourceDiff: postSourceDiff,
+                postParentId: postParentId,
+                postOldParentId: postOldParentId,
+                postDescription: postDescription,
+                postOldDescription: post.description,
+                postRating: postRating,
+                postOldRating: post.rating,
+                postIsRatingLocked: postIsRatingLocked,
+                postIsNoteLocked: postIsNoteLocked,
+                postEditReason: postEditReason,
+                credentials: E621AccessData.fallback?.cred,
+              );
+              util.logRequest(req, logger, lm.LogLevel.INFO);
+              if (debugDeactivate) return;
+              final res = await e621.Api.sendRequest(req);
+              util.logResponse(res, logger, lm.LogLevel.INFO);
+              Navigator.pop(
+                context,
+              );
+            } else {
+              logger.info("No changes detected");
+              final req = e621.Api.initUpdatePostRequest(
+                postId: post.id,
+                postTagStringDiff: postTagStringDiff,
+                postSourceDiff: postSourceDiff,
+                postParentId: postParentId,
+                postOldParentId: postOldParentId,
+                postDescription: postDescription,
+                postOldDescription: post.description,
+                postRating: postRating,
+                postOldRating: post.rating,
+                postIsRatingLocked: postIsRatingLocked,
+                postIsNoteLocked: postIsNoteLocked,
+                postEditReason: postEditReason,
+                credentials: E621AccessData.fallback?.cred,
+              );
+              util.logRequest(req, logger, lm.LogLevel.INFO);
+            }
           },
           icon: const Icon(Icons.check),
         ),
@@ -133,12 +207,14 @@ class _EditPostPageState extends State<EditPostPage> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
+                inputFormatters: [util.numericFormatter],
                 controller: controllerParentId,
                 decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     hintText: "Parent Id",
                     labelText: "Parent Id"),
-                onChanged: (v) => postParentId = v,
+                onChanged: (v) =>
+                    postParentId = v.isEmpty ? null : int.tryParse(v),
               ),
             ),
             Padding(
@@ -161,33 +237,34 @@ class _EditPostPageState extends State<EditPostPage> {
                     editedTags = post.tags.allTags;
                   }),
                 ),
-                ...editedTags.map(
-                  (e) => WTagItem(
-                    key: ObjectKey(e),
-                    initialValue: e,
-                    // onDuplicate: (initialValue, value) => ,
-                    onRemove: (initialValue, value) => setState(() {
-                      logger.info("Removing $initialValue (currently $value)");
-                      final r = editedTags.remove(initialValue);
-                      logger.info("Was successful: $r");
-                    }),
-                    onSubmitted: (initialValue, value) {
-                      if (initialValue == value) {
-                        logger.info("No change from $initialValue to $value");
-                        return;
-                      }
-                      logger.info("Changing $initialValue to $value");
-                      logger.info("start: $editedTags");
-                      final temp = editedTags.toSet();
-                      temp.remove(initialValue);
-                      temp.add(value);
-                      setState(() {
-                        editedTags = temp.toList();
-                      });
-                      logger.info("end: $editedTags");
-                    },
-                  ),
-                )
+                ListTile(
+                  title: const Text("Add tag"),
+                  // onTap: () => editedTags.insert(0, ""),
+                  onTap: () => setState(() {
+                    editedTags.insert(0, "");
+                  }),
+                ),
+                ...editedTags.mapAsList(tagMapper),
+              ],
+            ),
+            ExpansionTile(
+              title: const Text("Sources"),
+              initiallyExpanded: false,
+              children: [
+                ListTile(
+                  title: const Text("Revert Changes"),
+                  onTap: () => setState(() {
+                    editedSources = post.sources;
+                  }),
+                ),
+                ListTile(
+                  title: const Text("Add Source"),
+                  // onTap: () => editedSources.insert(0, ""),
+                  onTap: () => setState(() {
+                    editedSources.insert(0, "");
+                  }),
+                ),
+                ...editedSources.mapAsList(sourceMapper),
               ],
             ),
           ],
@@ -195,13 +272,181 @@ class _EditPostPageState extends State<EditPostPage> {
       ),
     );
   }
+
+  Widget tagMapper(String tag, [int i = 0, Iterable<String> l = const[]]) {
+    // final ctr = TextEditingController(text: tag);
+    // ctr.addListener(() => tag ctr.value.text)
+    return WTagItem(
+      // controller: ctr..addListener(() => ),
+      // key: ObjectKey(tag),
+      key: ObjectKey("$tag$i"),
+      initialValue: tag,
+      // onRemove: (initialValue, value) {
+      //   logger.info("Removing $initialValue (currently $value)");
+      //   final r = editedTags.remove(initialValue);
+      //   logger.info("Was successful: $r");
+      // },
+      onRemove: (initialValue, value) => setState(() {
+        logger.info("Removing $initialValue (currently $value)");
+        final r = editedTags.remove(initialValue);
+        logger.info("Was successful: $r");
+      }),
+      // onChange: (initialValue, value) => editedTags[editedTags.indexOf(initialValue)] = value,
+      onSubmitted: (initialValue, value) {
+        if (initialValue == value) {
+          logger.info("No change from $initialValue to $value");
+          return;
+        }
+        logger.info("Changing $initialValue to $value");
+        logger.finest("start: $editedTags");
+        setState(() {
+          editedTags[editedTags.indexOf(initialValue)] = value;
+        });
+        // final temp = editedTags.toSet();
+        // temp.remove(initialValue);
+        // temp.add(value);
+        // setState(() {
+        //   editedTags = temp.toList();
+        // });
+        logger.finest("end: $editedTags");
+      },
+      onDuplicate: (initialValue, value) {
+        var i = editedTags.indexOf(initialValue);
+        if (i >= 0) {
+          setState(() {
+            editedTags.insert(i, "$value*");
+          });
+        } else {
+          setState(() {
+            editedTags.add("$value*");
+          });
+        }
+      },
+    );
+  }
+
+  Widget sourceMapper(String source, [int i = 0, Iterable<String> l = const[]]) {
+    // final ctr = TextEditingController(text: source);
+    // ctr.addListener(() => source ctr.value.text)
+    return WTagItem(
+      // controller: ctr..addListener(() => ),
+      // key: ObjectKey(source),
+      key: ObjectKey("$source$i"),
+      initialValue: source,
+      // onRemove: (initialValue, value) {
+      //   logger.info("Removing $initialValue (currently $value)");
+      //   final r = editedSources.remove(initialValue);
+      //   logger.info("Was successful: $r");
+      // },
+      onRemove: (initialValue, value) => setState(() {
+        logger.info("Removing $initialValue (currently $value)");
+        final r = editedSources.remove(initialValue);
+        logger.info("Was successful: $r");
+      }),
+      // onChange: (initialValue, value) => editedSources[editedSources.indexOf(initialValue)] = value,
+      onSubmitted: (initialValue, value) {
+        if (initialValue == value) {
+          logger.info("No change from $initialValue to $value");
+          return;
+        }
+        logger.info("Changing $initialValue to $value");
+        logger.finest("start: $editedSources");
+        setState(() {
+          editedSources[editedSources.indexOf(initialValue)] = value;
+        });
+        // final temp = editedSources.toSet();
+        // temp.remove(initialValue);
+        // temp.add(value);
+        // setState(() {
+        //   editedSources = temp.toList();
+        // });
+        logger.finest("end: $editedSources");
+      },
+      onDuplicate: (initialValue, value) {
+        var i = editedSources.indexOf(initialValue);
+        if (i >= 0) {
+          setState(() {
+            editedSources.insert(i, "$value*");
+          });
+        } else {
+          setState(() {
+            editedSources.add("$value*");
+          });
+        }
+      },
+    );
+  }
 }
+
+// class WTagItem extends StatelessWidget {
+//   final String initialValue;
+//   final void Function(String initialValue, String value)? onRemove;
+//   final void Function(String initialValue, String value)? onDuplicate;
+//   final String? Function(String initialValue, String value)? onChange;
+//   // final String? Function(String initialValue, String priorValue, String newValue)? onChange;
+//   final void Function(String initialValue, String value)? onSubmitted;
+//   final TextEditingController? controller;
+//   const WTagItem({
+//     super.key,
+//     required this.initialValue,
+//     this.onRemove,
+//     this.onDuplicate,
+//     this.onChange,
+//     this.onSubmitted,
+//     this.controller,
+//   });
+
+//   // late bool isSelected
+//   @override
+//   Widget build(BuildContext context) {
+//     String _value = initialValue;
+//     return ListTile(
+//       // onFocusChange: (value) {
+//       //   if (!value) {
+//       //     this.value.isEmpty
+//       //         ? widget.onRemove?.call(widget.initialValue, this.value)
+//       //         : widget.onSubmitted?.call(widget.initialValue, this.value);
+//       //   }
+//       // },
+//       title: TextField(
+//         inputFormatters: [
+//           TextInputFormatter.withFunction(
+//             (oldValue, newValue) =>
+//                 newValue.text.contains(RegExp(RegExpExt.whitespacePattern))
+//                     ? oldValue
+//                     : newValue,
+//           )
+//         ],
+//         controller: controller ??
+//             TextEditingController(
+//               text: initialValue,
+//             ),
+//         onChanged: (value) => _value = onChange?.call(initialValue, value) ?? value,
+//         onSubmitted: (value) => onSubmitted?.call(initialValue, _value = value),
+//       ),
+//       trailing: onRemove != null
+//           ? IconButton(
+//               onPressed: () => onRemove!.call(initialValue, _value),
+//               icon: const Icon(Icons.remove),
+//             )
+//           : null,
+//       leading: onDuplicate != null
+//           ? IconButton(
+//               onPressed: () => onDuplicate!.call(initialValue, _value),
+//               icon: const Icon(Icons.remove),
+//             )
+//           : null,
+//     );
+//   }
+// }
 
 class WTagItem extends StatefulWidget {
   final String initialValue;
   final void Function(String initialValue, String value)? onRemove;
   final void Function(String initialValue, String value)? onDuplicate;
-  final String? Function(String initialValue, String value)? onChange;
+  // final String? Function(String initialValue, String value)? onChange;
+  final String? Function(
+      String initialValue, String priorValue, String newValue)? onChange;
   final void Function(String initialValue, String value)? onSubmitted;
   const WTagItem({
     super.key,
@@ -249,25 +494,26 @@ class _WTagItemState extends State<WTagItem> {
           text: widget.initialValue,
         ),
         onChanged: (value) => this.value =
-            widget.onChange?.call(widget.initialValue, value) ?? value,
+            widget.onChange?.call(widget.initialValue, this.value, value) ??
+                value,
         onTapOutside: (event) => value.isEmpty
             ? widget.onRemove?.call(widget.initialValue, value)
             : widget.onSubmitted?.call(widget.initialValue, value),
         onSubmitted: (value) =>
             widget.onSubmitted?.call(widget.initialValue, value),
       ),
-      trailing: widget.onDuplicate != null
+      trailing: widget.onRemove != null
           ? IconButton(
               onPressed: () =>
-                  widget.onRemove?.call(widget.initialValue, value),
+                  widget.onRemove!.call(widget.initialValue, value),
               icon: const Icon(Icons.remove),
             )
           : null,
       leading: widget.onDuplicate != null
           ? IconButton(
               onPressed: () =>
-                  widget.onDuplicate?.call(widget.initialValue, value),
-              icon: const Icon(Icons.remove),
+                  widget.onDuplicate!.call(widget.initialValue, value),
+              icon: const Icon(Icons.copy),
             )
           : null,
     );
@@ -311,7 +557,7 @@ class EditPostPageLoader extends StatelessWidget
                   stackTrace: snapshot.stackTrace,
                 );
               } else {
-                return fullPageSpinner;
+                return util.fullPageSpinner;
               }
             },
           );

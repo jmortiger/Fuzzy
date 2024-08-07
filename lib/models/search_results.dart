@@ -6,7 +6,8 @@ import 'package:fuzzy/log_management.dart' as lm;
 class SearchResultsNotifier with ChangeNotifier {
   // #region Logger
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("SearchResultsNotifier", "SearchResultsNotifier", lm.LogLevel.FINER);
+  static late final lRecord = lm.genLogger(
+      "SearchResultsNotifier", "SearchResultsNotifier", lm.LogLevel.FINER);
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger
@@ -56,6 +57,7 @@ class SearchResultsNotifier with ChangeNotifier {
     required int index,
     int? postId,
     bool resolveDesync = true,
+    bool throwOnDesync = false,
   }) {
     logger.fine("toggleSelection: ");
     logger.finer("\tindices: ${selectedIndices.toSet()}"
@@ -87,7 +89,11 @@ class SearchResultsNotifier with ChangeNotifier {
         notifyListeners();
       }
       logger.severe("Selected indices and posts desynced");
-      throw StateError("Selected indices and posts desynced");
+      if (throwOnDesync) {
+        throw StateError("Selected indices and posts desynced");
+      } else {
+        return getIsSelected(index);
+      }
     }
   }
 
@@ -96,6 +102,7 @@ class SearchResultsNotifier with ChangeNotifier {
     required int postId,
     int? index,
     bool resolveDesync = true,
+    bool throwOnDesync = false,
   }) {
     logger.fine("toggleSelection: Before");
     logger.finer("\tindices: ${selectedIndices.toSet()}"
@@ -128,7 +135,11 @@ class SearchResultsNotifier with ChangeNotifier {
         return false;
       }
       logger.severe("Selected indices and posts desynced");
-      throw StateError("Selected indices and posts desynced");
+      if (throwOnDesync) {
+        throw StateError("Selected indices and posts desynced");
+      } else {
+        return getIsPostSelected(postId);
+      }
     }
   }
 

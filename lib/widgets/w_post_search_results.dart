@@ -37,7 +37,6 @@ class WPostSearchResults extends StatefulWidget {
 
   final bool? usesLazyPosts;
 
-  // final JPureEvent? _onSelectionCleared;
   final bool useLazyBuilding;
 
   final bool disallowSelections;
@@ -74,7 +73,7 @@ class WPostSearchResults extends StatefulWidget {
   const WPostSearchResults.lazy({
     super.key,
     required E6PostsLazy this.posts,
-    required this.expectedCount, // = 50,
+    required this.expectedCount,
     this.pageIndex = 0,
     this.indexOffset = 0,
     this.onPostsSelected,
@@ -155,7 +154,7 @@ class WPostSearchResults extends StatefulWidget {
               pageModifier: pageModifier,
               postId: postId,
               pageNumber: pageNumber,
-              limit: limit /*  ?? E621.maxPostsPerSearch */,
+              limit: limit,
             )
             .then((v) => E6PostsSync.fromJson(dc.jsonDecode(v.responseBody)))),
         builder: (context, snapshot) {
@@ -193,9 +192,6 @@ class WPostSearchResults extends StatefulWidget {
               stackTrace: snapshot.stackTrace,
             );
           } else {
-            // return const Scaffold(
-            //   body: CircularProgressIndicator(),
-            // );
             return fullPageSpinner;
           }
         },

@@ -963,6 +963,30 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
+  static ActionButton getSinglePostToggleSelectAction(
+      BuildContext context, E6PostResponse post,
+      {String tooltip = "Toggle selection", bool? isSelected}) {
+    return ActionButton(
+      icon: const Icon(Icons.edit),
+      tooltip: tooltip,
+      onPressed: () {
+        final p = "${post.id}: $tooltip";
+        print(p);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(p),
+          ),
+        );
+        Provider.of<SearchResultsNotifier>(context, listen: false)
+            .togglePostSelection(
+          postId: post.id,
+          resolveDesync: false,
+          throwOnDesync: false,
+        );
+      },
+    );
+  }
+
   static ActionButton getPrintSelectionsAction(
     BuildContext context,
     E6PostResponse? post,
@@ -996,6 +1020,13 @@ class WFabBuilder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool? isSelected;
+    try {
+      if (isSinglePost) {
+        isSelected = Provider.of<SearchResultsNotifier>(context, listen: false)
+            .getIsPostSelected(post!.id);
+      }
+    } catch (e) {}
     return ExpandableFab(
       useDefaultHeroTag: false,
       distance: 112,
@@ -1027,6 +1058,12 @@ class WFabBuilder extends StatelessWidget {
               if (isSinglePost) getSinglePostUpvoteAction(context, post!),
               if (isSinglePost) getSinglePostDownvoteAction(context, post!),
               if (isSinglePost) getSinglePostEditAction(context, post!),
+              if (isSinglePost && (isSelected ?? false))
+                getSinglePostToggleSelectAction(context, post!,
+                    tooltip: "Remove from selections"),
+              if (isSinglePost && !(isSelected ?? true))
+                getSinglePostToggleSelectAction(context, post!,
+                    tooltip: "Add to selections"),
               // getPrintSelectionsAction(context, post, posts),
             ]
           : [],

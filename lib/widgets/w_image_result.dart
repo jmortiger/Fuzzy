@@ -227,11 +227,11 @@ class WImageResult extends StatelessWidget {
     SearchResultsNotifier? srl;
     if (!disallowSelections) srl = Provider.of<SearchResultsNotifier>(context);
     void toggle() {
-      // onSelectionToggle?.call(index);
       logger.info(
-          "Toggling ${imageListing.id} selection, was selected: ${srl?.getIsPostSelected(imageListing.id)}, is selected: ${srl?.toggleSelection(
+          "Toggling ${imageListing.id} selection, was selected: ${srl?.getIsPostSelected(imageListing.id)}, is selected: ${srl?.togglePostSelection(
         index: index,
         postId: imageListing.id,
+        resolveDesync: false,
       )} ");
       // srl?.toggleSelection(
       //   index: index,
@@ -240,28 +240,8 @@ class WImageResult extends StatelessWidget {
       logger.finest("Currently selected post ids: ${srl?.selectedPostIds}");
       logger.finest("Currently selected indices: ${srl?.selectedIndices}");
     }
-
-    return Positioned.fill(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          // onHover: (value) {
-          //   // tooltip: _buildTooltipString,
-          // },
-          onLongPress: () {
-            print("[$index] OnLongPress", lm.LogLevel.INFO);
-            toggle();
-          },
-          onDoubleTap: () {
-            print("[$index] onDoubleTap", lm.LogLevel.FINE);
-            toggle();
-          },
-          onTap: () async {
-            print("[$index] OnTap", lm.LogLevel.INFO);
-            if (isSelected || (srl?.areAnySelected ?? false)) {
-              toggle();
-            } else {
-              SavedDataE6.init();
+    Future<void> viewPost() async {
+      SavedDataE6.init();
               if (!disallowSelections && getSc(context, false).isMpcSync) {
                 await getSc(context, false)
                     .mpcSync
@@ -314,6 +294,33 @@ class WImageResult extends StatelessWidget {
                   }
                 }
               });
+    }
+    return Positioned.fill(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          // onHover: (value) {
+          //   // tooltip: _buildTooltipString,
+          // },
+          onLongPress: () {
+            print("[$index] OnLongPress", lm.LogLevel.INFO);
+            // toggle();
+            if (isSelected || (srl?.areAnySelected ?? false)) {
+              viewPost();
+            } else {
+              toggle();
+            }
+          },
+          onDoubleTap: () {
+            print("[$index] onDoubleTap", lm.LogLevel.FINE);
+            toggle();
+          },
+          onTap: () async {
+            print("[$index] OnTap", lm.LogLevel.INFO);
+            if (isSelected || (srl?.areAnySelected ?? false)) {
+              toggle();
+            } else {
+              viewPost();
             }
           },
         ),
