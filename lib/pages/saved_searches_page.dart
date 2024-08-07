@@ -34,7 +34,7 @@ class SavedSearchesPageProvider extends StatelessWidget {
                             data: value,
                           ),
                         ))
-                : util.scSaCoExArCpi);
+                : util.fullPageSpinner);
   }
 }
 

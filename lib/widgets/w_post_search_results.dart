@@ -3,6 +3,8 @@ import 'dart:convert' as dc;
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_results.dart';
+import 'package:fuzzy/pages/error_page.dart';
+import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
@@ -139,13 +141,15 @@ class WPostSearchResults extends StatefulWidget {
               );
             }
           } else if (snapshot.hasError) {
-            return Scaffold(
-              body: Text("${snapshot.error}\n${snapshot.stackTrace}"),
+            return ErrorPage(
+              error: snapshot.error,
+              stackTrace: snapshot.stackTrace,
             );
           } else {
-            return const Scaffold(
-              body: CircularProgressIndicator(),
-            );
+            // return const Scaffold(
+            //   body: CircularProgressIndicator(),
+            // );
+            return fullPageSpinner;
           }
         },
       );
@@ -177,13 +181,13 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
 
   set selectedIndices(Set<int> value) => widget.disallowSelections
       ? setState(() {
-        _selectedIndices = value;
-      })
+          _selectedIndices = value;
+        })
       : srl.selectedIndices = SetNotifier.from(value);
   set selectedPostIds(Set<int> value) => widget.disallowSelections
       ? setState(() {
-        _selectedPostIds = value;
-      })
+          _selectedPostIds = value;
+        })
       : srl.selectedPostIds = SetNotifier.from(value);
   bool getIsIndexSelected(int index) => widget.disallowSelections
       ? _selectedIndices.contains(index)
@@ -306,14 +310,14 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
             crossAxisSpacing: 4,
             mainAxisSpacing: 4,
             childAspectRatio: SearchView.i.widthToHeightRatio,
-            children: !widget.stripToGridView// sc.isMpcSync
+            children: !widget.stripToGridView // sc.isMpcSync
                 ? sc.mpcSync
                         .getPostsOnPageSync(widget.pageIndex)
                         ?.mapAsList((e, i, l) => constructImageResult(
                               e,
                               i +
-                                  sc.mpcSync.getPageFirstPostIndex(widget
-                                      .pageIndex),
+                                  sc.mpcSync
+                                      .getPageFirstPostIndex(widget.pageIndex),
                             ))
                         .toList() ??
                     []
@@ -365,7 +369,7 @@ class WPostSearchResultsSwiper extends StatefulWidget {
     this.disallowSelections = false,
     this.stripToGridView = false,
     JPureEvent? fireRebuild,
-  })  : _fireRebuild = fireRebuild;
+  }) : _fireRebuild = fireRebuild;
 
   @override
   State<WPostSearchResultsSwiper> createState() =>
@@ -429,10 +433,7 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
             children: <Widget>[
               PageView.builder(
                 key: ObjectKey(
-                  scWatch
-                      .mpcSync
-                      .parameters
-                      .tags,
+                  scWatch.mpcSync.parameters.tags,
                 ),
 
                 /// [PageView.scrollDirection] defaults to [Axis.horizontal].

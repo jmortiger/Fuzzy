@@ -104,9 +104,7 @@ class SavedDataE6 extends ChangeNotifier {
       if (!isInit) {
         SavedDataE6.searches = ListNotifier<SavedSearchData>.empty(true);
         storageAsync.then((v) {
-          if (!validateUniqueness()) {
-            _save();
-          }
+          if (!validateUniqueness()) _save();
           SavedDataE6.searches.addListener(notifyListeners);
         });
       }

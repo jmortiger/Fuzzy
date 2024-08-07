@@ -459,7 +459,8 @@ class WFabBuilder extends StatelessWidget {
           },
         );
         if (v != null) {
-          print("Adding ${postListing.id} to set ${v.id} (${v.shortname}, length ${v.postCount})");
+          print(
+              "Adding ${postListing.id} to set ${v.id} (${v.shortname}, length ${v.postCount})");
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -853,7 +854,7 @@ class WFabBuilder extends StatelessWidget {
       BuildContext context, E6PostResponse post) {
     return ActionButton(
       icon: const Icon(Icons.heart_broken_outlined),
-      tooltip: "Remove selected from favorites",
+      tooltip: "Remove from favorites",
       onPressed: () async {
         print("Removing ${post.id} from favorites...");
         ScaffoldMessenger.of(context).showSnackBar(

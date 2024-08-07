@@ -21,7 +21,6 @@ class WVideoPlayerScreen extends StatefulWidget {
 class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
     with TickerProviderStateMixin {
   // #region Logger
-  static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
   static late final lRecord = lm.genLogger("WVideoPlayerScreen");
@@ -365,16 +364,26 @@ class _WNewSpeedState extends State<WNewSpeed> {
   Widget build(BuildContext context) {
     return DropdownMenu<double>(
       dropdownMenuEntries: const [
-        DropdownMenuEntry(value: .25, label: ".25"),
-        DropdownMenuEntry(value: .5, label: ".5"),
-        DropdownMenuEntry(value: .75, label: ".75"),
-        DropdownMenuEntry(value: 1, label: "1"),
-        DropdownMenuEntry(value: 1.25, label: "1.25"),
-        DropdownMenuEntry(value: 1.5, label: "1.5"),
-        DropdownMenuEntry(value: 1.75, label: "1.75"),
-        DropdownMenuEntry(value: 2, label: "2"),
-        DropdownMenuEntry(value: 2.5, label: "2.5"),
-        DropdownMenuEntry(value: 5, label: "5"),
+        DropdownMenuEntry(value: 0.25, label: "x0.25"),
+        DropdownMenuEntry(value: 0.50, label: "x0.50"),
+        DropdownMenuEntry(value: 0.75, label: "x0.75"),
+        DropdownMenuEntry(value: 1.00, label: "x1.00"),
+        DropdownMenuEntry(value: 1.25, label: "x1.25"),
+        DropdownMenuEntry(value: 1.50, label: "x1.50"),
+        DropdownMenuEntry(value: 1.75, label: "x1.75"),
+        DropdownMenuEntry(value: 2.00, label: "x2.00"),
+        DropdownMenuEntry(value: 2.25, label: "x2.25"),
+        DropdownMenuEntry(value: 2.50, label: "x2.50"),
+        DropdownMenuEntry(value: 2.75, label: "x2.75"),
+        DropdownMenuEntry(value: 3.00, label: "x3.00"),
+        DropdownMenuEntry(value: 3.25, label: "x3.25"),
+        DropdownMenuEntry(value: 3.50, label: "x3.50"),
+        DropdownMenuEntry(value: 3.75, label: "x3.75"),
+        DropdownMenuEntry(value: 4.00, label: "x4.00"),
+        DropdownMenuEntry(value: 4.25, label: "x4.25"),
+        DropdownMenuEntry(value: 4.50, label: "x4.50"),
+        DropdownMenuEntry(value: 4.75, label: "x4.75"),
+        DropdownMenuEntry(value: 5.00, label: "x5.00"),
       ],
       initialSelection: 1,
       inputFormatters: [getParsableDecimalFormatter((p0) => p0 > 0)],

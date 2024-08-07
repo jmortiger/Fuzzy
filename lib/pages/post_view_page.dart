@@ -315,7 +315,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                                 ),
                               );
                             } else {
-                              return scSaCoExArCpi;
+                              return fullPageSpinner;
                             }
                           },
                         ),

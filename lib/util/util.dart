@@ -163,7 +163,7 @@ Size calculateTextSize({
   return textPainter.size;
 }
 
-const scSaCoExArCpi = Scaffold(
+const fullPageSpinner = Scaffold(
   body: SafeArea(child: Column(children: [exArCpi])),
 );
 const exArCpi = Expanded(

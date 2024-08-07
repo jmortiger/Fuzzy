@@ -100,7 +100,8 @@ Widget buildHomePageWithProviders({
           create: (context) => SearchViewModel(),
         ),
         ChangeNotifierProvider(
-            create: (context) => ManagedPostCollectionSync(parameters: PostSearchParametersSlim(tags: searchText))),
+            create: (context) => ManagedPostCollectionSync(
+                parameters: PostSearchParametersSlim(tags: searchText))),
         ChangeNotifierProvider(create: (context) => SearchResultsNotifier()),
         ChangeNotifierProvider(
             create: (context) => CachedFavorites.loadFromStorageSync()),
