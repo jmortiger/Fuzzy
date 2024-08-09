@@ -386,7 +386,8 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
         imageListing: data,
         index: index,
         postsCache: widget.disallowSelections ? widget.posts.posts : null,
-        isSelected: getIsIndexSelected(index),
+        // isSelected: getIsIndexSelected(index),
+        isSelected: getIsPostIdSelected(data.id),
       );
 }
 

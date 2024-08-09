@@ -7,7 +7,7 @@ class SearchResultsNotifier with ChangeNotifier {
   // #region Logger
   // ignore: unnecessary_late
   static late final lRecord = lm.genLogger(
-      "SearchResultsNotifier", "SearchResultsNotifier", lm.LogLevel.FINER);
+      "SearchResultsNotifier", "SearchResultsNotifier", lm.LogLevel.FINEST);
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger
@@ -104,26 +104,26 @@ class SearchResultsNotifier with ChangeNotifier {
     bool resolveDesync = true,
     bool throwOnDesync = false,
   }) {
-    logger.fine("toggleSelection: Before");
+    logger.fine("togglePostSelection: Before");
     logger.finer("\tindices: ${selectedIndices.toSet()}"
         "\tposts: ${selectedPostIds.toSet()}");
     if (getIsPostSelected(postId) && (index == null || getIsSelected(index))) {
-      _selectedPostIds.remove(index ?? -1);
-      _selectedIndices.remove(postId);
+      _selectedPostIds.remove(postId);
+      _selectedIndices.remove(index ?? -1);
       logger.finer("After: "
-          "\tindices: ${selectedIndices.toSet()}"
-          "\tposts: ${selectedPostIds.toSet()}");
+          "\n\tindices: ${selectedIndices.toSet()}"
+          "\n\tposts: ${selectedPostIds.toSet()}");
       notifyListeners();
       return false;
     } else if (!getIsPostSelected(postId) &&
         (index == null || !getIsSelected(index))) {
       if (index != null) {
-        _selectedPostIds.add(index);
+        _selectedIndices.add(index);
       }
-      _selectedIndices.add(postId);
+      _selectedPostIds.add(postId);
       logger.finer("After: "
-          "\tindices: ${selectedIndices.toSet()}"
-          "\tposts: ${selectedPostIds.toSet()}");
+          "\n\tindices: ${selectedIndices.toSet()}"
+          "\n\tposts: ${selectedPostIds.toSet()}");
       notifyListeners();
       return true;
     } else {
