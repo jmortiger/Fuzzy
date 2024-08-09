@@ -11,7 +11,8 @@ import 'package:j_util/j_util_full.dart';
 
 import '../web/e621/e621_access_data.dart';
 
-class UserProfilePage extends StatelessWidget implements IRoute<UserProfilePage> {
+class UserProfilePage extends StatelessWidget
+    implements IRoute<UserProfilePage> {
   // #region Logger
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
@@ -50,7 +51,8 @@ class UserProfilePage extends StatelessWidget implements IRoute<UserProfilePage>
         Text("Can Upload Free: ${user.canUploadFree}"),
         Text("Base Upload Limit: ${user.baseUploadLimit}"),
         if (userL != null)
-          Text("FavCount: ${userL!.favoriteCount}/${userL!.favoriteLimit} (${userL!.favoriteLimit - userL!.favoriteCount} left)"),
+          Text(
+              "FavCount: ${userL!.favoriteCount}/${userL!.favoriteLimit} (${userL!.favoriteLimit - userL!.favoriteCount} left)"),
         if (userL != null) Text("Tag Query Limit: ${userL!.tagQueryLimit}"),
         if (userL != null) Text("Blacklist Users: ${userL!.blacklistUsers}"),
         if (userL != null) Text("Blacklisted Tags: ${userL!.blacklistedTags}"),
@@ -65,7 +67,8 @@ class UserProfilePage extends StatelessWidget implements IRoute<UserProfilePage>
   }
 }
 
-class UserProfileLoaderPage extends StatefulWidget implements IRoute<UserProfileLoaderPage> {
+class UserProfileLoaderPage extends StatefulWidget
+    implements IRoute<UserProfileLoaderPage> {
   static lm.FileLogger get logger => lRecord.logger;
   static const routeNameString = "/";
   @override

@@ -70,7 +70,7 @@ class Post extends fa.Post implements PostListingBare {
     required super.next,
     required super.favorite,
     required super.favoriteToggleLink,
-  }) : tagData = TagData(general: tags, species: [species]),
+  })  : tagData = TagData(general: tags, species: [species]),
         preview = ImageInfoBare(url: thumbnailUrl),
         file = ImageInfoBare(url: fileUrl);
 

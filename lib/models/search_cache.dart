@@ -11,7 +11,7 @@ class SearchCacheLegacy extends ChangeNotifier {
   // ManagedPostCollection get mpc => this as ManagedPostCollection;
   bool get isMpcSync => this is ManagedPostCollectionSync;
   ManagedPostCollectionSync get mpcSync => this as ManagedPostCollectionSync;
-  bool get isScl => /* !isMpc &&  */!isMpcSync;
+  bool get isScl => /* !isMpc &&  */ !isMpcSync;
   // #region Logger
   // ignore: unnecessary_late
   static late final lRecord = lm.genLogger("SearchCache");
@@ -77,8 +77,7 @@ class SearchCacheLegacy extends ChangeNotifier {
       // }
     }
     if (lastPostId == null) {
-      logger.severe(
-          "Couldn't determine current page's last post's id. "
+      logger.severe("Couldn't determine current page's last post's id. "
           "To default to the first page, pass in a negative value.");
       throw StateError("Couldn't determine current page's last post's id.");
     }
@@ -113,11 +112,11 @@ class SearchCacheLegacy extends ChangeNotifier {
         );
       }
       // try {
-        if (lastPostId! < 0) {
-          lastPostOnPageIdCached = out.posts.first.id + 1;
-        }
-        return hasNextPageCached =
-            (lastPostId != (lastPostIdCached = out.posts.last.id));
+      if (lastPostId! < 0) {
+        lastPostOnPageIdCached = out.posts.first.id + 1;
+      }
+      return hasNextPageCached =
+          (lastPostId != (lastPostIdCached = out.posts.last.id));
       // } catch (e) {
       //   lastPostIdCached = out.posts.last.id;
       //   return hasNextPageCached = (lastPostId != out.posts.last.id);

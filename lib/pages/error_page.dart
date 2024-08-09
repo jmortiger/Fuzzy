@@ -18,8 +18,11 @@ class ErrorPage extends StatelessWidget {
         logger: logger,
         message: message,
       );
-  const ErrorPage.makeConst(
-      {super.key, required this.error, required this.stackTrace});
+  const ErrorPage.makeConst({
+    super.key,
+    required this.error,
+    required this.stackTrace,
+  });
   ErrorPage.logError({
     super.key,
     required this.error,
@@ -31,15 +34,64 @@ class ErrorPage extends StatelessWidget {
     logger.severe(message ?? error, error, stackTrace);
   }
 
+  /// If an error occurs, logs the error with the given [logger] and pushes an [ErrorPage] onto the navigator, then rethrows the error.
+  static RT? errorCatcher<RT>(
+    RT Function() task, {
+    required BuildContext context,
+    required lm.FileLogger logger,
+    Object? message,
+  }) {
+    try {
+      return task();
+    } catch (e, s) {
+      logger.severe(message ?? e, e, s);
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ErrorPage.makeConst(error: e, stackTrace: s),
+          ));
+      return null;
+    }
+  }
+
+  /// If an error occurs, logs the error with the given [logger] and returns an [ErrorPage] representing the error, then rethrows the error.
+  static ({
+    RT? value,
+    Object? e,
+    StackTrace? s,
+    ErrorPage? page,
+  }) errorWrapper<RT>(
+    RT Function() task, {
+    required lm.FileLogger logger,
+    Object? message,
+  }) {
+    try {
+      return (
+        value: task(),
+        e: null as Object?,
+        s: null as StackTrace?,
+        page: null as ErrorPage?,
+      );
+    } catch (e, s) {
+      logger.severe(message ?? e, e, s);
+      return (
+        value: null,
+        e: e,
+        s: s,
+        page: ErrorPage.makeConst(error: e, stackTrace: s),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        appBar: AppBar(),
-        body: Column(
+        appBar: AppBar(title: SelectableText(error.runtimeType.toString())),
+        body: ListView(
           children: [
-            Text("ERROR: $error"),
-            Text("StackTrace: $stackTrace"),
+            SelectableText("ERROR: $error"),
+            SelectableText("StackTrace: $stackTrace"),
           ],
         ),
       ),

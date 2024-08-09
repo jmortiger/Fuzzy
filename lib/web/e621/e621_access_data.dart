@@ -188,8 +188,8 @@ final class E621AccessData with Storable<E621AccessData> {
       E621AccessData(
           apiKey: apiKey,
           username: username,
-          userAgent: userAgent ??
-              "fuzzy/${version.$Safe} by atotaltirefire@gmail.com");
+          userAgent:
+              userAgent ?? "fuzzy/${version.$Safe} by atotaltirefire@gmail.com");
   static Future<E621AccessData> withDefaultAssured({
     required String apiKey,
     required String username,

@@ -192,7 +192,7 @@ class SavedDataE6 extends ChangeNotifier {
       final success = <Future<bool>>[];
       for (var i = 0; i < searches.length; i++) {
         final e1 = searches[i];
-        final e = e1.toJson();
+        // final e = e1.toJson();
         success.add(v.setString("$localStoragePrefix.$i.searchString",
             e1.searchString)); //e["searchString"]));
         success.add(v.setString("$localStoragePrefix.$i.delimiter",

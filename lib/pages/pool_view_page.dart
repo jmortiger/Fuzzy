@@ -73,7 +73,8 @@ class _PoolViewPageState extends State<PoolViewPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Pool ${widget.pool.id}: ${widget.pool.namePretty} by ${pool.creatorName} (${pool.creatorId})"),
+        title: Text(
+            "Pool ${widget.pool.id}: ${widget.pool.namePretty} by ${pool.creatorName} (${pool.creatorId})"),
       ),
       body: SafeArea(
         child: //posts.isNotEmpty ?
@@ -85,7 +86,7 @@ class _PoolViewPageState extends State<PoolViewPage> {
               dense: true,
               initiallyExpanded: true,
               children: [SelectableText(widget.pool.description)],
-              ),
+            ),
             if (posts.isNotEmpty)
               Expanded(
                 child: WPostSearchResults(
@@ -96,8 +97,7 @@ class _PoolViewPageState extends State<PoolViewPage> {
                   fireRebuild: rebuild,
                 ),
               ),
-            if (loadingPosts != null)
-              exArCpi,
+            if (loadingPosts != null) exArCpi,
             Center(
               child: Text(
                 "Loaded ${posts.length}/${widget.pool.postCount} posts",
@@ -143,6 +143,7 @@ class _PoolViewPageState extends State<PoolViewPage> {
     );
   }
 }
+
 class PoolViewPageBuilder extends StatelessWidget
     implements IRoute<PoolViewPageBuilder> {
   static const routeNameString = "/pool";

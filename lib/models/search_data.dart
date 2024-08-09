@@ -52,21 +52,24 @@ class SearchMetrics extends SearchData {
     required this.frequency,
     required List<String> tagList,
   }) : super.fromList(tagList: tagList);
-  factory SearchMetrics.fromJson(Map<String, dynamic> json) => SearchMetrics.fromString(
+  factory SearchMetrics.fromJson(Map<String, dynamic> json) =>
+      SearchMetrics.fromString(
         frequency: json["frequency"],
         searchString: json["searchString"],
       );
   @override
-  /* Map<String, dynamic> */String toJson() => {
-    "frequency": frequency.toString(),
-    "searchString": searchString.toString(),
-  }.toString();
+  /* Map<String, dynamic> */ String toJson() => {
+        "frequency": frequency.toString(),
+        "searchString": searchString.toString(),
+      }.toString();
 
   @override
   bool operator ==(Object other) {
-    return other is SearchMetrics && searchString == other.searchString && frequency == other.frequency;
+    return other is SearchMetrics &&
+        searchString == other.searchString &&
+        frequency == other.frequency;
   }
-  
+
   @override
   int get hashCode => searchString.hashCode;
 }

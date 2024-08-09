@@ -247,7 +247,8 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               WBooleanField(
                 getVal: () => SearchView.i.preferSetShortname,
                 name: "Prefer set shortname",
-                subtitle: 'Wherever possible, search using a set\'s shortname instead its id (e.g. "set:my_set" over "set:123"). This will break saved searches if the shortname changes.',
+                subtitle:
+                    'Wherever possible, search using a set\'s shortname instead its id (e.g. "set:my_set" over "set:123"). This will break saved searches if the shortname changes.',
                 setVal: (bool val) => SearchView.i.preferSetShortname = val,
               ),
             ]),
@@ -409,6 +410,7 @@ class _WBooleanFieldState extends State<WBooleanField> {
     );
   }
 }
+
 class WBooleanTristateField extends StatefulWidget {
   final String name;
   final String? subtitle;
@@ -436,12 +438,11 @@ class WBooleanTristateField extends StatefulWidget {
 }
 
 class _WBooleanTristateFieldState extends State<WBooleanTristateField> {
-  void onChanged([bool? value]) =>
-      widget.validateVal?.call(value) ?? true
-          ? setState(() {
-              widget.setVal(value);
-            })
-          : null;
+  void onChanged([bool? value]) => widget.validateVal?.call(value) ?? true
+      ? setState(() {
+          widget.setVal(value);
+        })
+      : null;
   @override
   Widget build(BuildContext context) {
     return ListTile(

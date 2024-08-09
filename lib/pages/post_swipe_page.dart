@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/post_view_page.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
@@ -210,7 +211,7 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
   // #region Logger
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("_PostSwipePageManagedState");
+  static late final lRecord = lm.genLogger("PostSwipePageManagedState");
   // #endregion Logger
   late PageController _pageViewController;
   late TabController _tabController;
@@ -255,74 +256,11 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
       controller: _pageViewController,
       allowImplicitScrolling: true,
       onPageChanged: _handlePageViewChanged,
-      itemBuilder: (context, index) {
-        // final page = widget.postsObj.currentPage;
-        final page = widget.postsObj.getPageOfGivenPostIndexOnPage(index);
-        // var ps = widget.postsObj[page], t = ps.$Safe;
-        var ps = ValueAsync(value: widget.postsObj.getPostsOnPageAsObj(page)),
-            t = widget.postsObj.getPostsOnPageAsObjSync(page);
-        if (ps.isComplete && t == null) {
-          return null;
-        } else if (!ps.isComplete) {
-          return FutureBuilder(
-            future: ps.future,
-            builder: (context, snapshot) {
-              logger.info(
-                  "Index: $index snapshot complete ${snapshot.hasData || snapshot.hasError} ${snapshot.data}");
-              if (snapshot.hasData) {
-                if (snapshot.data != null) {
-                  return PostViewPage.overrideFullscreen(
-                    postListing: snapshot
-                        .data![widget.postsObj.getPostIndexOnPage(index, page)],
-                    // snapshot.data![widget.postsObj.currentPostIndex],
-                    onAddToSearch: (s) {
-                      widget.onAddToSearch?.call(s);
-                      toReturn = "$toReturn $s";
-                      widget.tagsToAdd?.add(s);
-                    },
-                    onPop: () => Navigator.pop(context, widget),
-                    getFullscreen: () => isFullscreen,
-                    setFullscreen: (v) => setState(() {
-                      isFullscreen = v;
-                    }),
-                  );
-                } else {
-                  return const Column(
-                    children: [Expanded(child: Text("No Results"))],
-                  );
-                }
-              } else if (snapshot.hasError) {
-                return Column(
-                  children: [
-                    Text("ERROR: ${snapshot.error}"),
-                    Text("StackTrace: ${snapshot.stackTrace}"),
-                  ],
-                );
-              } else {
-                return const AspectRatio(
-                  aspectRatio: 1,
-                  child: CircularProgressIndicator(),
-                );
-              }
-            },
-          );
-        } else {
-          return PostViewPage.overrideFullscreen(
-            // postListing: t![widget.postsObj.currentPostIndex],
-            postListing: t![widget.postsObj.getPostIndexOnPage(index, page)],
-            onAddToSearch: (s) {
-              widget.onAddToSearch?.call(s);
-              toReturn = "$toReturn $s";
-              widget.tagsToAdd?.add(s);
-            },
-            onPop: () => Navigator.pop(context, widget),
-            getFullscreen: () => isFullscreen,
-            setFullscreen: (v) => setState(() {
-              isFullscreen = v;
-            }),
-          );
-        }
-      },
+      itemBuilder: (context, index) => ErrorPage.errorCatcher<Widget?>(
+        () => _pageBuilder(context, index),
+        context: context,
+        logger: logger,
+      ),
     );
     if (!Platform.isDesktop) {
       return root;
@@ -354,6 +292,75 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
           ),
       ],
     );
+  }
+
+  Widget? _pageBuilder(BuildContext context, int index) {
+    // final page = widget.postsObj.currentPage;
+    final page = widget.postsObj.getPageOfGivenPostIndexOnPage(index);
+    // var ps = widget.postsObj[page], t = ps.$Safe;
+    var ps = ValueAsync(value: widget.postsObj.getPostsOnPageAsObj(page)),
+        t = widget.postsObj.getPostsOnPageAsObjSync(page);
+    if (ps.isComplete && t == null) {
+      return null;
+    } else if (!ps.isComplete) {
+      return FutureBuilder(
+        future: ps.future,
+        builder: (context, snapshot) {
+          logger.info(
+              "Index: $index snapshot complete ${snapshot.hasData || snapshot.hasError} ${snapshot.data}");
+          if (snapshot.hasData) {
+            if (snapshot.data != null) {
+              return PostViewPage.overrideFullscreen(
+                postListing: snapshot
+                    .data![widget.postsObj.getPostIndexOnPage(index, page)],
+                // snapshot.data![widget.postsObj.currentPostIndex],
+                onAddToSearch: (s) {
+                  widget.onAddToSearch?.call(s);
+                  toReturn = "$toReturn $s";
+                  widget.tagsToAdd?.add(s);
+                },
+                onPop: () => Navigator.pop(context, widget),
+                getFullscreen: () => isFullscreen,
+                setFullscreen: (v) => setState(() {
+                  isFullscreen = v;
+                }),
+              );
+            } else {
+              return const Column(
+                children: [Expanded(child: Text("No Results"))],
+              );
+            }
+          } else if (snapshot.hasError) {
+            return Column(
+              children: [
+                Text("ERROR: ${snapshot.error}"),
+                Text("StackTrace: ${snapshot.stackTrace}"),
+              ],
+            );
+          } else {
+            return const AspectRatio(
+              aspectRatio: 1,
+              child: CircularProgressIndicator(),
+            );
+          }
+        },
+      );
+    } else {
+      return PostViewPage.overrideFullscreen(
+        // postListing: t![widget.postsObj.currentPostIndex],
+        postListing: t![widget.postsObj.getPostIndexOnPage(index, page)],
+        onAddToSearch: (s) {
+          widget.onAddToSearch?.call(s);
+          toReturn = "$toReturn $s";
+          widget.tagsToAdd?.add(s);
+        },
+        onPop: () => Navigator.pop(context, widget),
+        getFullscreen: () => isFullscreen,
+        setFullscreen: (v) => setState(() {
+          isFullscreen = v;
+        }),
+      );
+    }
   }
 
   void _handlePageViewChanged(int currentPageIndex) {

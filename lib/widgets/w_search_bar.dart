@@ -15,7 +15,6 @@ import 'package:provider/provider.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-
 class WSearchBar extends StatefulWidget {
   // #region Logger
   static lm.Printer get print => lRecord.print;
@@ -50,8 +49,8 @@ class _WSearchBarState extends State<WSearchBar> {
   Iterable<String> generateSortedOptions(String currentTextValue) {
     final currText = currentTextValue;
     // var lastTermIndex = currText.lastIndexOf(RegExpExt.whitespace);
-    var lastTermIndex =
-        currText.lastIndexOf(RegExp('[$whitespaceCharacters$tagModifiersRegexString]'));
+    var lastTermIndex = currText
+        .lastIndexOf(RegExp('[$whitespaceCharacters$tagModifiersRegexString]'));
     lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
     // final currSubString = currText.substring(lastTermIndex);
     final currPrefix = currText.substring(0, lastTermIndex);

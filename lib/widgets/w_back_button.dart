@@ -59,7 +59,9 @@ class WBackButton extends StatelessWidget {
     return child != null
         ? hover
             ? Stack(children: [child!, r])
-            : Column(mainAxisSize: MainAxisSize.min, children: [r, Expanded(child: child!)])
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [r, Expanded(child: child!)])
         : r;
   }
 }

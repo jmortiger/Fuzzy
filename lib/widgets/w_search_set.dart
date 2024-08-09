@@ -25,7 +25,8 @@ class WSearchSet extends StatefulWidget {
   // final bool Function(e621.PostSet set)? disableResults;
   final bool Function(e621.PostSet set)? filterResults;
   final Future<bool> Function(e621.PostSet set)? filterResultsAsync;
-  final Future<List<e621.PostSet>> Function(List<e621.PostSet> set)? customFilterResultsAsync;
+  final Future<List<e621.PostSet>> Function(List<e621.PostSet> set)?
+      customFilterResultsAsync;
   const WSearchSet({
     super.key,
     required this.onSelected,
@@ -65,7 +66,7 @@ class WSearchSet extends StatefulWidget {
   State<WSearchSet> createState() => _WSearchSetState();
 
   // static Future<List<e621.PostSet>> filterHasMaintenancePrivileges(List<e621.PostSet> set) {
-    
+
   // }
 }
 

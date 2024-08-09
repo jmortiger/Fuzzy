@@ -489,6 +489,7 @@ class SearchViewData {
   static const defaultData = SearchViewData(
     postsPerPage: 50,
     postsPerRow: 3,
+    maxCharsInPostInfo: 100,
     postInfoBannerItems: PostInfoPaneItem.values,
     widthToHeightRatio: 1,
     useProgressiveImages: true,
@@ -506,6 +507,7 @@ class SearchViewData {
   final bool lazyLoad;
   final bool lazyBuilding;
   final bool preferSetShortname;
+  final int maxCharsInPostInfo;
   const SearchViewData({
     required this.postsPerPage,
     required this.postsPerRow,
@@ -516,6 +518,7 @@ class SearchViewData {
     required this.lazyLoad,
     required this.lazyBuilding,
     required this.preferSetShortname,
+    required this.maxCharsInPostInfo,
   });
   factory SearchViewData.fromJson(JsonOut json) => SearchViewData(
         postsPerPage: json["postsPerPage"] ?? defaultData.postsPerPage,
@@ -533,7 +536,10 @@ class SearchViewData {
             defaultData.numSavedSearchesInSearchBar,
         lazyLoad: json["lazyLoad"] ?? defaultData.lazyLoad,
         lazyBuilding: json["lazyBuilding"] ?? defaultData.lazyBuilding,
-        preferSetShortname: json["preferSetShortname"] ?? defaultData.preferSetShortname,
+        preferSetShortname:
+            json["preferSetShortname"] ?? defaultData.preferSetShortname,
+        maxCharsInPostInfo:
+            json["maxCharsInPostInfo"] ?? defaultData.maxCharsInPostInfo,
       );
   JsonOut toJson() => {
         "postsPerPage": postsPerPage,
@@ -550,8 +556,10 @@ class SearchViewData {
         "lazyLoad": lazyLoad,
         "lazyBuilding": lazyBuilding,
         "preferSetShortname": preferSetShortname,
+        "maxCharsInPostInfo": maxCharsInPostInfo,
       };
 }
+
 /// TODO: Integrate ChangeNotifier?
 class SearchView implements SearchViewData {
   int _postsPerPage;
@@ -598,9 +606,14 @@ class SearchView implements SearchViewData {
   @override
   bool get preferSetShortname => _preferSetShortname;
   set preferSetShortname(bool v) => _preferSetShortname = v;
+  int _maxCharsInPostInfo;
+  @override
+  int get maxCharsInPostInfo => _maxCharsInPostInfo;
+  set maxCharsInPostInfo(int v) => (v >= 0) ? _maxCharsInPostInfo = v : "";
   SearchView({
     required int postsPerPage,
     required int postsPerRow,
+    required int maxCharsInPostInfo,
     required List<PostInfoPaneItem> postInfoBannerItems,
     required double widthToHeightRatio,
     required bool useProgressiveImages,
@@ -616,7 +629,8 @@ class SearchView implements SearchViewData {
         _numSavedSearchesInSearchBar = numSavedSearchesInSearchBar,
         _lazyLoad = lazyLoad,
         _lazyBuilding = lazyBuilding,
-        _preferSetShortname = preferSetShortname;
+        _preferSetShortname = preferSetShortname,
+        _maxCharsInPostInfo = maxCharsInPostInfo;
 
   factory SearchView.fromData(SearchViewData searchView) => SearchView(
         postsPerPage: searchView.postsPerPage,
@@ -628,6 +642,7 @@ class SearchView implements SearchViewData {
         lazyLoad: searchView.lazyLoad,
         lazyBuilding: searchView.lazyBuilding,
         preferSetShortname: searchView.preferSetShortname,
+        maxCharsInPostInfo: searchView.maxCharsInPostInfo,
       );
   void overwriteWithData(SearchViewData searchView) {
     _postsPerPage = searchView.postsPerPage;
@@ -639,6 +654,7 @@ class SearchView implements SearchViewData {
     _lazyLoad = searchView.lazyLoad;
     _lazyBuilding = searchView.lazyBuilding;
     _preferSetShortname = searchView.preferSetShortname;
+    _maxCharsInPostInfo = searchView.maxCharsInPostInfo;
   }
 
   SearchViewData toData() => SearchViewData(
@@ -651,6 +667,7 @@ class SearchView implements SearchViewData {
         lazyLoad: lazyLoad,
         lazyBuilding: lazyBuilding,
         preferSetShortname: preferSetShortname,
+        maxCharsInPostInfo: maxCharsInPostInfo,
       );
 
   // #region JSON (indirect, don't need updating w/ new fields)

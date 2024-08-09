@@ -957,6 +957,19 @@ class E6PostTags extends e621.PostTags implements ITagData {
         "meta": List<dynamic>.from(meta.map((x) => x)),
         "copyright": List<dynamic>.from(copyright.map((x) => x)),
       };
+  static const specialTags = [
+    "third-party_edit",
+    "conditional_dnp",
+  ];
+  static const specialArtistTags = [
+    "third-party_edit",
+    "conditional_dnp",
+  ];
+
+  /// Has a listed artist (i.e. contains something other than special artist tags like "third-party_edit")
+  bool get hasArtist => artist.any((e) => !specialArtistTags.contains(e));
+  Iterable<String> get artistFiltered =>
+      artist.where((e) => !specialArtistTags.contains(e));
 }
 
 class E6Flags extends e621.PostFlags {

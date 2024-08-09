@@ -1,4 +1,3 @@
-
 abstract interface class IRoute<T extends IRoute<T>> {
   String get routeName;
   // IRouteArguments getArgs(BuildContext context) => ModalRoute.of(context)!.settings.arguments as IRouteArguments;
@@ -8,5 +7,5 @@ abstract interface class IRoute<T extends IRoute<T>> {
 
 // }
 // abstract interface class IQueryArguments<T extends IQueryArguments<T>> extends IRouteArguments<IQueryArguments> {
-  
+
 // }

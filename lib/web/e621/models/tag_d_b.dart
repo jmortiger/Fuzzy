@@ -343,16 +343,17 @@ enum TagCategory with PrettyPrintEnum {
   bool get isValidCategory => this != _error && this != invalid;
 
   dynamic toJson() => index.toString();
-  factory TagCategory.fromJson(dynamic json) => switch (int.parse(json as String)) {
-    0 => TagCategory.general,
-    1 => TagCategory.artist,
-    2 => TagCategory._error,
-    3 => TagCategory.copyright,
-    4 => TagCategory.character,
-    5 => TagCategory.species,
-    6 => TagCategory.invalid,
-    7 => TagCategory.meta,
-    8 => TagCategory.lore,
-    _ => throw UnsupportedError("type not supported"),
-  };
+  factory TagCategory.fromJson(dynamic json) =>
+      switch (int.parse(json as String)) {
+        0 => TagCategory.general,
+        1 => TagCategory.artist,
+        2 => TagCategory._error,
+        3 => TagCategory.copyright,
+        4 => TagCategory.character,
+        5 => TagCategory.species,
+        6 => TagCategory.invalid,
+        7 => TagCategory.meta,
+        8 => TagCategory.lore,
+        _ => throw UnsupportedError("type not supported"),
+      };
 }

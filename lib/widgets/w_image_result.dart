@@ -240,61 +240,60 @@ class WImageResult extends StatelessWidget {
       logger.finest("Currently selected post ids: ${srl?.selectedPostIds}");
       logger.finest("Currently selected indices: ${srl?.selectedIndices}");
     }
+
     Future<void> viewPost() async {
       SavedDataE6.init();
-              if (!disallowSelections && getSc(context, false).isMpcSync) {
-                await getSc(context, false)
-                    .mpcSync
-                    .updateCurrentPostIndex(index);
-              }
-              Navigator.push<IReturnsTags>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => allowPostViewNavigation && !disallowSelections
-                        ? useLinkedList
-                            ? const Placeholder() //_buildLinkedSwiper(context)
-                            : /* Provider.of<SearchCacheLegacy>(context,
+      if (!disallowSelections && getSc(context, false).isMpcSync) {
+        await getSc(context, false).mpcSync.updateCurrentPostIndex(index);
+      }
+      Navigator.push<IReturnsTags>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => allowPostViewNavigation && !disallowSelections
+                ? useLinkedList
+                    ? const Placeholder() //_buildLinkedSwiper(context)
+                    : /* Provider.of<SearchCacheLegacy>(context,
                                         listen: false)
                                     .isMpcSync
                                 ?  */
-                            old.PostSwipePageManaged(
-                                initialIndex: index,
-                                initialPageIndex:
-                                    getSc(context, false).mpcSync.currentPageIndex,
-                                posts: getSc(context, false).mpcSync,
-                                onAddToSearch: getOnAddToSearch(context),
-                                tagsToAdd: [],
-                                // initialPageIndex: ,
-                              )
-                        : old.PostSwipePage.postsCollection(
-                            initialIndex: index,
-                            posts: postsCache ??
-                                Provider.of<SearchCacheLegacy>(context,
-                                        listen: false)
-                                    .posts!
-                                    .posts,
-                            onAddToSearch: getOnAddToSearch(context),
-                            tagsToAdd: [],
-                          )
-                    /* : PostViewPage(
+                    old.PostSwipePageManaged(
+                        initialIndex: index,
+                        initialPageIndex:
+                            getSc(context, false).mpcSync.currentPageIndex,
+                        posts: getSc(context, false).mpcSync,
+                        onAddToSearch: getOnAddToSearch(context),
+                        tagsToAdd: [],
+                        // initialPageIndex: ,
+                      )
+                : old.PostSwipePage.postsCollection(
+                    initialIndex: index,
+                    posts: postsCache ??
+                        Provider.of<SearchCacheLegacy>(context, listen: false)
+                            .posts!
+                            .posts,
+                    onAddToSearch: getOnAddToSearch(context),
+                    tagsToAdd: [],
+                  )
+            /* : PostViewPage(
                             postListing: imageListing,
                             onAddToSearch: getOnAddToSearch(context),
                             tagsToAdd: [],
                           ) */
-                    ,
-                  )).then<void>((v) {
-                if (v?.tagsToAdd?.firstOrNull != null) {
-                  try {
-                    getSc(context, false).mpcSync.searchText +=
-                        v!.tagsToAdd!.foldToString();
-                  } catch (e, s) {
-                    logger.severe(e, e, s);
-                    getSc(context, false).mpcSync.searchText +=
-                        v!.tagsToAdd!.foldToString();
-                  }
-                }
-              });
+            ,
+          )).then<void>((v) {
+        if (v?.tagsToAdd?.firstOrNull != null) {
+          try {
+            getSc(context, false).mpcSync.searchText +=
+                v!.tagsToAdd!.foldToString();
+          } catch (e, s) {
+            logger.severe(e, e, s);
+            getSc(context, false).mpcSync.searchText +=
+                v!.tagsToAdd!.foldToString();
+          }
+        }
+      });
     }
+
     return Positioned.fill(
       child: Material(
         color: Colors.transparent,
@@ -516,6 +515,7 @@ enum PostInfoPaneItem {
   hasActiveChildren,
   isFavorited,
   isInPools,
+  firstArtist,
   ;
 
   String toJson() => name;
@@ -529,6 +529,7 @@ enum PostInfoPaneItem {
         String j when j == hasActiveChildren.name => hasActiveChildren,
         String j when j == isFavorited.name => isFavorited,
         String j when j == isInPools.name => isInPools,
+        String j when j == firstArtist.name => firstArtist,
         _ => throw UnsupportedError("type not supported"),
       };
   InlineSpan getMyTextSpan(E6PostResponse e6Post) => switch (this) {
@@ -602,5 +603,27 @@ enum PostInfoPaneItem {
                   color: Colors.green,
                 ))
             : const TextSpan(),
+        firstArtist => e6Post.tags.hasArtist
+            ? TextSpan(
+                // text: "A: ${e6Post.tags.artistFiltered.first} ",
+                text: e6Post.tags.artistFiltered.first,
+                style: const TextStyle(
+                  color: Colors.white,
+                ))
+            : const TextSpan(),
       };
+  // static Iterable<InlineSpan> getMyTextSpans(
+  //     E6PostResponse e6Post, Iterable<PostInfoPaneItem> items) {
+  //   var children = <InlineSpan>[];
+  //   // var ret = TextSpan(text: " ", chil);
+  //   var length = 0;
+  //   for (var e in items.map((e) => e.getMyTextSpan(e6Post))) {
+  //     length += e.toPlainText().length;
+  //     children.add(e);
+  //     if (length >= SearchView.i.maxCharsInPostInfo) {
+  //       return children..add(const TextSpan(text: "..."));
+  //     }
+  //   }
+  //   return children;
+  // }
 }

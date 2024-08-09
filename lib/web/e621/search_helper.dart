@@ -155,7 +155,6 @@ enum Order {
       };
 }
 
-
 const modifierTagCompleteListString = [
   "order:id",
   "order:random",
@@ -276,7 +275,6 @@ const modifierTagStubListString = [
 ];
 
 const allModifierTagsList = [
-  
   "order:id",
   "order:random",
   "order:score",

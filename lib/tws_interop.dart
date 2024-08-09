@@ -100,7 +100,8 @@ class SavedSearch {
               "${previousValue != null ? "$previousValue " : ""}$element",
         )!,
         title: title,
-        parent: patterns == null ? null : patterns[title.split(delimiter).first],
+        parent:
+            patterns == null ? null : patterns[title.split(delimiter).first],
         uniqueId: null,
       );
   static Map<String, String>? format(String? pattern) {

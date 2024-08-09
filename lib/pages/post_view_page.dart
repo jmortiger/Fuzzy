@@ -233,9 +233,9 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
     required String url,
     double? screenWidth,
   }) {
-    final maxWidth = screenWidth ??
-        MediaQuery.sizeOf(context).width *
-            MediaQuery.devicePixelRatioOf(context);
+    final mqWidth = MediaQuery.sizeOf(context).width,
+        maxWidth =
+            screenWidth ?? mqWidth * MediaQuery.devicePixelRatioOf(context);
     final maxHeight = (h / w) * maxWidth;
     final ar = w / h;
     logger.log(
@@ -246,74 +246,77 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
       lm.LogLevel.FINE,
       "Constraints: maxWidth $maxWidth maxHeight $maxHeight ratio ${maxWidth / maxHeight}",
     );
-    return ListView(
-      children: [
-        Container(
-          constraints: BoxConstraints(
-            maxWidth: maxWidth,
-            maxHeight: maxHeight,
-          ),
-          child: AspectRatio(
-            aspectRatio: ar,
-            child: _buildMainContent(url, w, h),
-          ),
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Text(
-                "ID: ${e6Post.id}, W: $w, H: $h, screenWidth: ${maxWidth.toStringAsPrecision(5)}, MQWidth: ${MediaQuery.sizeOf(context).width.toStringAsPrecision(5)}"),
-          ],
-        ),
-        if (e6Post.relationships.hasParent ||
-            e6Post.relationships.hasActiveChildren)
-          // TODO: Render a sliver
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              if (e6Post.relationships.hasParent) const Text("Parent: "),
-              if (e6Post.relationships.hasParent)
-                _buildSinglePostViewButton(
-                    context, e6Post.relationships.parentId!),
-              if (e6Post.relationships.hasActiveChildren)
-                const Text("Children: "),
-              if (e6Post.relationships.hasActiveChildren)
-                ...e6Post.relationships.children.map(
-                  (e) => _buildSinglePostViewButton(context, e),
-                ),
-            ]),
-          ),
-        if (e6Post.pools.firstOrNull != null)
-          Row(children: [
-            const Text("Pools: "),
-            ...e6Post.pools.map((e) => TextButton(
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    "${PoolViewPageBuilder.routeNameString}?poolId=$e",
-                    // MaterialPageRoute(
-                    //   builder: (context) => PoolViewPageBuilder(poolId: e),
-                    // ),
-                  );
-                  // Navigator.push(
-                  //   context,
-                  //   MaterialPageRoute(
-                  //     builder: (context) => PoolViewPageBuilder(poolId: e),
-                  //   ),
-                  // );
-                },
-                child: Text(e.toString()))),
-          ]),
-        if (e6Post.description.isNotEmpty)
-          ExpansionTile(
-            title: const ListTile(
-              title: Text("Description", style: descriptionTheme),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            constraints: BoxConstraints(
+              maxWidth: maxWidth,
+              maxHeight: maxHeight,
             ),
-            initiallyExpanded: PostView.i.startWithDescriptionExpanded,
-            children: [SelectableText(e6Post.description)],
+            child: AspectRatio(
+              aspectRatio: ar,
+              child: _buildMainContent(url, w, h),
+            ),
           ),
-        ..._buildTagsDisplay(context),
-      ],
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              SelectableText(
+                  "ID: ${e6Post.id}, W: $w, H: $h, screenWidth: ${maxWidth.toStringAsPrecision(5)}, MQWidth: ${mqWidth.toStringAsPrecision(5)}"),
+            ],
+          ),
+          if (e6Post.relationships.hasParent ||
+              e6Post.relationships.hasActiveChildren)
+            // TODO: Render a sliver
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                if (e6Post.relationships.hasParent) const Text("Parent: "),
+                if (e6Post.relationships.hasParent)
+                  _buildSinglePostViewButton(
+                      context, e6Post.relationships.parentId!),
+                if (e6Post.relationships.hasActiveChildren)
+                  const Text("Children: "),
+                if (e6Post.relationships.hasActiveChildren)
+                  ...e6Post.relationships.children.map(
+                    (e) => _buildSinglePostViewButton(context, e),
+                  ),
+              ]),
+            ),
+          if (e6Post.pools.firstOrNull != null)
+            Row(children: [
+              const Text("Pools: "),
+              ...e6Post.pools.map((e) => TextButton(
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      "${PoolViewPageBuilder.routeNameString}?poolId=$e",
+                      // MaterialPageRoute(
+                      //   builder: (context) => PoolViewPageBuilder(poolId: e),
+                      // ),
+                    );
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //     builder: (context) => PoolViewPageBuilder(poolId: e),
+                    //   ),
+                    // );
+                  },
+                  child: Text(e.toString()))),
+            ]),
+          if (e6Post.description.isNotEmpty)
+            ExpansionTile(
+              title: const ListTile(
+                title: Text("Description", style: descriptionTheme),
+              ),
+              initiallyExpanded: PostView.i.startWithDescriptionExpanded,
+              children: [SelectableText(e6Post.description)],
+            ),
+          ..._buildTagsDisplay(context),
+        ],
+      ),
     );
   }
 

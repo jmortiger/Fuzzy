@@ -70,7 +70,7 @@
 //   List<ImageConfig> get myList => widget.orderedImageAndConfigs ?? _myList;
 //   List<ImageConfig>? get list => widget.orderedImageAndConfigs;
 //   ImageConfigBuilder? get builder => widget.builder;
-//   Image? 
+//   Image?
 
 //   @override
 //   void initState() {

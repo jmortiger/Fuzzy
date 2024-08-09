@@ -28,9 +28,11 @@ abstract interface class IImageInfoBare {
   bool get hasValidUrl => Uri.tryParse(url) != null;
   static bool hasValidUrlImpl(IImageInfoBare i) => Uri.tryParse(i.url) != null;
   String get extension;
-  static String extensionImpl(IImageInfoBare i) => i.url.substring(i.url.lastIndexOf(".") + 1);
+  static String extensionImpl(IImageInfoBare i) =>
+      i.url.substring(i.url.lastIndexOf(".") + 1);
   bool get isAVideo => extension == "webm" || extension == "mp4";
-  static bool isAVideoImpl(IImageInfoBare i) => i.extension == "webm" || i.extension == "mp4";
+  static bool isAVideoImpl(IImageInfoBare i) =>
+      i.extension == "webm" || i.extension == "mp4";
 }
 
 abstract interface class IImageInfo extends IImageInfoBare {

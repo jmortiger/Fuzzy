@@ -299,12 +299,13 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                     // scrollable: true,
                   );
                 },
-              )/* .then((v) => v != null
+              ) /* .then((v) => v != null
                   ? widget.onSearchRequested?.call(
                       SearchView.i.preferSetShortname
                           ? v.searchByShortname
                           : v.searchById)
-                  : null) */;
+                  : null) */
+                  ;
             },
           ),
         ],
