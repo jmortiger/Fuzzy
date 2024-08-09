@@ -42,6 +42,7 @@ sealed class E621 extends Site {
   ]);
   @event
   static final searchEnded = JEvent<SearchResultArgs>();
+  // static StreamController<(PostPageSearchParameters, Iterable<E6PostResponse>)> postSearches;
   @event
   static final nonUserSearchBegan = JEvent<SearchArgs>();
   @event
@@ -119,10 +120,20 @@ sealed class E621 extends Site {
       },
     );
     print("fillTagTemplate: After: $tags", lm.LogLevel.INFO);
-    tags +=
-        AppSettings.i?.blacklistedTags.map((e) => "-$e").foldToString(" ") ??
-            "";
-    print("fillTagTemplate: After Blacklist: $tags", lm.LogLevel.INFO);
+    // if (!tags.contains(RegExp("(?<=^|\\+${RegExpExt.whitespacePattern})fav:${loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username ?? " "}(?=\$|${RegExpExt.whitespacePattern})", caseSensitive: false))) {
+    if (!tags.contains(RegExp(
+        r"(?<=^|[\u2028\n\r\u000B\f\u2029\u0085 	]|\+)fav:"
+        "${loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username ?? " "}"
+        r"(?=$|[\u2028\n\r\u000B\f\u2029\u0085 	])",
+        caseSensitive: false))) {
+      tags +=
+          AppSettings.i?.blacklistedTags.map((e) => "-$e").foldToString(" ") ??
+              "";
+      print("fillTagTemplate: After Blacklist: $tags", lm.LogLevel.INFO);
+    } else {
+      print("fillTagTemplate: User favorite search, not applying blacklist",
+          lm.LogLevel.INFO);
+    }
     return tags;
   }
 

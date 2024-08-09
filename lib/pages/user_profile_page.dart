@@ -39,7 +39,7 @@ class UserProfilePage extends StatelessWidget implements IRoute<UserProfilePage>
         ),
       ),
       body: Column(children: [
-        // avatarId
+        // TODO: avatarId
         Text("Created At: ${user.createdAt}"),
         Text("Level: ${user.levelString}(${user.level})"),
         Text("Post Update Count: ${user.postUpdateCount}"),
@@ -50,7 +50,7 @@ class UserProfilePage extends StatelessWidget implements IRoute<UserProfilePage>
         Text("Can Upload Free: ${user.canUploadFree}"),
         Text("Base Upload Limit: ${user.baseUploadLimit}"),
         if (userL != null)
-          Text("FavCount: ${userL!.favoriteCount}/${userL!.favoriteLimit}"),
+          Text("FavCount: ${userL!.favoriteCount}/${userL!.favoriteLimit} (${userL!.favoriteLimit - userL!.favoriteCount} left)"),
         if (userL != null) Text("Tag Query Limit: ${userL!.tagQueryLimit}"),
         if (userL != null) Text("Blacklist Users: ${userL!.blacklistUsers}"),
         if (userL != null) Text("Blacklisted Tags: ${userL!.blacklistedTags}"),
