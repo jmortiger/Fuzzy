@@ -16,6 +16,7 @@ class AppSettingsRecord {
   final Set<String> favoriteTags;
   final Set<String> blacklistedTags;
   final bool forceSafe;
+  final int maxSearchesToSave;
   final SearchViewData searchView;
 
   const AppSettingsRecord({
@@ -24,6 +25,7 @@ class AppSettingsRecord {
     required this.blacklistedTags,
     required this.searchView,
     required this.forceSafe,
+    required this.maxSearchesToSave,
   });
   static const defaultSettings = AppSettingsRecord(
     postView: PostViewData.defaultData,
@@ -33,6 +35,7 @@ class AppSettingsRecord {
       "type:swf",
     },
     forceSafe: false,
+    maxSearchesToSave: 200,
   );
   factory AppSettingsRecord.fromJson(JsonOut json) => AppSettingsRecord(
         postView: PostViewData.fromJson(
@@ -45,6 +48,7 @@ class AppSettingsRecord {
             (json["blacklistedTags"] as List?)?.cast<String>().toSet() ??
                 defaultSettings.blacklistedTags,
         forceSafe: json["forceSafe"] ?? defaultSettings.forceSafe,
+        maxSearchesToSave: json["maxSearchesToSave"] ?? defaultSettings.maxSearchesToSave,
       );
   JsonOut toJson() => {
         "postView": postView,
@@ -52,12 +56,12 @@ class AppSettingsRecord {
         "favoriteTags": favoriteTags.toList(),
         "blacklistedTags": blacklistedTags.toList(),
         "forceSafe": forceSafe,
+        "maxSearchesToSave": maxSearchesToSave,
       };
 }
 
 class AppSettings implements AppSettingsRecord {
   // #region FileIO
-  // static const localStoragePrefix = "settings";
   static const fileName = "settings.json";
   static final _fileFullPath = LazyInitializer(
       () async => "${await util.appDataPath.getItem()}/$fileName");
@@ -77,17 +81,6 @@ class AppSettings implements AppSettingsRecord {
         ? ((await devData.getItem())["settings"] == null
             ? defaultSettings
             : AppSettings.fromJson(devData.$["settings"]))
-        // : await (myFile
-        //     .getItem()
-        //     .then((v) => v.readAsString())
-        //     .then((v2) => AppSettings.fromJson(
-        //           jsonDecode((v2).printMe()),
-        //         ))
-        //   ..then((v) {
-        //     PostView._instance.itemSafe ??= v.postView;
-        //     SearchView._instance.itemSafe ??= v.searchView;
-        //     return v;
-        //   }));
         : AppSettings.fromJson(
             jsonDecode(
                 (await (await myFile.getItem()).readAsString()).printMe()),
@@ -104,12 +97,6 @@ class AppSettings implements AppSettingsRecord {
     };
   }
 
-  /* static Future<String?> loadStringAsync() async {
-    !Platform.isWeb ? await (await myFile.getItem()).readAsString()
-    : (() {
-      
-    })();
-  } */
   static Future<io.File?> writeSettingsToFile([AppSettings? a]) async =>
       switch (Platform.getPlatform()) {
         Platform.web => null,
@@ -141,21 +128,13 @@ class AppSettings implements AppSettingsRecord {
       AppSettings.fromRecord(AppSettingsRecord.fromJson(json));
   // #endregion JSON (indirect, don't need updating w/ new fields)
 
-  // static List<(String, dynamic Function(), void Function(dynamic))> getFields(AppSettings i) => [
-  //   ("postView", () => i.postView as dynamic, (v) => i.postView = v),
-  //   ("searchView", () => i.searchView as dynamic, (v) => i.searchView = v),
-  //   ("favoriteTags", () => i.favoriteTags as dynamic, (v) => i.favoriteTags = v),
-  //   ("blacklistedTags", () => i.blacklistedTags as dynamic, (v) => i.blacklistedTags = v),
-  // ];
-  // static String? loadFromLocalStorage() {
-
-  // }
   factory AppSettings.fromRecord(AppSettingsRecord r) => AppSettings.all(
         postView: PostView.fromData(r.postView),
         searchView: SearchView.fromData(r.searchView),
         favoriteTags: Set<String>.from(r.favoriteTags),
         blacklistedTags: Set<String>.from(r.blacklistedTags),
         forceSafe: r.forceSafe,
+        maxSearchesToSave: r.maxSearchesToSave,
       );
   AppSettingsRecord toRecord() => AppSettingsRecord(
         postView: _postView.toData(),
@@ -163,18 +142,21 @@ class AppSettings implements AppSettingsRecord {
         favoriteTags: Set.unmodifiable(_favoriteTags),
         blacklistedTags: Set.unmodifiable(_blacklistedTags),
         forceSafe: _forceSafe,
+        maxSearchesToSave: _maxSearchesToSave,
       );
-  AppSettings({
-    PostView? postView,
-    SearchView? searchView,
-    Set<String>? favoriteTags,
-    Set<String>? blacklistedTags,
-    bool? forceSafe,
-  })  : _postView = postView ?? defaultSettings.postView,
-        _searchView = searchView ?? defaultSettings.searchView,
-        _favoriteTags = favoriteTags ?? defaultSettings._favoriteTags,
-        _blacklistedTags = blacklistedTags ?? defaultSettings._blacklistedTags,
-        _forceSafe = forceSafe ?? defaultSettings._forceSafe;
+  // AppSettings({
+  //   PostView? postView,
+  //   SearchView? searchView,
+  //   Set<String>? favoriteTags,
+  //   Set<String>? blacklistedTags,
+  //   bool? forceSafe,
+  //   int? maxSearchesToSave,
+  // })  : _postView = postView ?? defaultSettings.postView,
+  //       _searchView = searchView ?? defaultSettings.searchView,
+  //       _favoriteTags = favoriteTags ?? defaultSettings._favoriteTags,
+  //       _blacklistedTags = blacklistedTags ?? defaultSettings._blacklistedTags,
+  //       _forceSafe = forceSafe ?? defaultSettings._forceSafe,
+  //       _maxSearchesToSave = maxSearchesToSave ?? defaultSettings._maxSearchesToSave;
   void overwriteWithRecord([
     AppSettingsRecord r = AppSettingsRecord.defaultSettings,
   ]) {
@@ -183,6 +165,8 @@ class AppSettings implements AppSettingsRecord {
     _favoriteTags = Set.of(r.favoriteTags);
     _blacklistedTags = Set.of(r.blacklistedTags);
     _forceSafe = r.forceSafe;
+    _forceSafe = r.forceSafe;
+    _maxSearchesToSave = r.maxSearchesToSave;
   }
 
   AppSettings.all({
@@ -191,11 +175,13 @@ class AppSettings implements AppSettingsRecord {
     required Set<String> favoriteTags,
     required Set<String> blacklistedTags,
     required bool forceSafe,
+    required int maxSearchesToSave,
   })  : _postView = postView,
         _searchView = searchView,
         _favoriteTags = favoriteTags,
         _blacklistedTags = blacklistedTags,
-        _forceSafe = forceSafe;
+        _forceSafe = forceSafe,
+        _maxSearchesToSave = maxSearchesToSave;
   PostView _postView;
   @override
   PostView get postView => _postView;
@@ -216,6 +202,10 @@ class AppSettings implements AppSettingsRecord {
   @override
   bool get forceSafe => _forceSafe;
   set forceSafe(bool value) => _forceSafe = value;
+  int _maxSearchesToSave;
+  @override
+  int get maxSearchesToSave => _maxSearchesToSave;
+  set maxSearchesToSave(int value) => _maxSearchesToSave = value;
 }
 
 class PostViewData {
@@ -489,7 +479,6 @@ class SearchViewData {
   static const defaultData = SearchViewData(
     postsPerPage: 50,
     postsPerRow: 3,
-    maxCharsInPostInfo: 100,
     postInfoBannerItems: PostInfoPaneItem.values,
     widthToHeightRatio: 1,
     useProgressiveImages: true,
@@ -497,6 +486,7 @@ class SearchViewData {
     lazyLoad: false,
     lazyBuilding: false,
     preferSetShortname: true,
+    maxCharsInPostInfo: 100,
   );
   final int postsPerPage;
   final int postsPerRow;

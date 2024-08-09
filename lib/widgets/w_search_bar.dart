@@ -58,18 +58,18 @@ class _WSearchBarState extends State<WSearchBar> {
     logger.finer("lastTermIndex: $lastTermIndex");
     // logger.finer("currSubString: $currSubString");
     logger.finer("currPrefix: $currPrefix");
-    if (allSuggestionSourcesEmpty() || currText.isEmpty) {
+    if (allSuggestionSourcesEmpty() /*  || currText.isEmpty */) {
       return const Iterable<String>.empty();
     }
     var db = retrieveTagDB();
     if (db == null) {
-      var r = allModifierTagsList
+      var r = modifierTagsSuggestionsList
           .map((e) => "$currPrefix$e")
           .where((v) => v.contains(currText));
       if ((AppSettings.i?.favoriteTags.isEmpty ?? true) &&
           !SavedDataE6.isInit &&
           CachedSearches.searches.isEmpty) {
-        return r.toList(growable: false)
+        return r.take(50).toList(growable: false)
           ..sort(util.getFineInverseSimilarityComparator(
             currText,
           ));
@@ -81,7 +81,7 @@ class _WSearchBarState extends State<WSearchBar> {
             var relatedSearches = CachedSearches.searches.where(
               (element) => element.searchString.contains(currText),
             );
-            return relatedSearches.mapAsList((e, i, l) => e.searchString)
+            return relatedSearches.map((e) => e.searchString).toList()
               ..sort(
                 util.getFineInverseSimilarityComparator(currText),
               )
@@ -98,16 +98,14 @@ class _WSearchBarState extends State<WSearchBar> {
               .where(
                 (v) =>
                     v.verifyUniqueness() &&
-                    !currText.contains(
-                      "${E621.delimiter}${v.uniqueId}",
-                    ),
+                    !currText.contains("${E621.delimiter}${v.uniqueId}")/*  &&
+                    "${E621.delimiter}${v.uniqueId}".contains(currText) */,
               )
               .map((v) => "$currPrefix ${E621.delimiter}${v.uniqueId}")
               .toList()
             ..sort(
               util.getFineInverseSimilarityComparator(currText),
             ),
-        ...r,
         if (AppSettings.i?.favoriteTags.isNotEmpty ?? false)
           ...AppSettings.i!.favoriteTags
               .where((element) => !currText.contains(element))
@@ -116,6 +114,7 @@ class _WSearchBarState extends State<WSearchBar> {
             ..sort(
               util.getFineInverseSimilarityComparator(currText),
             ),
+        ...r.take(20),
       };
     }
     return genSearchOptionsFromTagDB(

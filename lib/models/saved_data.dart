@@ -318,23 +318,34 @@ class SavedDataE6 extends ChangeNotifier {
     searches ??= SavedDataE6.searches;
     var ret = true;
     for (var i = 0; i < searches.length; i++) {
-      for (var j = i; j < searches.length; j++) {
-        if (i == j) continue;
-        if (searches[i].uniqueId == searches[j].uniqueId) {
+      for (var j = i + 1; j < searches.length; j++) {
+        // if (i == j) continue;
+        if (searches[i].uniqueId.isNotEmpty && searches[i].uniqueId == searches[j].uniqueId) {
           ret = false;
           if (!resolve) {
             return ret;
           }
           var store = searches[j];
-          store = store.copyWith(
+          searches[j] = store.copyWith(
             uniqueId:
                 "${store.uniqueId}${validIdCharacters[Random().nextInt(validIdCharacters.length)]}",
           );
-          searches[j] = store;
         }
       }
     }
     return ret;
+  }
+
+  /// Returns [true] if no entries have the same id (empty, null or otherwise), and false otherwise.
+  static bool isUnique(
+    String proposedValue, {
+    ListNotifier<SavedSearchData>? searches,
+  }) {
+    searches ??= SavedDataE6.searches;
+    for (var e in searches) {
+      if (e.uniqueId == proposedValue) return false;
+    }
+    return true;
   }
 
   static void _$modify(void Function() modifier) {
@@ -808,7 +819,11 @@ final class SavedSearchData extends SavedEntry {
 
   @override
   bool verifyUniqueness() => !SavedDataE6.all.any(
-        (e) => e.searchString != searchString && e.uniqueId == uniqueId,
+        // (e) => e.searchString != searchString && e.uniqueId == uniqueId,
+        (e) =>
+            e.searchString != searchString &&
+            e.uniqueId == uniqueId &&
+            uniqueId.isNotEmpty,
       );
   // @override
   // bool verifyUniqueness() => !SavedDataE6Legacy._instance.$.all.any(
@@ -888,7 +903,8 @@ Future<SavedElementRecord?> showSavedElementEditDialogue(
                   (e) => ListTile(
                     title: Text(e),
                     onTap: () => controller.closeView(e),
-                    subtitle: Text("${SavedDataE6.parentCount[e]} children"),
+                    subtitle:
+                        Text("${SavedDataE6.parentCount[e] ?? "No"} children"),
                   ),
                 );
               },
@@ -897,6 +913,12 @@ Future<SavedElementRecord?> showSavedElementEditDialogue(
             TextField(
               onChanged: (value) => uniqueId = value,
               controller: defaultSelection(initialUniqueId),
+              decoration: InputDecoration(
+                errorText:
+                    uniqueId.isNotEmpty && !SavedDataE6.isUnique(uniqueId)
+                        ? "Must be unique or empty"
+                        : null,
+              ),
             ),
           ],
         ),
@@ -929,159 +951,3 @@ typedef SavedElementRecord = ({
   String? parent,
   String? uniqueId,
 });
-
-// @immutable
-// final class SavedSearchDataMutable implements SavedSearchData {
-//   static String tagListToString(Iterable<String> tags, String delimiter) =>
-//       tags.reduce((acc, e) => "$acc$delimiter$e");
-//   static const e621Delimiter = " ";
-//   @override
-//   final String delimiter;
-//   @override
-//   final String title;
-//   @override
-//   final String uniqueId;
-//   final Set<String> tags;
-//   @override
-//   final String searchString;
-//   // String get searchString => tagListToString(tags, delimiter);
-//   @override
-//   final String parent;
-//   final bool isFavorite;
-
-//   const SavedSearchDataMutable.$const({
-//     required this.tags,
-//     this.title = "",
-//     this.parent = "",
-//     this.uniqueId = "",
-//     this.isFavorite = false,
-//     this.delimiter = e621Delimiter,
-//     this.searchString = "",
-//   });
-//   SavedSearchDataMutable({
-//     required this.tags,
-//     this.title = "",
-//     this.parent = "",
-//     this.uniqueId = "",
-//     this.isFavorite = false,
-//     this.delimiter = e621Delimiter,
-//   }) : searchString = tags.reduce((acc, e) => "$acc$delimiter$e");
-//   SavedSearchDataMutable.withDefaults({
-//     required this.tags,
-//     String title = "",
-//     this.parent = "",
-//     this.uniqueId = "",
-//     this.isFavorite = false,
-//     this.delimiter = e621Delimiter,
-//   })  : title = title.isEmpty ? tagListToString(tags, delimiter) : title,
-//         searchString = tags.reduce((acc, e) => "$acc$delimiter$e");
-
-//   SavedSearchDataMutable.fromTagsString({
-//     required this.searchString,
-//     String title = "",
-//     this.parent = "",
-//     this.uniqueId = "",
-//     this.isFavorite = false,
-//     this.delimiter = e621Delimiter,
-//   })  : title = title.isNotEmpty ? title : searchString,
-//         tags = searchString.split(delimiter).toSet();
-
-//   SavedSearchDataMutable.fromSearchString({
-//     required String searchString,
-//     String title = "",
-//     String parent = "",
-//     String uniqueId = "",
-//     String delimiter = e621Delimiter,
-//     bool isFavorite = false,
-//   }) : this.fromTagsString(
-//             searchString: searchString,
-//             delimiter: delimiter,
-//             isFavorite: isFavorite,
-//             parent: parent,
-//             uniqueId: uniqueId,
-//             title: title);
-
-//   SavedSearchDataMutable copyWith({
-//     String? title,
-//     String? searchString,
-//     // Set<String>? tags,
-//     String? parent,
-//     String? uniqueId,
-//     bool? isFavorite,
-//     String? delimiter,
-//   }) =>
-//       SavedSearchDataMutable.fromTagsString(
-//         searchString: searchString ?? this.searchString,
-//         title: title ?? this.title,
-//         parent: parent ?? this.parent,
-//         isFavorite: isFavorite ?? this.isFavorite,
-//         delimiter: delimiter ?? this.delimiter,
-//         uniqueId: uniqueId ?? this.uniqueId,
-//       );
-
-//   @override
-//   int compareTo(SavedEntry other) => (title.compareTo(other.title) != 0)
-//       ? title.compareTo(other.title)
-//       : searchString.compareTo(other.searchString);
-
-//   @override
-//   bool operator ==(Object other) {
-//     return other.runtimeType == runtimeType &&
-//         other is SavedSearchDataMutable &&
-//         other.delimiter == delimiter &&
-//         other.isFavorite == isFavorite &&
-//         other.parent == parent &&
-//         other.searchString == searchString &&
-//         other.title == title &&
-//         other.uniqueId == uniqueId;
-//     //super == other;
-//   }
-
-//   @override
-//   int get hashCode {
-//     return delimiter.hashCode % 32767 +
-//         isFavorite.hashCode % 32767 +
-//         parent.hashCode % 32767 +
-//         searchString.hashCode % 32767 +
-//         title.hashCode % 32767 +
-//         uniqueId.hashCode % 32767;
-//     // return super.hashCode;
-//   }
-
-//   factory SavedSearchDataMutable.fromJson(Map<String, dynamic> json) =>
-//       SavedSearchDataMutable(
-//         title: json["title"],
-//         parent: json["parent"],
-//         uniqueId: json["uniqueId"],
-//         isFavorite: json["isFavorite"],
-//         delimiter: json["delimiter"],
-//         tags: (json["tags"] as List).cast<String>().toSet(),
-//       );
-//   Map<String, dynamic> toJson() => {
-//         "tags": tags.toList(),
-//         "title": title,
-//         "parent": parent,
-//         "uniqueId": uniqueId,
-//         "isFavorite": isFavorite,
-//         "delimiter": delimiter,
-//       };
-
-//   @override
-//   SavedSearchDataMutable validateUniqueness() {
-//     var all = SavedDataE6Legacy._instance.$.all;
-//     var ret = this;
-//     while (!ret.verifyUniqueness()) {
-//       ret = copyWith(
-//         uniqueId: "$uniqueId${SavedEntry.validIdCharacters[Random().nextInt(
-//           SavedEntry.validIdCharacters.length,
-//         )]}",
-//       );
-//     }
-//     return ret;
-//   }
-
-//   @override
-//   bool verifyUniqueness() => !SavedDataE6Legacy._instance.$.all.any(
-//         (e) => e.searchString != searchString && e.uniqueId == uniqueId,
-//       );
-// }
