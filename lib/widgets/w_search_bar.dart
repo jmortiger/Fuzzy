@@ -158,7 +158,7 @@ class _WSearchBarState extends State<WSearchBar> {
       sc.parameters = PostPageSearchParameters(
         limit: SearchView.i.postsPerPage,
         tags: s,
-        page: 0,
+        pageIndex: 0,
       );
     }
 

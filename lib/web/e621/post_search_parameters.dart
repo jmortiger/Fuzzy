@@ -64,27 +64,75 @@ final class PostPageSearchParameters
 
   const PostPageSearchParameters({
     this.tags,
-    int? page,
+    int? pageIndex,
     this.limit,
-  }) : pageNumber = page;
+  }) : pageNumber = pageIndex == null ? null : pageIndex + 1;
+  const PostPageSearchParameters.withIndex({
+    this.tags,
+    int? pageIndex,
+    this.limit,
+  }) : pageNumber = pageIndex == null ? null : pageIndex + 1;
+  const PostPageSearchParameters.withNumber({
+    this.tags,
+    this.pageNumber,
+    this.limit,
+  });
   PostPageSearchParameters.fromSlim({
     PostSearchParametersSlim? s,
-    int? page,
-  }) : this(tags: s?.tags, limit: s?.limit, page: page);
+    int? pageIndex,
+  }) : this(tags: s?.tags, limit: s?.limit, pageIndex: pageIndex);
 
   @override
   PostPageSearchParameters copyWith({
     String? tags,
     int? limit,
-    int? page,
+    int? pageIndex,
     String? username,
     String? apiKey,
   }) =>
       PostPageSearchParameters(
         tags: tags ?? this.tags,
         limit: limit ?? this.limit,
-        page: page?.toInt() ?? pageNumber,
+        pageIndex: pageIndex ?? pageIndex,
       );
+  PostPageSearchParameterRecord toRecord() =>
+      PostPageSearchParameterRecord.withNumber(
+        tags: tags,
+        limit: limit,
+        pageNumber: pageNumber,
+      );
+}
+
+final class PostPageSearchParameterRecord extends PostPageSearchParameters {
+  const PostPageSearchParameterRecord({
+    super.tags,
+    super.pageIndex,
+    super.limit,
+  });
+  const PostPageSearchParameterRecord.withIndex({
+    super.tags,
+    super.pageIndex,
+    super.limit,
+  });
+  const PostPageSearchParameterRecord.withNumber({
+    String? tags,
+    int? pageNumber,
+    int? limit,
+  }) : super.withNumber(tags: tags, pageNumber: pageNumber, limit: limit);
+  PostPageSearchParameterRecord.fromSlim({
+    PostSearchParametersSlim? s,
+    int? pageIndex,
+  }) : this(tags: s?.tags, limit: s?.limit, pageIndex: pageIndex);
+  @override
+  bool operator ==(Object other) {
+    return other is PostPageSearchParameterRecord &&
+        limit == other.limit &&
+        pageNumber == other.pageNumber &&
+        tags == other.tags;
+  }
+
+  @override
+  int get hashCode => Object.hash(tags, pageNumber, limit);
 }
 
 /// if [page] is used, must be a page number, not an id & modifier.
@@ -97,24 +145,38 @@ final class PostPageSearchParametersFull extends PostPageSearchParameters
 
   PostPageSearchParametersFull({
     super.tags,
-    super.page,
+    super.pageIndex,
     super.limit,
     this.username,
     this.apiKey,
   });
+  PostPageSearchParametersFull.withIndex({
+    String? tags,
+    int? pageIndex,
+    int? limit,
+    this.username,
+    this.apiKey,
+  }) : super.withIndex(tags: tags, pageIndex: pageIndex, limit: limit);
+  PostPageSearchParametersFull.withNumber({
+    String? tags,
+    int? pageNumber,
+    int? limit,
+    this.username,
+    this.apiKey,
+  }) : super.withNumber(tags: tags, pageNumber: pageNumber, limit: limit);
 
   @override
   PostPageSearchParametersFull copyWith({
     String? tags,
     int? limit,
-    int? page,
+    int? pageIndex,
     String? username,
     String? apiKey,
   }) =>
       PostPageSearchParametersFull(
         tags: tags ?? this.tags,
         limit: limit ?? this.limit,
-        page: page?.toInt() ?? pageNumber,
+        pageIndex: pageIndex?.toInt() ?? pageIndex,
         username: username ?? this.username,
         apiKey: apiKey ?? this.apiKey,
       );
@@ -181,6 +243,7 @@ mixin PageSearchParameter {
   int? get id => usesPageOffset ? int.parse(page!.substring(1)) : null;
 
   int? get pageNumber => usesPageNumber ? int.parse(page!) : null;
+  int? get pageIndex => usesPageNumber ? int.parse(page!) - 1 : null;
 }
 bool isValidPage(String? page) =>
     (page?.isNotEmpty ?? false) &&
@@ -200,6 +263,8 @@ int? toId(String? page) =>
 
 int? toPageNumber(String? page) =>
     usesPageNumber(page) ? int.parse(page!) : null;
+int? toPageIndex(String? page) =>
+    usesPageNumber(page) ? int.parse(page!) - 1 : null;
 mixin PageSearchParameterStrict implements PageSearchParameter {
   @override
   String get page;
@@ -224,6 +289,8 @@ mixin PageSearchParameterStrict implements PageSearchParameter {
 
   @override
   int? get pageNumber => usesPageNumber ? int.parse(page) : null;
+  @override
+  int? get pageIndex => usesPageNumber ? int.parse(page) - 1 : null;
 }
 bool isValidPageStrict(String page) =>
     page.isNotEmpty &&
@@ -244,6 +311,8 @@ int? toIdStrict(String page) =>
 
 int? toPageNumberStrict(String page) =>
     usesPageNumberStrict(page) ? int.parse(page) : null;
+int? toPageIndexStrict(String page) =>
+    usesPageNumberStrict(page) ? int.parse(page) - 1 : null;
 
 /* abstract interface class IHasNullablePostSearchParameter<
     T extends IPostSearchParameters> {
@@ -268,17 +337,20 @@ final class PageParameterStrict with PageSearchParameterStrict {
   const PageParameterStrict(this.page);
 }
 
-/// If all parameters are valid, prioritizes the page offset over page number.
+/// If all parameters are valid, prioritizes the page offset over page number over page index.
 String? encodePageParameterFromOptions({
   String? pageModifier,
   int? id,
   int? pageNumber,
+  int? pageIndex,
 }) =>
     (id != null && (pageModifier == 'a' || pageModifier == 'b'))
         ? "$pageModifier$id"
         : pageNumber != null
             ? "$pageNumber"
-            : null;
+            : pageIndex != null
+                ? "${pageIndex + 1}"
+                : null;
 typedef PageOffset = ({String pageModifier, int id});
 typedef PageParsed = ({String? pageModifier, int? id, int? pageNumber});
 dynamic parsePageParameterDirectly(String? page) => !isValidPage(page)
@@ -288,5 +360,13 @@ dynamic parsePageParameterDirectly(String? page) => !isValidPage(page)
         : toPageNumberStrict(page)!;
 PageParsed? parsePageParameterStrict(String? page) => !isValidPage(page)
     ? null
-    : (pageModifier: toPageModifierStrict(page!), id: toIdStrict(page!), pageNumber: toPageNumberStrict(page!));
-PageParsed parsePageParameter(String? page) => (pageModifier: toPageModifierStrict(page!), id: toIdStrict(page!), pageNumber: toPageNumberStrict(page!));
+    : (
+        pageModifier: toPageModifierStrict(page!),
+        id: toIdStrict(page!),
+        pageNumber: toPageNumberStrict(page!)
+      );
+PageParsed parsePageParameter(String? page) => (
+      pageModifier: toPageModifierStrict(page!),
+      id: toIdStrict(page!),
+      pageNumber: toPageNumberStrict(page!)
+    );

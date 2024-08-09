@@ -260,7 +260,7 @@ class WImageResult extends StatelessWidget {
                             old.PostSwipePageManaged(
                                 initialIndex: index,
                                 initialPageIndex:
-                                    getSc(context, false).mpcSync.currentPage,
+                                    getSc(context, false).mpcSync.currentPageIndex,
                                 posts: getSc(context, false).mpcSync,
                                 onAddToSearch: getOnAddToSearch(context),
                                 tagsToAdd: [],

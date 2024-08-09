@@ -900,6 +900,7 @@ class PostViewPageLoader extends StatelessWidget
           return ErrorPage(
             error: snapshot.error,
             stackTrace: snapshot.stackTrace,
+            logger: PostViewPage.logger,
           );
         } else {
           return fullPageSpinner;

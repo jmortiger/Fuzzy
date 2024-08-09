@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fuzzy/i_route.dart';
@@ -100,7 +99,7 @@ class _EditPostPageState extends State<EditPostPage> {
 
   static String _folder(acc, e) => "$acc${acc.isEmpty ? "" : " "}$e";
   static String _minusFolder(acc, e) => "$acc${acc.isEmpty ? "" : " "}-$e";
-  static const debugDeactivate = true;
+  static const debugDeactivate = false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -273,7 +272,7 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
-  Widget tagMapper(String tag, [int i = 0, Iterable<String> l = const[]]) {
+  Widget tagMapper(String tag, [int i = 0, Iterable<String> l = const []]) {
     // final ctr = TextEditingController(text: tag);
     // ctr.addListener(() => tag ctr.value.text)
     return WTagItem(
@@ -325,7 +324,8 @@ class _EditPostPageState extends State<EditPostPage> {
     );
   }
 
-  Widget sourceMapper(String source, [int i = 0, Iterable<String> l = const[]]) {
+  Widget sourceMapper(String source,
+      [int i = 0, Iterable<String> l = const []]) {
     // final ctr = TextEditingController(text: source);
     // ctr.addListener(() => source ctr.value.text)
     return WTagItem(
@@ -522,6 +522,7 @@ class _WTagItemState extends State<WTagItem> {
 
 class EditPostPageLoader extends StatelessWidget
     implements IRoute<EditPostPageLoader> {
+  static lm.FileLogger get logger => _EditPostPageState.logger;
   static const routeNameString = "/post/edit";
   @override
   String get routeName => routeNameString;
@@ -555,6 +556,7 @@ class EditPostPageLoader extends StatelessWidget
                 return ErrorPage(
                   error: snapshot.error,
                   stackTrace: snapshot.stackTrace,
+                  logger: logger,
                 );
               } else {
                 return util.fullPageSpinner;

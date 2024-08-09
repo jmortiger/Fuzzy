@@ -190,6 +190,7 @@ class WPostSearchResults extends StatefulWidget {
             return ErrorPage(
               error: snapshot.error,
               stackTrace: snapshot.stackTrace,
+              logger: logger,
             );
           } else {
             return fullPageSpinner;
@@ -606,7 +607,8 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
   }
 }
 
-class PostSearchResultsBuilder extends StatelessWidget implements IRoute<PostSearchResultsBuilder>{
+class PostSearchResultsBuilder extends StatelessWidget
+    implements IRoute<PostSearchResultsBuilder> {
   final String? tags;
   final int? limit;
   final String? page;
@@ -614,9 +616,10 @@ class PostSearchResultsBuilder extends StatelessWidget implements IRoute<PostSea
 
   @override
   Widget build(BuildContext context) {
-    return WPostSearchResults.directResultFromSearchWithPage(tags ?? "", limit: limit, page: page, stripToWidget: false);
+    return WPostSearchResults.directResultFromSearchWithPage(tags ?? "",
+        limit: limit, page: page, stripToWidget: false);
   }
-  
+
   @override
   String get routeName => routeNameString;
   static const routeNameString = "/posts";

@@ -4,6 +4,8 @@ import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/pages/user_profile_page.dart';
 import 'package:fuzzy/web/e621/e621.dart';
+import 'package:fuzzy/widgets/w_back_button.dart';
+import 'package:fuzzy/widgets/w_create_set.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:fuzzy/widgets/w_search_pool.dart';
 import 'package:fuzzy/widgets/w_search_set.dart';
@@ -281,6 +283,28 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
               ).then((v) => v != null
                   ? widget.onSearchRequested?.call(v.searchById)
                   : null);
+            },
+          ),
+          ListTile(
+            title: const Text("Create set"),
+            leading: const Icon(Icons.add),
+            onTap: () {
+              print("Create Set activated");
+              Navigator.pop(context);
+              showDialog<e621.PostSet>(
+                context: context,
+                builder: (context) {
+                  return const AlertDialog(
+                    content: WBackButton.doNotBlockChild(child: WCreateSet()),
+                    // scrollable: true,
+                  );
+                },
+              )/* .then((v) => v != null
+                  ? widget.onSearchRequested?.call(
+                      SearchView.i.preferSetShortname
+                          ? v.searchByShortname
+                          : v.searchById)
+                  : null) */;
             },
           ),
         ],
