@@ -15,7 +15,7 @@ import '../widgets/w_home_end_drawer.dart';
 import '../widgets/w_search_bar.dart';
 
 // #region Logger
-late final lRecord = lm.genLogger("HomePage");
+late final lRecord = lm.generateLogger("HomePage");
 lm.Printer get print => lRecord.print;
 lm.FileLogger get logger => lRecord.logger;
 // #endregion Logger

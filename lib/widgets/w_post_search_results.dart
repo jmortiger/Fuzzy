@@ -26,7 +26,7 @@ class WPostSearchResults extends StatefulWidget {
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("WPostSearchResults");
+  static late final lRecord = lm.generateLogger("WPostSearchResults");
   // #endregion Logger
 
   final int pageIndex;
@@ -204,7 +204,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("_WPostSearchResultsState");
+  static late final lRecord = lm.generateLogger("WPostSearchResultsState");
   // #endregion Logger
   // #region Notifiers
   Set<int> _selectedIndices = {};
@@ -427,8 +427,7 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("_WPostSearchResultsSwiperState",
-      "_WPostSearchResultsSwiperState", lm.LogLevel.FINEST);
+  static late final lRecord = lm.generateLogger("WPostSearchResultsSwiperState");
   // #endregion Logger
   late PageController _pageViewController;
   late TabController _tabController;

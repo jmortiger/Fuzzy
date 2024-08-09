@@ -20,7 +20,7 @@ class WSearchBar extends StatefulWidget {
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("WSearchBar");
+  static late final lRecord = lm.generateLogger("WSearchBar");
   // #endregion Logger
   final String? initialValue;
   final VoidFunction? onSelected;

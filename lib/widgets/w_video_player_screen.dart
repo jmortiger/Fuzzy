@@ -23,7 +23,7 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
   // #region Logger
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("WVideoPlayerScreen");
+  static late final lRecord = lm.generateLogger("WVideoPlayerScreen");
   // #endregion Logger
   static const fadeInTime = Duration(milliseconds: 750);
   late AnimationController _fadeInController;

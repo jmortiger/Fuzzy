@@ -23,7 +23,7 @@ import 'package:fuzzy/log_management.dart' as lm;
 lm.Printer get _print => lRecord.print;
 lm.FileLogger get _logger => lRecord.logger;
 // ignore: unnecessary_late
-late final lRecord = lm.genLogger("Util");
+late final lRecord = lm.generateLogger("Util");
 // #endregion Logger
 
 typedef JsonMap = Map<String, dynamic>;

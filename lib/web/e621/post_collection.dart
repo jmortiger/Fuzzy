@@ -19,7 +19,7 @@ import 'post_search_parameters.dart';
 final class E6PostEntrySync extends LinkedListEntry<E6PostEntrySync>
     with ValueAsyncMixin<E6PostResponse> {
   // #region Logger
-  static late final lRecord = lm.genLogger("E6PostEntrySync");
+  static late final lRecord = lm.generateLogger("E6PostEntrySync");
   static lm.FileLogger get logger => lRecord.logger;
   static lm.Printer get print => lRecord.print;
   // #endregion Logger
@@ -52,7 +52,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
   static late final lRecord =
-      lm.genLogger("PostCollection", "MPCSync", lm.LogLevel.FINEST);
+      lm.generateLogger("PostCollection", className: "MPCSync");
   // #endregion Logger
   // #region Fields
   bool treatAsNull = true;

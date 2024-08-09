@@ -13,7 +13,7 @@ import 'package:fuzzy/log_management.dart' as lm;
 lm.Printer get print => lRecord.print;
 lm.FileLogger get logger => lRecord.logger;
 // ignore: unnecessary_late
-late final lRecord = lm.genLogger("SettingsPage");
+late final lRecord = lm.generateLogger("SettingsPage");
 // #endregion Logger
 
 class SettingsPage extends StatelessWidget implements IRoute<SettingsPage> {

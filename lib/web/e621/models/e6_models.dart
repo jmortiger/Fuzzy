@@ -18,7 +18,7 @@ import 'package:fuzzy/log_management.dart' as lm;
 lm.Printer get _print => _lRecord.print;
 lm.FileLogger get _logger => _lRecord.logger;
 // ignore: unnecessary_late
-late final _lRecord = lm.genLogger("E6Models");
+late final _lRecord = lm.generateLogger("E6Models");
 // #endregion Logger
 
 typedef JsonOut = Map<String, dynamic>;
@@ -1276,7 +1276,7 @@ class PoolModel extends e621.Pool {
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("PoolModel");
+  static late final lRecord = lm.generateLogger("PoolModel");
   // #endregion Logger
   PoolModel({
     required super.id,

@@ -21,7 +21,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'e621_access_data.dart';
 
 // #region Logger
-late final lRecord = lm.genLogger("E621");
+late final lRecord = lm.generateLogger("E621");
 lm.Printer get print => lRecord.print;
 lm.FileLogger get logger => lRecord.logger;
 

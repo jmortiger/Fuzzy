@@ -42,7 +42,7 @@ class PostViewPage extends StatefulWidget
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("PostViewPage");
+  static late final lRecord = lm.generateLogger("PostViewPage");
   // #endregion Logger
   static const routeNameString = "/post";
   final PostListing postListing;

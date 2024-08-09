@@ -7,7 +7,7 @@ import 'package:j_util/j_util_full.dart';
 // #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
-late final lRecord = lm.genLogger("TwsInterop");
+late final lRecord = lm.generateLogger("TwsInterop");
 lm.Printer get print => lRecord.print;
 lm.FileLogger get logger => lRecord.logger;
 // #endregion Logger

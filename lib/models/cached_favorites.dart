@@ -13,7 +13,7 @@ import 'package:fuzzy/log_management.dart' as lm;
 class CachedFavorites extends ChangeNotifier with Storable<CachedFavorites> {
   // #region Logger
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("CachedFavorites");
+  static late final lRecord = lm.generateLogger("CachedFavorites");
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger

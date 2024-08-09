@@ -19,7 +19,7 @@ class SavedDataE6 extends ChangeNotifier {
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("SavedData");
+  static late final lRecord = lm.generateLogger("SavedData");
   // #endregion Logger
   static const fileName = "savedSearches.json";
   static final fileFullPath = LazyInitializer.immediate(fileFullPathInit);

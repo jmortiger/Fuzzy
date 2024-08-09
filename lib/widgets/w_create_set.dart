@@ -17,7 +17,7 @@ class _WCreateSetState extends State<WCreateSet> {
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("WCreateSet");
+  static late final lRecord = lm.generateLogger("WCreateSet");
   // #endregion Logger
   String postSetName = "";
   String postSetShortname = "";

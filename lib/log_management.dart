@@ -23,30 +23,30 @@ void Function(Object? message,
   String? className,
   Level level = Level.INFO,
 ]) =>
-    genLogger(fileName, className, level).print;
-@Deprecated("Use generateLogger")
-({Printer print, FileLogger logger}) genLogger(
-  String fileName, [
-  String? className,
-  Level level = Level.INFO,
-  bool overrideLevelForMobile = true,
-]) {
-  final l = FileLogger(
-    className ?? fileName,
-    "$fileName.txt",
-    overrideLevelForMobile && !Platform.isDesktop ? Level.ALL : level,
-  );
-  // l.$.level = level ?? Level.INFO;
-  return (
-    print: (Object? message,
-            [LogLevel logLevel = Level.FINEST,
-            Object? error,
-            StackTrace? stackTrace,
-            Zone? zone]) =>
-        l.log(logLevel, message, error, stackTrace, zone),
-    logger: l
-  );
-}
+    generateLogger(fileName, className: className, level: level).print;
+// @Deprecated("Use generateLogger")
+// ({Printer print, FileLogger logger}) generateLogger(
+//   String fileName, [
+//   String? className,
+//   Level level = Level.INFO,
+//   bool overrideLevelForMobile = true,
+// ]) {
+//   final l = FileLogger(
+//     className ?? fileName,
+//     "$fileName.txt",
+//     overrideLevelForMobile && !Platform.isDesktop ? Level.ALL : level,
+//   );
+//   // l.$.level = level ?? Level.INFO;
+//   return (
+//     print: (Object? message,
+//             [LogLevel logLevel = Level.FINEST,
+//             Object? error,
+//             StackTrace? stackTrace,
+//             Zone? zone]) =>
+//         l.log(logLevel, message, error, stackTrace, zone),
+//     logger: l
+//   );
+// }
 ({Printer print, FileLogger logger}) generateLogger(
   String fileName, {
   String? className,

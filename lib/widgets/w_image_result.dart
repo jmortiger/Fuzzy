@@ -25,7 +25,7 @@ class WImageResult extends StatelessWidget {
   // #region Logger
   // ignore: unnecessary_late
   static late final lRecord =
-      lm.genLogger("WImageResult", "WImageResult", lm.LogLevel.INFO);
+      lm.generateLogger("WImageResult");
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger

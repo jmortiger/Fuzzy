@@ -53,7 +53,7 @@ class _SavedSearchesPageSingletonState
   // #region Logger
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("SavedSearchesPage");
+  static late final lRecord = lm.generateLogger("SavedSearchesPage");
   // #endregion Logger
   var data = LateInstance<SavedDataE6>();
   @override

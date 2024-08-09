@@ -38,8 +38,8 @@ void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
   storable.Storable.beSilent = true;
   await lm.init().then((v) {
-    lRecord = lm.genLogger("main");
-    lRRecord = lm.genLogger("Routing");
+    lRecord = lm.generateLogger("main");
+    lRRecord = lm.generateLogger("Routing");
   });
   if (Platform.isWeb) registerImgElement();
   pathSoundOff();

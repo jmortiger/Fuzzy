@@ -211,7 +211,7 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
   // #region Logger
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("PostSwipePageManagedState");
+  static late final lRecord = lm.generateLogger("PostSwipePageManagedState");
   // #endregion Logger
   late PageController _pageViewController;
   late TabController _tabController;

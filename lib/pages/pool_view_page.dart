@@ -14,7 +14,7 @@ class PoolViewPage extends StatefulWidget implements IRoute<PoolViewPage> {
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("PoolViewPage");
+  static late final lRecord = lm.generateLogger("PoolViewPage");
   // #endregion Logger
   static const routeNameString = "/poolView";
   @override
@@ -32,7 +32,7 @@ class _PoolViewPageState extends State<PoolViewPage> {
   // #region Logger
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("_PoolViewPageState");
+  static late final lRecord = lm.generateLogger("_PoolViewPageState");
   // #endregion Logger
   PoolModel get pool => widget.pool;
   List<E6PostResponse> posts = [];

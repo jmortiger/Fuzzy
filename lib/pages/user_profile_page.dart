@@ -17,7 +17,7 @@ class UserProfilePage extends StatelessWidget
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("UserProfilePage");
+  static late final lRecord = lm.generateLogger("UserProfilePage");
   // #endregion Logger
   static const routeNameString = "/";
   @override

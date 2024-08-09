@@ -27,7 +27,7 @@ class _EditPostPageState extends State<EditPostPage> {
   // #region Logger
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.genLogger("EditPostPage");
+  static late final lRecord = lm.generateLogger("EditPostPage");
   // #endregion Logger
   E6PostResponse get post => widget.post;
   late List<String> editedTags;

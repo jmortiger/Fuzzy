@@ -33,7 +33,7 @@ class WHomeEndDrawer extends StatefulWidget {
 
 class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
   // #region Logger
-  static late final lRecord = lm.genLogger("WHomeEndDrawer");
+  static late final lRecord = lm.generateLogger("WHomeEndDrawer");
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger
