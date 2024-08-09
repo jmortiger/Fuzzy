@@ -12,10 +12,7 @@ import 'util/util.dart' as f_util;
 
 typedef LogLevel = Level;
 typedef Printer = void Function(Object? message,
-      [LogLevel logLevel,
-      Object? error,
-      StackTrace? stackTrace,
-      Zone? zone]);
+    [LogLevel logLevel, Object? error, StackTrace? stackTrace, Zone? zone]);
 const logFileExt = ".txt";
 void Function(Object? message,
     [LogLevel logLevel,
@@ -28,15 +25,17 @@ void Function(Object? message,
 ]) =>
     genLogger(fileName, className, level).print;
 
-({
-  Printer print,
-  FileLogger logger
-}) genLogger(
+({Printer print, FileLogger logger}) genLogger(
   String fileName, [
   String? className,
   Level level = Level.INFO,
+  bool overrideLevelForMobile = true,
 ]) {
-  final l = FileLogger(className ?? fileName, "$fileName.txt", level);
+  final l = FileLogger(
+    className ?? fileName,
+    "$fileName.txt",
+    overrideLevelForMobile && !Platform.isDesktop ? Level.ALL : level,
+  );
   // l.$.level = level ?? Level.INFO;
   return (
     print: (Object? message,
@@ -133,7 +132,9 @@ class FileLogger implements Logger {
         );
     $.onRecord.listen(
       (e) {
-        file.$Safe?.writeAsString("${e.time.toLocal().toIso8601String()} [${e.level.toString().toUpperCase()}]: ${e.message}\n", mode: FileMode.append);
+        file.$Safe?.writeAsString(
+            "${e.time.toLocal().toIso8601String()} [${e.level.toString().toUpperCase()}]: ${e.message}\n",
+            mode: FileMode.append);
         // dev.log(
         //   e.message,
         //   time: e.time,
