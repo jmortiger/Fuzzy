@@ -864,11 +864,6 @@ Future<SavedElementRecord?> showSavedElementEditDialogue(
               keyboardType: isNumeric ? TextInputType.number : null,
             ),
             const Text("Parent:"),
-            // TODO: Add Autocomplete
-            // TextField(
-            //   onChanged: (value) => parent = value,
-            //   controller: defaultSelection(initialParent),
-            // ),
             SearchAnchor(
               viewHintText: "parent",
               viewOnChanged: (value) {

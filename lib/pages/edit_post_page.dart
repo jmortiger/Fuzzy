@@ -228,7 +228,7 @@ class _EditPostPageState extends State<EditPostPage> {
             ),
             ExpansionTile(
               title: const Text("Tags"),
-              initiallyExpanded: true,
+              initiallyExpanded: false,
               children: [
                 ListTile(
                   title: const Text("Revert Changes"),
