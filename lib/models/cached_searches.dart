@@ -9,11 +9,13 @@ import '../web/e621/e621.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-final lRecord = lm.genLogger("CachedSearches");
-final print = lRecord.print;
-final logger = lRecord.logger;
-
 class CachedSearches {
+  // #region Logger
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.generateLogger("CachedSearches");
+  // #endregion Logger
   static const fileName = "CachedSearches.json";
 
   static final file = LazyInitializer.immediate(() async {
@@ -64,12 +66,15 @@ class CachedSearches {
         for (var i = 0; i < length; i++) {
           data.add(
             SearchData.fromString(
-              searchString:
+              searchString: v.getString("$localStoragePrefix.$i") ??
                   v.getString("$localStoragePrefix.$i.searchString") ??
-                      "FAILURE",
+                  "FAILURE",
             ),
           );
         }
+        logger.finer("Loaded cached searches from pref: ${data.map(
+          (e) => e.searchString,
+        )}");
         return data;
       });
   static List<SearchData>? loadFromPrefSync() {
