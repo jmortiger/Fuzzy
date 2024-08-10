@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
-import 'package:fuzzy/main.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/pages/saved_searches_page.dart';
@@ -26,7 +25,16 @@ class HomePage extends StatefulWidget implements IRoute<HomePage> {
   static const allRoutesString = ["/", "/posts"];
   @override
   get routeName => routeNameString;
-  const HomePage({super.key});
+
+  final String? initialTags;
+  final String? initialLimit;
+  final String? initialPage;
+  const HomePage({
+    super.key,
+    this.initialTags,
+    this.initialLimit,
+    this.initialPage,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -45,7 +53,6 @@ class _HomePageState extends State<HomePage> {
   String? toFillSearchWith;
   @override
   Widget build(BuildContext context) {
-    // checkAndLaunch(context);
     final fsw = toFillSearchWith;
     toFillSearchWith = null;
     return Scaffold(
@@ -65,12 +72,14 @@ class _HomePageState extends State<HomePage> {
                 MaterialPageRoute(
                   builder: (context) => const SavedSearchesPageProvider(),
                 )).then(
-              (value) => value == null
-                  ? null
-                  : setState(() {
-                      toFillSearchWith = sc.searchText = value;
-                      _sendSearchAndUpdateState(tags: value);
-                    }),
+              (value) {
+                if (value != null) {
+                  _sendSearchAndUpdateState(tags: value);
+                  setState(() {
+                    toFillSearchWith = sc.searchText = value;
+                  });
+                }
+              },
             );
           },
         ),
@@ -78,9 +87,9 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(child: buildSearchView(context)),
       endDrawer: WHomeEndDrawer(
         onSearchRequested: (searchText) {
+          _sendSearchAndUpdateState(tags: searchText);
           setState(() {
             toFillSearchWith = sc.searchText = searchText;
-            _sendSearchAndUpdateState(tags: searchText);
           });
         },
         getMountedContext: () => this.context,

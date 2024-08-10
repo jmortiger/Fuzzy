@@ -155,7 +155,7 @@ class _WSearchBarState extends State<WSearchBar> {
           ? _sendSearchAndUpdateState(tags: s)
           : _sendSearchAndUpdateState();
       widget.onSelected?.call();
-      sc.parameters = PostPageSearchParameters(
+      sc.parameters = PostSearchQueryRecord.withIndex(
         limit: SearchView.i.postsPerPage,
         tags: s,
         pageIndex: 0,

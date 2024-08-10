@@ -1,8 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_sharing_intent/flutter_sharing_intent.dart';
-import 'package:flutter_sharing_intent/model/sharing_file.dart';
+import 'package:fuzzy/intent.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
 import 'package:fuzzy/models/cached_searches.dart';
@@ -22,7 +21,6 @@ import 'package:path_provider/path_provider.dart' as path;
 import 'package:provider/provider.dart';
 import 'pages/home_page.dart';
 import 'web/e621/e621_access_data.dart';
-// import 'package:app_links/app_links.dart';
 
 // #region Logger
 late final ({lm.FileLogger logger, lm.Printer print}) lRecord;
@@ -32,10 +30,6 @@ late final ({lm.FileLogger logger, lm.Printer print}) lRRecord;
 lm.Printer get routePrint => lRRecord.print;
 lm.FileLogger get routeLogger => lRRecord.logger;
 // #endregion Logger
-// final _appLinks = AppLinks(); // AppLinks is singleton
-// late StreamSubscription<Uri> linkSubscription;
-late StreamSubscription<List<SharedFile>> intentDataStreamSubscription;
-final List<Uri> requestedUrls = [];
 Map<String, String> tryParsePathToQuery(Uri u) {
   final t = u.pathSegments.firstOrNull;
   if (t != null && u.pathSegments.length > 1) {
@@ -53,18 +47,7 @@ void main(List<String> args) async {
     lRecord = lm.generateLogger("main");
     lRRecord = lm.generateLogger("Routing");
   });
-  // final _navigatorKey = GlobalKey<NavigatorState>();
-
-  // Subscribe to all events (initial link and further)
-  // linkSubscription = _appLinks.uriLinkStream.listen((uri) {
-  //   // Do something (navigation, ...)
-  //   // _navigatorKey.currentState?.pushNamed(uri.fragment);
-  //   requestedUrls.add(uri);
-  //   print(uri);
-  // });
-  handleShareIntent(await FlutterSharingIntent.instance.getInitialSharing());
-  intentDataStreamSubscription =
-      FlutterSharingIntent.instance.getMediaStream().listen(handleShareIntent);
+  initIntentHandling();
   if (Platform.isWeb) registerImgElement();
   pathSoundOff();
   await appDataPath.getItem() /* .ignore() */;
@@ -159,41 +142,6 @@ void main(List<String> args) async {
   }
 }
 
-void handleShareIntent(List<SharedFile> f) {
-  var t = f.firstOrNull;
-  switch (t?.type) {
-    case SharedMediaType.URL:
-    case SharedMediaType.TEXT:
-      print("Share intent received: ${t!.value}");
-      final u = Uri.tryParse(t.value!);
-      if (u != null) requestedUrls.add(u);
-      print("Failed parsing");
-      break;
-    case null:
-    default:
-      print("Share not handled");
-  }
-}
-
-void checkAndLaunch(BuildContext context) {
-  if (requestedUrls.isNotEmpty) {
-    final u = requestedUrls.removeAt(0);
-    final uFormatted = Uri(path: u.path, query: u.query);
-    print("navigating to ${u.toString()} (${uFormatted.toString()})");
-    Navigator.pushNamed(context, uFormatted.toString());
-    // ScaffoldMessenger.of(context)
-    //     .showSnackBar(SnackBar(content: Text(u.toString())));
-    // showDialog(
-    //   context: context,
-    //   builder: (context) {
-    //     return AlertDialog(
-    //       content: ,
-    //     );
-    //   },
-    // );
-  }
-}
-
 Widget buildHomePageWithProviders({
   String? searchText,
 }) =>
@@ -204,7 +152,7 @@ Widget buildHomePageWithProviders({
         ),
         ChangeNotifierProvider(
             create: (context) => ManagedPostCollectionSync(
-                parameters: PostSearchParametersSlim(tags: searchText))),
+                parameters: PostSearchQueryRecord(tags: searchText ?? ""))),
         ChangeNotifierProvider(create: (context) => SearchResultsNotifier()),
         ChangeNotifierProvider(
             create: (context) => CachedFavorites.loadFromStorageSync()),

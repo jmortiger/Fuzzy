@@ -58,65 +58,65 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   bool treatAsNull = true;
   final PostCollectionSync collection;
   final onPageRetrievalFailure = JEvent<PostCollectionEvent>();
-  PostPageSearchParameters _parameters;
+  PostSearchQueryRecord _parameters;
   int _startingPage = 0;
   int _currentPageOffset;
   E6Posts? _e6posts;
   int _currentPostIndex = 0;
-  // StreamController<(PostPageSearchParameters, Iterable<E6PostResponse>)> ctr;
-  // final postSearches =
-  //     StreamController<(PostPageSearchParameterRecord, CacheType)>.broadcast();
-  final _loading = <PostPageSearchParameterRecord, Future<CacheType>>{};
-  Future<CacheType>? checkLoading(PostPageSearchParameterRecord p) {
-    return _loading[p];
-  }
+  final _loading = <PostSearchQueryRecord, Future<CacheType>>{};
+  Future<CacheType>? checkLoading(PostSearchQueryRecord p) =>
+      _loading[p];
   // #endregion Fields
 
   // #region Ctor
   ManagedPostCollectionSync({
     int currentPageOffset = 0,
-    PostSearchParametersSlim parameters = const PostSearchParametersSlim(),
+    PostSearchQueryRecord? parameters,
     super.firstPostIdCached,
     super.lastPostIdCached,
     super.lastPostOnPageIdCached,
     super.hasNextPageCached,
-  })  : _parameters = PostPageSearchParameters.fromSlim(
-            s: parameters, pageIndex: currentPageOffset),
+  })  : _parameters = parameters ?? PostSearchQueryRecord(),
         _currentPageOffset = 0,
         _startingPage = currentPageOffset,
-        collection = PostCollectionSync(); // {
-  //   E621.searchBegan.subscribe(_onUserSearchBegan);
-  // }
-  ManagedPostCollectionSync.withE6Posts({
-    int currentPageOffset = 0,
-    required E6Posts posts,
-    PostSearchParametersSlim parameters = const PostSearchParametersSlim(),
-    super.firstPostIdCached,
-    super.lastPostIdCached,
-    super.lastPostOnPageIdCached,
-    super.hasNextPageCached,
-  })  : _parameters = PostPageSearchParameters.fromSlim(
-            s: parameters, pageIndex: currentPageOffset),
-        _currentPageOffset = 0,
-        _startingPage = currentPageOffset,
-        collection = PostCollectionSync.withPosts(posts: posts.posts); // {
-  //   E621.searchBegan.subscribe(_onUserSearchBegan);
-  // }
-  ManagedPostCollectionSync.withPosts({
-    int currentPageOffset = 0,
-    required Iterable<E6PostResponse> posts,
-    PostSearchParametersSlim parameters = const PostSearchParametersSlim(),
-    super.firstPostIdCached,
-    super.lastPostIdCached,
-    super.lastPostOnPageIdCached,
-    super.hasNextPageCached,
-  })  : _parameters = PostPageSearchParameters.fromSlim(
-            s: parameters, pageIndex: currentPageOffset),
-        _currentPageOffset = 0,
-        _startingPage = currentPageOffset,
-        collection = PostCollectionSync.withPosts(posts: posts); // {
-  //   E621.searchBegan.subscribe(_onUserSearchBegan);
-  // }
+        collection = PostCollectionSync();
+  // ManagedPostCollectionSync.fromSearch({
+  //   // int currentPageOffset = 0,
+  //   PageNumSearchParameters parameters = const PageNumSearchParameters.blank(),
+  //   super.firstPostIdCached,
+  //   super.lastPostIdCached,
+  //   super.lastPostOnPageIdCached,
+  //   super.hasNextPageCached,
+  // })  : _parameters = parameters,
+  //       _currentPageOffset = 0,
+  //       _startingPage = 0,
+  //       collection = PostCollectionSync();
+  // ManagedPostCollectionSync.withE6Posts({
+  //   int currentPageOffset = 0,
+  //   required E6Posts posts,
+  //   PostSearchParametersSlim parameters = const PostSearchParametersSlim(),
+  //   super.firstPostIdCached,
+  //   super.lastPostIdCached,
+  //   super.lastPostOnPageIdCached,
+  //   super.hasNextPageCached,
+  // })  : _parameters = PostPageSearchParameters.fromSlim(
+  //           s: parameters, pageIndex: currentPageOffset),
+  //       _currentPageOffset = 0,
+  //       _startingPage = currentPageOffset,
+  //       collection = PostCollectionSync.withPosts(posts: posts.posts);
+  // ManagedPostCollectionSync.withPosts({
+  //   int currentPageOffset = 0,
+  //   required Iterable<E6PostResponse> posts,
+  //   PostSearchParametersSlim parameters = const PostSearchParametersSlim(),
+  //   super.firstPostIdCached,
+  //   super.lastPostIdCached,
+  //   super.lastPostOnPageIdCached,
+  //   super.hasNextPageCached,
+  // })  : _parameters = PostPageSearchParameters.fromSlim(
+  //           s: parameters, pageIndex: currentPageOffset),
+  //       _currentPageOffset = 0,
+  //       _startingPage = currentPageOffset,
+  //       collection = PostCollectionSync.withPosts(posts: posts);
   // #endregion Ctor
 
   // #region Properties
@@ -163,9 +163,9 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   int get numStoredPages =>
       (collection._posts.length / SearchView.i.postsPerPage).ceil();
 
-  PostPageSearchParameters get parameters => _parameters;
+  PostSearchQueryRecord get parameters => _parameters;
 
-  set parameters(PostPageSearchParameters value) {
+  set parameters(PostSearchQueryRecord value) {
     logger.finest("set parameters called"
         "\n\told:"
         "\n\t\ttags:${_parameters.tags}"
@@ -301,7 +301,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   /// {@macro loadWarn}
   Future<E6Posts?> getPostsOnPageAsObjAsync(final int index) async {
     final s =
-        checkLoading(parameters.copyWith(pageIndex: index + 1).toRecord());
+        checkLoading(parameters.copyWith(pageIndex: index + 1));
     if (s != null) {
       return s.then((v) => v != null
           ? _genFromStartAndCount(
@@ -362,7 +362,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   /// {@macro loadWarn}
   Future<Iterable<E6PostResponse>?> getPostsOnPageAsync(final int index) async {
     final s =
-        checkLoading(parameters.copyWith(pageIndex: index + 1).toRecord());
+        checkLoading(parameters.copyWith(pageIndex: index + 1));
     if (s != null) {
       return s.then((v) => v != null
           ? _getRawPostFromStartAndCount(
@@ -892,10 +892,10 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   }
 
   Future<Iterable<E6PostResponse>?> _fetchPage(
-      [PostPageSearchParameters? parameters]) {
+      [PostSearchQueryRecord? parameters]) {
     parameters ??= _parameters;
-    return _loading[parameters.toRecord()] ??
-        (_loading[parameters.toRecord()] = E621
+    return _loading[parameters] ??
+        (_loading[parameters] = E621
             .performUserPostSearch(
           limit: parameters.limit,
           pageNumber: (parameters.pageNumber ?? 1),
@@ -908,7 +908,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           }
           return v.results?.posts;
         }))
-      ..then((v) => _loading.remove(parameters!.toRecord()));
+      ..then((v) => _loading.remove(parameters!));
   }
 
   /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
@@ -1012,7 +1012,7 @@ class PostCollectionSync with ListMixin<E6PostEntrySync> {
 
 class PostCollectionEvent extends JEventArgs {
   final PostCollectionSync posts;
-  final PostPageSearchParameters parameters;
+  final PostSearchQueryRecord parameters;
 
   PostCollectionEvent({
     required this.parameters,

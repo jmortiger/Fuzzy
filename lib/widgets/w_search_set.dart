@@ -270,7 +270,7 @@ class WSetTile extends StatelessWidget {
   }
 }
 
-class SetSearchParameterModel with PageSearchParameter {
+class SetSearchParameterModel with PageSearchParameterNullable {
   SetSearchParameterModel({
     this.searchName,
     this.searchShortname,
@@ -298,7 +298,7 @@ class SetSearchParameterModel with PageSearchParameter {
 }
 
 class SetSearchParameterNotifier extends ChangeNotifier
-    with PageSearchParameter
+    with PageSearchParameterNullable
     implements SetSearchParameterModel {
   SetSearchParameterNotifier({
     String? searchName,

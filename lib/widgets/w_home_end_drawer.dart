@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/domain_verification_page.dart';
-import 'package:fuzzy/main.dart';
+import 'package:fuzzy/intent.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/settings_page.dart';
