@@ -7,10 +7,13 @@ environment:
   sdk: '>=3.2.6 <4.0.0'
 
 dependencies:
+  app_links: ^6.1.4
   archive: ^3.6.1
+  domain_verification_manager: ^1.0.0
   flutter:
     sdk: flutter
   flutter_linkify: ^6.0.0
+  flutter_sharing_intent: ^1.1.1
   http: ^1.2.0
   j_util:
     #path: C:/Users/***REMOVED***source/repos/j_util

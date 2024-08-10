@@ -44,7 +44,7 @@ class PostViewPage extends StatefulWidget
   // ignore: unnecessary_late
   static late final lRecord = lm.generateLogger("PostViewPage");
   // #endregion Logger
-  static const routeNameString = "/post";
+  static const routeNameString = "/posts";
   final PostListing postListing;
   final void Function(String addition)? onAddToSearch;
   final void Function()? onPop;

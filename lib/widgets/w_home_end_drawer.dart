@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fuzzy/domain_verification_page.dart';
+import 'package:fuzzy/main.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/settings_page.dart';
@@ -306,6 +308,26 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                           : v.searchById)
                   : null) */
                   ;
+            },
+          ),
+          ListTile(
+            title: const Text("Linking test"),
+            leading: const Icon(Icons.question_mark),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const DomainVerificationPage(),
+                  ));
+            },
+          ),
+          ListTile(
+            title: const Text("Try load"),
+            leading: const Icon(Icons.question_mark),
+            onTap: () {
+              Navigator.pop(context);
+              checkAndLaunch(context);
             },
           ),
         ],

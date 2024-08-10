@@ -6,7 +6,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
@@ -22,6 +22,50 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+    		<!-- <intent-filter>
+    		    <action android:name="android.intent.action.VIEW" /> -->
+    		    <!-- Include the host attribute if you want your app to respond
+    		         only to URLs with your app's domain. -->
+    		    <!-- <data android:scheme="http" android:host="www.e621.net" />
+    		    <category android:name="android.intent.category.DEFAULT" /> -->
+    		    <!-- The BROWSABLE category is required to get links from web pages. -->
+    		    <!-- <category android:name="android.intent.category.BROWSABLE" />
+    		</intent-filter> -->
+			<!-- <intent-filter android:autoVerify="true"> -->
+			<!-- <meta-data android:name="flutter_deeplinking_enabled" android:value="true" />
+			<intent-filter>
+			    <action android:name="android.intent.action.VIEW" />
+			    <category android:name="android.intent.category.DEFAULT" />
+			    <category android:name="android.intent.category.BROWSABLE" />
+			    <data android:scheme="https" android:host="www.e621.net" />
+			    <data android:scheme="http" android:host="www.e621.net" />
+			    <data android:scheme="https" android:host="e621.net" />
+			    <data android:scheme="http" android:host="e621.net" />
+			</intent-filter> -->
+			<!--TODO:  Add this filter, if you want support opening urls into your app-->
+            <intent-filter>
+               <action android:name="android.intent.action.VIEW" />
+               <category android:name="android.intent.category.DEFAULT" />
+               <category android:name="android.intent.category.BROWSABLE" />
+               <data
+                   android:scheme="https"
+                   android:host="e621.net"/>
+               <data
+                   android:scheme="http"
+                   android:host="e621.net"/>
+            </intent-filter>
+
+            <!--TODO: Add this filter, if you want to support sharing text into your app-->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

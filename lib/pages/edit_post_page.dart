@@ -378,6 +378,44 @@ class _EditPostPageState extends State<EditPostPage> {
   }
 }
 
+// class WListUniqueStringEditor extends StatelessWidget {
+//   final List<String> list;
+//   final String name;
+//   final List<String> Function(List<String>)? onCollectionChanged;
+//   final List<String> Function(List<String>)? onRevertChanges;
+//   const WListUniqueStringEditor({
+//     super.key,
+//     required this.list,
+//     required this.name,
+//     this.onCollectionChanged,
+//     this.onRevertChanges,
+//   });
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return ExpansionTile(
+//       title: const Text("Tags"),
+//       initiallyExpanded: false,
+//       children: [
+//         ListTile(
+//           title: const Text("Revert Changes"),
+//           onTap: () => setState(() {
+//             editedTags = post.tags.allTags;
+//           }),
+//         ),
+//         ListTile(
+//           title: const Text("Add tag"),
+//           // onTap: () => editedTags.insert(0, ""),
+//           onTap: () => setState(() {
+//             editedTags.insert(0, "");
+//           }),
+//         ),
+//         ...editedTags.mapAsList(tagMapper),
+//       ],
+//     );
+//   }
+// }
+
 // class WTagItem extends StatelessWidget {
 //   final String initialValue;
 //   final void Function(String initialValue, String value)? onRemove;

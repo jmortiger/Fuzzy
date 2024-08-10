@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/main.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/pages/saved_searches_page.dart';
@@ -22,6 +23,7 @@ lm.FileLogger get logger => lRecord.logger;
 
 class HomePage extends StatefulWidget implements IRoute<HomePage> {
   static const routeNameString = "/";
+  static const allRoutesString = ["/", "/posts"];
   @override
   get routeName => routeNameString;
   const HomePage({super.key});
@@ -43,6 +45,7 @@ class _HomePageState extends State<HomePage> {
   String? toFillSearchWith;
   @override
   Widget build(BuildContext context) {
+    // checkAndLaunch(context);
     final fsw = toFillSearchWith;
     toFillSearchWith = null;
     return Scaffold(
