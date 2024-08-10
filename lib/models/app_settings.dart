@@ -48,7 +48,8 @@ class AppSettingsRecord {
             (json["blacklistedTags"] as List?)?.cast<String>().toSet() ??
                 defaultSettings.blacklistedTags,
         forceSafe: json["forceSafe"] ?? defaultSettings.forceSafe,
-        maxSearchesToSave: json["maxSearchesToSave"] ?? defaultSettings.maxSearchesToSave,
+        maxSearchesToSave:
+            json["maxSearchesToSave"] ?? defaultSettings.maxSearchesToSave,
       );
   JsonOut toJson() => {
         "postView": postView,

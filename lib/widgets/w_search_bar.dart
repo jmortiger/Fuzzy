@@ -98,8 +98,10 @@ class _WSearchBarState extends State<WSearchBar> {
               .where(
                 (v) =>
                     v.verifyUniqueness() &&
-                    !currText.contains("${E621.delimiter}${v.uniqueId}")/*  &&
-                    "${E621.delimiter}${v.uniqueId}".contains(currText) */,
+                    !currText.contains(
+                        "${E621.delimiter}${v.uniqueId}") /*  &&
+                    "${E621.delimiter}${v.uniqueId}".contains(currText) */
+                ,
               )
               .map((v) => "$currPrefix ${E621.delimiter}${v.uniqueId}")
               .toList()

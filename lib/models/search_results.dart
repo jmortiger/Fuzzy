@@ -6,8 +6,7 @@ import 'package:fuzzy/log_management.dart' as lm;
 class SearchResultsNotifier with ChangeNotifier {
   // #region Logger
   // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger(
-      "SearchResultsNotifier");
+  static late final lRecord = lm.generateLogger("SearchResultsNotifier");
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger

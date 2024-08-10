@@ -146,7 +146,7 @@ class _PoolViewPageState extends State<PoolViewPage> {
 
 class PoolViewPageBuilder extends StatelessWidget
     implements IRoute<PoolViewPageBuilder> {
-  static const routeNameString = "/pool";
+  static const routeNameString = "/pools";
   @override
   get routeName => routeNameString;
   final int poolId;

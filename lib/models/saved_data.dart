@@ -320,7 +320,8 @@ class SavedDataE6 extends ChangeNotifier {
     for (var i = 0; i < searches.length; i++) {
       for (var j = i + 1; j < searches.length; j++) {
         // if (i == j) continue;
-        if (searches[i].uniqueId.isNotEmpty && searches[i].uniqueId == searches[j].uniqueId) {
+        if (searches[i].uniqueId.isNotEmpty &&
+            searches[i].uniqueId == searches[j].uniqueId) {
           ret = false;
           if (!resolve) {
             return ret;

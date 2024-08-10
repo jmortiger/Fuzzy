@@ -424,10 +424,10 @@ class WPostSearchResultsSwiper extends StatefulWidget {
 class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
     with TickerProviderStateMixin {
   // #region Logger
-  static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("WPostSearchResultsSwiperState");
+  static late final lRecord =
+      lm.generateLogger("WPostSearchResultsSwiperState");
   // #endregion Logger
   late PageController _pageViewController;
   late TabController _tabController;

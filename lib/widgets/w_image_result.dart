@@ -24,8 +24,7 @@ const bool useLinkedList = false;
 class WImageResult extends StatelessWidget {
   // #region Logger
   // ignore: unnecessary_late
-  static late final lRecord =
-      lm.generateLogger("WImageResult");
+  static late final lRecord = lm.generateLogger("WImageResult");
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger
@@ -423,7 +422,7 @@ class WImageResult extends StatelessWidget {
     return Center(child: i);
   }
 
-  @widgetFactory
+  /* @widgetFactory
   HtmlElementView _createHtmlImageElement(String url, int w, int h) {
     return HtmlElementView(
       viewType: "imgPostTile",
@@ -470,7 +469,7 @@ class WImageResult extends StatelessWidget {
         }
       },
     );
-  }
+  } */
 }
 
 class PostInfoPane extends StatelessWidget {
@@ -615,7 +614,7 @@ enum PostInfoPaneItem {
   // static Iterable<InlineSpan> getMyTextSpans(
   //     E6PostResponse e6Post, Iterable<PostInfoPaneItem> items) {
   //   var children = <InlineSpan>[];
-  //   // var ret = TextSpan(text: " ", chil);
+  //   // var ret = TextSpan(text: " ", child);
   //   var length = 0;
   //   for (var e in items.map((e) => e.getMyTextSpan(e6Post))) {
   //     length += e.toPlainText().length;

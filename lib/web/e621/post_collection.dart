@@ -420,13 +420,15 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   bool assignPagePosts(
       final int pageIndex, final Iterable<E6PostResponse> toAdd) {
     var start = getPageFirstPostIndex(pageIndex);
-    // TODO: Doesn't handle multiple pages past startingPage
     if (start < 0) {
-      _startingPage--;
-      final t = toAdd.toList();
       do {
-        collection._posts.addFirst(E6PostEntrySync(value: t.removeLast()));
-      } while (t.isNotEmpty);
+        _startingPage--;
+        start++;
+        final t = toAdd.toList();
+        do {
+          collection._posts.addFirst(E6PostEntrySync(value: t.removeLast()));
+        } while (t.isNotEmpty);
+      } while (start < 0);
       return true;
     } else if (start >= collection._posts.length) {
       collection._posts.addAll(toAdd.map((e) => E6PostEntrySync(value: e)));
