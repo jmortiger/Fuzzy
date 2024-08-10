@@ -99,7 +99,7 @@ class SavedSearch {
           (previousValue, element) =>
               "${previousValue != null ? "$previousValue " : ""}$element",
         )!,
-        title: title,
+        title: title.split(delimiter).first,
         parent:
             patterns == null ? null : patterns[title.split(delimiter).first],
         uniqueId: null,

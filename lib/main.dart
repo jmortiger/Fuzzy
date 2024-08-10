@@ -22,7 +22,7 @@ import 'package:path_provider/path_provider.dart' as path;
 import 'package:provider/provider.dart';
 import 'pages/home_page.dart';
 import 'web/e621/e621_access_data.dart';
-import 'package:app_links/app_links.dart';
+// import 'package:app_links/app_links.dart';
 
 // #region Logger
 late final ({lm.FileLogger logger, lm.Printer print}) lRecord;
@@ -32,8 +32,8 @@ late final ({lm.FileLogger logger, lm.Printer print}) lRRecord;
 lm.Printer get routePrint => lRRecord.print;
 lm.FileLogger get routeLogger => lRRecord.logger;
 // #endregion Logger
-final _appLinks = AppLinks(); // AppLinks is singleton
-late StreamSubscription<Uri> linkSubscription;
+// final _appLinks = AppLinks(); // AppLinks is singleton
+// late StreamSubscription<Uri> linkSubscription;
 late StreamSubscription<List<SharedFile>> intentDataStreamSubscription;
 final List<Uri> requestedUrls = [];
 Map<String, String> tryParsePathToQuery(Uri u) {
@@ -45,13 +45,6 @@ Map<String, String> tryParsePathToQuery(Uri u) {
   }
 }
 
-// // Subscribe to all events (initial link and further)
-// _appLinks.uriLinkStream.listen((uri) {
-//     // Do something (navigation, ...)
-// });
-// late final Map<String, Route<dynamic>? Function(RouteSettings)> routeJumpTable = {
-//   PoolViewPageBuilder.routeNameString: (settings) =>
-// };
 /// TODO: https://pub.dev/packages/args
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,13 +55,13 @@ void main(List<String> args) async {
   });
   // final _navigatorKey = GlobalKey<NavigatorState>();
 
-// Subscribe to all events (initial link and further)
-  linkSubscription = _appLinks.uriLinkStream.listen((uri) {
-    // Do something (navigation, ...)
-    // _navigatorKey.currentState?.pushNamed(uri.fragment);
-    requestedUrls.add(uri);
-    print(uri);
-  });
+  // Subscribe to all events (initial link and further)
+  // linkSubscription = _appLinks.uriLinkStream.listen((uri) {
+  //   // Do something (navigation, ...)
+  //   // _navigatorKey.currentState?.pushNamed(uri.fragment);
+  //   requestedUrls.add(uri);
+  //   print(uri);
+  // });
   handleShareIntent(await FlutterSharingIntent.instance.getInitialSharing());
   intentDataStreamSubscription =
       FlutterSharingIntent.instance.getMediaStream().listen(handleShareIntent);
