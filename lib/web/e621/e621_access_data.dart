@@ -161,6 +161,11 @@ final class E621AccessData with Storable<E621AccessData> {
       });
   }
 
+  static final E621AccessData errorData = E621AccessData.nonSaved(
+    apiKey: "INVALID",
+    username: "INVALID",
+    userAgent: "INVALID",
+  );
   final String apiKey;
   final String username;
   final String userAgent;
@@ -180,6 +185,11 @@ final class E621AccessData with Storable<E621AccessData> {
           s),
     );
   }
+  /* const  */ E621AccessData.nonSaved({
+    required this.apiKey,
+    required this.username,
+    required this.userAgent,
+  });
   factory E621AccessData.withDefault({
     required String apiKey,
     required String username,

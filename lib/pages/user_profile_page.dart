@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/web/e621/e621.dart';
 import 'package:http/http.dart';
 import 'package:j_util/e621.dart';
 
@@ -69,7 +70,7 @@ class UserProfilePage extends StatelessWidget
 
 class UserProfileLoaderPage extends StatefulWidget
     implements IRoute<UserProfileLoaderPage> {
-  static lm.FileLogger get logger => lRecord.logger;
+  static lm.FileLogger get logger => UserProfilePage.logger;
   static const routeNameString = "/";
   @override
   get routeName => routeNameString;
@@ -281,7 +282,7 @@ class _UserProfileLoaderPageState extends State<UserProfileLoaderPage> {
         });
       } else {
         setState(() {
-          user = value;
+          E621.tryAssignLoggedInUser(user = value);
           userFuture = null;
         });
       }
@@ -290,7 +291,7 @@ class _UserProfileLoaderPageState extends State<UserProfileLoaderPage> {
     super.initState();
     userFuture = widget.user;
     if (userFuture.runtimeType == UserDetailed) {
-      user = userFuture as User;
+      E621.tryAssignLoggedInUser(user = userFuture as User);
       userFuture = null;
     } else if (userFuture.runtimeType == User) {
       user = userFuture as User;
@@ -308,7 +309,7 @@ class _UserProfileLoaderPageState extends State<UserProfileLoaderPage> {
             });
           } else {
             setState(() {
-              user = v;
+              E621.tryAssignLoggedInUser(user = v);
               userFuture = null;
             });
           }

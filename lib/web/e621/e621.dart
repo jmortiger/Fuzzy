@@ -61,6 +61,21 @@ sealed class E621 extends Site {
 
   // #region User Account Data
   static final loggedInUser = LateInstance<e621.UserLoggedIn>();
+  static bool tryAssignLoggedInUser(e621.User? user) {
+    if (user is e621.UserLoggedIn) {
+      if (user is! e621.UserLoggedInDetail &&
+          loggedInUser.$Safe is e621.UserLoggedInDetail) {
+        loggedInUser.$ =
+            (loggedInUser.$ as e621.UserLoggedInDetail).copyWithInstance(user);
+      } else {
+        loggedInUser.$ = user;
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   static int get tagQueryLimit =>
       loggedInUser.isAssigned ? loggedInUser.$.tagQueryLimit : 40;
   static int get favoriteLimit =>

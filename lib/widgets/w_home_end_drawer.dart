@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/domain_verification_page.dart';
 import 'package:fuzzy/intent.dart';
@@ -61,9 +62,12 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
           !isLoggedIn
               ? const DrawerHeader(child: Text("Menu"))
               // : DrawerHeader(child: Text(E621AccessData.fallback?.username ?? "FAIL")),
-              : DrawerHeader(
-                  child:
-                      Text(E621AccessData.userData.$Safe?.username ?? "FAIL")),
+              : WUserDrawerHeader(
+                  data: E621AccessData.userData.$Safe ??
+                      (kDebugMode ? E621AccessData.fallbackForced : null) ??
+                      E621AccessData.errorData,
+                  user: E621.loggedInUser.$Safe,
+                ),
           ListTile(
             title: const Text("Go to settings"),
             onTap: () {
@@ -332,6 +336,35 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class WUserDrawerHeader extends StatelessWidget {
+  final E621AccessData data;
+
+  final e621.User? user;
+  e621.UserDetailed? get userD =>
+      user is e621.UserDetailed ? user as e621.UserDetailed : null;
+  e621.UserLoggedIn? get userL =>
+      user is e621.UserLoggedIn ? user as e621.UserLoggedIn : null;
+  const WUserDrawerHeader({
+    super.key,
+    required this.data,
+    required this.user,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DrawerHeader(
+      child: Column(
+        children: [
+          Text(user?.name ?? data.username),
+          if (userL != null)
+            Text(
+                "FavCount: ${userL!.favoriteCount}/${userL!.favoriteLimit} (${userL!.favoriteLimit - userL!.favoriteCount} left)"),
+        ],
+      ), //Text(data.username),
     );
   }
 }
