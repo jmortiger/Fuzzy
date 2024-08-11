@@ -831,7 +831,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     var username = E621AccessData.fallback?.username,
         apiKey = E621AccessData.fallback?.apiKey;
     sc.pr = E621.performUserPostSearch(
-      tags: AppSettings.i!.forceSafe ? "$tags rating:safe" : tags,
+      // tags: AppSettings.i!.forceSafe ? "$tags rating:safe" : tags,
+      tags: tags,
       limit: limit,
       pageModifier: pageModifier,
       pageNumber: pageNumber,

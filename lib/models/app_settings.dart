@@ -8,6 +8,7 @@ import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/e621.dart' show TagCategory;
+import 'package:j_util/e621.dart' as e621 show Api;
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:j_util/j_util_full.dart';
 
@@ -88,6 +89,9 @@ class AppSettings implements AppSettingsRecord {
           );
   }
 
+  static Future<AppSettings> loadInstanceFromFile() => loadSettingsFromFile()
+    ..then((value) => e621.Api.useNsfw = !value.forceSafe);
+
   Future<AppSettings> loadFromFile() async {
     return switch (Platform.getPlatform()) {
       Platform.web => this..overwriteWithRecord(defaultSettings),
@@ -117,7 +121,7 @@ class AppSettings implements AppSettingsRecord {
   static final priorSettings = LazyInitializer(loadSettingsFromFile);
 
   // #region Singleton
-  static final _instance = LazyInitializer<AppSettings>(loadSettingsFromFile);
+  static final _instance = LazyInitializer<AppSettings>(loadInstanceFromFile);
   static Future<AppSettings> get instance async =>
       _instance.isAssigned ? _instance.$ : await _instance.getItem();
   static AppSettings? get i => _instance.$Safe;
@@ -166,7 +170,6 @@ class AppSettings implements AppSettingsRecord {
     _favoriteTags = Set.of(r.favoriteTags);
     _blacklistedTags = Set.of(r.blacklistedTags);
     _forceSafe = r.forceSafe;
-    _forceSafe = r.forceSafe;
     _maxSearchesToSave = r.maxSearchesToSave;
   }
 
@@ -202,7 +205,13 @@ class AppSettings implements AppSettingsRecord {
   bool _forceSafe;
   @override
   bool get forceSafe => _forceSafe;
-  set forceSafe(bool value) => _forceSafe = value;
+  set forceSafe(bool value) {
+    if (this == i && e621.Api.useNsfw != !value) {
+      e621.Api.useNsfw = !value;
+    }
+    _forceSafe = value;
+  }
+
   int _maxSearchesToSave;
   @override
   int get maxSearchesToSave => _maxSearchesToSave;
