@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:fuzzy/models/app_settings.dart';
@@ -365,6 +366,76 @@ sealed class E621 extends Site {
       apiKey: apiKey,
     );
   }
+
+  static Future<http.Response> logAndSendRequest(http.Request r) {
+    logRequest(r, logger);
+    return e621.Api.sendRequest(r);
+  }
+
+  // #region User API
+  static e621.UserDetailed? resolveGetUserFuture(http.Response v) {
+    if (v.statusCodeInfo.isError) {
+      logResponse(v, logger, lm.LogLevel.SEVERE);
+      return null;
+    } else if (!v.statusCodeInfo.isSuccessful) {
+      logResponse(v, logger, lm.LogLevel.WARNING);
+      return null;
+    } else {
+      logResponse(v, logger, lm.LogLevel.FINER);
+      try {
+        return e621.UserLoggedInDetail.fromRawJson(v.body);
+      } catch (e) {
+        return e621.UserDetailed.fromRawJson(v.body);
+      }
+    }
+  }
+
+  static Future<e621.UserDetailed?> getUserDetailedFromId(int id,
+      [e621.E6Credentials? c]) {
+    var d = c ??
+        (E621AccessData.userData.$Safe ??
+                (isDebug ? E621AccessData.devAccessData.$Safe : null))
+            ?.cred;
+    if (d == null) {
+      logger.finest("No access data");
+    }
+    var r = e621.Api.initGetUserRequest(
+      id,
+      credentials: d,
+    );
+    logRequest(r, logger, lm.LogLevel.FINEST);
+    return e621.Api.sendRequest(r).then((v) {
+      if (v.statusCodeInfo.isError) {
+        logResponse(v, logger, lm.LogLevel.SEVERE);
+        return null;
+      } else if (!v.statusCodeInfo.isSuccessful) {
+        logResponse(v, logger, lm.LogLevel.WARNING);
+        return null;
+      } else {
+        logResponse(v, logger, lm.LogLevel.FINER);
+        try {
+          return e621.UserLoggedInDetail.fromRawJson(v.body);
+        } catch (e) {
+          return e621.UserDetailed.fromRawJson(v.body);
+        }
+      }
+    });
+  }
+
+  static Future<http.Response> sendGetUserRequest(
+    int userId, {
+    e621.BaseCredentials? credentials,
+    bool logRequest = kDebugMode,
+  }) => (logRequest
+        ? logAndSendRequest(
+            e621.Api.initGetUserRequest(userId, credentials: credentials))
+        : e621.Api.sendRequest(
+            e621.Api.initGetUserRequest(userId, credentials: credentials)))
+      ..then((v) {
+        final t = resolveGetUserFuture(v);
+        if (t is e621.UserLoggedInDetail) loggedInUser.$ = t;
+      });
+  // #endregion User API
 
   static Future<SearchResultArgs> performPostSearch({
     String tags = "",

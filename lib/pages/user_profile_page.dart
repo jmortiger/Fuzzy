@@ -174,7 +174,7 @@ class UserProfileLoaderPage extends StatefulWidget
         credentials: d,
       );
       logRequest(r, logger);
-      return Api.sendRequest(r).then(resolveGetUserFuture);
+      return Api.sendRequest(r).then(E621.resolveGetUserFuture);
     }
     logger.finest("No id, trying access data");
     var username = d?.username ?? this.username;
@@ -212,56 +212,7 @@ class UserProfileLoaderPage extends StatefulWidget
           credentials: d,
         );
         logRequest(r, logger);
-        return Api.sendRequest(r).then(resolveGetUserFuture);
-      }
-    });
-  }
-
-  static UserDetailed? resolveGetUserFuture(Response v) {
-    if (v.statusCodeInfo.isError) {
-      logResponse(v, logger, lm.LogLevel.SEVERE);
-      return null;
-    } else if (!v.statusCodeInfo.isSuccessful) {
-      logResponse(v, logger, lm.LogLevel.WARNING);
-      return null;
-    } else {
-      logResponse(v, logger, lm.LogLevel.FINER);
-      try {
-        return UserLoggedInDetail.fromRawJson(v.body);
-      } catch (e) {
-        return UserDetailed.fromRawJson(v.body);
-      }
-    }
-  }
-
-  static Future<UserDetailed?> getUserDetailedFromId(int id,
-      [E6Credentials? c]) {
-    var d = c ??
-        (E621AccessData.userData.$Safe ??
-                (isDebug ? E621AccessData.devAccessData.$Safe : null))
-            ?.cred;
-    if (d == null) {
-      logger.finest("No access data");
-    }
-    var r = Api.initGetUserRequest(
-      id,
-      credentials: d,
-    );
-    logRequest(r, logger, lm.LogLevel.FINEST);
-    return Api.sendRequest(r).then((v) {
-      if (v.statusCodeInfo.isError) {
-        logResponse(v, logger, lm.LogLevel.SEVERE);
-        return null;
-      } else if (!v.statusCodeInfo.isSuccessful) {
-        logResponse(v, logger, lm.LogLevel.WARNING);
-        return null;
-      } else {
-        logResponse(v, logger, lm.LogLevel.FINER);
-        try {
-          return UserLoggedInDetail.fromRawJson(v.body);
-        } catch (e) {
-          return UserDetailed.fromRawJson(v.body);
-        }
+        return Api.sendRequest(r).then(E621.resolveGetUserFuture);
       }
     });
   }
@@ -295,7 +246,7 @@ class _UserProfileLoaderPageState extends State<UserProfileLoaderPage> {
       userFuture = null;
     } else if (userFuture.runtimeType == User) {
       user = userFuture as User;
-      userFuture = UserProfileLoaderPage.getUserDetailedFromId(user!.id)
+      userFuture = E621.getUserDetailedFromId(user!.id)
         ..then<void>(myThen);
     } else if (userFuture == null) {
       user = userFuture = null;
