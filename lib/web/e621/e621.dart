@@ -43,13 +43,10 @@ sealed class E621 extends Site {
   ]);
   @event
   static final searchEnded = JEvent<SearchResultArgs>();
-  // static StreamController<(PostPageSearchParameters, Iterable<E6PostResponse>)> postSearches;
   @event
   static final nonUserSearchBegan = JEvent<SearchArgs>();
   @event
   static final nonUserSearchEnded = JEvent<SearchResultArgs>();
-  // static final accessData = LateFinal<E621AccessData>();
-  // static LateInstance<E621AccessData> get accessData => E621AccessData.userData;
   static const int hardRateLimit = 1;
   static const int softRateLimit = 2;
   static const int idealRateLimit = 3;
@@ -144,9 +141,11 @@ sealed class E621 extends Site {
     E621AccessData? data,
     String? username,
     int? id,
+    bool updateIfLoggedIn = true,
   }) {
     if (user != null) {
       if (user is e621.UserLoggedInDetail || user is e621.UserDetailed) {
+        if (updateIfLoggedIn) tryUpdateLoggedInUser(user);
         return user;
       } else {
         id ??= user.id;
@@ -493,7 +492,8 @@ sealed class E621 extends Site {
   }
 
   // #region User API
-  static e621.UserDetailed? resolveGetUserFuture(http.Response v) {
+  static e621.UserDetailed? resolveGetUserFuture(http.Response v,
+      [bool updateIfLoggedIn = true]) {
     if (v.statusCodeInfo.isError) {
       logResponse(v, logger, lm.LogLevel.SEVERE);
       return null;
@@ -503,7 +503,9 @@ sealed class E621 extends Site {
     } else {
       logResponse(v, logger, lm.LogLevel.FINER);
       try {
-        return e621.UserLoggedInDetail.fromRawJson(v.body);
+        final t = e621.UserLoggedInDetail.fromRawJson(v.body);
+        if (updateIfLoggedIn) tryUpdateLoggedInUser(t);
+        return t;
       } catch (e) {
         return e621.UserDetailed.fromRawJson(v.body);
       }
@@ -512,10 +514,7 @@ sealed class E621 extends Site {
 
   static Future<e621.UserDetailed?> getUserDetailedFromId(int id,
       [e621.E6Credentials? c]) {
-    var d = c ??
-        (E621AccessData.userData.$Safe ??
-                (isDebug ? E621AccessData.devAccessData.$Safe : null))
-            ?.cred;
+    var d = c ?? E621AccessData.fallback?.cred;
     if (d == null) {
       logger.finest("No access data");
     }
@@ -524,22 +523,7 @@ sealed class E621 extends Site {
       credentials: d,
     );
     logRequest(r, logger, lm.LogLevel.FINEST);
-    return e621.Api.sendRequest(r).then((v) {
-      if (v.statusCodeInfo.isError) {
-        logResponse(v, logger, lm.LogLevel.SEVERE);
-        return null;
-      } else if (!v.statusCodeInfo.isSuccessful) {
-        logResponse(v, logger, lm.LogLevel.WARNING);
-        return null;
-      } else {
-        logResponse(v, logger, lm.LogLevel.FINER);
-        try {
-          return e621.UserLoggedInDetail.fromRawJson(v.body);
-        } catch (e) {
-          return e621.UserDetailed.fromRawJson(v.body);
-        }
-      }
-    });
+    return e621.Api.sendRequest(r).then(resolveGetUserFuture);
   }
 
   static Future<http.Response> sendGetUserRequest(
@@ -696,7 +680,8 @@ sealed class E621 extends Site {
             )
           : E621AccessData.fallback?.cred;
   static Future<void> addPostToSetHeavyLifter(
-      BuildContext context, PostListing postListing, [e621.E6Credentials? cred]) async {
+      BuildContext context, PostListing postListing,
+      [e621.E6Credentials? cred]) async {
     print("Adding ${postListing.id} to a set");
     // ScaffoldMessenger.of(context).showSnackBar(
     //   const SnackBar(content: Text("To Be Implemented")),

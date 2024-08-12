@@ -1,8 +1,13 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:fuzzy/main.dart';
+import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
+import 'package:fuzzy/widgets/w_update_set.dart';
 import 'package:http/http.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
@@ -21,7 +26,7 @@ class WSearchSet extends StatefulWidget {
   final bool hasInitialSearch;
   final int? limit;
 
-  final void Function(e621.PostSet set) onSelected;
+  final void Function(e621.PostSet set)? onSelected;
   // final bool Function(e621.PostSet set)? disableResults;
   final bool Function(e621.PostSet set)? filterResults;
   final Future<bool> Function(e621.PostSet set)? filterResultsAsync;
@@ -153,7 +158,7 @@ class _WSearchSetState extends State<WSearchSet> {
   bool isExpanded = false;
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: double.maxFinite,
       height: double.maxFinite,
       child: ListView(
@@ -239,7 +244,8 @@ class _WSearchSetState extends State<WSearchSet> {
             ...sets!.map((e) {
               return WSetTile(
                 set: e,
-                onSelected: widget.onSelected,
+                onSelected: widget.onSelected ??
+                    (e621.PostSet set) => Navigator.pop(context, set),
               );
             }),
         ],
@@ -266,6 +272,234 @@ class WSetTile extends StatelessWidget {
       subtitle: Text(
           "Posts: ${set.postCount}, Last Updated: ${set.updatedAt}, Created: ${set.createdAt}, CreatorId: ${set.creatorId}"),
       onTap: () => onSelected(set),
+      leading: IconButton(
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) {
+                return AlertDialog(
+                  content: SizedBox(
+                    width: double.maxFinite,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(set.name),
+                        ListTile(
+                          title: const Text("Select"),
+                          onTap: () => onSelected(set),
+                        ),
+                        ListTile(
+                          title: const Text("Search"),
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    buildHomePageWithProviders(
+                                  searchText: set.searchByShortname,
+                                ),
+                              )),
+                        ),
+                        ListTile(
+                          title: const Text("Edit Set"),
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => Scaffold(
+                                  appBar: AppBar(
+                                    title:
+                                        Text("Editing ${set.id} (${set.name})"),
+                                  ),
+                                  body: WUpdateSet(set: set),
+                                ),
+                              )),
+                        ),
+                        if (!((AppSettings.i?.blacklistedTags
+                                    .contains(set.searchByShortname) ??
+                                true) ||
+                            AppSettings.i!.blacklistedTags
+                                .contains(set.searchById)))
+                          ListTile(
+                            title: const Text("Add to blacklist"),
+                            onTap: () {
+                              AppSettings.i?.blacklistedTags.add(
+                                  SearchView.i.preferSetShortname
+                                      ? set.searchByShortname
+                                      : set.searchById);
+                              AppSettings.i?.writeToFile();
+                              Navigator.pop(context);
+                            },
+                          ),
+                        if (AppSettings.i?.blacklistedTags
+                                .contains(set.searchById) ??
+                            false)
+                          ListTile(
+                            title: const Text("Remove from blacklist"),
+                            onTap: () {
+                              AppSettings.i?.blacklistedTags
+                                  .remove(set.searchById);
+                              AppSettings.i?.writeToFile();
+                              Navigator.pop(context);
+                            },
+                          ),
+                        if (AppSettings.i?.blacklistedTags
+                                .contains(set.searchByShortname) ??
+                            false)
+                          ListTile(
+                            title: const Text("Remove from blacklist"),
+                            onTap: () {
+                              AppSettings.i?.blacklistedTags
+                                  .remove(set.searchByShortname);
+                              AppSettings.i?.writeToFile();
+                              Navigator.pop(context);
+                            },
+                          ),
+                        if (!((AppSettings.i?.favoriteTags
+                                    .contains(set.searchByShortname) ??
+                                true) ||
+                            AppSettings.i!.favoriteTags
+                                .contains(set.searchById)))
+                          ListTile(
+                            title: const Text("Add to favorites"),
+                            onTap: () {
+                              AppSettings.i?.favoriteTags.add(
+                                  SearchView.i.preferSetShortname
+                                      ? set.searchByShortname
+                                      : set.searchById);
+                              AppSettings.i?.writeToFile();
+                              Navigator.pop(context);
+                            },
+                          ),
+                        if (AppSettings.i?.favoriteTags
+                                .contains(set.searchById) ??
+                            false)
+                          ListTile(
+                            title: const Text("Remove from favorites"),
+                            onTap: () {
+                              AppSettings.i?.favoriteTags
+                                  .remove(set.searchById);
+                              AppSettings.i?.writeToFile();
+                              Navigator.pop(context);
+                            },
+                          ),
+                        if (AppSettings.i?.favoriteTags
+                                .contains(set.searchByShortname) ??
+                            false)
+                          ListTile(
+                            title: const Text("Remove from favorites"),
+                            onTap: () {
+                              AppSettings.i?.favoriteTags
+                                  .remove(set.searchByShortname);
+                              AppSettings.i?.writeToFile();
+                              Navigator.pop(context);
+                            },
+                          ),
+                        if (!SavedDataE6.all.any((e) =>
+                            e.searchString == set.searchById ||
+                            e.searchString == set.searchByShortname))
+                          ListTile(
+                            title: const Text("Add to saved searches"),
+                            onTap: () {
+                              Navigator.pop(context);
+                              showSavedElementEditDialogue(
+                                context,
+                                initialData: SearchView.i.preferSetShortname
+                                    ? set.searchByShortname
+                                    : set.searchById,
+                                initialParent: "Set",
+                                initialTitle: set.shortname,
+                                initialUniqueId: set.shortname,
+                              ).then((value) {
+                                if (value != null) {
+                                  SavedDataE6.doOnInit(
+                                    () => SavedDataE6.$addAndSaveSearch(
+                                      SavedSearchData.fromTagsString(
+                                        searchString: value.mainData,
+                                        title: value.title,
+                                        uniqueId: value.uniqueId ?? "",
+                                        parent: value.parent ?? "",
+                                      ),
+                                    ),
+                                  );
+                                }
+                              });
+                            },
+                          ),
+                        if (SavedDataE6.isInit &&
+                            SavedDataE6.searches.isNotEmpty)
+                          ListTile(
+                            title: const Text("Add tag to a saved search"),
+                            onTap: () {
+                              Navigator.pop(context);
+                              showDialog<SavedSearchData>(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    title: const Text("Select a search"),
+                                    content: SizedBox(
+                                      width: double.maxFinite,
+                                      child: SavedDataE6.buildParentedView(
+                                        context: context,
+                                        generateOnTap: (e) =>
+                                            () => Navigator.pop(context, e),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ).then((e) => e == null
+                                  ? ""
+                                  : showSavedElementEditDialogue(
+                                      context,
+                                      initialData:
+                                          "${e.searchString} ${SearchView.i.preferSetShortname ? set.searchByShortname : set.searchById}",
+                                      initialParent: e.parent,
+                                      initialTitle: e.title,
+                                      initialUniqueId: e.uniqueId,
+                                    ).then((value) {
+                                      if (value != null) {
+                                        SavedDataE6.$editAndSave(
+                                          original: e,
+                                          edited:
+                                              SavedSearchData.fromTagsString(
+                                            searchString: value.mainData,
+                                            title: value.title,
+                                            uniqueId: value.uniqueId ?? "",
+                                            parent: value.parent ?? "",
+                                          ),
+                                        );
+                                      }
+                                    }));
+                            },
+                          ),
+                        ListTile(
+                          title: const Text("Add to clipboard"),
+                          onTap: () {
+                            final text = SearchView.i.preferSetShortname
+                                ? set.searchByShortname
+                                : set.searchById;
+                            Clipboard.setData(ClipboardData(text: text))
+                                .then((v) {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                content: Text("$text added to clipboard."),
+                              ));
+                              Navigator.pop(context);
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Close"),
+                    )
+                  ],
+                );
+              },
+            );
+          },
+          icon: const Icon(Icons.question_mark)),
     );
   }
 }

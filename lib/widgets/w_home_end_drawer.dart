@@ -1,15 +1,13 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/domain_verification_page.dart';
 import 'package:fuzzy/intent.dart';
-import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/pages/user_profile_page.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/widgets/w_back_button.dart';
-import 'package:fuzzy/widgets/w_create_set.dart';
+import 'package:fuzzy/widgets/w_update_set.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:fuzzy/widgets/w_search_pool.dart';
 import 'package:fuzzy/widgets/w_search_set.dart';
@@ -190,6 +188,9 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             leading: E621AccessData.useLoginData
                 ? const Icon(Icons.check_box)
                 : const Icon(Icons.check_box_outline_blank),
+            subtitle: Text(E621AccessData.useLoginData
+                ? "On"
+                : "Off"),
             onTap: () {
               print("Before: ${E621AccessData.useLoginData}");
               setState(
@@ -298,7 +299,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 context: context,
                 builder: (context) {
                   return const AlertDialog(
-                    content: WBackButton.doNotBlockChild(child: WCreateSet()),
+                    content: WBackButton.doNotBlockChild(child: WUpdateSet.create()),
                     // scrollable: true,
                   );
                 },
@@ -370,7 +371,7 @@ class WUserDrawerHeader extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        UserProfileLoaderPage.getById(id: user!.id),
+                        UserProfileLoaderPage.getById(id: user.id),
                   )),
           child: root,
         ),
@@ -426,13 +427,14 @@ class _WUserDrawerHeaderLoaderState extends State<WUserDrawerHeaderLoader> {
       final t = E621.retrieveUserMostSpecific(user: user, data: widget.data);
       if (t is Future<e621.User?>?) {
         userFuture = t
-          ?..then((v) {
+          ?.then((v) {
             setState(() {
               user = v;
               userFuture = null;
             });
             E621.tryUpdateLoggedInUser(user);
-          });
+            return v;
+          })?..ignore();
       } else {
         logger.warning("Unexpected failure retrieving "
             "User in _WUserDrawerHeaderLoaderState.initState");

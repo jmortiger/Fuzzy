@@ -29,6 +29,9 @@ class WImageResult extends StatelessWidget {
   static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger
   final PostListing imageListing;
+  bool get isE6Post => imageListing is E6PostResponse;
+  E6PostResponse get post => imageListing as E6PostResponse;
+  E6PostResponse? get postSafe => imageListing as E6PostResponse;
   final int index;
   final bool isSelected;
   final bool disallowSelections;
@@ -47,8 +50,7 @@ class WImageResult extends StatelessWidget {
     this.postsCache,
   });
 
-  String get _buildTooltipString =>
-      /* $searchText */ "[$index]: ${(imageListing as E6PostResponse).id.toString()}";
+  String get _buildTooltipString => "[$index]: ${imageListing.id.toString()}";
 
   @override
   Widget build(BuildContext context) {
@@ -77,10 +79,21 @@ class WImageResult extends StatelessWidget {
         if (SearchView.i.postInfoBannerItems.isNotEmpty)
           PostInfoPane(post: imageListing),
         if (isSelected ||
-            // (!disallowSelections && sr(context).getIsSelected(index)))
             (!disallowSelections &&
                 sr(context).getIsPostSelected(imageListing.id)))
           _buildCheckmark(context),
+        if (isE6Post && post.isAnimatedGif)
+          Positioned.directional(
+              textDirection: TextDirection.ltr,
+              top: 0,
+              end: 0,
+              child: const Icon(Icons.gif))
+        else if (isE6Post && post.file.isAVideo)
+          Positioned.directional(
+              textDirection: TextDirection.ltr,
+              top: 0,
+              end: 0,
+              child: const Icon(Icons.play_circle_outline)),
         _buildInputDetector(context, w, h, url),
       ],
     );

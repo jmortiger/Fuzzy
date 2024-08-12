@@ -5,14 +5,16 @@ import 'package:j_util/e621.dart' as e621;
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:j_util/j_util_full.dart';
 
-class WCreateSet extends StatefulWidget {
-  const WCreateSet({super.key});
+class WUpdateSet extends StatefulWidget {
+  final e621.PostSet? set;
+  const WUpdateSet({super.key, required e621.PostSet this.set});
+  const WUpdateSet.create({super.key}) : set = null;
 
   @override
-  State<WCreateSet> createState() => _WCreateSetState();
+  State<WUpdateSet> createState() => _WUpdateSetState();
 }
 
-class _WCreateSetState extends State<WCreateSet> {
+class _WUpdateSetState extends State<WUpdateSet> {
   // #region Logger
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
@@ -20,13 +22,21 @@ class _WCreateSetState extends State<WCreateSet> {
   static late final lRecord = lm.generateLogger("WCreateSet");
   // #endregion Logger
   String postSetName = "";
+  String? get initialPostSetName => widget.set?.name;
+  TextEditingController? postSetNameController;
   String postSetShortname = "";
+  String? get initialPostSetShortname => widget.set?.shortname;
+  TextEditingController? postSetShortnameController;
   String? postSetDescription;
+  String? get initialPostSetDescription => widget.set?.description;
+  TextEditingController? postSetDescriptionController;
   bool? postSetIsPublic;
+  bool? get initialPostSetIsPublic => widget.set?.isPublic;
   bool? postSetTransferOnDelete;
+  bool? get initialPostSetTransferOnDelete => widget.set?.transferOnDelete;
   String? postSetNameErrorText;
   String? postSetShortnameErrorText;
-  String? postSetDescriptionErrorText;
+  // String? postSetDescriptionErrorText;
   String? determineNameErrorText(String value) =>
       value.length < 3 || value.length > 100
           ? "must be between three and one hundred characters long"
@@ -49,6 +59,30 @@ class _WCreateSetState extends State<WCreateSet> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.set != null) {
+      postSetName = widget.set!.name;
+      postSetShortname = widget.set!.shortname;
+      postSetDescription = widget.set!.description;
+      postSetIsPublic = widget.set!.isPublic;
+      postSetTransferOnDelete = widget.set!.transferOnDelete;
+
+      postSetNameController = TextEditingController.fromValue(
+          TextEditingValue(text: widget.set!.name));
+      postSetShortnameController = TextEditingController.fromValue(
+          TextEditingValue(text: widget.set!.shortname));
+      postSetDescriptionController = TextEditingController.fromValue(
+          TextEditingValue(text: widget.set!.description));
+
+      postSetNameErrorText = determineNameErrorText(initialPostSetName!);
+      postSetShortnameErrorText =
+          determineShortnameErrorText(initialPostSetShortname!);
+      // postSetDescriptionErrorText = determineDescriptionErrorText(initialPostSetDescription);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.maxFinite,
@@ -57,10 +91,11 @@ class _WCreateSetState extends State<WCreateSet> {
         child: Column(
           children: [
             TextField(
-              onChanged: (value) {
+              controller: postSetNameController,
+              onChanged: (value) => setState(() {
                 postSetName = value;
                 postSetNameErrorText = determineNameErrorText(value);
-              },
+              }),
               decoration: InputDecoration(
                 border: const OutlineInputBorder(),
                 labelText: "Set Name",
@@ -70,10 +105,11 @@ class _WCreateSetState extends State<WCreateSet> {
               maxLength: 100,
             ),
             TextField(
-              onChanged: (value) {
+              controller: postSetShortnameController,
+              onChanged: (value) => setState(() {
                 postSetShortname = value;
                 postSetShortnameErrorText = determineShortnameErrorText(value);
-              },
+              }),
               decoration: InputDecoration(
                 border: const OutlineInputBorder(),
                 labelText: "Set Shortname",
@@ -83,15 +119,16 @@ class _WCreateSetState extends State<WCreateSet> {
               maxLength: 50,
             ),
             TextField(
-              onChanged: (value) {
+              controller: postSetDescriptionController,
+              onChanged: (value) => setState(() {
                 postSetDescription = value;
                 // postSetDescriptionErrorText =
                 //     determineDescriptionErrorText(value);
-              },
+              }),
               decoration: InputDecoration(
                 border: const OutlineInputBorder(),
                 labelText: "Set Description",
-                errorText: postSetDescriptionErrorText,
+                // errorText: postSetDescriptionErrorText,
                 counterText: postSetDescription?.length.toString(),
               ),
               maxLines: 5,
@@ -127,33 +164,51 @@ class _WCreateSetState extends State<WCreateSet> {
             Row(
               children: [
                 TextButton(
-                  onPressed: () async {
-                    final r = e621.Api.initCreateSetRequest(
-                      postSetName: postSetName,
-                      postSetShortname: postSetShortname,
-                      postSetDescription: postSetDescription,
-                      postSetIsPublic: postSetIsPublic,
-                      postSetTransferOnDelete: postSetTransferOnDelete,
-                      credentials: E621AccessData.fallback?.cred,
-                    );
-                    util.logRequest(r, logger, lm.LogLevel.INFO);
-                    if ((determineNameErrorText(postSetName) ??
-                            determineShortnameErrorText(postSetShortname)) !=
-                        null) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text(
-                        "Resolve Errors with Name and/or shortname",
-                      )));
-                      return;
-                    }
-                    final res = await e621.Api.sendRequest(r);
-                    util.logResponse(res, logger, lm.LogLevel.INFO);
-                    if (res.statusCodeInfo.isSuccessful) {
-                      if (mounted) {
-                        Navigator.pop(this.context);
-                      }
-                    }
-                  },
+                  onPressed: postSetNameErrorText == null &&
+                          postSetShortnameErrorText == null
+                      ? () async {
+                          final r = widget.set == null
+                              ? e621.Api.initCreateSetRequest(
+                                  postSetName: postSetName,
+                                  postSetShortname: postSetShortname,
+                                  postSetDescription: postSetDescription,
+                                  postSetIsPublic: postSetIsPublic,
+                                  postSetTransferOnDelete:
+                                      postSetTransferOnDelete,
+                                  credentials:
+                                      E621AccessData.fallbackForced?.cred,
+                                )
+                              : e621.Api.initUpdateSetRequest(
+                                  widget.set!.id,
+                                  postSetName: postSetName,
+                                  postSetShortname: postSetShortname,
+                                  postSetDescription: postSetDescription,
+                                  postSetIsPublic: postSetIsPublic,
+                                  postSetTransferOnDelete:
+                                      postSetTransferOnDelete,
+                                  credentials: E621AccessData.fallback?.cred,
+                                );
+                          util.logRequest(r, logger, lm.LogLevel.INFO);
+                          if ((determineNameErrorText(postSetName) ??
+                                  determineShortnameErrorText(
+                                      postSetShortname)) !=
+                              null) {
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(const SnackBar(
+                                    content: Text(
+                              "Resolve Errors with Name and/or shortname",
+                            )));
+                            return;
+                          }
+                          final res = await e621.Api.sendRequest(r);
+                          util.logResponse(res, logger, lm.LogLevel.INFO);
+                          if (res.statusCodeInfo.isSuccessful) {
+                            if (mounted) {
+                              Navigator.pop(this.context);
+                            }
+                          }
+                        }
+                      : null,
                   child: const Text("Accept"),
                 ),
                 TextButton(
