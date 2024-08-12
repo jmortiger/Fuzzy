@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/domain_verification_page.dart';
 import 'package:fuzzy/intent.dart';
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/settings_page.dart';
@@ -50,8 +51,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
   @override
   void initState() {
     super.initState();
-    isLoggedIn =
-        E621AccessData.userData.isAssigned && E621AccessData.useLoginData;
+    isLoggedIn = E621AccessData.fallback != null;
   }
 
   @override
@@ -62,10 +62,8 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
           !isLoggedIn
               ? const DrawerHeader(child: Text("Menu"))
               // : DrawerHeader(child: Text(E621AccessData.fallback?.username ?? "FAIL")),
-              : WUserDrawerHeader(
-                  data: E621AccessData.userData.$Safe ??
-                      (kDebugMode ? E621AccessData.fallbackForced : null) ??
-                      E621AccessData.errorData,
+              : WUserDrawerHeaderLoader(
+                  data: E621AccessData.fallback ?? E621AccessData.errorData,
                   user: E621.loggedInUser.$Safe,
                 ),
           ListTile(
@@ -93,19 +91,18 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             // onTap: () => launchLogInDialog(context, () => this.context)
             //     .then((v) => setState(() {})),
           ),
-          if (isLoggedIn)
-            ListTile(
-              title: const Text("Show User Profile"),
-              onTap: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => UserProfileLoaderPage.getByName(
-                          username: E621AccessData.userData.$Safe?.username ??
-                              E621AccessData.devAccessData.$.username),
-                    ));
-              },
-            ),
+          // if (isLoggedIn)
+          //   ListTile(
+          //     title: const Text("Show User Profile"),
+          //     onTap: () {
+          //       Navigator.push(
+          //           context,
+          //           MaterialPageRoute(
+          //             builder: (context) => UserProfileLoaderPage.getByName(
+          //                 username: E621AccessData.fallback!.username),
+          //           ));
+          //     },
+          //   ),
           if (isLoggedIn)
             ListTile(
               title: const Text("Log out"),
@@ -354,17 +351,117 @@ class WUserDrawerHeader extends StatelessWidget {
     required this.user,
   });
 
+  static Widget createUsernameDisplay(E621AccessData data, e621.User? user) =>
+      Text(user?.name ?? data.username);
+  static Widget buildShell(BuildContext context, E621AccessData data,
+          e621.User? user, Widget root) =>
+      DrawerHeader(
+        child: InkWell(
+          onTap: user == null
+              ? () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => UserProfileLoaderPage.getByName(
+                            username: data.username),
+                      ));
+                }
+              : () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        UserProfileLoaderPage.getById(id: user!.id),
+                  )),
+          child: root,
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
-    return DrawerHeader(
-      child: Column(
-        children: [
-          Text(user?.name ?? data.username),
-          if (userL != null)
-            Text(
-                "FavCount: ${userL!.favoriteCount}/${userL!.favoriteLimit} (${userL!.favoriteLimit - userL!.favoriteCount} left)"),
-        ],
-      ), //Text(data.username),
+    final root = Column(
+      children: [
+        createUsernameDisplay(data, user),
+        if (userL != null) UserProfilePage.generateFavStats(userL!),
+        // Text("FavCount: ${userL!.favoriteCount}/${userL!.favoriteLimit}"
+        //     " (${userL!.favoriteLimit - userL!.favoriteCount} left)"),
+        if (userL != null) Text("Tag Query Limit: ${userL!.tagQueryLimit}"),
+      ],
     );
+    return buildShell(context, data, user, root);
+  }
+}
+
+class WUserDrawerHeaderLoader extends StatefulWidget {
+  final E621AccessData data;
+
+  final e621.User? user;
+  const WUserDrawerHeaderLoader({
+    super.key,
+    required this.data,
+    required this.user,
+  });
+
+  @override
+  State<WUserDrawerHeaderLoader> createState() =>
+      _WUserDrawerHeaderLoaderState();
+}
+
+class _WUserDrawerHeaderLoaderState extends State<WUserDrawerHeaderLoader> {
+  static lm.FileLogger get logger => _WHomeEndDrawerState.logger;
+  e621.User? user;
+
+  Future<e621.User?>? userFuture;
+
+  e621.UserDetailed? get userD =>
+      user is e621.UserDetailed ? user as e621.UserDetailed : null;
+
+  e621.UserLoggedIn? get userL =>
+      user is e621.UserLoggedIn ? user as e621.UserLoggedIn : null;
+
+  @override
+  void initState() {
+    super.initState();
+    user = widget.user;
+    if (widget.user == null || widget.user is! e621.UserDetailed) {
+      final t = E621.retrieveUserMostSpecific(user: user, data: widget.data);
+      if (t is Future<e621.User?>?) {
+        userFuture = t
+          ?..then((v) {
+            setState(() {
+              user = v;
+              userFuture = null;
+            });
+            E621.tryUpdateLoggedInUser(user);
+          });
+      } else {
+        logger.warning("Unexpected failure retrieving "
+            "User in _WUserDrawerHeaderLoaderState.initState");
+        assert(t is! Future);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return userFuture == null
+        ? WUserDrawerHeader(data: widget.data, user: user)
+        : WUserDrawerHeader.buildShell(
+            context,
+            widget.data,
+            user,
+            Column(
+              children: [
+                WUserDrawerHeader.createUsernameDisplay(widget.data, user),
+                const CircularProgressIndicator(),
+              ],
+            ));
+    // DrawerHeader(
+    //     child: Column(
+    //       children: [
+    //         WUserDrawerHeader.createUsernameDisplay(widget.data, user),
+    //         const CircularProgressIndicator(),
+    //       ],
+    //     ),
+    //   );
   }
 }

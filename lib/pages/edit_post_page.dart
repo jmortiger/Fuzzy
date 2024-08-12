@@ -584,7 +584,7 @@ class EditPostPageLoader extends StatelessWidget
         : FutureBuilder(
             future: e621.Api.sendRequest(e621.Api.initSearchPostRequest(
               postId!,
-              credentials: E621.accessData.$Safe?.cred,
+              credentials: E621AccessData.fallbackForced?.cred,
             )),
             builder: (context, snapshot) {
               if (snapshot.hasData) {

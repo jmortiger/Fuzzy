@@ -20,10 +20,14 @@ final class E621AccessData with Storable<E621AccessData> {
   static String? get devUserAgent => devAccessData.$Safe?.userAgent;
   static bool useLoginData = true;
   static bool toggleUseLoginData() => useLoginData = !useLoginData;
+
+  /// TODO: refactor behind fallback.
   static final userData = LateInstance<E621AccessData>();
-  static E621AccessData? fallback =
-      useLoginData ? userData.$Safe ?? devAccessData.$Safe : null;
-  static E621AccessData? fallbackForced = userData.$Safe ?? devAccessData.$Safe;
+  static E621AccessData? fallback = useLoginData ? fallbackForced : null;
+
+  /// Disregards state of [useLoginData].
+  static E621AccessData? fallbackForced =
+      userData.$Safe ?? (isDebug ? devAccessData.$Safe : null);
   static const fileName = "credentials.json";
   static final filePathFull = LazyInitializer<String>(
     () async =>

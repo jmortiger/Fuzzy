@@ -181,7 +181,7 @@ class CachedSearchesEvent extends JEventArgs {
     E621.searchBegan.subscribe(onSearchBegan);
   }
   void onSearchBegan(SearchArgs a) {
-    searches.add(a.tags.foldToString(" "));
+    searches.add(a.tags.foldToString());
     _save();
   }
 

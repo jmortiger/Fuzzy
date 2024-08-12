@@ -48,10 +48,8 @@ sealed class E621 extends Site {
   static final nonUserSearchBegan = JEvent<SearchArgs>();
   @event
   static final nonUserSearchEnded = JEvent<SearchResultArgs>();
-  static const String rootUrl = "https://e621.net/";
-  static final Uri rootUri = Uri.parse(rootUrl);
   // static final accessData = LateFinal<E621AccessData>();
-  static LateInstance<E621AccessData> get accessData => E621AccessData.userData;
+  // static LateInstance<E621AccessData> get accessData => E621AccessData.userData;
   static const int hardRateLimit = 1;
   static const int softRateLimit = 2;
   static const int idealRateLimit = 3;
@@ -62,7 +60,9 @@ sealed class E621 extends Site {
 
   // #region User Account Data
   static final loggedInUser = LateInstance<e621.UserLoggedIn>();
-  static bool tryAssignLoggedInUser(e621.User? user) {
+
+  /// Won't update unless [user] is non-null and of type [e621.UserLoggedIn].
+  static bool tryUpdateLoggedInUser(e621.User? user) {
     if (user is e621.UserLoggedIn) {
       if (user is! e621.UserLoggedInDetail &&
           loggedInUser.$Safe is e621.UserLoggedInDetail) {
@@ -93,6 +93,124 @@ sealed class E621 extends Site {
       loggedInUser.isAssigned ? loggedInUser.$.apiRegenMultiplier : 1;
   static int get remainingApiLimit =>
       loggedInUser.isAssigned ? loggedInUser.$.remainingApiLimit : 60;
+
+  static FutureOr<e621.User?> retrieveUserNonDetailed(
+      {e621.User? user, E621AccessData? data, String? username}) {
+    if (user != null) return user;
+    logger.finest("No User obj, trying access data");
+    var d = (data ??
+            E621AccessData.userData.$Safe ??
+            (isDebug ? E621AccessData.devAccessData.$Safe : null))
+        ?.cred;
+    if (d == null) {
+      logger.finest("No access data, trying by name");
+    }
+    username ??= d?.username;
+    if (username == null || username.isEmpty) {
+      logger.warning("No user info available: cannot find user");
+      return null;
+    }
+    var r = e621.Api.initSearchUsersRequest(
+      searchNameMatches: username,
+      credentials: d,
+      limit: 1,
+    );
+    logRequest(r, logger);
+    return e621.Api.sendRequest(r).then((v) {
+      if (v.statusCodeInfo.isError) {
+        logResponse(v, logger, lm.LogLevel.SEVERE);
+        return null;
+      } else if (!v.statusCodeInfo.isSuccessful) {
+        logResponse(v, logger, lm.LogLevel.WARNING);
+        return null;
+      } else {
+        logResponse(v, logger, lm.LogLevel.INFO);
+        try {
+          return e621.UserLoggedIn.fromRawJson(v.body);
+        } catch (e) {
+          return e621.User.fromRawJson(v.body);
+        }
+      }
+    });
+  }
+
+  /// Based on the provided user info, attempts to get, in order:
+  /// 1. [UserLoggedInDetail]
+  /// 1. [UserDetailed]
+  /// 1. [UserLoggedIn]
+  /// 1. [User]
+  static FutureOr<e621.User?> retrieveUserMostSpecific({
+    e621.User? user,
+    E621AccessData? data,
+    String? username,
+    int? id,
+  }) {
+    if (user != null) {
+      if (user is e621.UserLoggedInDetail || user is e621.UserDetailed) {
+        return user;
+      } else {
+        id ??= user.id;
+        logger.finest("Attempting to retrieve more specific user "
+            "info for user ${user.id}/$id (${user.name}/$username)");
+      }
+    } else {
+      logger.finest("No User obj, trying id");
+    }
+    var d = (data ??
+            E621AccessData.userData.$Safe ??
+            (isDebug ? E621AccessData.devAccessData.$Safe : null))
+        ?.cred;
+    if (id != null) {
+      if (d == null) {
+        logger.info("No credential data, can't get logged in data.");
+      }
+      var r = e621.Api.initGetUserRequest(
+        id,
+        credentials: d,
+      );
+      logRequest(r, logger);
+      return e621.Api.sendRequest(r).then(E621.resolveGetUserFuture);
+    }
+    logger.finest("No id, trying access data");
+    if (d == null) {
+      logger.finest("No access data, trying by name");
+    }
+    username ??= d?.username;
+    if (username == null || username.isEmpty) {
+      logger.warning("No user info available: cannot find user");
+      return null;
+    }
+    var r = e621.Api.initSearchUsersRequest(
+      searchNameMatches: username,
+      credentials: d,
+      limit: 1,
+    );
+    logRequest(r, logger);
+    return e621.Api.sendRequest(r).then((v) {
+      if (v.statusCodeInfo.isError) {
+        logResponse(v, logger, lm.LogLevel.SEVERE);
+        return null;
+      } else if (!v.statusCodeInfo.isSuccessful) {
+        logResponse(v, logger, lm.LogLevel.WARNING);
+        return null;
+      } else {
+        logResponse(v, logger, lm.LogLevel.FINER);
+        e621.User t;
+        try {
+          t = e621.UserLoggedIn.fromRawJson(v.body);
+        } catch (e) {
+          t = e621.User.fromRawJson(v.body);
+        }
+        logger.info("Launching request for User ${t.id} (${t.name})");
+        var r = e621.Api.initGetUserRequest(
+          t.id,
+          credentials: d,
+        );
+        logRequest(r, logger);
+        return e621.Api.sendRequest(r).then(resolveGetUserFuture);
+      }
+    });
+  }
   // #endregion User Account Data
 
   // #region Saved Search Parsing
@@ -120,7 +238,12 @@ sealed class E621 extends Site {
       RegExp("$delimiter([^$delimiter]+?)$savedSearchInsertionEnd");
   // #endregion Saved Search Parsing
   E621();
-
+  // RegExp("(?<=^|\\+${RegExpExt.whitespacePattern})fav:${loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username ?? " "}(?=\$|${RegExpExt.whitespacePattern})", caseSensitive: false)
+  static RegExp get userFavoriteSearchFinder => RegExp(
+      r"(?<=^|[\u2028\n\r\u000B\f\u2029\u0085 	]|\+)fav:"
+      "${loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username ?? " "}"
+      r"(?=$|[\u2028\n\r\u000B\f\u2029\u0085 	])",
+      caseSensitive: false);
   static String fillTagTemplate(String tags) {
     print("fillTagTemplate: Before: $tags");
     tags = tags.replaceAllMapped(
@@ -136,15 +259,12 @@ sealed class E621 extends Site {
       },
     );
     print("fillTagTemplate: After: $tags", lm.LogLevel.INFO);
-    // if (!tags.contains(RegExp("(?<=^|\\+${RegExpExt.whitespacePattern})fav:${loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username ?? " "}(?=\$|${RegExpExt.whitespacePattern})", caseSensitive: false))) {
-    if (!tags.contains(RegExp(
-        r"(?<=^|[\u2028\n\r\u000B\f\u2029\u0085 	]|\+)fav:"
-        "${loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username ?? " "}"
-        r"(?=$|[\u2028\n\r\u000B\f\u2029\u0085 	])",
-        caseSensitive: false))) {
-      tags +=
-          AppSettings.i?.blacklistedTags.map((e) => "-$e").foldToString(" ") ??
-              "";
+    if (!tags.contains(userFavoriteSearchFinder)) {
+      tags += AppSettings.i?.blacklistedTags.map((e) => "-$e").fold(
+                "",
+                (p, e) => "$p $e",
+              ) ??
+          "";
       print("fillTagTemplate: After Blacklist: $tags", lm.LogLevel.INFO);
     } else {
       print("fillTagTemplate: User favorite search, not applying blacklist",
@@ -426,15 +546,16 @@ sealed class E621 extends Site {
     int userId, {
     e621.BaseCredentials? credentials,
     bool logRequest = kDebugMode,
-  }) => (logRequest
-        ? logAndSendRequest(
-            e621.Api.initGetUserRequest(userId, credentials: credentials))
-        : e621.Api.sendRequest(
-            e621.Api.initGetUserRequest(userId, credentials: credentials)))
-      ..then((v) {
-        final t = resolveGetUserFuture(v);
-        if (t is e621.UserLoggedInDetail) loggedInUser.$ = t;
-      });
+  }) =>
+      (logRequest
+          ? logAndSendRequest(
+              e621.Api.initGetUserRequest(userId, credentials: credentials))
+          : e621.Api.sendRequest(
+              e621.Api.initGetUserRequest(userId, credentials: credentials)))
+        ..then((v) {
+          final t = resolveGetUserFuture(v);
+          if (t is e621.UserLoggedInDetail) loggedInUser.$ = t;
+        });
   // #endregion User API
 
   static Future<SearchResultArgs> performPostSearch({
@@ -573,11 +694,9 @@ sealed class E621 extends Site {
               username: username!,
               apiKey: apiKey!,
             )
-          : accessData.isAssigned
-              ? accessData.$.cred
-              : null;
+          : E621AccessData.fallback?.cred;
   static Future<void> addPostToSetHeavyLifter(
-      BuildContext context, PostListing postListing) async {
+      BuildContext context, PostListing postListing, [e621.E6Credentials? cred]) async {
     print("Adding ${postListing.id} to a set");
     // ScaffoldMessenger.of(context).showSnackBar(
     //   const SnackBar(content: Text("To Be Implemented")),
@@ -605,7 +724,7 @@ sealed class E621 extends Site {
           .sendRequest(e621.Api.initAddToSetRequest(
             v.id,
             [postListing.id],
-            credentials: E621.accessData.$.cred,
+            credentials: cred ?? E621AccessData.fallback?.cred,
           ))
           .toResponse();
       if (res.statusCode == 201) {

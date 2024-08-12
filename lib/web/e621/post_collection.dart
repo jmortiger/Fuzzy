@@ -264,7 +264,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     notifyListeners();
   }
 
-  String get searchText => _parameters.tags ?? "";
+  String get searchText => _parameters.tags;
   set searchText(String value) {
     parameters = parameters.copyWith(tags: value);
     // notifyListeners();
@@ -561,7 +561,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     } else if (hasNextPageCached ?? false) {
       return doIt();
     } else {
-      final t = getHasNextPage(tags: parameters.tags ?? "");
+      final t = getHasNextPage(tags: parameters.tags);
       return t is Future<bool>
           ? t.then((np) => np ? doIt() : false)
           : t
@@ -718,7 +718,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     } else if (hasNextPageCached ?? false) {
       return doIt();
     } else {
-      final t = getHasNextPage(tags: parameters.tags ?? "");
+      final t = getHasNextPage(tags: parameters.tags);
       return t is Future<bool>
           ? t.then((np) => np ? doIt() : false)
           : t
@@ -900,7 +900,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
             .performUserPostSearch(
           limit: parameters.limit,
           pageNumber: (parameters.pageNumber ?? 1),
-          tags: parameters.tags ?? "",
+          tags: parameters.tags,
         )
             .then((v) {
           if (v.results == null) {

@@ -7,6 +7,7 @@ import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/j_util_full.dart';
+import 'package:j_util/e621.dart' as e621;
 import 'package:fuzzy/log_management.dart' as lm;
 
 // #region Logger
@@ -143,11 +144,13 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
           children: [
             WSetStringField(
               name: "Favorite Tags",
+              subtitle: null,
               getVal: AppSettings.i!.favoriteTags,
               setVal: (Set<String> v) => AppSettings.i!.favoriteTags = v,
             ),
             WSetStringField(
               getVal: AppSettings.i!.blacklistedTags,
+              subtitle: null,
               name: "Blacklisted Tags",
               setVal: (Set<String> v) => AppSettings.i!.blacklistedTags = v,
             ),
@@ -156,7 +159,38 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               subtitle:
                   Text("Delete all ${CachedSearches.searches.length} searches"),
               onTap: CachedSearches.clear,
-            )
+            ),
+            WBooleanField(
+              getVal: () => AppSettings.i!.forceSafe,
+              name: "Disable non-safe posts",
+              subtitle: "Current site: ${e621.Api.baseUri.toString()}",
+              setVal: (bool val) => AppSettings.i!.forceSafe = val,
+            ),
+            WBooleanField(
+              getVal: () => AppSettings.i!.autoLoadUserProfile,
+              name: "Auto-load user profile",
+              subtitle: "Load e621 user profile when required?",
+              setVal: (bool val) => AppSettings.i!.autoLoadUserProfile = val,
+            ),
+            WBooleanField(
+              getVal: () => AppSettings.i!.applyProfileBlacklist,
+              name: "Apply Profile blacklist",
+              subtitle: "If profile is loaded, add its blacklist to the local blacklist",
+              setVal: (bool val) => AppSettings.i!.applyProfileBlacklist = val,
+            ),
+            WBooleanField(
+              getVal: () => AppSettings.i!.applyProfileFavTags,
+              name: "Apply Profile Fav tags",
+              subtitle: "If profile is loaded, add its fav tags to the local fav tags",
+              setVal: (bool val) => AppSettings.i!.applyProfileFavTags = val,
+            ),
+            // if (!AppSettings.i!.autoLoadUserProfile)
+            //   WBooleanField(
+            //     getVal: () => AppSettings.i!.autoLoadUserProfile,
+            //     name: "Load user profile ",
+            //     subtitle: "Current site: ${e621.Api.baseUri.toString()}",
+            //     setVal: (bool val) => SearchView.i.lazyBuilding = val,
+            //   ),
           ],
         ),
         ExpansionTile(
@@ -460,6 +494,9 @@ class _WBooleanTristateFieldState extends State<WBooleanTristateField> {
 
 class WSetStringField extends StatefulWidget {
   final String name;
+  /// Null for generated subtitle, empty string for no subtitle
+  /// Defaults to empty string
+  final String? subtitle;
 
   final Set<String> getVal;
 
@@ -469,6 +506,7 @@ class WSetStringField extends StatefulWidget {
   const WSetStringField({
     super.key,
     required this.name,
+    this.subtitle = "",
     required this.getVal,
     required this.setVal,
     this.validateVal,
@@ -479,8 +517,6 @@ class WSetStringField extends StatefulWidget {
 }
 
 class _WSetStringFieldState extends State<WSetStringField> {
-  String get name => widget.name;
-
   Set<String> get getVal => widget.getVal;
 
   void Function(Set<String> p1) get setVal => widget.setVal;
@@ -490,8 +526,10 @@ class _WSetStringFieldState extends State<WSetStringField> {
   Widget build(BuildContext context) {
     return ListTile(
       key: ValueKey(getVal),
-      title: Text(name),
-      subtitle: Text(getVal.toString()),
+      title: Text(widget.name),
+      subtitle: widget.subtitle?.isNotEmpty ?? true
+          ? Text(widget.subtitle ?? getVal.toString())
+          : null,
       onTap: () {
         final before = getVal.fold(
           "",

@@ -358,9 +358,7 @@ class WFabBuilder extends StatelessWidget {
               .sendRequest(e621.Api.initAddToSetRequest(
                 v.id,
                 posts.map((e) => e.id).toList(),
-                credentials: (E621.accessData.$Safe ??=
-                        await E621AccessData.devAccessData.getItem())
-                    .cred,
+                credentials: E621AccessData.fallback?.cred,
               ))
               .toResponse();
 
@@ -474,9 +472,7 @@ class WFabBuilder extends StatelessWidget {
               .sendRequest(e621.Api.initAddToSetRequest(
                 v.id,
                 [postListing.id],
-                credentials: (E621.accessData.$Safe ??=
-                        await E621AccessData.devAccessData.getItem())
-                    .cred,
+                credentials: E621AccessData.fallback?.cred,
               ))
               .toResponse();
           if (res.statusCode == 201) {
@@ -571,9 +567,7 @@ class WFabBuilder extends StatelessWidget {
               .sendRequest(e621.Api.initRemoveFromSetRequest(
                 v.id,
                 posts.map((e) => e.id).toList(),
-                credentials: (E621.accessData.$Safe ??=
-                        await E621AccessData.devAccessData.getItem())
-                    .cred,
+                credentials: E621AccessData.fallback?.cred,
               ))
               .toResponse();
 
@@ -691,9 +685,7 @@ class WFabBuilder extends StatelessWidget {
               .sendRequest(e621.Api.initRemoveFromSetRequest(
                 v.id,
                 [post.id],
-                credentials: (E621.accessData.$Safe ??=
-                        await E621AccessData.devAccessData.getItem())
-                    .cred,
+                credentials: E621AccessData.fallback?.cred,
               ))
               .toResponse();
 

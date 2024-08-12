@@ -4,11 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
-import 'package:http/http.dart';
 import 'package:j_util/e621.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
-import 'package:j_util/j_util_full.dart';
 
 import '../web/e621/e621_access_data.dart';
 
@@ -31,7 +29,22 @@ class UserProfilePage extends StatelessWidget
     super.key,
     required this.user,
   });
-
+  static Widget generateFavStats(UserLoggedIn userL) => Text.rich(TextSpan(
+        text: "FavCount: ${userL.favoriteCount}/${userL.favoriteLimit} (",
+        children: [
+          TextSpan(text: "${userL.favoriteLimit - userL.favoriteCount}", 
+            style: TextStyle(
+              color: switch (userL.favoriteLimit - userL.favoriteCount) {
+                >= 500 => Colors.green,
+                >= 100 && < 500 => Colors.amber,
+                < 100 => Colors.red,
+                _ => throw UnsupportedError("type not supported"),
+              },
+              fontWeight: FontWeight.bold,
+            )),
+          const TextSpan(text: " left)"),
+        ],
+      ));
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,9 +64,7 @@ class UserProfilePage extends StatelessWidget
         Text("Can Approve Posts: ${user.canApprovePosts}"),
         Text("Can Upload Free: ${user.canUploadFree}"),
         Text("Base Upload Limit: ${user.baseUploadLimit}"),
-        if (userL != null)
-          Text(
-              "FavCount: ${userL!.favoriteCount}/${userL!.favoriteLimit} (${userL!.favoriteLimit - userL!.favoriteCount} left)"),
+        if (userL != null) generateFavStats(userL!),
         if (userL != null) Text("Tag Query Limit: ${userL!.tagQueryLimit}"),
         if (userL != null) Text("Blacklist Users: ${userL!.blacklistUsers}"),
         if (userL != null) Text("Blacklisted Tags: ${userL!.blacklistedTags}"),
@@ -104,118 +115,118 @@ class UserProfileLoaderPage extends StatefulWidget
   })  : data = null,
         username = null,
         _user = null;
-  FutureOr<User?> get user {
-    if (_user != null) return _user;
-    logger.finest("No User obj, trying access data");
-    var d = (data ??
-                E621AccessData.userData.$Safe ??
-                (isDebug ? E621AccessData.devAccessData.$Safe : null))
-            ?.cred,
-        username = d?.username ?? this.username;
-    if (d == null) {
-      logger.finest("No access data, trying by name");
-    }
-    if (username == null || username.isEmpty) {
-      logger.warning("No user info available: cannot find user");
-      return null;
-    }
-    var r = Api.initSearchUsersRequest(
-      searchNameMatches: d?.username,
-      credentials: d,
-      limit: 1,
-    );
-    logRequest(r, logger);
-    return Api.sendRequest(r).then((v) {
-      if (v.statusCodeInfo.isError) {
-        logResponse(v, logger, lm.LogLevel.SEVERE);
-        return null;
-      } else if (!v.statusCodeInfo.isSuccessful) {
-        logResponse(v, logger, lm.LogLevel.WARNING);
-        return null;
-      } else {
-        logResponse(v, logger, lm.LogLevel.INFO);
-        try {
-          return UserLoggedIn.fromRawJson(v.body);
-        } catch (e) {
-          return User.fromRawJson(v.body);
-        }
-      }
-    });
-  }
+  // FutureOr<User?> get user {
+  //   if (_user != null) return _user;
+  //   logger.finest("No User obj, trying access data");
+  //   var d = (data ??
+  //               E621AccessData.userData.$Safe ??
+  //               (isDebug ? E621AccessData.devAccessData.$Safe : null))
+  //           ?.cred,
+  //       username = this.username ?? d?.username;
+  //   if (d == null) {
+  //     logger.finest("No access data, trying by name");
+  //   }
+  //   if (username == null || username.isEmpty) {
+  //     logger.warning("No user info available: cannot find user");
+  //     return null;
+  //   }
+  //   var r = Api.initSearchUsersRequest(
+  //     searchNameMatches: username,
+  //     credentials: d,
+  //     limit: 1,
+  //   );
+  //   logRequest(r, logger);
+  //   return Api.sendRequest(r).then((v) {
+  //     if (v.statusCodeInfo.isError) {
+  //       logResponse(v, logger, lm.LogLevel.SEVERE);
+  //       return null;
+  //     } else if (!v.statusCodeInfo.isSuccessful) {
+  //       logResponse(v, logger, lm.LogLevel.WARNING);
+  //       return null;
+  //     } else {
+  //       logResponse(v, logger, lm.LogLevel.INFO);
+  //       try {
+  //         return UserLoggedIn.fromRawJson(v.body);
+  //       } catch (e) {
+  //         return User.fromRawJson(v.body);
+  //       }
+  //     }
+  //   });
+  // }
 
-  /// Based on the provided user info, attempts to get, in order:
-  /// 1. [UserLoggedInDetail]
-  /// 1. [UserDetailed]
-  /// 1. [UserLoggedIn]
-  /// 1. [User]
-  FutureOr<User?> get userMostSpecific {
-    var id = this.id;
-    if (_user != null) {
-      if (_user is UserLoggedInDetail || _user is UserDetailed) {
-        return _user;
-      } else {
-        logger.finest("Attempting to retrieve more specific user "
-            "info for user ${_user.id} (${_user.name})");
-        id = _user.id;
-      }
-    } else {
-      logger.finest("No User obj, trying id");
-    }
-    var d = (data ??
-            E621AccessData.userData.$Safe ??
-            (isDebug ? E621AccessData.devAccessData.$Safe : null))
-        ?.cred;
-    if (id != null) {
-      if (d == null) {
-        logger.info("No credential data, can't get logged in data.");
-      }
-      var r = Api.initGetUserRequest(
-        id,
-        credentials: d,
-      );
-      logRequest(r, logger);
-      return Api.sendRequest(r).then(E621.resolveGetUserFuture);
-    }
-    logger.finest("No id, trying access data");
-    var username = d?.username ?? this.username;
-    if (d == null) {
-      logger.finest("No access data, trying by name");
-    }
-    if (username == null || username.isEmpty) {
-      logger.warning("No user info available: cannot find user");
-      return null;
-    }
-    var r = Api.initSearchUsersRequest(
-      searchNameMatches: d?.username,
-      credentials: d,
-      limit: 1,
-    );
-    logRequest(r, logger);
-    return Api.sendRequest(r).then((v) {
-      if (v.statusCodeInfo.isError) {
-        logResponse(v, logger, lm.LogLevel.SEVERE);
-        return null;
-      } else if (!v.statusCodeInfo.isSuccessful) {
-        logResponse(v, logger, lm.LogLevel.WARNING);
-        return null;
-      } else {
-        logResponse(v, logger, lm.LogLevel.FINER);
-        User t;
-        try {
-          t = UserLoggedIn.fromRawJson(v.body);
-        } catch (e) {
-          t = User.fromRawJson(v.body);
-        }
-        logger.info("Launching request for User ${t.id} (${t.name})");
-        var r = Api.initGetUserRequest(
-          t.id,
-          credentials: d,
-        );
-        logRequest(r, logger);
-        return Api.sendRequest(r).then(E621.resolveGetUserFuture);
-      }
-    });
-  }
+  // /// Based on the provided user info, attempts to get, in order:
+  // /// 1. [UserLoggedInDetail]
+  // /// 1. [UserDetailed]
+  // /// 1. [UserLoggedIn]
+  // /// 1. [User]
+  // FutureOr<User?> get userMostSpecific {
+  //   var id = this.id;
+  //   if (_user != null) {
+  //     if (_user is UserLoggedInDetail || _user is UserDetailed) {
+  //       return _user;
+  //     } else {
+  //       logger.finest("Attempting to retrieve more specific user "
+  //           "info for user ${_user.id} (${_user.name})");
+  //       id = _user.id;
+  //     }
+  //   } else {
+  //     logger.finest("No User obj, trying id");
+  //   }
+  //   var d = (data ??
+  //           E621AccessData.userData.$Safe ??
+  //           (isDebug ? E621AccessData.devAccessData.$Safe : null))
+  //       ?.cred;
+  //   if (id != null) {
+  //     if (d == null) {
+  //       logger.info("No credential data, can't get logged in data.");
+  //     }
+  //     var r = Api.initGetUserRequest(
+  //       id,
+  //       credentials: d,
+  //     );
+  //     logRequest(r, logger);
+  //     return Api.sendRequest(r).then(E621.resolveGetUserFuture);
+  //   }
+  //   logger.finest("No id, trying access data");
+  //   var username = this.username ?? d?.username;
+  //   if (d == null) {
+  //     logger.finest("No access data, trying by name");
+  //   }
+  //   if (username == null || username.isEmpty) {
+  //     logger.warning("No user info available: cannot find user");
+  //     return null;
+  //   }
+  //   var r = Api.initSearchUsersRequest(
+  //     searchNameMatches: username,
+  //     credentials: d,
+  //     limit: 1,
+  //   );
+  //   logRequest(r, logger);
+  //   return Api.sendRequest(r).then((v) {
+  //     if (v.statusCodeInfo.isError) {
+  //       logResponse(v, logger, lm.LogLevel.SEVERE);
+  //       return null;
+  //     } else if (!v.statusCodeInfo.isSuccessful) {
+  //       logResponse(v, logger, lm.LogLevel.WARNING);
+  //       return null;
+  //     } else {
+  //       logResponse(v, logger, lm.LogLevel.FINER);
+  //       User t;
+  //       try {
+  //         t = UserLoggedIn.fromRawJson(v.body);
+  //       } catch (e) {
+  //         t = User.fromRawJson(v.body);
+  //       }
+  //       logger.info("Launching request for User ${t.id} (${t.name})");
+  //       var r = Api.initGetUserRequest(
+  //         t.id,
+  //         credentials: d,
+  //       );
+  //       logRequest(r, logger);
+  //       return Api.sendRequest(r).then(E621.resolveGetUserFuture);
+  //     }
+  //   });
+  // }
 
   @override
   State<UserProfileLoaderPage> createState() => _UserProfileLoaderPageState();
@@ -233,21 +244,25 @@ class _UserProfileLoaderPageState extends State<UserProfileLoaderPage> {
         });
       } else {
         setState(() {
-          E621.tryAssignLoggedInUser(user = value);
+          user = value;
           userFuture = null;
         });
+        E621.tryUpdateLoggedInUser(value);
       }
     }
 
     super.initState();
-    userFuture = widget.user;
+    userFuture = E621.retrieveUserNonDetailed(
+      user: widget._user,
+      data: widget.data,
+      username: widget.username,
+    ); //widget.user;
     if (userFuture.runtimeType == UserDetailed) {
-      E621.tryAssignLoggedInUser(user = userFuture as User);
+      E621.tryUpdateLoggedInUser(user = userFuture as User);
       userFuture = null;
     } else if (userFuture.runtimeType == User) {
       user = userFuture as User;
-      userFuture = E621.getUserDetailedFromId(user!.id)
-        ..then<void>(myThen);
+      userFuture = E621.getUserDetailedFromId(user!.id)..then<void>(myThen);
     } else if (userFuture == null) {
       user = userFuture = null;
     } else if (userFuture is Future<UserLoggedInDetail?>) {
@@ -260,9 +275,10 @@ class _UserProfileLoaderPageState extends State<UserProfileLoaderPage> {
             });
           } else {
             setState(() {
-              E621.tryAssignLoggedInUser(user = v);
+              user = v;
               userFuture = null;
             });
+            E621.tryUpdateLoggedInUser(v);
           }
         });
     } else if (userFuture is Future<UserDetailed?>) {

@@ -16,7 +16,7 @@ class SearchData {
         tagSet = searchString.split(RegExpExt.whitespace).toSet();
   SearchData.fromList({
     required this.tagList,
-  })  : searchString = tagList.foldToString(" "),
+  })  : searchString = tagList.foldToString(),
         // })  : searchString = tagList.fold("", (acc, e) => acc.isNotEmpty ? "$acc $e" : e),
         tagSet = tagList.toSet();
   factory SearchData.fromJson(String json) => SearchData.fromString(

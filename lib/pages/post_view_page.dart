@@ -10,6 +10,7 @@ import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/main.dart';
+import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
 import 'package:j_util/e621.dart';
 import 'package:j_util/j_util_full.dart';
@@ -893,7 +894,7 @@ class PostViewPageLoader extends StatelessWidget
     return FutureBuilder(
       future: Api.sendRequest(Api.initSearchPostRequest(
         postId,
-        credentials: E621.accessData.$Safe?.cred,
+        credentials: E621AccessData.fallback?.cred,
       )),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
