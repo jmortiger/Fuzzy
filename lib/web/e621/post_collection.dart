@@ -51,8 +51,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord =
-      lm.generateLogger("PostCollection", className: "MPCSync");
+  static late final lRecord = lm.generateLogger("PostCollection",
+      className: "MPCSync", level: lm.LogLevel.FINEST);
   // #endregion Logger
   // #region Fields
   bool treatAsNull = true;
@@ -64,59 +64,47 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   E6Posts? _e6posts;
   int _currentPostIndex = 0;
   final _loading = <PostSearchQueryRecord, Future<CacheType>>{};
-  Future<CacheType>? checkLoading(PostSearchQueryRecord p) =>
-      _loading[p];
+  Future<CacheType>? checkLoading(PostSearchQueryRecord p) => _loading[p];
+  Future<int> _lpi() => E621.findTotalPostNumber().then((v) {
+        _numPostsInSearch = v;
+        notifyListeners();
+        return _numPostsInSearch!;
+      })
+        ..then((v) => logger.info(
+            "tags: ${parameters.tags} numPostsInSearch: ${_numPostsInSearch = v}"));
+  late LazyInitializer<int> totalPostsInSearch;
+  int? _numPostsInSearch;
+  int? get numPostsInSearch => _numPostsInSearch ?? totalPostsInSearch.$Safe;
   // #endregion Fields
 
   // #region Ctor
   ManagedPostCollectionSync({
-    int currentPageOffset = 0,
+    // int currentPageOffset = 0,
     PostSearchQueryRecord? parameters,
     super.firstPostIdCached,
     super.lastPostIdCached,
     super.lastPostOnPageIdCached,
     super.hasNextPageCached,
-  })  : _parameters = parameters ?? PostSearchQueryRecord(),
+  })  : _parameters = parameters ?? const PostSearchQueryRecord(),
         _currentPageOffset = 0,
-        _startingPage = currentPageOffset,
-        collection = PostCollectionSync();
-  // ManagedPostCollectionSync.fromSearch({
-  //   // int currentPageOffset = 0,
-  //   PageNumSearchParameters parameters = const PageNumSearchParameters.blank(),
-  //   super.firstPostIdCached,
-  //   super.lastPostIdCached,
-  //   super.lastPostOnPageIdCached,
-  //   super.hasNextPageCached,
-  // })  : _parameters = parameters,
-  //       _currentPageOffset = 0,
-  //       _startingPage = 0,
-  //       collection = PostCollectionSync();
-  // ManagedPostCollectionSync.withE6Posts({
-  //   int currentPageOffset = 0,
-  //   required E6Posts posts,
-  //   PostSearchParametersSlim parameters = const PostSearchParametersSlim(),
-  //   super.firstPostIdCached,
-  //   super.lastPostIdCached,
-  //   super.lastPostOnPageIdCached,
-  //   super.hasNextPageCached,
-  // })  : _parameters = PostPageSearchParameters.fromSlim(
-  //           s: parameters, pageIndex: currentPageOffset),
-  //       _currentPageOffset = 0,
-  //       _startingPage = currentPageOffset,
-  //       collection = PostCollectionSync.withPosts(posts: posts.posts);
-  // ManagedPostCollectionSync.withPosts({
-  //   int currentPageOffset = 0,
-  //   required Iterable<E6PostResponse> posts,
-  //   PostSearchParametersSlim parameters = const PostSearchParametersSlim(),
-  //   super.firstPostIdCached,
-  //   super.lastPostIdCached,
-  //   super.lastPostOnPageIdCached,
-  //   super.hasNextPageCached,
-  // })  : _parameters = PostPageSearchParameters.fromSlim(
-  //           s: parameters, pageIndex: currentPageOffset),
-  //       _currentPageOffset = 0,
-  //       _startingPage = currentPageOffset,
-  //       collection = PostCollectionSync.withPosts(posts: posts);
+        _startingPage =
+            (parameters ?? const PostSearchQueryRecord()).pageIndex ?? 0,
+        collection = PostCollectionSync() {
+    totalPostsInSearch = LazyInitializer<int>(_lpi);
+    if (parameters != null) {
+      E621
+          .sendSearchForFirstPostRequest(tags: parameters.tags)
+          .then((v) => logger.info("firstPostId: ${firstPostIdCached = v.id}"));
+      // E621
+      //     .findTotalPostNumber(/* limit: parameters.validLimit */)
+      // .then((v) => logger.info("tags: ${parameters.tags} numPostsInSearch: ${_numPostsInSearch = v}"))
+      totalPostsInSearch.getItem().onError((e, s) {
+        logger.severe(e, e, s);
+        return -1;
+      });
+      tryRetrieveFirstPage();
+    }
+  }
   // #endregion Ctor
 
   // #region Properties
@@ -179,6 +167,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       logger.info("Tag Parameter changed from ${_parameters.tagSet} "
           "to ${value.tagSet}, clearing collection and notifying listeners");
       _parameters = value;
+      lastPostIdCached =
+          firstPostIdCached = hasNextPageCached = lastPostOnPageIdCached = null;
       collection.clear();
       logger.finest("Length after clearing: ${collection.length}");
       notifyListeners();
@@ -188,13 +178,6 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       _parameters = value;
     }
   }
-
-  // String _priorSearchText = "";
-  // String get priorSearchText => _priorSearchText;
-  // set priorSearchText(String value) {
-  //   _priorSearchText = value;
-  //   // notifyListeners();
-  // }
 
   @override
   E6Posts? get posts => treatAsNull
@@ -300,8 +283,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
 
   /// {@macro loadWarn}
   Future<E6Posts?> getPostsOnPageAsObjAsync(final int index) async {
-    final s =
-        checkLoading(parameters.copyWith(pageIndex: index + 1));
+    final s = checkLoading(parameters.copyWith(pageIndex: index + 1));
     if (s != null) {
       return s.then((v) => v != null
           ? _genFromStartAndCount(
@@ -314,36 +296,6 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
             start: getPageFirstPostIndex(index),
           )
         : null;
-    // If no pages are loaded, load the first page.
-    // if (lastStoredPage < 0) {
-    //   if (index == 0) {
-    //     return await tryRetrieveFirstPage()
-    //         ? _genFromStartAndCount(
-    //             start: getPageFirstPostIndex(index),
-    //           )
-    //         : null;
-    //   }
-    //   if (!await tryRetrieveFirstPage()) return null;
-    // }
-    // if (index < startingPage) {
-    //   return (startingPage > 0)
-    //       ? await tryRetrieveFormerPage(index)
-    //           ? _genFromStartAndCount(
-    //               start: getPageFirstPostIndex(index),
-    //             )
-    //           : null
-    //       : null;
-    // } else if (index > lastStoredPage) {
-    //   return (hasNextPageCached ?? true)
-    //       ? await tryRetrieveFuturePage(index)
-    //           ? _genFromStartAndCount(
-    //               start: getPageFirstPostIndex(index),
-    //             )
-    //           : null
-    //       : null;
-    // } else /* if (index >= startingPage && index <= lastStoredPage)  */ {
-    //   return _genFromStartAndCount(start: getPageFirstPostIndex(index));
-    // }
   }
 
   /// {@macro loadWarn}
@@ -361,8 +313,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
 
   /// {@macro loadWarn}
   Future<Iterable<E6PostResponse>?> getPostsOnPageAsync(final int index) async {
-    final s =
-        checkLoading(parameters.copyWith(pageIndex: index + 1));
+    final s = checkLoading(parameters.copyWith(pageIndex: index + 1));
     if (s != null) {
       return s.then((v) => v != null
           ? _getRawPostFromStartAndCount(
@@ -375,46 +326,6 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
             start: getPageFirstPostIndex(index),
           )
         : null;
-    // if (lastStoredPage < 0) {
-    //   if (index == 0) {
-    //     return ValueAsync.resolve(value: tryRetrieveFirstPage())
-    //         .then<Iterable<E6PostResponse>?>(
-    //       (v) => v
-    //           ? _getRawPostFromStartAndCount(
-    //               start: getPageFirstPostIndex(index),
-    //             )
-    //           : null,
-    //     );
-    //   }
-    //   if (!await tryRetrieveFirstPage()) return null;
-    // }
-    // if (index < startingPage) {
-    //   return (startingPage > 0)
-    //       ? ValueAsync.resolve(value: tryRetrieveFormerPage(index))
-    //           .then<Iterable<E6PostResponse>?>(
-    //           (v) => v
-    //               ? _getRawPostFromStartAndCount(
-    //                   start: getPageFirstPostIndex(index),
-    //                 )
-    //               : null,
-    //         )
-    //       : null;
-    // } else if (index > lastStoredPage) {
-    //   return (hasNextPageCached ?? true)
-    //       ? ValueAsync.resolve(value: tryRetrieveFuturePage(index))
-    //           .then<Iterable<E6PostResponse>?>(
-    //           (v) => v
-    //               ? _getRawPostFromStartAndCount(
-    //                   start: getPageFirstPostIndex(index),
-    //                 )
-    //               : null,
-    //         )
-    //       : null;
-    // } else /* if (index >= startingPage && index <= lastStoredPage)  */ {
-    //   return _getRawPostFromStartAndCount(
-    //     start: getPageFirstPostIndex(index),
-    //   );
-    // }
   }
 
   bool assignPagePosts(
@@ -532,7 +443,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         if (v?.isEmpty ?? true) {
           logger.info(
             "No next page from server\n"
-            "\tlimit: ${p.limit}\n"
+            "\tvalidLimit: ${p.validLimit}\n"
             "\tpageNumber: ${p.pageNumber}\n"
             // "\tpageNumber: ${_currentPageOffset + 1 + _startingPage + 1}\n"
             "\ttags: ${p.tags}",
@@ -541,7 +452,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         }
         logger.info(
           "Got next page from server\n"
-          "\tlimit: ${p.limit}\n"
+          "\tvalidLimit: ${p.validLimit}\n"
           "\tpageNumber: ${p.pageNumber}\n"
           // "\tpageNumber: ${_currentPageOffset + 1 + _startingPage + 1}\n"
           "\ttags: ${p.tags}"
@@ -581,7 +492,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         if (v?.isEmpty ?? true) {
           logger.info(
             "No prior page from server\n"
-            "\tlimit: ${p.limit}\n"
+            "\tvalidLimit: ${p.validLimit}\n"
             "\tpageNumber: ${p.pageNumber}\n"
             "\ttags: ${p.tags}",
           );
@@ -589,7 +500,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         }
         logger.info(
           "Got prior page from server\n"
-          "\tlimit: ${p.limit}\n"
+          "\tvalidLimit: ${p.validLimit}\n"
           "\tpageNumber: ${p.pageNumber}\n"
           "\ttags: ${p.tags}"
           "Result length: ${v?.length}",
@@ -609,7 +520,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     } else {
       logger.info(
         "Should be no prior page\n"
-        "\tlimit: ${parameters.limit}\n"
+        "\tvalidLimit: ${parameters.validLimit}\n"
         "\tpageNumber: ${_currentPageOffset - 1 + _startingPage + 1}\n"
         "\ttags: ${parameters.tags}",
       );
@@ -629,7 +540,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           if (v?.isEmpty ?? true) {
             logger.info(
               "No prior page from server\n"
-              "\tlimit: ${param.limit}\n"
+              "\tvalidLimit: ${param.validLimit}\n"
               "\tpageNumber: ${param.pageNumber}\n"
               "\ttags: ${param.tags}",
             );
@@ -637,7 +548,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           }
           logger.info(
             "Got prior page from server\n"
-            "\tlimit: ${param.limit}\n"
+            "\tvalidLimit: ${param.validLimit}\n"
             "\tpageNumber: ${param.pageNumber}\n"
             "\ttags: ${param.tags}"
             "Result length: ${v?.length}",
@@ -665,7 +576,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     } else {
       logger.info(
           "Should be no prior page and therefore no page $pageIndex\n"
-              "\tlimit: ${parameters.limit}\n"
+              "\tvalidLimit: ${parameters.validLimit}\n"
               "\tpageNumber: ${_currentPageOffset - 1 + _startingPage}\n"
               "\ttags: ${parameters.tags}",
           "\tRequest index: $pageIndex\n");
@@ -685,7 +596,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           if (v?.isEmpty ?? true) {
             logger.info(
               "No page index $p from server\n"
-              "\tlimit: ${param.limit}\n"
+              "\tvalidLimit: ${param.validLimit}\n"
               "\tpageNumber: ${param.pageNumber}\n"
               "\ttags: ${param.tags}",
             );
@@ -693,7 +604,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           }
           logger.info(
             "Got page index $p from server\n"
-            "\tlimit: ${param.limit}\n"
+            "\tvalidLimit: ${param.validLimit}\n"
             "\tpageNumber: ${param.pageNumber}\n"
             "\ttags: ${param.tags}"
             "Result length: ${v?.length}",
@@ -736,7 +647,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       if (v?.isEmpty ?? true) {
         logger.info(
           "No page index ${param.pageIndex} from server\n"
-          "\tlimit: ${param.limit}\n"
+          "\tvalidLimit: ${param.validLimit}\n"
           "\tpageNumber: ${param.pageNumber}\n"
           "\ttags: ${param.tags}",
         );
@@ -744,7 +655,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       }
       logger.info(
         "Got page ${param.pageIndex} from server\n"
-        "\tlimit: ${param.limit}\n"
+        "\tvalidLimit: ${param.validLimit}\n"
         "\tpageNumber: ${param.pageNumber}\n"
         "\ttags: ${param.tags}"
         "Result length: ${v?.length}",
@@ -780,7 +691,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     }
   }
 
-  bool isNewSearch(String newSearchText) => setEquals(
+  bool isNewSearch(String newSearchText) => !setEquals(
       newSearchText.split(RegExp(RegExpExt.whitespacePattern)).toSet(),
       parameters.tagSet);
 
@@ -794,7 +705,6 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     int? pageNumber,
   }) {
     // var sc = Provider.of<ManagedPostCollectionSync>(context, listen: false);
-    final sc = this;
     limit ??= SearchView.i.postsPerPage;
     bool isNewRequest = false;
     var out = "pageModifier = $pageModifier, "
@@ -805,81 +715,104 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     // if (isNewRequest = (sc.priorSearchText != tags)) {
     if (isNewRequest = isNewSearch(tags)) {
       // out = "Request For New Terms: ${sc.priorSearchText} -> $tags ($out";
-      out = "Request For New Terms: ${sc._parameters.tags} -> $tags ($out";
-      sc.lastPostIdCached = null;
-      sc.firstPostIdCached = null;
+      out = "Request For New Terms: ${_parameters.tags} -> $tags ($out";
+      lastPostIdCached = null;
+      firstPostIdCached = null;
       try {
-        // sc.priorSearchText = tags;
-        sc.searchText = tags;
+        // sc.searchText = tags;
+        parameters = PostSearchQueryRecord(
+          tags: tags,
+          limit: limit,
+          page: encodeValidPageParameterFromOptions(
+                  pageModifier: pageModifier,
+                  id: postId,
+                  pageNumber: pageNumber) ??
+              "1",
+        );
       } catch (e, s) {
         logger.severe(
             // "Failed to set sc.priorSearchText ${sc.priorSearchText} to $tags",
-            "Failed to set sc.parameters.tags ${sc.parameters.tags} to $tags",
+            "Failed to set sc.parameters.tags ${parameters.tags} to $tags",
             e,
             s);
       }
     } else {
       // out = "Request For Same Terms: ${sc.priorSearchText} ($out";
-      out = "Request For Same Terms: ${sc.parameters.tags} = $tags ($out";
+      out = "Request For Same Terms: ${parameters.tags} = $tags ($out";
+
+      parameters = PostSearchQueryRecord(
+        tags: tags,
+        limit: limit,
+        page: encodeValidPageParameterFromOptions(
+                pageModifier: pageModifier,
+                id: postId,
+                pageNumber: pageNumber) ??
+            "1",
+      );
     }
-    print(out);
+    logger.info(out);
     // Provider.of<SearchResultsNotifier?>(context, listen: false)
     (searchViewNotifier ?? context?.read<srn.SearchResultsNotifier?>())
         ?.clearSelections();
-    sc.hasNextPageCached = null;
-    sc.lastPostOnPageIdCached = null;
-    var username = E621AccessData.fallback?.username,
-        apiKey = E621AccessData.fallback?.apiKey;
-    sc.pr = E621.performUserPostSearch(
-      // tags: AppSettings.i!.forceSafe ? "$tags rating:safe" : tags,
-      tags: tags,
-      limit: limit,
-      pageModifier: pageModifier,
-      pageNumber: pageNumber,
-      postId: postId,
-      apiKey: apiKey,
-      username: username,
-    );
-    sc.pr!.then((v) {
-      // setState(() {
-      print("pr reset");
-      sc.pr = null;
-      var json = dc.jsonDecode(v.responseBody);
-      if (json["success"] == false) {
-        print("Response failed: $json");
-        if (json["reason"].contains("Access Denied")) {
-          if (context != null) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text("Access Denied. Did you mean to login?"),
-            ));
+    hasNextPageCached = null;
+    lastPostOnPageIdCached = null;
+    if (true /* isNewRequest */) {
+      var username = E621AccessData.fallback?.username,
+          apiKey = E621AccessData.fallback?.apiKey;
+      pr = E621.performUserPostSearch(
+        // tags: AppSettings.i!.forceSafe ? "$tags rating:safe" : tags,
+        tags: tags,
+        limit: parameters.validLimit,
+        pageModifier: parameters.pageModifier,
+        pageNumber: parameters.pageNumber,
+        postId: parameters.id,
+        apiKey: apiKey,
+        username: username,
+      );
+      pr!.then((v) {
+        // setState(() {
+        print("pr reset");
+        pr = null;
+        var json = dc.jsonDecode(v.responseBody);
+        if (json["success"] == false) {
+          print("Response failed: $json");
+          if (json["reason"].contains("Access Denied")) {
+            if (context != null) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text("Access Denied. Did you mean to login?"),
+              ));
+            }
           }
+          posts = E6PostsSync(posts: []);
+        } else {
+          posts = SearchView.i.lazyLoad
+              ? E6PostsLazy.fromJson(json as Map<String, dynamic>)
+              : E6PostsSync.fromJson(json as Map<String, dynamic>);
         }
-        sc.posts = E6PostsSync(posts: []);
-      } else {
-        sc.posts = SearchView.i.lazyLoad
-            ? E6PostsLazy.fromJson(json as Map<String, dynamic>)
-            : E6PostsSync.fromJson(json as Map<String, dynamic>);
-      }
-      // if (sc.posts?.posts.firstOrNull != null) {
-      //   if (sc.posts.runtimeType == E6PostsLazy) {
-      //     (sc.posts as E6PostsLazy)
-      //         .onFullyIterated
-      //         .subscribe((a) => sc.getHasNextPage(
-      //               tags: sc.priorSearchText,
-      //               lastPostId: a.posts.last.id,
-      //             ));
-      //   } else {
-      //     sc.getHasNextPage(
-      //         tags: sc.priorSearchText,
-      //         lastPostId: (sc.posts as E6PostsSync).posts.last.id);
-      //   }
-      // }
-      if (isNewRequest) sc.firstPostIdCached = sc.firstPostOnPageId;
-      // });
-    }).catchError((err, st) {
-      print(err);
-      print(st);
-    });
+        // if (sc.posts?.posts.firstOrNull != null) {
+        //   if (sc.posts.runtimeType == E6PostsLazy) {
+        //     (sc.posts as E6PostsLazy)
+        //         .onFullyIterated
+        //         .subscribe((a) => sc.getHasNextPage(
+        //               tags: sc.priorSearchText,
+        //               lastPostId: a.posts.last.id,
+        //             ));
+        //   } else {
+        //     sc.getHasNextPage(
+        //         tags: sc.priorSearchText,
+        //         lastPostId: (sc.posts as E6PostsSync).posts.last.id);
+        //   }
+        // }
+        if (isNewRequest) firstPostIdCached = firstPostOnPageId;
+        // });
+      }).catchError((err, st) {
+        print(err);
+        print(st);
+      });
+    } else {
+      // this.isPageLoaded(pageIndex)
+      // TODO: This
+    }
   }
 
   Future<void> updateCurrentPostIndex(int newIndex) async {
@@ -895,10 +828,11 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   Future<Iterable<E6PostResponse>?> _fetchPage(
       [PostSearchQueryRecord? parameters]) {
     parameters ??= _parameters;
+    logger.info("Getting page ${parameters.page}");
     return _loading[parameters] ??
         (_loading[parameters] = E621
             .performUserPostSearch(
-          limit: parameters.limit,
+          limit: parameters.validLimit,
           pageNumber: (parameters.pageNumber ?? 1),
           tags: parameters.tags,
         )

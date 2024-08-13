@@ -15,6 +15,8 @@ import 'package:provider/provider.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
+import '../util/string_comparator.dart' as str_util;
+
 class WSearchBar extends StatefulWidget {
   // #region Logger
   static lm.Printer get print => lRecord.print;
@@ -70,7 +72,7 @@ class _WSearchBarState extends State<WSearchBar> {
           !SavedDataE6.isInit &&
           CachedSearches.searches.isEmpty) {
         return r.take(50).toList(growable: false)
-          ..sort(util.getFineInverseSimilarityComparator(
+          ..sort(str_util.getFineInverseSimilarityComparator(
             currText,
           ));
       }
@@ -83,7 +85,7 @@ class _WSearchBarState extends State<WSearchBar> {
             );
             return relatedSearches.map((e) => e.searchString).toList()
               ..sort(
-                util.getFineInverseSimilarityComparator(currText),
+                str_util.getFineInverseSimilarityComparator(currText),
               )
               ..removeRange(
                 min(
@@ -106,7 +108,7 @@ class _WSearchBarState extends State<WSearchBar> {
               .map((v) => "$currPrefix ${E621.delimiter}${v.uniqueId}")
               .toList()
             ..sort(
-              util.getFineInverseSimilarityComparator(currText),
+              str_util.getFineInverseSimilarityComparator(currText),
             ),
         if (AppSettings.i?.favoriteTags.isNotEmpty ?? false)
           ...AppSettings.i!.favoriteTags
@@ -114,7 +116,7 @@ class _WSearchBarState extends State<WSearchBar> {
               .map((e) => "$currPrefix$e")
               .toList()
             ..sort(
-              util.getFineInverseSimilarityComparator(currText),
+              str_util.getFineInverseSimilarityComparator(currText),
             ),
         ...r.take(20),
       };
@@ -151,15 +153,14 @@ class _WSearchBarState extends State<WSearchBar> {
         currentText = s;
       });
       closeAndUnfocus();
-      (s.isNotEmpty)
-          ? _sendSearchAndUpdateState(tags: s)
-          : _sendSearchAndUpdateState();
+      _sendSearchAndUpdateState(
+          limit: SearchView.i.postsPerPage, pageNumber: 1, tags: s);
       widget.onSelected?.call();
-      sc.parameters = PostSearchQueryRecord.withIndex(
-        limit: SearchView.i.postsPerPage,
-        tags: s,
-        pageIndex: 0,
-      );
+      // sc.parameters = PostSearchQueryRecord.withIndex(
+      //   limit: SearchView.i.postsPerPage,
+      //   tags: s,
+      //   pageIndex: 0,
+      // );
     }
 
     return SearchAnchor.bar(
@@ -233,7 +234,7 @@ class _WSearchBarState extends State<WSearchBar> {
               //..sort((a, b) => b.postCount - a.postCount))
               ..sort(
                 (a, b) {
-                  return util.getFineInverseSimilarityComparator(currText)(
+                  return str_util.getFineInverseSimilarityComparator(currText)(
                     a.name,
                     b.name,
                   );
@@ -268,7 +269,7 @@ class _WSearchBarState extends State<WSearchBar> {
             //..sort((a, b) => b.postCount - a.postCount))
             ..sort(
               (a, b) {
-                return util.getFineInverseSimilarityComparator(
+                return str_util.getFineInverseSimilarityComparator(
                   currText,
                 )(a.name, b.name);
               },

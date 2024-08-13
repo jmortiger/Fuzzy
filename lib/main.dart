@@ -55,10 +55,11 @@ void main(List<String> args) async {
     (value) => print("Can Use AppSettings singleton"),
   );
   //.ignore();
+  final searchText =
+      (await CachedSearches.loadFromStorageAsync()).firstOrNull?.searchString;
+  await E621AccessData.tryLoad(); //.ignore();
   CachedFavorites.fileFullPath.getItem().ignore();
-  CachedSearches.loadFromStorageAsync();
   SavedDataE6.init();
-  E621AccessData.tryLoad().ignore();
   try {
     runApp(
       MaterialApp(
@@ -134,7 +135,8 @@ void main(List<String> args) async {
                   buildHomePageWithProviders() /* const HomePage() */);
         },
         theme: ThemeData.dark(),
-        home: buildHomePageWithProviders(searchText: args.firstOrNull),
+        home: buildHomePageWithProviders(
+            searchText: args.firstOrNull ?? searchText),
       ),
     );
   } catch (e, s) {
@@ -152,13 +154,28 @@ Widget buildHomePageWithProviders({
         ),
         ChangeNotifierProvider(
             create: (context) => ManagedPostCollectionSync(
-                parameters: PostSearchQueryRecord(tags: searchText ?? ""))),
+                parameters: searchText?.isNotEmpty ?? false
+                    ? PostSearchQueryRecord(tags: searchText!)
+                    : null)),
         ChangeNotifierProvider(create: (context) => SearchResultsNotifier()),
         ChangeNotifierProvider(
             create: (context) => CachedFavorites.loadFromStorageSync()),
         // ChangeNotifierProvider(create: (context) => SavedDataE6.$),
       ],
-      child: const HomePage(),
+      child: searchText == null
+          // ? const HomePage()
+          ? Selector<ManagedPostCollectionSync, Future?>(
+              builder: (context, value, child) =>
+                  HomePage(initialTags: searchText),
+              selector: (cxt, p) => p.pr,
+              shouldRebuild: (previous, next) => previous != next,
+            )
+          : Selector<ManagedPostCollectionSync, Future?>(
+              builder: (context, value, child) =>
+                  HomePage(initialTags: searchText),
+              selector: (cxt, p) => p.pr,
+              shouldRebuild: (previous, next) => previous != next,
+            ),
     );
 void pathSoundOff() {
   path

@@ -15,8 +15,6 @@ import 'package:logging/logging.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'package:string_similarity/string_similarity.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
 // #region Logger
@@ -172,18 +170,7 @@ const exArCpi = Expanded(
     child: CircularProgressIndicator(),
   ),
 );
-/// Lower output value means lower similarity
-Comparator<String> getCoarseSimilarityComparator(String mainComparison, [int resolution = 1000000,]) => (String a, String b) => (a.similarityTo(mainComparison) * resolution -
-                        b.similarityTo(mainComparison) * resolution)
-                    .truncate();
-/// Lower output value means higher similarity
-Comparator<String> getCoarseInverseSimilarityComparator(String mainComparison, [int resolution = 1000000,]) => (String a, String b) => (b.similarityTo(mainComparison) * resolution -
-                        a.similarityTo(mainComparison) * resolution)
-                    .truncate();
-/// Lower output value means lower similarity
-Comparator<String> getFineSimilarityComparator(String mainComparison) => (String a, String b) => a.similarityTo(mainComparison).compareTo(b.similarityTo(mainComparison));
-/// Lower output value means higher similarity
-Comparator<String> getFineInverseSimilarityComparator(String mainComparison) => (String a, String b) => b.similarityTo(mainComparison).compareTo(a.similarityTo(mainComparison));
+
 const placeholderPath = "assets/snake_loader.webp";
 const placeholder = AssetImage(placeholderPath);
 void logRequest(

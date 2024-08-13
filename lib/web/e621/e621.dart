@@ -257,17 +257,17 @@ sealed class E621 extends Site {
         }
       },
     );
-    print("fillTagTemplate: After: $tags", lm.LogLevel.INFO);
+    print("fillTagTemplate: After: $tags", lm.LogLevel.FINER);
     if (!tags.contains(userFavoriteSearchFinder)) {
       tags += AppSettings.i?.blacklistedTags.map((e) => "-$e").fold(
                 "",
                 (p, e) => "$p $e",
               ) ??
           "";
-      print("fillTagTemplate: After Blacklist: $tags", lm.LogLevel.INFO);
+      print("fillTagTemplate: After Blacklist: $tags", lm.LogLevel.FINER);
     } else {
       print("fillTagTemplate: User favorite search, not applying blacklist",
-          lm.LogLevel.INFO);
+          lm.LogLevel.FINER);
     }
     return tags;
   }
@@ -640,6 +640,144 @@ sealed class E621 extends Site {
     return a2;
   }
 
+  /// Should take at most 12 iterations to find, forcibly ends after 16;
+  /// profiled with https://dartpad.dev/?id=ec269e2c4c7ccd4019bd07d3470e0d97
+  static Future<int> findLastPageNumber({
+    String tags = "",
+    int? limit,
+    String? username,
+    String? apiKey,
+    bool checkOnNonFullPages = false,
+  }) async =>
+      await findTotalPostNumber(
+        tags: tags,
+        username: username,
+        apiKey: apiKey,
+        checkOnNonFullPages: checkOnNonFullPages,
+      ).then((v) => (v / (limit ?? SearchView.i.postsPerPage)).ceil());
+
+  /// Should take at most 12 iterations to find, forcibly ends after 16;
+  /// profiled with https://dartpad.dev/?id=ec269e2c4c7ccd4019bd07d3470e0d97
+  static Future<int> findTotalPostNumber({
+    String tags = "",
+    String? username,
+    String? apiKey,
+    bool checkOnNonFullPages = false,
+  }) async {
+    const sLimit = e621.Api.maxPostsPerSearch;
+    tags = fillTagTemplate(tags);
+    final cred = getAuth(username, apiKey);
+    f({
+      int limit = sLimit,
+      required int pageNumber,
+    }) =>
+        e621.Api.initSearchPostsRequest(
+          credentials: cred,
+          tags: tags,
+          limit: limit,
+          page: pageNumber.toString(),
+        );
+    Iterable<E6PostResponse> results =
+        parsePostsResults((await e621.Api.sendRequest(f(
+      limit: sLimit,
+      pageNumber: 1,
+    ))));
+    if (results.lastOrNull == null) return -1;
+    final lastId = (await sendSearchForLastPostRequest(
+      tags: tags,
+      apiKey: apiKey,
+      username: username,
+    ))
+        .id;
+    int finalPage = 1;
+    num delta = e621.Api.maxPageNumber * 2;
+    // Should take at most 12 iterations, I'll add the leeway of 3 iterations
+    for (int currentPageNumber = 0, safety = 1;
+        // for (int currentPageNumber = 0, delta = e621.Api.maxPageNumber * 2;
+        // (results.lastOrNull?.id ?? -1) != lastId && delta > 0;
+        (results.lastOrNull?.id ?? -1) != lastId &&
+            (!checkOnNonFullPages &&
+                results.isNotEmpty &&
+                results.length == sLimit) &&
+            safety < 15;
+        safety++,
+        // delta ~/= 2,
+        currentPageNumber =
+            currentPageNumber + (results.isEmpty ? -delta : delta).toInt(),
+        // currentPageNumber += results.isEmpty ? -delta : delta,
+        finalPage = currentPageNumber,
+        results = parsePostsResults(await e621.Api.sendRequest(f(
+      pageNumber: currentPageNumber,
+    ))) /* .toList() */) {
+      if (results.isNotEmpty && currentPageNumber == e621.Api.maxPageNumber) {
+        break;
+      }
+      // if (currentPageNumber != 0 &&
+      //     results.length != sLimit &&
+      //     results.isNotEmpty) {
+      if (results.length != sLimit && results.isNotEmpty) {
+        // This should only happen when it's at the end.
+        if (checkOnNonFullPages) {
+          safety++;
+          final temp = parsePostsResults(await e621.Api.sendRequest(f(
+            pageNumber: currentPageNumber + 1,
+          )));
+          if ((temp.lastOrNull?.id ?? -1) == lastId) {
+            results = temp;
+            finalPage = currentPageNumber++;
+            logger.warning(
+                "Should have completed prior; page ${currentPageNumber - 1} wasn't full, but page $currentPageNumber's last id ${results.lastOrNull?.id ?? -1} equals $lastId. Either the posts were edited over the course of the run, or the supposition was wrong.");
+            break;
+          } else if (temp.isEmpty) {
+            break;
+          } else {
+            logger.warning("findLastPageNumber: this is weird, investigate"
+                "\ntags:$tags,"
+                "\nusername:$username,"
+                "\napiKey:$apiKey,"
+                "\ncheckOnNonFullPages:$checkOnNonFullPages,"
+                "\npage ${currentPageNumber + 1} results: [${temp.firstOrNull?.toJson().toString()}, [${temp.length - 2} other posts]..., ${temp.lastOrNull?.toJson().toString()}],"
+                "\npage $currentPageNumber : [${results.firstOrNull?.toJson().toString()}, [${results.length - 2} other posts]..., ${results.lastOrNull?.toJson().toString()}],");
+            delta /= 2;
+          }
+        } else {
+          break;
+        }
+      } else {
+        delta /= 2;
+      }
+    }
+    // int currentPageNumber = 0, delta = e621.Api.maxPageNumber * 2;
+    // do {
+    //   if (results.length != sLimit && results.isNotEmpty) {
+
+    //   }
+    //   if (results.isNotEmpty && currentPageNumber == e621.Api.maxPageNumber) {
+    //     break;
+    //   }
+    //   // if (results.length != sLimit) {
+    //   //   currentPageNumber += 1;
+    //   //   // continue;
+    //   // } else {
+    //   delta ~/= 2;
+    //   currentPageNumber += results.isEmpty ? -delta : delta;
+    //   // }
+    //   results = parsePostsResults(await e621.Api.sendRequest(f(
+    //     pageNumber: currentPageNumber,
+    //   ))) /* .toList() */;
+    // } while ((results.lastOrNull?.id ?? -1) != lastId && delta > 0);
+    return (((finalPage - 1) * sLimit) + results.length);
+  }
+
+  /// For some reason, throws (at least on web) if not separated.
+  ///
+  /// TODO: Handle errors
+  static Iterable<E6PostResponse> parsePostsResults(http.Response r) {
+    final f = (jsonDecode(r.body)["posts"] as List)
+        .map((e) => E6PostResponse.fromJson(e));
+    return f;
+  }
+
   static http.Request initSearchForLastPageRequest({
     String tags = "",
     // int limit = 50,
@@ -655,6 +793,36 @@ sealed class E621 extends Site {
         postId: 0,
         pageModifier: 'a',
       );
+  static Future<http.Response> sendSearchForLastPageRequest({
+    String tags = "",
+    // int limit = 50,
+    int? limit,
+    String? username,
+    String? apiKey,
+  }) =>
+      e621.Api.sendRequest(initSearchForLastPageRequest(
+        tags: tags,
+        limit: limit,
+        apiKey: apiKey,
+        username: username,
+      ));
+
+  static Future<Iterable<E6PostResponse>> getLastPageFull({
+    String tags = "",
+    // int limit = 50,
+    int? limit,
+    String? username,
+    String? apiKey,
+  }) async {
+    return parsePostsResults(
+        (await e621.Api.sendRequest(initSearchForLastPageRequest(
+      tags: tags,
+      limit: limit,
+      apiKey: apiKey,
+      username: username,
+    ))));
+  }
+
   static http.Request initSearchForLastPostRequest({
     String tags = "",
     String? username,
@@ -667,6 +835,48 @@ sealed class E621 extends Site {
         username: username,
         postId: 0,
         pageModifier: 'a',
+      );
+  static Future<E6PostResponse> sendSearchForLastPostRequest({
+    String tags = "",
+    String? username,
+    String? apiKey,
+  }) async {
+    return E6PostResponse.fromJson(
+        (jsonDecode((await e621.Api.sendRequest(initSearchForLastPostRequest(
+      tags: tags,
+      apiKey: apiKey,
+      username: username,
+    )))
+                .body)["posts"] as List)
+            .lastOrNull);
+  }
+
+  static Future<E6PostResponse> sendSearchForFirstPostRequest({
+    String tags = "",
+    String? username,
+    String? apiKey,
+  }) async {
+    return E6PostResponse.fromJson(
+        (jsonDecode((await e621.Api.sendRequest(initSearchForFirstPostRequest(
+      tags: tags,
+      apiKey: apiKey,
+      username: username,
+    )))
+                .body)["posts"] as Iterable)
+            .firstOrNull);
+  }
+
+  static http.Request initSearchForFirstPostRequest({
+    String tags = "",
+    String? username,
+    String? apiKey,
+  }) =>
+      initSearchRequest(
+        tags: tags,
+        limit: 1,
+        apiKey: apiKey,
+        username: username,
+        pageNumber: 1,
       );
 
   static e621.E6Credentials? getAuth(

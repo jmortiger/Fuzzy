@@ -112,6 +112,13 @@ class _WSearchSetState extends State<WSearchSet> {
     // if (widget.initiallyExpanded) _control.expand();
   }
 
+  @override
+  void dispose() {
+    loadingSets?.ignore();
+    loadingSets = null;
+    super.dispose();
+  }
+
   void launchSearch([bool collapse = true]) {
     setState(() {
       sets = null;
@@ -128,29 +135,31 @@ class _WSearchSetState extends State<WSearchSet> {
         var t = await ByteStream(v.stream.asBroadcastStream()).bytesToString();
         var step = jsonDecode(t);
         try {
-          return (step as List).mapAsList(
+          final v = (step as List).mapAsList(
             (e, index, list) => e621.PostSet.fromJson(e),
           );
-        } catch (e) {
-          return <e621.PostSet>[];
-        }
-      })
-        ..then((v) async {
           if (widget.filterResultsAsync == null) return v;
           final r = <e621.PostSet>[];
           for (var e in v) {
             if (await widget.filterResultsAsync!(e)) r.add(e);
           }
           return r;
-        })
-        ..then((v) {
+        } catch (e) {
+          return <e621.PostSet>[];
+        }
+      }).then((v) {
+        if (mounted) {
           setState(() {
             sets = widget.filterResults == null
                 ? v
                 : v.where(widget.filterResults!).toList();
             loadingSets = null;
           });
-        });
+          return sets!;
+        } else {
+          return v;
+        }
+      });
       if (collapse) _control.collapse();
     });
   }

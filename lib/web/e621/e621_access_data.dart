@@ -51,6 +51,7 @@ final class E621AccessData with Storable<E621AccessData> {
   }
 
   static Future<E621AccessData?> tryLoad() async {
+    devAccessData.$Safe;
     if (Platform.isWeb) {
       var t = (await pref.getItem()).getString(localStorageKey);
       logger.warning("From Local Storage: $t");

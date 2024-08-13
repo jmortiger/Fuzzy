@@ -76,7 +76,7 @@ class _HomePageState extends State<HomePage> {
                 if (value != null) {
                   _sendSearchAndUpdateState(tags: value);
                   setState(() {
-                    toFillSearchWith = sc.searchText = value;
+                    toFillSearchWith = /* sc.searchText =  */value;
                   });
                 }
               },
@@ -89,7 +89,7 @@ class _HomePageState extends State<HomePage> {
         onSearchRequested: (searchText) {
           _sendSearchAndUpdateState(tags: searchText);
           setState(() {
-            toFillSearchWith = sc.searchText = searchText;
+            toFillSearchWith = /* sc.searchText =  */searchText;
           });
         },
         getMountedContext: () => this.context,
@@ -131,15 +131,15 @@ class _HomePageState extends State<HomePage> {
     return Column(
       key: ObjectKey(sc.mpcSync.parameters.tags),
       children: [
-        if (sc.posts == null && sc.pr != null)
-          const Expanded(
-            child: Center(
-                child: AspectRatio(
-              aspectRatio: 1,
-              child: CircularProgressIndicator(),
-            )),
-          ),
-        if (sc.posts != null)
+        // if (sc.posts == null && sc.pr != null)
+        //   const Expanded(
+        //     child: Center(
+        //         child: AspectRatio(
+        //       aspectRatio: 1,
+        //       child: CircularProgressIndicator(),
+        //     )),
+        //   ),
+        // if (sc.posts != null)
           Expanded(
             key: ObjectKey(sc.mpcSync.parameters.tags),
             child: sc.isMpcSync

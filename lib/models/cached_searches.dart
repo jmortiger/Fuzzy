@@ -16,6 +16,7 @@ class CachedSearches {
   // ignore: unnecessary_late
   static late final lRecord = lm.generateLogger("CachedSearches");
   // #endregion Logger
+  // #region IO
   static const fileName = "CachedSearches.json";
 
   static final file = LazyInitializer.immediate(() async {
@@ -94,6 +95,7 @@ class CachedSearches {
   static List<SearchData> loadFromJson(List json) =>
       searches = json.mapAsList((e, i, l) => SearchData.fromJson(e));
   static List toJson() => _searches;
+  // #endregion IO
 
   @event
   static final Changed = JEvent<CachedSearchesEvent>();
@@ -108,9 +110,11 @@ class CachedSearches {
     );
   }
 
-  static void clear() {
-    searches = const <SearchData>[];
-  }
+  // static void clear() => searches = const <SearchData>[];
+  static void clear() => Changed.invoke(CachedSearchesEvent(
+      priorValue: List.unmodifiable(_searches),
+      currentValue: List.unmodifiable(_searches..clear()),
+    ));
 
   static void onSearchBegan(SearchArgs a) {
     _searches = List.unmodifiable(

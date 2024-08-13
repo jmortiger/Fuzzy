@@ -459,129 +459,144 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
         "${posts?.map((e) => e.id)}";
     logger.finest(
         "Building widget.posts.parameters.tags: ${widget.posts.parameters.tags} Provider.of<SearchCacheLegacy>(context).mpcSync.parameters.tags: ${scWatch.mpcSync.parameters.tags}");
-    return Column(
-      key: ObjectKey(
-        scWatch.mpcSync.parameters.tags,
-      ),
-      children: [
-        Text("_currentPageIndex: $_currentPageIndex"),
-        Expanded(
-          key: ObjectKey(
-            scWatch.mpcSync.parameters.tags,
+    return Selector<ManagedPostCollectionSync, String>(
+      builder: (context, tags, child) => Column(
+        key: ObjectKey(
+          tags,
+          // scWatch.mpcSync.parameters.tags,
+        ),
+        children: [
+          Selector<ManagedPostCollectionSync, int?>(
+            builder: (context, value, child) => Text(
+                "_currentPageIndex: $_currentPageIndex, totalPages: ${((value ?? 750 * SearchView.i.postsPerPage)/SearchView.i.postsPerPage).ceil()}"),
+            selector: (ctx, v) =>
+                v.totalPostsInSearch.$Safe ?? v.numPostsInSearch,
           ),
-          child: Stack(
+          Expanded(
             key: ObjectKey(
-              scWatch.mpcSync.parameters.tags,
+              tags,
+              // scWatch.mpcSync.parameters.tags,
             ),
-            alignment: Alignment.bottomCenter,
-            children: <Widget>[
-              PageView.builder(
-                key: ObjectKey(
-                  scWatch.mpcSync.parameters.tags,
-                ),
+            child: Stack(
+              key: ObjectKey(
+                tags,
+                // scWatch.mpcSync.parameters.tags,
+              ),
+              alignment: Alignment.bottomCenter,
+              children: <Widget>[
+                PageView.builder(
+                  key: ObjectKey(
+                    tags,
+                    // scWatch.mpcSync.parameters.tags,
+                  ),
 
-                /// [PageView.scrollDirection] defaults to [Axis.horizontal].
-                /// Use [Axis.vertical] to scroll vertically.
-                controller: _pageViewController,
-                onPageChanged:
-                    _handlePageViewChanged, //Platform.isDesktop ? _handlePageViewChanged : null,
-                itemBuilder: (context, index) {
-                  // var ps = widget.posts[index], t = ps.$Safe;
-                  logger.finest("${widget.posts.parameters.tags} $index");
-                  var ps = ValueAsync(
-                          value: widget.posts.getPostsOnPageAsObj(index)),
-                      t = ps.$Safe;
-                  Widget ret;
-                  Key? key;
-                  // key = widget.key;
-                  // key = ObjectKey(widget.posts.parameters.tags);
-                  key = ObjectKey("${widget.posts.parameters.tags}$index");
-                  // logger.finer("index: $index, sync posts: ${t?.map(
-                  //   (element) => element.id,
-                  // )}");
+                  /// [PageView.scrollDirection] defaults to [Axis.horizontal].
+                  /// Use [Axis.vertical] to scroll vertically.
+                  controller: _pageViewController,
+                  onPageChanged:
+                      _handlePageViewChanged, //Platform.isDesktop ? _handlePageViewChanged : null,
+                  itemBuilder: (context, index) {
+                    // var ps = widget.posts[index], t = ps.$Safe;
+                    // logger.finest("${widget.posts.parameters.tags} $index");
+                    logger.finest("$tags $index");
+                    var ps = ValueAsync(
+                            value: widget.posts.getPostsOnPageAsObj(index)),
+                        t = ps.$Safe;
+                    Widget ret;
+                    Key? key;
+                    // key = widget.key;
+                    // key = ObjectKey(widget.posts.parameters.tags);
+                    // key = ObjectKey("${widget.posts.parameters.tags}$index");
+                    key = ObjectKey("$tags $index");
+                    // logger.finer("index: $index, sync posts: ${t?.map(
+                    //   (element) => element.id,
+                    // )}");
 
-                  if (ps.isComplete && t == null) {
-                    logger.finer("index: $index, empty && complete}");
-                    return null;
-                  } else if (!ps.isComplete) {
-                    ret = FutureBuilder(
-                      future: ps.future,
-                      builder: (context, snapshot) {
-                        logger.info("Index: $index snapshot complete "
-                            "${snapshot.hasData || snapshot.hasError} "
-                            "${logE6Posts(snapshot.data)}");
-                        if (snapshot.hasData || ps.isComplete) {
-                          if (snapshot.data != null) {
-                            return WPostSearchResults(
-                              key: key,
-                              posts: snapshot.data!,
-                              expectedCount: SearchView.i.postsPerPage,
-                              disallowSelections: widget.disallowSelections,
-                              fireRebuild: widget._fireRebuild,
-                              pageIndex: index,
-                              indexOffset: index * SearchView.i.postsPerPage,
-                              onPostsSelected: widget.onPostsSelected,
-                              stripToGridView: widget.stripToGridView,
-                              useLazyBuilding: widget.useLazyBuilding,
+                    if (ps.isComplete && t == null) {
+                      logger.finer("index: $index, empty && complete}");
+                      return null;
+                    } else if (!ps.isComplete) {
+                      ret = FutureBuilder(
+                        future: ps.future,
+                        builder: (context, snapshot) {
+                          logger.info("Index: $index snapshot complete "
+                              "${snapshot.hasData || snapshot.hasError} "
+                              "${logE6Posts(snapshot.data)}");
+                          if (snapshot.hasData || ps.isComplete) {
+                            if (snapshot.data != null) {
+                              return WPostSearchResults(
+                                key: key,
+                                posts: snapshot.data!,
+                                expectedCount: SearchView.i.postsPerPage,
+                                disallowSelections: widget.disallowSelections,
+                                fireRebuild: widget._fireRebuild,
+                                pageIndex: index,
+                                indexOffset: index * SearchView.i.postsPerPage,
+                                onPostsSelected: widget.onPostsSelected,
+                                stripToGridView: widget.stripToGridView,
+                                useLazyBuilding: widget.useLazyBuilding,
+                              );
+                            } else {
+                              return const Column(
+                                children: [Expanded(child: Text("No Results"))],
+                              );
+                            }
+                          } else if (snapshot.hasError) {
+                            return Column(
+                              children: [
+                                Text("ERROR: ${snapshot.error}"),
+                                Text("StackTrace: ${snapshot.stackTrace}"),
+                              ],
                             );
                           } else {
-                            return const Column(
-                              children: [Expanded(child: Text("No Results"))],
+                            return const AspectRatio(
+                              aspectRatio: 1,
+                              child: CircularProgressIndicator(),
                             );
                           }
-                        } else if (snapshot.hasError) {
-                          return Column(
-                            children: [
-                              Text("ERROR: ${snapshot.error}"),
-                              Text("StackTrace: ${snapshot.stackTrace}"),
-                            ],
-                          );
-                        } else {
-                          return const AspectRatio(
-                            aspectRatio: 1,
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-                      },
-                    );
-                  } else {
-                    logger.finer("index: $index, sync posts: ${t?.map(
-                      (element) => element.id,
-                    )}");
-                    ret = WPostSearchResults(
+                        },
+                      );
+                    } else {
+                      logger.finer("index: $index, sync posts: ${t?.map(
+                        (element) => element.id,
+                      )}");
+                      ret = WPostSearchResults(
+                        key: key,
+                        posts: t!,
+                        expectedCount: SearchView.i.postsPerPage,
+                        disallowSelections: widget.disallowSelections,
+                        fireRebuild: widget._fireRebuild,
+                        pageIndex: index,
+                        indexOffset: index * SearchView.i.postsPerPage,
+                        onPostsSelected: widget.onPostsSelected,
+                        stripToGridView: widget.stripToGridView,
+                        useLazyBuilding: widget.useLazyBuilding,
+                      );
+                    }
+                    return Column(
                       key: key,
-                      posts: t!,
-                      expectedCount: SearchView.i.postsPerPage,
-                      disallowSelections: widget.disallowSelections,
-                      fireRebuild: widget._fireRebuild,
-                      pageIndex: index,
-                      indexOffset: index * SearchView.i.postsPerPage,
-                      onPostsSelected: widget.onPostsSelected,
-                      stripToGridView: widget.stripToGridView,
-                      useLazyBuilding: widget.useLazyBuilding,
+                      children: [
+                        Text(
+                          "index: $index, indexOffset: ${index * SearchView.i.postsPerPage}",
+                        ),
+                        Expanded(child: ret),
+                      ],
                     );
-                  }
-                  return Column(
-                    key: key,
-                    children: [
-                      Text(
-                        "index: $index, indexOffset: ${index * SearchView.i.postsPerPage}",
-                      ),
-                      Expanded(child: ret),
-                    ],
-                  );
-                },
-              ),
-              if (Platform.isDesktop)
-                PageIndicator(
-                  tabController: _tabController,
-                  currentPageIndex: _currentPageIndex,
-                  onUpdateCurrentPageIndex: _updateCurrentPageIndex,
+                  },
                 ),
-            ],
+                if (Platform.isDesktop)
+                  PageIndicator(
+                    tabController: _tabController,
+                    currentPageIndex: _currentPageIndex,
+                    onUpdateCurrentPageIndex: _updateCurrentPageIndex,
+                  ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
+      selector: (context, mpc) => mpc.parameters.tags,
+      // shouldRebuild: (prior, latter) => prior != latter,
     );
   }
 

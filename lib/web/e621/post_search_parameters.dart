@@ -717,31 +717,31 @@ class PostSearchQueryRecordNullable
 
 class PostSearchQueryRecord extends PostSearchQueryRecordNullable {
   @override
-  final String tags;
+  String get tags => super.tags!;
 
   @override
-  final int limit;
+  int get limit => super.limit!;
 
   @override
-  final String page;
+  String get page => super.page!;
 
   @override
   int get upperBound => 320;
   const PostSearchQueryRecord({
-    this.tags = "",
-    this.limit = -1,
-    this.page = "1",
+    String super.tags = "",
+    int super.limit = -1,
+    String super.page = "1",
   });
   const PostSearchQueryRecord.withIndex({
-    this.tags = "",
-    this.limit = -1,
+    String tags = "",
+    int limit = -1,
     int pageIndex = 0,
-  }) : page = "${pageIndex + 1}";
+  }) : super(limit: limit, tags: tags, page: "${pageIndex + 1}");
   const PostSearchQueryRecord.withNumber({
-    this.tags = "",
-    this.limit = -1,
-    int pageNumber = 0,
-  }) : page = "$pageNumber";
+    String tags = "",
+    int limit = -1,
+    int pageNumber = 1,
+  }) : super(limit: limit, tags: tags, page: "$pageNumber");
 
   @override
   PostSearchQueryRecord copyWith({
@@ -776,6 +776,11 @@ class PostSearchQueryRecord extends PostSearchQueryRecordNullable {
 
   @override
   int get hashCode => Object.hash(tags, limit, page);
+
+  @override
+  String toString() {
+    return "{ tags: $tags, limit: $limit, page: $page }";
+  }
 }
 
 abstract interface class ComparableRecord<T extends ComparableRecord<T>> {
