@@ -348,6 +348,31 @@ class E6PostResponse implements PostListing, e621.Post {
         hasNotes: json["has_notes"] as bool,
         duration: json["duration"] as num?,
       );
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "createdAt": createdAt.toIso8601String(),
+        "updatedAt": updatedAt.toIso8601String(),
+        "file": file.toJson(),
+        "preview": preview.toJson(),
+        "sample": sample.toJson(),
+        "score": score.toJson(),
+        "tags": tags.toJson(),
+        "lockedTags": lockedTags,
+        "changeSeq": changeSeq,
+        "flags": flags.toJson(),
+        "rating": rating,
+        "favCount": favCount,
+        "sources": sources,
+        "pools": pools,
+        "relationships": relationships.toJson(),
+        "approverId": approverId,
+        "uploaderId": uploaderId,
+        "description": description,
+        "commentCount": commentCount,
+        "isFavorited": isFavorited,
+        "hasNotes": hasNotes,
+        "duration": duration,
+      };
   @override
   E6PostResponse copyWith({
     int? id,
@@ -711,6 +736,33 @@ class E6PostMutable implements E6PostResponse {
         hasNotes: hasNotes,
         duration: duration,
       );
+
+  @override
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "createdAt": createdAt.toIso8601String(),
+        "updatedAt": updatedAt.toIso8601String(),
+        "file": file.toJson(),
+        "preview": preview.toJson(),
+        "sample": sample.toJson(),
+        "score": score.toJson(),
+        "tags": tags.toJson(),
+        "lockedTags": lockedTags,
+        "changeSeq": changeSeq,
+        "flags": flags.toJson(),
+        "rating": rating,
+        "favCount": favCount,
+        "sources": sources,
+        "pools": pools,
+        "relationships": relationships.toJson(),
+        "approverId": approverId,
+        "uploaderId": uploaderId,
+        "description": description,
+        "commentCount": commentCount,
+        "isFavorited": isFavorited,
+        "hasNotes": hasNotes,
+        "duration": duration,
+      };
 }
 
 class E6FileResponse extends E6Preview implements e621.File {
@@ -768,6 +820,14 @@ class E6FileResponse extends E6Preview implements e621.File {
         md5: json["md5"] as String,
         url: json["url"] as String? ?? "",
       );
+  JsonOut toJson() => {
+        "width": width,
+        "height": height,
+        "ext": ext,
+        "size": size,
+        "md5": md5,
+        "url": url,
+      };
 }
 
 class E6Preview extends e621.Preview implements IImageInfo {
@@ -814,6 +874,11 @@ class E6Preview extends e621.Preview implements IImageInfo {
         height: json["height"],
         url: json["url"] as String? ?? "",
       );
+  JsonOut toJson() => {
+        "width": width,
+        "height": height,
+        "url": url,
+      };
 }
 
 class E6Sample extends E6Preview implements ISampleInfo, e621.Sample {
@@ -849,6 +914,14 @@ class E6Sample extends E6Preview implements ISampleInfo, e621.Sample {
             ? Alternates.fromJson(json["alternates"])
             : null,
       );
+  @override
+  JsonOut toJson() => {
+        "has": has,
+        "width": width,
+        "height": height,
+        "url": url,
+        "alternates": alternates?.toJson(),
+      };
 }
 
 class E6Score extends e621.Score {
@@ -997,6 +1070,14 @@ class E6Flags extends e621.PostFlags {
         ratingLocked: json["rating_locked"] as bool,
         deleted: json["deleted"] as bool,
       );
+  JsonOut toJson() => {
+        "pending": pending,
+        "flagged": flagged,
+        "noteLocked": noteLocked,
+        "statusLocked": statusLocked,
+        "ratingLocked": ratingLocked,
+        "deleted": deleted,
+      };
 
   // @override
   E6Flags copyWith({
@@ -1150,6 +1231,16 @@ class E6FlagsBit implements E6Flags {
         ratingLocked: ratingLocked ?? this.ratingLocked,
         deleted: deleted ?? this.deleted,
       );
+
+  @override
+  JsonOut toJson() => {
+        "pending": pending,
+        "flagged": flagged,
+        "noteLocked": noteLocked,
+        "statusLocked": statusLocked,
+        "ratingLocked": ratingLocked,
+        "deleted": deleted,
+      };
 }
 
 class E6Relationships extends e621.PostRelationships {
@@ -1171,6 +1262,12 @@ class E6Relationships extends e621.PostRelationships {
         hasActiveChildren: json["has_active_children"] as bool,
         children: (json["children"] as List).cast<int>(),
       );
+  JsonOut toJson() => {
+        "parentId": parentId,
+        "hasChildren": hasChildren,
+        "hasActiveChildren": hasActiveChildren,
+        "children": children,
+      };
 }
 
 class Alternates {
