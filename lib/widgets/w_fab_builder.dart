@@ -63,7 +63,7 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.arrow_upward),
       tooltip: "Upvote",
       onPressed: () async {
-        print("Upvoting ${post.id}...");
+        logger.finer("Upvoting ${post.id}...");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Upvoting ${post.id}...")),
         );
@@ -75,7 +75,7 @@ class WFabBuilder extends StatelessWidget {
           ),
         ).then(
           (v) {
-            print(v.body);
+            logger.finer(v.body);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text("${v.statusCode}: ${v.reasonPhrase}"),
@@ -95,7 +95,7 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.arrow_downward),
       tooltip: "Downvote",
       onPressed: () async {
-        print("Downvoting ${post.id}...");
+        logger.finer("Downvoting ${post.id}...");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Downvoting ${post.id}...")),
         );
@@ -107,7 +107,7 @@ class WFabBuilder extends StatelessWidget {
           ),
         ).then(
           (v) {
-            print(v.body);
+            logger.finer(v.body);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text("${v.statusCode}: ${v.reasonPhrase}"),
@@ -127,7 +127,7 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.favorite),
       tooltip: "Add to favorites",
       onPressed: () async {
-        print("Adding ${post.id} to favorites...");
+        logger.finer("Adding ${post.id} to favorites...");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Adding ${post.id} to favorites...")),
         );
@@ -142,7 +142,7 @@ class WFabBuilder extends StatelessWidget {
             .toResponse()
             .then(
           (v) {
-            print(v.body);
+            logger.finer(v.body);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text("${v.statusCode}: ${v.reasonPhrase}"),
@@ -171,7 +171,7 @@ class WFabBuilder extends StatelessWidget {
                         },
                       );
                     } catch (e) {
-                      print(e);
+                      logger.finer(e);
                       rethrow;
                     }
                   },
@@ -192,7 +192,7 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.favorite),
       tooltip: "Add selected to favorites",
       onPressed: () async {
-        print("Adding ${posts.length} posts to favorites...");
+        logger.finer("Adding ${posts.length} posts to favorites...");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text("Adding ${posts.length} posts to favorites...")),
@@ -254,7 +254,7 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.favorite),
       tooltip: "Upvote selected to favorites",
       onPressed: () async {
-        print("Upvoting ${posts.length} posts to favorites...");
+        logger.finer("Upvoting ${posts.length} posts to favorites...");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text("Upvoting ${posts.length} posts to favorites...")),
@@ -317,7 +317,7 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.add),
       tooltip: "Add selected to set",
       onPressed: () async {
-        print("Adding ${posts.length}"
+        logger.finer("Adding ${posts.length}"
             " posts to a set, selecting set");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -344,7 +344,7 @@ class WFabBuilder extends StatelessWidget {
           },
         );
         if (v != null) {
-          print("Adding ${posts.length}"
+          logger.finer("Adding ${posts.length}"
               " posts to set ${v.id} (${v.shortname}, length ${v.postCount})");
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -367,7 +367,7 @@ class WFabBuilder extends StatelessWidget {
           if (res.statusCodeInfo.isSuccessful) {
             final out =
                 "${res.statusCode}: ${posts.length} posts successfully added to set ${v.id} (${v.shortname})";
-            print(out);
+            logger.finer(out);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -394,7 +394,7 @@ class WFabBuilder extends StatelessWidget {
           } else {
             final out =
                 "${res.statusCode}: Failed to add posts to set ${v.id} (${v.shortname})";
-            print(out);
+            logger.finer(out);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -419,7 +419,7 @@ class WFabBuilder extends StatelessWidget {
           }
         } else {
           const out = "No Set Selected, canceling.";
-          print(out);
+          logger.finer(out);
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text(out)),
@@ -438,7 +438,7 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.add),
       tooltip: "Add to set",
       onPressed: () async {
-        print("Adding ${postListing.id} to a set");
+        logger.finer("Adding ${postListing.id} to a set");
         var v = await showDialog<e621.PostSet>(
           context: context,
           builder: (context) {
@@ -458,7 +458,7 @@ class WFabBuilder extends StatelessWidget {
           },
         );
         if (v != null) {
-          print(
+          logger.finer(
               "Adding ${postListing.id} to set ${v.id} (${v.shortname}, length ${v.postCount})");
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -476,7 +476,7 @@ class WFabBuilder extends StatelessWidget {
               ))
               .toResponse();
           if (res.statusCode == 201) {
-            print(
+            logger.finer(
                 "${postListing.id} successfully added to set ${v.id} (${v.shortname}, length ${v.postCount})");
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -520,7 +520,7 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.delete),
       tooltip: "Remove selected from set",
       onPressed: () async {
-        print("Removing ${posts.length}"
+        logger.finer("Removing ${posts.length}"
             " posts from a set, selecting set");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -553,7 +553,7 @@ class WFabBuilder extends StatelessWidget {
           },
         );
         if (v != null) {
-          print("Removing ${posts.length}"
+          logger.finer("Removing ${posts.length}"
               " posts from set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})");
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -576,7 +576,7 @@ class WFabBuilder extends StatelessWidget {
           if (res.statusCodeInfo.isSuccessful) {
             final out =
                 "${res.statusCode}: Posts successfully removed from set ${v.id} (${v.shortname}, length ${v.postCount})";
-            print(out);
+            logger.finer(out);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -603,7 +603,7 @@ class WFabBuilder extends StatelessWidget {
           } else {
             final out =
                 "${res.statusCode}: Failed to remove posts to set ${v.id} (${v.shortname}, length ${v.postCount})";
-            print(out);
+            logger.finer(out);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -628,7 +628,7 @@ class WFabBuilder extends StatelessWidget {
           }
         } else {
           const out = "No Set Selected, canceling.";
-          print(out);
+          logger.finer(out);
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text(out)),
@@ -645,7 +645,7 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.delete),
       tooltip: "Remove selected from set",
       onPressed: () async {
-        print("Removing ${post.id} from a set, selecting set");
+        logger.finer("Removing ${post.id} from a set, selecting set");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Removing ${post.id} from a set, selecting set"),
@@ -671,7 +671,7 @@ class WFabBuilder extends StatelessWidget {
           },
         );
         if (v != null) {
-          print("Removing ${post.id}"
+          logger.finer("Removing ${post.id}"
               " from set ${v.id} (${v.shortname}, length ${v.postCount})");
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -694,7 +694,7 @@ class WFabBuilder extends StatelessWidget {
           if (res.statusCodeInfo.isSuccessful) {
             final out =
                 "${res.statusCode}: Post successfully removed from set ${v.id} (${v.shortname}, length ${v.postCount})";
-            print(out);
+            logger.finer(out);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -721,7 +721,7 @@ class WFabBuilder extends StatelessWidget {
           } else {
             final out =
                 "${res.statusCode}: Failed to remove posts to set ${v.id} (${v.shortname}, length ${v.postCount})";
-            print(out);
+            logger.finer(out);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -746,7 +746,7 @@ class WFabBuilder extends StatelessWidget {
           }
         } else {
           const out = "No Set Selected, canceling.";
-          print(out);
+          logger.finer(out);
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text(out)),
@@ -763,7 +763,7 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.heart_broken_outlined),
       tooltip: "Remove selected from favorites",
       onPressed: () async {
-        print("Removing ${posts.length}"
+        logger.finer("Removing ${posts.length}"
             " posts from favorites...");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -784,7 +784,7 @@ class WFabBuilder extends StatelessWidget {
             },
           ),
           onError: (error, trace) {
-            print(error);
+            logger.finer(error);
           },
           onComplete: (responses) => ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -849,7 +849,7 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.heart_broken_outlined),
       tooltip: "Remove from favorites",
       onPressed: () async {
-        print("Removing ${post.id} from favorites...");
+        logger.finer("Removing ${post.id} from favorites...");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Removing ${post.id} from favorites..."),
@@ -888,7 +888,7 @@ class WFabBuilder extends StatelessWidget {
                         ),
                       )
                           .onError((error, stackTrace) {
-                        print(error);
+                        logger.finer(error);
                         throw error!;
                       });
                       newStream.then(
@@ -906,7 +906,7 @@ class WFabBuilder extends StatelessWidget {
               ),
             )
             .onError((error, stackTrace) {
-          print(error);
+          logger.finer(error);
           throw error!;
         });
       },
@@ -919,7 +919,7 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.edit),
       tooltip: "Edit",
       onPressed: () async {
-        print("Editing ${post.id}...");
+        logger.finer("Editing ${post.id}...");
         // ScaffoldMessenger.of(context).showSnackBar(
         //   SnackBar(
         //     content: Text("Editing ${post.id}..."),
@@ -948,7 +948,7 @@ class WFabBuilder extends StatelessWidget {
         //       ),
         //     )
         //     .onError((error, stackTrace) {
-        //   print(error);
+        //   logger.finer(error);
         //   throw error!;
         // });
       },
@@ -963,7 +963,7 @@ class WFabBuilder extends StatelessWidget {
       tooltip: tooltip,
       onPressed: () {
         final p = "${post.id}: $tooltip";
-        print(p);
+        logger.finer(p);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(p),
@@ -988,19 +988,19 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.info_outline),
       tooltip: "Print Selections",
       onPressed: () async {
-        print("Printing selections...");
+        logger.finer("Printing selections...");
         var s = "posts: ${posts?.fold(
           "",
           (previousValue, element) => "$previousValue, ${element.id}",
         )}";
-        print(s);
+        logger.finer(s);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(s),
           ),
         );
         s = "post: ${post?.id}";
-        print(s);
+        logger.finer(s);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(s),
@@ -1021,7 +1021,7 @@ class WFabBuilder extends StatelessWidget {
     } catch (e) {}
     return ExpandableFab(
       useDefaultHeroTag: false,
-      distance: 112,
+      distance: Platform.isDesktop ? 112 : 224,
       disabledTooltip: (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
           ? ""
           : "Long-press to select posts and perform bulk actions.",

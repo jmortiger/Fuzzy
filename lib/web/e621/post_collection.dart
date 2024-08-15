@@ -472,7 +472,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     } else if (hasNextPageCached ?? false) {
       return doIt();
     } else {
-      final t = getHasNextPage(tags: parameters.tags);
+      final t = getHasNextPageById(tags: parameters.tags);
       return t is Future<bool>
           ? t.then((np) => np ? doIt() : false)
           : t
@@ -629,7 +629,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     } else if (hasNextPageCached ?? false) {
       return doIt();
     } else {
-      final t = getHasNextPage(tags: parameters.tags);
+      final t = getHasNextPageById(tags: parameters.tags);
       return t is Future<bool>
           ? t.then((np) => np ? doIt() : false)
           : t

@@ -30,14 +30,9 @@ late final ({lm.FileLogger logger, lm.Printer print}) lRRecord;
 lm.Printer get routePrint => lRRecord.print;
 lm.FileLogger get routeLogger => lRRecord.logger;
 // #endregion Logger
-Map<String, String> tryParsePathToQuery(Uri u) {
-  final t = u.pathSegments.firstOrNull;
-  if (t != null && u.pathSegments.length > 1) {
-    return {"id": u.pathSegments[1]};
-  } else {
-    return {};
-  }
-}
+Map<String, String> tryParsePathToQuery(Uri u) => u.pathSegments.length > 1
+    ? ({"id": u.pathSegments[1]}..addAll(u.queryParameters))
+    : u.queryParameters;
 
 /// TODO: https://pub.dev/packages/args
 void main(List<String> args) async {
@@ -74,8 +69,9 @@ void main(List<String> args) async {
                         searchText: url
                             .queryParameters["tags"]) /* const HomePage() */);
               case PoolViewPageBuilder.routeNameString:
-                final t = int.tryParse(url.queryParameters["poolId"] ??
-                    url.queryParameters["id"] ??
+                final parameters = tryParsePathToQuery(url);
+                final t = int.tryParse(parameters["poolId"] ??
+                    parameters["id"] ??
                     tryParsePathToQuery(url)["id"] ??
                     "");
                 if (t != null) {
@@ -146,6 +142,8 @@ void main(List<String> args) async {
 
 Widget buildHomePageWithProviders({
   String? searchText,
+  int? limit,
+  String? page,
 }) =>
     MultiProvider(
       providers: [

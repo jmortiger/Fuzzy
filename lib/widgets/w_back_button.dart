@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 class WBackButton extends StatelessWidget {
+  /// Have the button hover over [child] (if non-null).
   const WBackButton({
     super.key,
     this.onPop,
     this.child,
   }) : hover = true;
+  /// Don't have the button hover over [child] (if non-null).
   const WBackButton.doNotBlockChild({
     super.key,
     this.onPop,
@@ -13,6 +15,10 @@ class WBackButton extends StatelessWidget {
   }) : hover = false;
 
   final void Function()? onPop;
+
+  /// To have this button lay itself out, set this to 
+  /// a single element with the rest of the widget tree.
+  /// Essentially a lightweight [Scaffold] + [AppBar].
   final Widget? child;
   final bool hover;
 

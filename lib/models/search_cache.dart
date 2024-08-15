@@ -57,7 +57,7 @@ class SearchCacheLegacy extends ChangeNotifier {
         _lastPostOnPageIdCached = lastPostOnPageIdCached,
         _hasNextPageCached = hasNextPageCached;
 
-  FutureOr<bool> getHasNextPage({
+  FutureOr<bool> getHasNextPageById({
     required String tags,
     int? lastPostId, // = 9223372036854775807,//double.maxFinite.toInt(),
     // required BuildContext context,

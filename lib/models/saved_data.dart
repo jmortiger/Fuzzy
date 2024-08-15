@@ -115,9 +115,7 @@ class SavedDataE6 extends ChangeNotifier {
     }
   }
   SavedDataE6.recycle() {
-    try {
-      SavedDataE6.searches.isEmpty;
-    } catch (e) {
+    if (!isInit) {
       SavedDataE6.searches = ListNotifier<SavedSearchData>.empty(true);
       storageAsync.then((v) {
         searches = v;
@@ -129,10 +127,9 @@ class SavedDataE6 extends ChangeNotifier {
     }
   }
   static async_lib.FutureOr<SavedDataE6> loadOrRecycle() {
-    try {
-      searches.isEmpty;
+    if (isInit) {
       return SavedDataE6.recycle();
-    } catch (e) {
+    } else {
       return storageAsync.then((v) => SavedDataE6(searches: v));
     }
   }
@@ -145,7 +142,7 @@ class SavedDataE6 extends ChangeNotifier {
   static ListNotifier<SavedSearchData>? get storageSync {
     String? t = file.$Safe?.readAsStringSync();
     return (t == null)
-        ? loadFromPrefSync()
+        ? loadFromPrefTrySync()
         : SavedDataE6.fromJson(jsonDecode(t));
   }
 
@@ -172,6 +169,41 @@ class SavedDataE6 extends ChangeNotifier {
       });
     });
   }
+  void _rootInit(ListNotifier<SavedSearchData> v) {
+    searches = v..addListener(notifyListeners);
+    if (!validateUniqueness(searches: v)) {
+      _save();
+    }
+  }
+
+  SavedDataE6.initTrySync() {
+    if (isInit) {
+      searches.addListener(notifyListeners);
+      return;
+    }
+    if (file.isAssigned) {
+      final s = file.$?.readAsStringSync();
+      final v = s != null
+          ? SavedDataE6.fromJson(jsonDecode(s))
+          : loadFromPrefTrySync();
+      if (v != null) {
+        _rootInit(v);
+        return;
+      } else {
+        loadFromPref().then((v) {
+          _rootInit(v);
+        });
+        return;
+      }
+    }
+    file.getItem().then((value) {
+      (value?.readAsString().then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
+              loadFromPref())
+          .then((v) {
+        _rootInit(v);
+      });
+    });
+  }
   // SavedDataE6 copyWith({
   //   // List<SavedPoolData>? pools,
   //   // List<SavedSetData>? sets,
@@ -182,9 +214,10 @@ class SavedDataE6 extends ChangeNotifier {
   //       // sets: sets ?? this.sets.toList(),
   //       searches: searches ?? this.searches.toList(),
   //     );
-  factory SavedDataE6.fromStorageSync() => Platform.isWeb
-      ? SavedDataE6()
-      : Storable.tryLoadToInstanceSync(fileFullPath.$) ?? SavedDataE6();
+  factory SavedDataE6.fromStorageSync() => SavedDataE6.initTrySync();
+  // factory SavedDataE6.fromStorageSync() => Platform.isWeb
+  //     ? SavedDataE6()
+  //     : Storable.tryLoadToInstanceSync(fileFullPath.$) ?? SavedDataE6();
   static Future<bool> writeToPref([List<SavedSearchData>? searches]) {
     searches ??= SavedDataE6.searches;
     return pref.getItem().then((v) {
@@ -236,8 +269,8 @@ class SavedDataE6 extends ChangeNotifier {
         }
         return data;
       });
-  static ListNotifier<SavedSearchData>? loadFromPrefSync() {
-    if (!pref.isAssigned) return null;
+  static ListNotifier<SavedSearchData>? loadFromPrefTrySync() {
+    if (pref.$Safe == null) return null;
     final length = pref.$.getInt(localStorageLengthKey) ?? 0;
     var data = ListNotifier<SavedSearchData>();
     for (var i = 0; i < length; i++) {

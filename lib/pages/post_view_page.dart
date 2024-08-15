@@ -11,6 +11,7 @@ import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/main.dart';
 import 'package:fuzzy/web/e621/e621_access_data.dart';
+import 'package:fuzzy/widgets/w_upvote_button.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
 import 'package:j_util/e621.dart';
 import 'package:j_util/j_util_full.dart';
@@ -102,17 +103,16 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
     // var IImageInfo(width: w, height: h, url: url) = postListing.sample;
     var i = widget.postListing.file.isAVideo
         ? switch (PostView.i.imageQuality) {
-            FilterQuality.low =>
-              (e6Post.sample.alternates!.alternates["480p"] ??
-                  e6Post.sample.alternates!.alternates["720p"] ??
-                  e6Post.sample.alternates!.alternates["original"])!,
+            FilterQuality.low => e6Post.sample.alternates!.alternates["480p"] ??
+                e6Post.sample.alternates!.alternates["720p"] ??
+                e6Post.sample.alternates!.alternates["original"],
             FilterQuality.medium =>
-              (e6Post.sample.alternates!.alternates["720p"] ??
-                  e6Post.sample.alternates!.alternates["original"])!,
+              e6Post.sample.alternates!.alternates["720p"] ??
+                  e6Post.sample.alternates!.alternates["original"],
             FilterQuality.high =>
-              e6Post.sample.alternates!.alternates["original"]!,
+              e6Post.sample.alternates!.alternates["original"],
             FilterQuality.none =>
-              e6Post.sample.alternates!.alternates["original"]!,
+              e6Post.sample.alternates!.alternates["original"],
             // _ => throw UnsupportedError("type not supported"),
           }
         : e6Post.isAnimatedGif
@@ -124,6 +124,9 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                 FilterQuality.none => e6Post.file,
                 // _ => throw UnsupportedError("type not supported"),
               };
+    if (i == null) {
+      return e6Post.file;
+    }
     if (i.width > screenWidth &&
         !isFullScreen &&
         !pvs.forceHighQualityImage &&
@@ -187,12 +190,13 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
       body: SafeArea(
         child: Stack(
           children: [
-            _buildBody(
-              w: w,
-              h: h,
-              url: url,
-              screenWidth: screenWidth,
-            ),
+            if (!treatAsFullscreen)
+              _buildBody(
+                w: w,
+                h: h,
+                url: url,
+                screenWidth: screenWidth,
+              ),
             if (treatAsFullscreen)
               const Positioned.fill(
                 child: ColoredBox(
@@ -221,9 +225,35 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                   ? widget.onPop ?? () => Navigator.pop(context, this)
                   : toggleFullscreen,
             ),
+            Positioned.fill(
+              bottom: 25,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  WUpvoteButton.fromPost(
+                    post: e6Post,
+                  ),
+                  WUpvoteButton.fromPost(
+                    post: e6Post,
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
+      // persistentFooterButtons: [
+      //   WUpvoteButton.fromPost(
+      //     post: e6Post,
+      //   ),
+      //   WUpvoteButton.fromPost(
+      //     post: e6Post,
+      //   ),
+      //   WUpvoteButton.fromPost(
+      //     post: e6Post,
+      //   ),
+      // ],
       floatingActionButton: WFabBuilder.singlePost(post: e6Post),
     );
   }
@@ -265,7 +295,9 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
             mainAxisSize: MainAxisSize.max,
             children: [
               SelectableText(
-                  "ID: ${e6Post.id}, W: $w, H: $h, screenWidth: ${maxWidth.toStringAsPrecision(5)}, MQWidth: ${mqWidth.toStringAsPrecision(5)}"),
+                  "ID: ${e6Post.id}, W: $w, H: $h"),
+              // SelectableText(
+              //     "ID: ${e6Post.id}, W: $w, H: $h, screenWidth: ${maxWidth.toStringAsPrecision(5)}, MQWidth: ${mqWidth.toStringAsPrecision(5)}"),
             ],
           ),
           if (e6Post.relationships.hasParent ||

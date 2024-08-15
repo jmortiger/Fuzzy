@@ -14,12 +14,6 @@ import '../web/e621/e621_access_data.dart';
 import '../widgets/w_home_end_drawer.dart';
 import '../widgets/w_search_bar.dart';
 
-// #region Logger
-late final lRecord = lm.generateLogger("HomePage");
-lm.Printer get print => lRecord.print;
-lm.FileLogger get logger => lRecord.logger;
-// #endregion Logger
-
 class HomePage extends StatefulWidget implements IRoute<HomePage> {
   static const routeNameString = "/";
   static const allRoutesString = ["/", "/posts"];
@@ -41,6 +35,11 @@ class HomePage extends StatefulWidget implements IRoute<HomePage> {
 }
 
 class _HomePageState extends State<HomePage> {
+  // #region Logger
+  late final lRecord = lm.generateLogger("HomePage");
+  lm.Printer get print => lRecord.print;
+  lm.FileLogger get logger => lRecord.logger;
+  // #endregion Logger
   @override
   void initState() {
     super.initState();
@@ -76,7 +75,7 @@ class _HomePageState extends State<HomePage> {
                 if (value != null) {
                   _sendSearchAndUpdateState(tags: value);
                   setState(() {
-                    toFillSearchWith = /* sc.searchText =  */value;
+                    toFillSearchWith = /* sc.searchText =  */ value;
                   });
                 }
               },
@@ -89,7 +88,7 @@ class _HomePageState extends State<HomePage> {
         onSearchRequested: (searchText) {
           _sendSearchAndUpdateState(tags: searchText);
           setState(() {
-            toFillSearchWith = /* sc.searchText =  */searchText;
+            toFillSearchWith = /* sc.searchText =  */ searchText;
           });
         },
         getMountedContext: () => this.context,
@@ -140,25 +139,25 @@ class _HomePageState extends State<HomePage> {
         //     )),
         //   ),
         // if (sc.posts != null)
-          Expanded(
-            key: ObjectKey(sc.mpcSync.parameters.tags),
-            child: sc.isMpcSync
-                ? WPostSearchResultsSwiper(
-                    key: ObjectKey(sc.mpcSync.parameters.tags),
-                    posts: sc.mpcSync,
-                    // expectedCount:
-                    // SearchView.i.lazyLoad ? SearchView.i.postsPerPage : sc.posts!.count,
-                    useLazyBuilding: SearchView.i.lazyBuilding,
-                  )
-                : WPostSearchResults(
-                    key: ObjectKey(sc.posts!),
-                    posts: sc.posts!,
-                    expectedCount: SearchView.i.lazyLoad
-                        ? SearchView.i.postsPerPage
-                        : sc.posts!.count,
-                    useLazyBuilding: SearchView.i.lazyBuilding,
-                  ),
-          ),
+        Expanded(
+          key: ObjectKey(sc.mpcSync.parameters.tags),
+          child: sc.isMpcSync
+              ? WPostSearchResultsSwiper(
+                  key: ObjectKey(sc.mpcSync.parameters.tags),
+                  posts: sc.mpcSync,
+                  // expectedCount:
+                  // SearchView.i.lazyLoad ? SearchView.i.postsPerPage : sc.posts!.count,
+                  useLazyBuilding: SearchView.i.lazyBuilding,
+                )
+              : WPostSearchResults(
+                  key: ObjectKey(sc.posts!),
+                  posts: sc.posts!,
+                  expectedCount: SearchView.i.lazyLoad
+                      ? SearchView.i.postsPerPage
+                      : sc.posts!.count,
+                  useLazyBuilding: SearchView.i.lazyBuilding,
+                ),
+        ),
       ],
     );
   }

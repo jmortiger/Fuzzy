@@ -288,7 +288,7 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
             // onUpdateCurrentPageIndex: _updateCurrentPageIndex,
             onUpdateCurrentPageIndex: _updateCurrentPageIndexWrapper,
             pageIndicatorBuilder: (cxt, currentPageIndex) =>
-                Text("tabController.index: $currentPageIndex"),
+                IgnorePointer(child: Text("tabController.index: $currentPageIndex")),
           ),
       ],
     );
