@@ -6,7 +6,7 @@ import 'package:fuzzy/models/app_settings.dart' show SearchView;
 import 'package:fuzzy/models/saved_data.dart' show SavedDataE6;
 import 'package:fuzzy/models/search_cache.dart' show SearchCacheLegacy;
 import 'package:fuzzy/models/search_results.dart' show SearchResultsNotifier;
-import 'package:fuzzy/pages/post_swipe_page.dart' as old;
+import 'package:fuzzy/pages/post_swipe_page.dart';
 import 'package:fuzzy/pages/post_view_page.dart' show IReturnsTags;
 import 'package:fuzzy/util/util.dart' show placeholder;
 import 'package:fuzzy/web/e621/models/e6_models.dart' show E6PostResponse;
@@ -19,14 +19,13 @@ import 'package:provider/provider.dart' show Provider;
 
 BoxFit imageFit = BoxFit.cover;
 const bool allowPostViewNavigation = true;
-const bool useLinkedList = false;
 
 class WImageResult extends StatelessWidget {
   // #region Logger
-  // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("WImageResult");
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.generateLogger("WImageResult");
   // #endregion Logger
   final PostListing imageListing;
   bool get isE6Post => imageListing is E6PostResponse;
@@ -112,105 +111,6 @@ class WImageResult extends StatelessWidget {
     return (height: sizeHeight, width: sizeWidth);
   }
 
-  /// Using the smaller of size(Dimension) and file(Dimension) causes big
-  /// scale-ups (e.g. a long vertical comic) to have the wrong resolution.
-  static ({
-    num width,
-    num height,
-    num? cacheWidth,
-    num? cacheHeight,
-    double aspectRatio,
-  }) determineResolution(
-    final num fileWidth,
-    final num fileHeight,
-    final double sizeWidth,
-    final double sizeHeight,
-    final BoxFit fit,
-  ) {
-    num width, height;
-    num? cacheWidth, cacheHeight;
-    // final double widthRatio =
-    //     // (sizeWidth - fileWidth).abs() / max(fileWidth, fileHeight);
-    //     (sizeWidth - fileWidth).abs() / fileWidth;
-    // final double heightRatio =
-    //     // (sizeHeight - fileHeight).abs() / max(fileWidth, fileHeight);
-    //     (sizeHeight - fileHeight).abs() / fileHeight;
-    final double widthRatio = fileWidth / sizeWidth;
-    final double heightRatio = fileHeight / sizeHeight;
-    final bool finiteRatios = widthRatio.isFinite && heightRatio.isFinite;
-    if ((finiteRatios && widthRatio != heightRatio) ||
-        fileWidth != fileHeight) {
-      switch (fit) {
-        // TODO: Implement
-        // case BoxFit.scaleDown:
-        case BoxFit.fill:
-          cacheWidth = fileWidth;
-          cacheHeight = fileHeight;
-          if (finiteRatios) {
-            width = sizeWidth;
-            height = sizeHeight;
-          } else if (sizeWidth.isFinite || !sizeHeight.isFinite) {
-            width = (sizeWidth.isFinite) ? sizeWidth : fileWidth;
-            height = (fileHeight * width) / fileWidth;
-          } else {
-            height = (sizeHeight.isFinite) ? sizeHeight : fileHeight;
-            width = (fileWidth * height) / fileHeight;
-          }
-        case BoxFit.none:
-          cacheWidth = width = fileWidth;
-          cacheHeight = height = fileHeight;
-          break;
-        fitHeight:
-        case BoxFit.fitHeight:
-          cacheHeight = (sizeHeight.isFinite) ? sizeHeight : null;
-          height = cacheHeight ?? fileHeight;
-          width = (fileWidth * height) / fileHeight;
-          break;
-        fitWidth:
-        case BoxFit.fitWidth:
-          cacheWidth = (sizeWidth.isFinite) ? sizeWidth : null;
-          width = cacheWidth ?? fileWidth;
-          height = (fileHeight * width) / fileWidth;
-          break;
-        case BoxFit.cover:
-          // if (fileWidth > fileHeight) {
-          if ((finiteRatios && heightRatio > widthRatio) ||
-              (!finiteRatios && fileWidth > fileHeight)) {
-            continue fitWidth;
-          } else /*  if (fileHeight > fileWidth) */ {
-            continue fitHeight;
-          }
-        case BoxFit.contain:
-        default:
-          // if (fileWidth > fileHeight) {
-          if ((finiteRatios && heightRatio > widthRatio) ||
-              (!finiteRatios && fileWidth > fileHeight)) {
-            continue fitHeight;
-          } else /*  if (fileHeight > fileWidth) */ {
-            continue fitWidth;
-          }
-      }
-    } else {
-      cacheHeight = cacheWidth = (sizeHeight.isFinite)
-          ? sizeHeight
-          : (sizeWidth.isFinite)
-              ? sizeWidth
-              : null;
-      height = width = (sizeHeight.isFinite)
-          ? sizeHeight
-          : (sizeWidth.isFinite)
-              ? sizeWidth
-              : fileWidth;
-    }
-    return (
-      width: width,
-      height: height,
-      cacheWidth: cacheWidth,
-      cacheHeight: cacheHeight,
-      aspectRatio: width / height,
-    );
-  }
-
   @widgetFactory
   Widget _buildCheckmark(BuildContext context) {
     return IgnorePointer(
@@ -253,31 +153,32 @@ class WImageResult extends StatelessWidget {
       logger.finest("Currently selected indices: ${srl?.selectedIndices}");
     }
 
-    Future<void> viewPost() async {
+    void viewPost() {
       SavedDataE6.init();
+      int? p;
       if (!disallowSelections && getSc(context, false).isMpcSync) {
-        await getSc(context, false).mpcSync.updateCurrentPostIndex(index);
+        // await getSc(context, false).mpcSync.updateCurrentPostIndex(index);
+        p = getSc(context, false).mpcSync.getPageOfGivenPostIndexOnPage(index);
+        getSc(context, false).mpcSync.updateCurrentPostIndex(index);
       }
+      final sc = getSc(context, false).mpcSync;
       Navigator.push<IReturnsTags>(
           context,
           MaterialPageRoute(
             builder: (_) => allowPostViewNavigation && !disallowSelections
-                ? useLinkedList
-                    ? const Placeholder() //_buildLinkedSwiper(context)
-                    : /* Provider.of<SearchCacheLegacy>(context,
-                                        listen: false)
-                                    .isMpcSync
-                                ?  */
-                    old.PostSwipePageManaged(
-                        initialIndex: index,
-                        initialPageIndex:
-                            getSc(context, false).mpcSync.currentPageIndex,
-                        posts: getSc(context, false).mpcSync,
-                        onAddToSearch: getOnAddToSearch(context),
-                        tagsToAdd: [],
-                        // initialPageIndex: ,
-                      )
-                : old.PostSwipePage.postsCollection(
+                ? PostSwipePageManaged(
+                    initialIndex: index,
+                    // initialPageIndex:
+                    //     getSc(context, false).mpcSync.currentPageIndex,
+                    initialPageIndex: p ??
+                        getSc(context, false)
+                            .mpcSync
+                            .getPageOfGivenPostIndexOnPage(index),
+                    posts: getSc(context, false).mpcSync,
+                    onAddToSearch: getOnAddToSearch(context),
+                    tagsToAdd: [],
+                  )
+                : PostSwipePage.postsCollection(
                     initialIndex: index,
                     posts: postsCache ??
                         Provider.of<SearchCacheLegacy>(context, listen: false)
@@ -295,12 +196,14 @@ class WImageResult extends StatelessWidget {
           )).then<void>((v) {
         if (v?.tagsToAdd?.firstOrNull != null) {
           try {
-            getSc(context, false).mpcSync.searchText +=
-                v!.tagsToAdd!.foldToString();
+            // getSc(context, false).mpcSync.searchText +=
+            // v!.tagsToAdd!.foldToString();
+            sc.searchText += v!.tagsToAdd!.foldToString();
           } catch (e, s) {
             logger.severe(e, e, s);
-            getSc(context, false).mpcSync.searchText +=
-                v!.tagsToAdd!.foldToString();
+            // getSc(context, false).mpcSync.searchText +=
+            // v!.tagsToAdd!.foldToString();
+            sc.searchText += v!.tagsToAdd!.foldToString();
           }
         }
       });
@@ -326,7 +229,7 @@ class WImageResult extends StatelessWidget {
             print("[$index] onDoubleTap", lm.LogLevel.FINE);
             toggle();
           },
-          onTap: () async {
+          onTap: () {
             print("[$index] OnTap", lm.LogLevel.INFO);
             if (isSelected || (srl?.areAnySelected ?? false)) {
               toggle();
@@ -363,7 +266,7 @@ class WImageResult extends StatelessWidget {
     var (width: sizeWidth, height: sizeHeight) =
         WImageResult.getGridSizeEstimate(ctx);
     var (:width, :height, :cacheWidth, :cacheHeight, :aspectRatio) =
-        WImageResult.determineResolution(w, h, sizeWidth, sizeHeight, imageFit);
+        determineResolution(w, h, sizeWidth, sizeHeight, imageFit);
     if (!SearchView.i.useProgressiveImages) {
       Widget i = Image.network(
         url,
@@ -397,8 +300,7 @@ class WImageResult extends StatelessWidget {
       cacheWidth: cacheWidth2,
       cacheHeight: cacheHeight2,
       aspectRatio: aspectRatio2,
-    ) = WImageResult.determineResolution(
-        w2, h2, sizeWidth, sizeHeight, imageFit);
+    ) = determineResolution(w2, h2, sizeWidth, sizeHeight, imageFit);
     // if (sizeWidth.isFinite && sizeHeight.isFinite) {
     //   assert(fWidth == w && fHeight == h);
     // }
@@ -434,55 +336,6 @@ class WImageResult extends StatelessWidget {
     );
     return Center(child: i);
   }
-
-  /* @widgetFactory
-  HtmlElementView _createHtmlImageElement(String url, int w, int h) {
-    return HtmlElementView(
-      viewType: "imgPostTile",
-      // creationParams: ,
-      onPlatformViewCreated: (id) {
-        // https://api.flutter.dev/flutter/dart-html/ImageElement-class.html
-        var e = getViewById(id) as dynamic; //ImageElement
-        e.attributes["src"] = url;
-        // https://api.flutter.dev/flutter/dart-html/CssStyleDeclaration-class.html
-        if (imageFit == BoxFit.contain) {
-          if (w > h) {
-            e.style.width = "100%";
-            e.style.height = "auto";
-          } else if (w == h) {
-            e.style.width = "100%";
-            e.style.height = "100%";
-          } else {
-            e.style.width = "auto";
-            e.style.height = "100%";
-          }
-          e.style.maxWidth = "100%";
-          e.style.maxHeight = "100%";
-          e.style.objectFit = "contain";
-          // print("Trying to contain");
-          // e.style.aspectRatio = "${w / h}";
-        } else /* if (imageFit == BoxFit.cover) */ {
-          if (w > h) {
-            e.style.width = "auto";
-            e.style.height = "100%";
-          } else if (w == h) {
-            e.style.width = "100%";
-            e.style.height = "100%";
-          } else {
-            e.style.width = "100%";
-            e.style.height = "auto";
-          }
-          e.style.minWidth = "100%";
-          e.style.minHeight = "100%";
-          e.style.maxWidth = "100vw";
-          e.style.maxHeight = "100vh";
-          e.style.objectFit = "cover";
-          // print("Trying to cover");
-          // e.style.aspectRatio = "${w / h}";
-        }
-      },
-    );
-  } */
 }
 
 class PostInfoPane extends StatelessWidget {
@@ -638,4 +491,123 @@ enum PostInfoPaneItem {
   //   }
   //   return children;
   // }
+}
+
+/// Determines the appropriate rendered dimensions, cached true resolution
+/// dimensions (as per [ResizeImage]), and aspect ratio for displaying the
+/// given image in the given area with the given fitment.
+///
+/// [fileWidth] & [fileHeight] are the image's natural, true,
+/// full-size dimensions.
+///
+/// [sizeWidth] & [sizeHeight] are dimensions that the image is to be
+/// rendered into. It is expected (but not required) that these do not match
+/// the natural aspect ratio of the image; this method's job is to handle that.
+///
+/// [fit] is the logic by which the image is rendered to the display dimensions.
+///
+/// TODO: Test with non-finite [sizeWidth] &/or [sizeHeight].
+///
+/// Implementation Notes: Using the smaller of size(Dimension) and
+/// file(Dimension) for the cache(Dimension) causes big scale-ups (e.g.
+/// a long vertical comic) to have the wrong resolution, so cache is assigned
+/// by rendered size (if finite & corresponds to [fit]) or the file resolution.
+({
+  num width,
+  num height,
+  num? cacheWidth,
+  num? cacheHeight,
+  double aspectRatio,
+}) determineResolution(
+  final int fileWidth,
+  final int fileHeight,
+  final num sizeWidth,
+  final num sizeHeight,
+  final BoxFit fit,
+) {
+  num width, height;
+  num? cacheWidth, cacheHeight;
+  final double widthRatio = fileWidth / sizeWidth;
+  final double heightRatio = fileHeight / sizeHeight;
+  final bool finiteRatios = widthRatio.isFinite && heightRatio.isFinite;
+  if ((finiteRatios && widthRatio != heightRatio) || fileWidth != fileHeight) {
+    switch (fit) {
+      // TODO: Implement
+      case BoxFit.scaleDown:
+        if ((widthRatio <= 1 || !widthRatio.isFinite) &&
+            (heightRatio <= 1 || !heightRatio.isFinite)) {
+          continue none;
+        } else {
+          continue contain;
+        }
+      case BoxFit.fill:
+        cacheWidth = fileWidth;
+        cacheHeight = fileHeight;
+        if (finiteRatios) {
+          width = sizeWidth;
+          height = sizeHeight;
+        } else if (sizeWidth.isFinite || !sizeHeight.isFinite) {
+          width = (sizeWidth.isFinite) ? sizeWidth : fileWidth;
+          height = (fileHeight * width) / fileWidth;
+        } else {
+          height = (sizeHeight.isFinite) ? sizeHeight : fileHeight;
+          width = (fileWidth * height) / fileHeight;
+        }
+        break;
+      none:
+      case BoxFit.none:
+        cacheWidth = width = fileWidth;
+        cacheHeight = height = fileHeight;
+        break;
+      fitHeight:
+      case BoxFit.fitHeight:
+        cacheHeight = (sizeHeight.isFinite) ? sizeHeight : null;
+        height = cacheHeight ?? fileHeight;
+        width = (fileWidth * height) / fileHeight;
+        break;
+      fitWidth:
+      case BoxFit.fitWidth:
+        cacheWidth = (sizeWidth.isFinite) ? sizeWidth : null;
+        width = cacheWidth ?? fileWidth;
+        height = (fileHeight * width) / fileWidth;
+        break;
+      case BoxFit.cover:
+        if ((finiteRatios && heightRatio > widthRatio) ||
+            (!finiteRatios && fileWidth < fileHeight)) {
+          // (!finiteRatios && fileWidth > fileHeight)) {
+          continue fitWidth;
+        } else {
+          continue fitHeight;
+        }
+      contain:
+      case BoxFit.contain:
+      default:
+        if ((finiteRatios && heightRatio > widthRatio) ||
+            (!finiteRatios && fileWidth < fileHeight)) {
+          // (!finiteRatios && fileWidth > fileHeight)) {
+          continue fitHeight;
+        } else {
+          continue fitWidth;
+        }
+    }
+  } else {
+    // TODO: This needs a switch too.
+    cacheHeight = cacheWidth = (sizeHeight.isFinite)
+        ? sizeHeight
+        : (sizeWidth.isFinite)
+            ? sizeWidth
+            : null;
+    height = width = (sizeHeight.isFinite)
+        ? sizeHeight
+        : (sizeWidth.isFinite)
+            ? sizeWidth
+            : fileWidth;
+  }
+  return (
+    width: width,
+    height: height,
+    cacheWidth: cacheWidth,
+    cacheHeight: cacheHeight,
+    aspectRatio: width / height,
+  );
 }

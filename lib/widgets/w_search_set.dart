@@ -25,6 +25,8 @@ class WSearchSet extends StatefulWidget {
   final bool initiallyExpanded;
   final bool hasInitialSearch;
   final int? limit;
+  final bool showCreateSetButton;
+  final bool returnOnCreateSet;
 
   final void Function(e621.PostSet set)? onSelected;
   // final bool Function(e621.PostSet set)? disableResults;
@@ -47,6 +49,8 @@ class WSearchSet extends StatefulWidget {
     this.filterResults,
     this.filterResultsAsync,
     this.customFilterResultsAsync,
+    this.showCreateSetButton = false,
+    this.returnOnCreateSet = true,
   }) : hasInitialSearch = true;
   const WSearchSet.noInitialSearch({
     super.key,
@@ -56,6 +60,8 @@ class WSearchSet extends StatefulWidget {
     this.filterResults,
     this.filterResultsAsync,
     this.customFilterResultsAsync,
+    this.showCreateSetButton = false,
+    this.returnOnCreateSet = true,
   })  : hasInitialSearch = false,
         initialSearchName = null,
         initialSearchShortname = null,
@@ -170,93 +176,124 @@ class _WSearchSetState extends State<WSearchSet> {
     return SizedBox(
       width: double.maxFinite,
       height: double.maxFinite,
-      child: ListView(
+      child: Column(
         children: [
-          AppBar(title: const Text("Sets")),
-          ExpansionTile(
-            title: const Text("Search Options"),
-            controller: _control,
-            dense: true,
-            initiallyExpanded: widget.initiallyExpanded,
-            children: [
-              ListTile(
-                title: TextField(
-                  maxLines: 1,
-                  onChanged: (v) => searchName = v,
-                  decoration:
-                      const InputDecoration.collapsed(hintText: "Set Name"),
-                  controller: searchName != null
-                      ? TextEditingController(text: searchName!)
-                      : null,
+          Expanded(
+            child: ListView(
+              children: [
+                AppBar(title: const Text("Sets")),
+                ExpansionTile(
+                  title: const Text("Search Options"),
+                  controller: _control,
+                  dense: true,
+                  initiallyExpanded: widget.initiallyExpanded,
+                  children: [
+                    ListTile(
+                      title: TextField(
+                        maxLines: 1,
+                        onChanged: (v) => searchName = v,
+                        decoration: const InputDecoration.collapsed(
+                            hintText: "Set Name"),
+                        controller: searchName != null
+                            ? TextEditingController(text: searchName!)
+                            : null,
+                      ),
+                    ),
+                    ListTile(
+                      title: TextField(
+                        maxLines: 1,
+                        onChanged: (v) => searchShortname = v,
+                        decoration: const InputDecoration.collapsed(
+                            hintText: "Set Short Name"),
+                        controller: searchShortname != null
+                            ? TextEditingController(text: searchShortname!)
+                            : null,
+                      ),
+                    ),
+                    ListTile(
+                      title: TextField(
+                        maxLines: 1,
+                        onChanged: (v) => searchCreatorName = v,
+                        decoration: const InputDecoration.collapsed(
+                            hintText: "Set Creator Name"),
+                        controller: searchCreatorName != null
+                            ? TextEditingController(text: searchCreatorName!)
+                            : null,
+                      ),
+                    ),
+                    WIntegerField(
+                      name: "Set Creator Id",
+                      getVal: () => searchCreatorId ?? -1,
+                      setVal: (v) => searchCreatorId = v,
+                      validateVal: (p1) => p1 != null && p1 >= 0,
+                    ),
+                    WEnumField(
+                      name: "Order",
+                      getVal: () => searchOrder ?? e621.SetOrder.updatedAt,
+                      setVal: (Enum v) => searchOrder = v as e621.SetOrder,
+                      values: e621.SetOrder.values,
+                    ),
+                    WIntegerField(
+                      name: "Limit",
+                      getVal: () => limit ?? 50,
+                      setVal: (v) => limit = v,
+                      validateVal: (p1) => p1 != null && p1 > 0 && p1 <= 320,
+                    ),
+                    WIntegerField(
+                      name: "Page Number",
+                      getVal: () => p.pageNumber ?? 50,
+                      setVal: (v) => p.page = v.toString(),
+                      validateVal: (p1) => p1 != null && p1 > 0,
+                    ),
+                    TextButton(
+                      onPressed: launchSearch,
+                      child: const Text("Search"),
+                    ),
+                  ],
                 ),
-              ),
-              ListTile(
-                title: TextField(
-                  maxLines: 1,
-                  onChanged: (v) => searchShortname = v,
-                  decoration: const InputDecoration.collapsed(
-                      hintText: "Set Short Name"),
-                  controller: searchShortname != null
-                      ? TextEditingController(text: searchShortname!)
-                      : null,
-                ),
-              ),
-              ListTile(
-                title: TextField(
-                  maxLines: 1,
-                  onChanged: (v) => searchCreatorName = v,
-                  decoration: const InputDecoration.collapsed(
-                      hintText: "Set Creator Name"),
-                  controller: searchCreatorName != null
-                      ? TextEditingController(text: searchCreatorName!)
-                      : null,
-                ),
-              ),
-              WIntegerField(
-                name: "Set Creator Id",
-                getVal: () => searchCreatorId ?? -1,
-                setVal: (v) => searchCreatorId = v,
-                validateVal: (p1) => p1 != null && p1 >= 0,
-              ),
-              WEnumField(
-                name: "Order",
-                getVal: () => searchOrder ?? e621.SetOrder.updatedAt,
-                setVal: (Enum v) => searchOrder = v as e621.SetOrder,
-                values: e621.SetOrder.values,
-              ),
-              WIntegerField(
-                name: "Limit",
-                getVal: () => limit ?? 50,
-                setVal: (v) => limit = v,
-                validateVal: (p1) => p1 != null && p1 > 0 && p1 <= 320,
-              ),
-              WIntegerField(
-                name: "Page Number",
-                getVal: () => p.pageNumber ?? 50,
-                setVal: (v) => p.page = v.toString(),
-                validateVal: (p1) => p1 != null && p1 > 0,
-              ),
-              TextButton(
-                onPressed: launchSearch,
-                child: const Text("Search"),
-              ),
-            ],
-          ),
-          if (loadingSets != null)
-            const AspectRatio(
-              aspectRatio: 1,
-              child: CircularProgressIndicator(),
+                if (loadingSets != null)
+                  const AspectRatio(
+                    aspectRatio: 1,
+                    child: CircularProgressIndicator(),
+                  ),
+                if (loadingSets == null && sets?.firstOrNull == null)
+                  const Text("No Results"),
+                if (sets?.firstOrNull != null)
+                  ...sets!.map((e) {
+                    return WSetTile(
+                      set: e,
+                      onSelected: widget.onSelected ??
+                          (e621.PostSet set) => Navigator.pop(context, set),
+                    );
+                  }),
+              ],
             ),
-          if (loadingSets == null && sets?.firstOrNull == null)
-            const Text("No Results"),
-          if (sets?.firstOrNull != null)
-            ...sets!.map((e) {
-              return WSetTile(
-                set: e,
-                onSelected: widget.onSelected ??
-                    (e621.PostSet set) => Navigator.pop(context, set),
-              );
-            }),
+          ),
+          if (widget.showCreateSetButton)
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (ctx) => Scaffold(
+                              appBar: AppBar(title: const Text("Create Set")),
+                              body: const WUpdateSet.create(),
+                            ))).then((v) {
+                  if (v == null) return;
+                  if (widget.returnOnCreateSet) {
+                    Navigator.pop(context, v as e621.PostSet);
+                  }
+                  if (sets != null) {
+                    setState(() {
+                      sets!.insert(0, v as e621.PostSet);
+                    });
+                  } else {
+                    launchSearch();
+                  }
+                });
+              },
+              child: const Text("Add Set"),
+            ),
         ],
       ),
     );

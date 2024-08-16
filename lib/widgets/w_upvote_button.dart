@@ -21,7 +21,7 @@ class WUpvoteButton extends StatelessWidget {
     return WPullTab(
       anchorAlignment: AnchorAlignment.bottom,
       openIcon: const Icon(Icons.import_export),
-      initialOpen: true,
+      // initialOpen: true,
       distance: 200,
       children: [
         WFabBuilder.getSinglePostDownvoteAction(context, post!),

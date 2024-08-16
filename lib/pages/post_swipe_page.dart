@@ -7,6 +7,7 @@ import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:fuzzy/log_management.dart' as lm;
+// import 'package:fuzzy/models/search_results.dart' as srn_lib;
 
 import '../widgets/w_page_indicator.dart';
 
@@ -216,8 +217,13 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
   late PageController _pageViewController;
   late TabController _tabController;
   late int _currentPostPageIndex;
+  late int _currentResultsPageIndex;
   String toReturn = "";
   bool isFullscreen = false;
+  late final List<ActionButton> _extras;
+  List<ActionButton> get extras =>
+      (loopy ?? onFinished) != null ? [cancel] : _extras;
+  late final ActionButton cancel;
   @override
   void initState() {
     super.initState();
@@ -227,6 +233,7 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
       keepPage: false,
     );
     _currentPostPageIndex = widget.initialIndex;
+    _currentResultsPageIndex = widget.initialPageIndex;
     if (Platform.isDesktop) {
       _tabController = TabController(
         initialIndex: widget.initialIndex,
@@ -235,11 +242,18 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
       );
     }
     widget.postsObj.currentPostIndex = widget.initialIndex;
+    _extras = [makeSlideshow(context)];
+    cancel = ActionButton(
+      tooltip: "Stop Slideshow",
+      icon: const Icon(Icons.close),
+      onPressed: stopSlideshow,
+    );
   }
 
   @override
   void dispose() {
     super.dispose();
+    stopSlideshow();
     _pageViewController.dispose();
     if (Platform.isDesktop) {
       _tabController.dispose();
@@ -287,8 +301,8 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
             currentPageIndex: _currentPostPageIndex,
             // onUpdateCurrentPageIndex: _updateCurrentPageIndex,
             onUpdateCurrentPageIndex: _updateCurrentPageIndexWrapper,
-            pageIndicatorBuilder: (cxt, currentPageIndex) =>
-                IgnorePointer(child: Text("tabController.index: $currentPageIndex")),
+            pageIndicatorBuilder: (cxt, currentPageIndex) => IgnorePointer(
+                child: Text("tabController.index: $currentPageIndex")),
           ),
       ],
     );
@@ -324,6 +338,7 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
                 setFullscreen: (v) => setState(() {
                   isFullscreen = v;
                 }),
+                extraActions: extras,
               );
             } else {
               return const Column(
@@ -346,9 +361,10 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
         },
       );
     } else {
-      return PostViewPage.overrideFullscreen(
+      final p = t!.elementAtOrNull(widget.postsObj.getPostIndexOnPage(index, page));
+      return p != null ? PostViewPage.overrideFullscreen(
         // postListing: t![widget.postsObj.currentPostIndex],
-        postListing: t![widget.postsObj.getPostIndexOnPage(index, page)],
+        postListing: p,
         onAddToSearch: (s) {
           widget.onAddToSearch?.call(s);
           toReturn = "$toReturn $s";
@@ -359,9 +375,136 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
         setFullscreen: (v) => setState(() {
           isFullscreen = v;
         }),
-      );
+        extraActions: extras,
+      ) : null;
     }
   }
+
+  // #region Slideshow
+  ActionButton makeSlideshow(BuildContext context) {
+    return ActionButton(
+      icon: const Icon(Icons.timelapse),
+      tooltip: "Slideshow",
+      onPressed: () {
+        showDialog<
+            ({
+              bool backwards,
+              double duration,
+              bool fullscreen,
+              bool repeatPage
+            })>(
+          context: context,
+          builder: (context) {
+            double duration = 5;
+            var backwards = false, fullscreen = false, repeatPage = false;
+            return StatefulBuilder(
+              builder: (BuildContext context, setState) {
+                return AlertDialog(
+                  title: const Text("Slideshow"),
+                  content: SizedBox.expand(
+                    child: Column(
+                      children: [
+                        Slider(
+                          label: duration.toString(),
+                          onChanged: (value) =>
+                              setState(() => duration = value),
+                          value: duration,
+                          divisions: 29,
+                          min: 1,
+                          max: 30,
+                        ),
+                        Row(
+                          children: [
+                            const Text("Backwards"),
+                            Checkbox(
+                              value: backwards,
+                              onChanged: (value) =>
+                                  setState(() => backwards = value!),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            const Text("Fullscreen"),
+                            Checkbox(
+                              value: fullscreen,
+                              onChanged: (value) =>
+                                  setState(() => fullscreen = value!),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            const Text("Repeat page"),
+                            Checkbox(
+                              value: repeatPage,
+                              onChanged: (value) =>
+                                  setState(() => repeatPage = value!),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("Cancel")),
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, (
+                              backwards: backwards,
+                              fullscreen: fullscreen,
+                              repeatPage: repeatPage,
+                              duration: duration,
+                            )),
+                        child: const Text("Accept")),
+                  ],
+                );
+              },
+            );
+          },
+        ).then(
+          (value) {
+            if (value == null) return;
+            isFullscreen = value.fullscreen;
+            final delta = value.backwards ? -1 : 1;
+            onFinished = () {
+              // TODO: Bounds checking
+              final last = widget.postsObj
+                      .getPageLastPostIndex(_currentPostPageIndex),
+                  first = widget.postsObj
+                      .getPageFirstPostIndex(_currentPostPageIndex);
+              var newIndex = _currentPostPageIndex + delta;
+              if (value.repeatPage) {
+                int safety = 0;
+                while ((newIndex > last || newIndex < first) && safety < 5) {
+                  newIndex = switch (newIndex) {
+                    int n when n > last =>
+                      newIndex - widget.postsObj.postsPerPage,
+                    int n when n < first =>
+                      newIndex + widget.postsObj.postsPerPage,
+                    _ => newIndex,
+                  };
+                }
+                if (safety >= 5) {
+                  logger.warning("Something's wrong in onFinished");
+                }
+              }
+              _updateCurrentPageIndex(newIndex);
+            };
+            loopy = looper(Duration(seconds: value.duration.toInt()));
+          },
+        );
+      },
+    );
+  }
+
+  VoidCallback? onFinished;
+  Future<void>? loopy;
+  Future<void> looper(Duration duration) => Future.delayed(duration, () {
+        onFinished?.call();
+        return loopy = onFinished == null ? null : looper(duration);
+      });
 
   void _handlePageViewChanged(int currentPageIndex) {
     logger.info(
@@ -377,6 +520,13 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
       _currentPostPageIndex = currentPageIndex;
     });
   }
+
+  void stopSlideshow() {
+    loopy?.ignore();
+    loopy = null;
+    onFinished = null;
+  }
+  // #endregion Slideshow
 
   void _updateCurrentPageIndex(int newPageViewIndex) {
     _tabController.index = newPageViewIndex;

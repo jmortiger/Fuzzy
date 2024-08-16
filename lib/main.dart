@@ -13,6 +13,7 @@ import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/pages/post_view_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:j_util/platform_finder.dart';
@@ -62,6 +63,14 @@ void main(List<String> args) async {
         onGenerateRoute: (settings) {
           if (settings.name != null) {
             final url = Uri.parse(settings.name!);
+            final parameters = tryParsePathToQuery(url);
+            int? id;
+            try {
+              id = (settings.arguments as dynamic)?.id ??
+                  int.tryParse(parameters["poolId"] ?? parameters["id"] ?? "");
+            } catch (e) {
+              id = int.tryParse(parameters["poolId"] ?? parameters["id"] ?? "");
+            }
             switch ("/${url.pathSegments.firstOrNull}") {
               case HomePage.routeNameString when url.pathSegments.length == 1:
                 return MaterialPageRoute(
@@ -69,55 +78,111 @@ void main(List<String> args) async {
                         searchText: url
                             .queryParameters["tags"]) /* const HomePage() */);
               case PoolViewPageBuilder.routeNameString:
-                final parameters = tryParsePathToQuery(url);
-                final t = int.tryParse(parameters["poolId"] ??
-                    parameters["id"] ??
-                    tryParsePathToQuery(url)["id"] ??
-                    "");
-                if (t != null) {
-                  return MaterialPageRoute(
-                    settings: settings,
-                    builder: (cxt) => PoolViewPageBuilder(
-                      poolId: t,
-                    ),
+                try {
+                  if ((settings.arguments as PoolViewParameters?)?.pool !=
+                      null) {
+                    return MaterialPageRoute(
+                      settings: settings,
+                      builder: (cxt) => PoolViewPage(
+                        pool: (settings.arguments as PoolViewParameters).pool!,
+                      ),
+                    );
+                  }
+                  id ??= (settings.arguments as PostViewParameters?)?.id;
+                  if (id != null) {
+                    return MaterialPageRoute(
+                      settings: settings,
+                      builder: (cxt) => PoolViewPageBuilder(
+                        poolId: id!,
+                      ),
+                    );
+                  } else {
+                    routeLogger.severe(
+                      "routing failure\nRoute: ${settings.name} Id: $id Args: ${settings.arguments}",
+                    );
+                    return null;
+                  }
+                } catch (e, s) {
+                  routeLogger.severe(
+                    "routing failure\nRoute: ${settings.name} Id: $id Args: ${settings.arguments}",
+                    e,
+                    s,
                   );
-                } else {
-                  routeLogger
-                      .severe("routing failure\nRoute: ${settings.name}");
                   return null;
                 }
               case PostViewPageLoader.routeNameString:
-                final t = int.tryParse(url.queryParameters["postId"] ??
-                    url.queryParameters["id"] ??
-                    tryParsePathToQuery(url)["id"] ??
-                    "");
-                if (t != null) {
-                  return MaterialPageRoute(
-                    settings: settings,
-                    builder: (cxt) => PostViewPageLoader(
-                      postId: t,
-                    ),
+                try {
+                  if ((settings.arguments as PostViewParameters?)?.post !=
+                      null) {
+                    return MaterialPageRoute(
+                      settings: settings,
+                      builder: (cxt) => PostViewPage(
+                        postListing:
+                            (settings.arguments as PostViewParameters).post!,
+                            
+                        // srn: null,//Provider.of(context),
+                      ),
+                    );
+                  }
+                  id ??= (settings.arguments as PostViewParameters?)?.id ??
+                      int.tryParse(parameters["postId"] ?? "");
+                  if (id != null) {
+                    return MaterialPageRoute(
+                      settings: settings,
+                      builder: (cxt) => PostViewPageLoader(
+                        postId: id!,
+                      ),
+                    );
+                  } else {
+                    routeLogger.severe(
+                      "routing failure\nRoute: ${settings.name} Id: $id Args: ${settings.arguments}",
+                    );
+                    return null;
+                  }
+                } catch (e, s) {
+                  routeLogger.severe(
+                    "routing failure\nRoute: ${settings.name} Id: $id Args: ${settings.arguments}",
+                    e,
+                    s,
                   );
-                } else {
-                  routeLogger
-                      .severe("routing failure\nRoute: ${settings.name}");
                   return null;
                 }
+              // editPostPage:
               case EditPostPageLoader.routeNameString:
-                final t = int.tryParse(url.queryParameters["postId"] ??
-                    url.queryParameters["id"] ??
-                    tryParsePathToQuery(url)["id"] ??
-                    "");
-                if (t != null) {
-                  return MaterialPageRoute(
-                    settings: settings,
-                    builder: (cxt) => EditPostPageLoader(
-                      postId: t,
-                    ),
+                try {
+                  if ((settings.arguments as PostViewParameters?)?.post !=
+                          null &&
+                      (settings.arguments as PostViewParameters).post
+                          is E6PostResponse) {
+                    return MaterialPageRoute(
+                      settings: settings,
+                      builder: (cxt) => EditPostPage(
+                        post: (settings.arguments as PostViewParameters).post
+                            as E6PostResponse,
+                      ),
+                    );
+                  }
+                  id ??= (settings.arguments as PostViewParameters?)?.id ??
+                      int.tryParse(parameters["postId"] ?? "");
+                  if (id != null) {
+                    return MaterialPageRoute(
+                      settings: settings,
+                      builder: (cxt) => EditPostPageLoader(
+                        postId: id!,
+                      ),
+                    );
+                  } else {
+                    routeLogger.severe(
+                      "routing failure\nRoute: ${settings.name} Id: $id Args: ${settings.arguments}",
+                    );
+                    return null;
+                  }
+                } catch (e, s) {
+                  routeLogger.severe(
+                    "routing failure\nRoute: ${settings.name} Id: $id Args: ${settings.arguments}",
+                    e,
+                    s,
                   );
-                } else {
-                  routeLogger
-                      .severe("routing failure\nRoute: ${settings.name}");
                   return null;
                 }
               default:

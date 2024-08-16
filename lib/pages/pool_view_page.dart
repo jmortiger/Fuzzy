@@ -81,12 +81,13 @@ class _PoolViewPageState extends State<PoolViewPage> {
             Column(
           // mainAxisSize: MainAxisSize.min,
           children: [
-            ExpansionTile(
-              title: const Text("Description"),
-              dense: true,
-              initiallyExpanded: true,
-              children: [SelectableText(widget.pool.description)],
-            ),
+            if (widget.pool.description.isNotEmpty)
+              ExpansionTile(
+                title: const Text("Description"),
+                dense: true,
+                initiallyExpanded: true,
+                children: [SelectableText(widget.pool.description)],
+              ),
             if (posts.isNotEmpty)
               Expanded(
                 child: WPostSearchResults(
@@ -143,7 +144,7 @@ class _PoolViewPageState extends State<PoolViewPage> {
     );
   }
 }
-
+typedef PoolViewParameters = ({PoolModel? pool, int? id});
 class PoolViewPageBuilder extends StatelessWidget
     implements IRoute<PoolViewPageBuilder> {
   static const routeNameString = "/pools";

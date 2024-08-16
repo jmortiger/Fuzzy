@@ -93,24 +93,26 @@ class _HomePageState extends State<HomePage> {
         },
         getMountedContext: () => this.context,
       ),
-      floatingActionButton: WFabBuilder.multiplePosts(
-        posts: sc.isMpcSync
-            ? scWatch.mpcSync.collection
-                .where((e) =>
-                    Provider.of<SearchResultsNotifier>(context, listen: true)
-                        .selectedPostIds
-                        .contains(e.inst.$Safe?.id))
-                .map((e) => e.inst.$)
-                .toList()
-            : Provider.of<SearchCacheLegacy>(context, listen: true)
-                    .posts
-                    ?.posts
-                    .where((e) => Provider.of<SearchResultsNotifier>(context,
-                            listen: true)
-                        .selectedPostIds
-                        .contains(e.id))
-                    .toList() ??
-                [],
+      floatingActionButton: Consumer<SearchResultsNotifier>(
+        builder: (context, value, child) => WFabBuilder.multiplePosts(
+          posts: sc.isMpcSync
+              ? scWatch.mpcSync.collection
+                  .where((e) =>
+                      value // Provider.of<SearchResultsNotifier>(context, listen: true)
+                          .selectedPostIds
+                          .contains(e.inst.$Safe?.id))
+                  .map((e) => e.inst.$)
+                  .toList()
+              : Provider.of<SearchCacheLegacy>(context, listen: true)
+                      .posts
+                      ?.posts
+                      .where((e) =>
+                          value // Provider.of<SearchResultsNotifier>(context, listen: true)
+                              .selectedPostIds
+                              .contains(e.id))
+                      .toList() ??
+                  [],
+        ),
       ),
     );
   }
@@ -122,8 +124,6 @@ class _HomePageState extends State<HomePage> {
       Provider.of<ManagedPostCollectionSync>(context, listen: false);
   ManagedPostCollectionSync get scWatch =>
       Provider.of<ManagedPostCollectionSync>(context, listen: true);
-  SearchResultsNotifier get sr =>
-      Provider.of<SearchResultsNotifier>(context, listen: false);
 
   @widgetFactory
   Widget buildSearchView(BuildContext context) {

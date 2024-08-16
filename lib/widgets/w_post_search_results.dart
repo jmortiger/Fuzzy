@@ -381,14 +381,18 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
   }
 
   @widgetFactory
-  WImageResult constructImageResult(E6PostResponse data, int index) =>
-      WImageResult(
-        disallowSelections: widget.disallowSelections,
-        imageListing: data,
-        index: index,
-        postsCache: widget.disallowSelections ? widget.posts.posts : null,
-        // isSelected: getIsIndexSelected(index),
-        isSelected: getIsPostIdSelected(data.id),
+  Widget constructImageResult(E6PostResponse data, int index) =>
+      Selector<SearchResultsNotifier, bool>(
+        builder: (context, value, child) => WImageResult(
+          disallowSelections: widget.disallowSelections,
+          imageListing: data,
+          index: index,
+          postsCache: widget.disallowSelections ? widget.posts.posts : null,
+          // isSelected: getIsIndexSelected(index),
+          // isSelected: getIsPostIdSelected(data.id),
+          isSelected: value,
+        ),
+        selector: (ctx, v) => v.getIsPostSelected(data.id),
       );
 }
 

@@ -88,136 +88,138 @@ class _WUpdateSetState extends State<WUpdateSet> {
       width: double.maxFinite,
       height: double.maxFinite,
       child: SingleChildScrollView(
-        child: Column(
-          children: [
-            TextField(
-              controller: postSetNameController,
-              onChanged: (value) => setState(() {
-                postSetName = value;
-                postSetNameErrorText = determineNameErrorText(value);
-              }),
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                labelText: "Set Name",
-                errorText: postSetNameErrorText,
-                counterText: "${postSetName.length}/100",
-              ),
-              maxLength: 100,
-            ),
-            TextField(
-              controller: postSetShortnameController,
-              onChanged: (value) => setState(() {
-                postSetShortname = value;
-                postSetShortnameErrorText = determineShortnameErrorText(value);
-              }),
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                labelText: "Set Shortname",
-                errorText: postSetShortnameErrorText,
-                counterText: "${postSetShortname.length}/50",
-              ),
-              maxLength: 50,
-            ),
-            TextField(
-              controller: postSetDescriptionController,
-              onChanged: (value) => setState(() {
-                postSetDescription = value;
-                // postSetDescriptionErrorText =
-                //     determineDescriptionErrorText(value);
-              }),
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                labelText: "Set Description",
-                // errorText: postSetDescriptionErrorText,
-                counterText: postSetDescription?.length.toString(),
-              ),
-              maxLines: 5,
-            ),
-            ListTile(
-              trailing: Checkbox(
-                value: postSetIsPublic,
+        child: Material(
+          child: Column(
+            children: [
+              TextField(
+                controller: postSetNameController,
                 onChanged: (value) => setState(() {
-                  postSetIsPublic = value;
+                  postSetName = value;
+                  postSetNameErrorText = determineNameErrorText(value);
                 }),
-                tristate: true,
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: "Set Name",
+                  errorText: postSetNameErrorText,
+                  counterText: "${postSetName.length}/100",
+                ),
+                maxLength: 100,
               ),
-              title: const Text("Is Public?"),
-              leading: Text("$postSetIsPublic"),
-              subtitle: const Text(
-                "Private sets are only visible to you. Public sets are visible to anyone, but only you and users you assign as maintainers can edit the set. Only accounts three days or older can make public sets.",
-              ),
-            ),
-            ListTile(
-              trailing: Checkbox(
-                value: postSetTransferOnDelete,
+              TextField(
+                controller: postSetShortnameController,
                 onChanged: (value) => setState(() {
-                  postSetTransferOnDelete = value;
+                  postSetShortname = value;
+                  postSetShortnameErrorText = determineShortnameErrorText(value);
                 }),
-                tristate: true,
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: "Set Shortname",
+                  errorText: postSetShortnameErrorText,
+                  counterText: "${postSetShortname.length}/50",
+                ),
+                maxLength: 50,
               ),
-              title: const Text("Transfer On Delete?"),
-              leading: Text("$postSetTransferOnDelete"),
-              subtitle: const Text(
-                'If "Transfer on Delete" is enabled, when a post is deleted from the site, its parent (if any) will be added to this set in its place. Disable if you want posts to simply be removed from this set with no replacement.',
+              TextField(
+                controller: postSetDescriptionController,
+                onChanged: (value) => setState(() {
+                  postSetDescription = value;
+                  // postSetDescriptionErrorText =
+                  //     determineDescriptionErrorText(value);
+                }),
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: "Set Description",
+                  // errorText: postSetDescriptionErrorText,
+                  counterText: postSetDescription?.length.toString(),
+                ),
+                maxLines: 5,
               ),
-            ),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: postSetNameErrorText == null &&
-                          postSetShortnameErrorText == null
-                      ? () async {
-                          final r = widget.set == null
-                              ? e621.Api.initCreateSetRequest(
-                                  postSetName: postSetName,
-                                  postSetShortname: postSetShortname,
-                                  postSetDescription: postSetDescription,
-                                  postSetIsPublic: postSetIsPublic,
-                                  postSetTransferOnDelete:
-                                      postSetTransferOnDelete,
-                                  credentials:
-                                      E621AccessData.fallbackForced?.cred,
-                                )
-                              : e621.Api.initUpdateSetRequest(
-                                  widget.set!.id,
-                                  postSetName: postSetName,
-                                  postSetShortname: postSetShortname,
-                                  postSetDescription: postSetDescription,
-                                  postSetIsPublic: postSetIsPublic,
-                                  postSetTransferOnDelete:
-                                      postSetTransferOnDelete,
-                                  credentials: E621AccessData.fallback?.cred,
-                                );
-                          util.logRequest(r, logger, lm.LogLevel.INFO);
-                          if ((determineNameErrorText(postSetName) ??
-                                  determineShortnameErrorText(
-                                      postSetShortname)) !=
-                              null) {
-                            ScaffoldMessenger.of(context)
-                                .showSnackBar(const SnackBar(
-                                    content: Text(
-                              "Resolve Errors with Name and/or shortname",
-                            )));
-                            return;
-                          }
-                          final res = await e621.Api.sendRequest(r);
-                          util.logResponse(res, logger, lm.LogLevel.INFO);
-                          if (res.statusCodeInfo.isSuccessful) {
-                            if (mounted) {
-                              Navigator.pop(this.context);
+              ListTile(
+                trailing: Checkbox(
+                  value: postSetIsPublic,
+                  onChanged: (value) => setState(() {
+                    postSetIsPublic = value;
+                  }),
+                  tristate: true,
+                ),
+                title: const Text("Is Public?"),
+                leading: Text("$postSetIsPublic"),
+                subtitle: const Text(
+                  "Private sets are only visible to you. Public sets are visible to anyone, but only you and users you assign as maintainers can edit the set. Only accounts three days or older can make public sets.",
+                ),
+              ),
+              ListTile(
+                trailing: Checkbox(
+                  value: postSetTransferOnDelete,
+                  onChanged: (value) => setState(() {
+                    postSetTransferOnDelete = value;
+                  }),
+                  tristate: true,
+                ),
+                title: const Text("Transfer On Delete?"),
+                leading: Text("$postSetTransferOnDelete"),
+                subtitle: const Text(
+                  'If "Transfer on Delete" is enabled, when a post is deleted from the site, its parent (if any) will be added to this set in its place. Disable if you want posts to simply be removed from this set with no replacement.',
+                ),
+              ),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: postSetNameErrorText == null &&
+                            postSetShortnameErrorText == null
+                        ? () async {
+                            final r = widget.set == null
+                                ? e621.Api.initCreateSetRequest(
+                                    postSetName: postSetName,
+                                    postSetShortname: postSetShortname,
+                                    postSetDescription: postSetDescription,
+                                    postSetIsPublic: postSetIsPublic,
+                                    postSetTransferOnDelete:
+                                        postSetTransferOnDelete,
+                                    credentials:
+                                        E621AccessData.fallbackForced?.cred,
+                                  )
+                                : e621.Api.initUpdateSetRequest(
+                                    widget.set!.id,
+                                    postSetName: postSetName,
+                                    postSetShortname: postSetShortname,
+                                    postSetDescription: postSetDescription,
+                                    postSetIsPublic: postSetIsPublic,
+                                    postSetTransferOnDelete:
+                                        postSetTransferOnDelete,
+                                    credentials: E621AccessData.fallback?.cred,
+                                  );
+                            util.logRequest(r, logger, lm.LogLevel.INFO);
+                            if ((determineNameErrorText(postSetName) ??
+                                    determineShortnameErrorText(
+                                        postSetShortname)) !=
+                                null) {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(const SnackBar(
+                                      content: Text(
+                                "Resolve Errors with Name and/or shortname",
+                              )));
+                              return;
+                            }
+                            final res = await e621.Api.sendRequest(r);
+                            util.logResponse(res, logger, lm.LogLevel.INFO);
+                            if (res.statusCodeInfo.isSuccessful) {
+                              if (mounted) {
+                                Navigator.pop(this.context, e621.PostSet.fromRawJson(res.body));
+                              }
                             }
                           }
-                        }
-                      : null,
-                  child: const Text("Accept"),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Cancel"),
-                ),
-              ],
-            ),
-          ],
+                        : null,
+                    child: const Text("Accept"),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Cancel"),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

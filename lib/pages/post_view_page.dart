@@ -53,6 +53,7 @@ class PostViewPage extends StatefulWidget
   final bool? startFullscreen;
   final bool Function()? getFullscreen;
   final void Function(bool)? setFullscreen;
+  final List<ActionButton>? extraActions;
   @override
   final List<String>? tagsToAdd;
   const PostViewPage({
@@ -62,6 +63,7 @@ class PostViewPage extends StatefulWidget
     this.onPop,
     this.tagsToAdd,
     bool this.startFullscreen = false,
+    this.extraActions,
   })  : getFullscreen = null,
         setFullscreen = null;
   const PostViewPage.overrideFullscreen({
@@ -71,6 +73,7 @@ class PostViewPage extends StatefulWidget
     this.onPop,
     this.tagsToAdd,
     this.startFullscreen,
+    this.extraActions,
     required bool Function() this.getFullscreen,
     required void Function(bool) this.setFullscreen,
   });
@@ -226,16 +229,56 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                   : toggleFullscreen,
             ),
             Positioned.fill(
-              bottom: 25,
+              bottom: 0,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  WUpvoteButton.fromPost(
-                    post: e6Post,
+                  // WUpvoteButton.fromPost(
+                  //   post: e6Post,
+                  // ),
+                  if (e6Post.voteState != null)
+                    if (!e6Post.voteState!)
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: WFabBuilder.getSinglePostUpvoteAction(
+                            context, e6Post),
+                      )
+                    else
+                      Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: WFabBuilder.getSinglePostDownvoteAction(
+                              context, e6Post))
+                  else ...[
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: WFabBuilder.getSinglePostUpvoteAction(
+                          context, e6Post),
+                    ),
+                    Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: WFabBuilder.getSinglePostDownvoteAction(
+                            context, e6Post)),
+                  ],
+                  WPullTab(
+                    anchorAlignment: AnchorAlignment.bottom,
+                    openIcon: const Icon(Icons.edit),
+                    // initialOpen: true,
+                    distance: 200,
+                    color: Theme.of(context).buttonTheme.colorScheme?.onPrimary,
+                    children: [
+                      WFabBuilder.getSinglePostAddToSetAction(context, e6Post),
+                      WFabBuilder.getSinglePostRemoveFromSetAction(
+                          context, e6Post),
+                    ],
                   ),
-                  WUpvoteButton.fromPost(
-                    post: e6Post,
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: e6Post.isFavorited
+                        ? WFabBuilder.getSinglePostRemoveFavAction(
+                            context, e6Post)
+                        : WFabBuilder.getSinglePostAddFavAction(
+                            context, e6Post),
                   ),
                 ],
               ),
@@ -254,7 +297,10 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
       //     post: e6Post,
       //   ),
       // ],
-      floatingActionButton: WFabBuilder.singlePost(post: e6Post),
+      floatingActionButton: WFabBuilder.singlePost(
+        post: e6Post,
+        customActions: widget.extraActions,
+      ),
     );
   }
 
@@ -294,8 +340,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
           Row(
             mainAxisSize: MainAxisSize.max,
             children: [
-              SelectableText(
-                  "ID: ${e6Post.id}, W: $w, H: $h"),
+              SelectableText("ID: ${e6Post.id}, W: $w, H: $h"),
               // SelectableText(
               //     "ID: ${e6Post.id}, W: $w, H: $h, screenWidth: ${maxWidth.toStringAsPrecision(5)}, MQWidth: ${mqWidth.toStringAsPrecision(5)}"),
             ],
@@ -911,6 +956,8 @@ class WPostViewBackButton extends StatelessWidget {
     );
   }
 }
+
+typedef PostViewParameters = ({int? id, PostListing? post});
 
 class PostViewPageLoader extends StatelessWidget
     implements IRoute<PostViewPageLoader> {

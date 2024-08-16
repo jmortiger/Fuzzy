@@ -191,7 +191,7 @@ class E6PostResponse implements PostListing, e621.Post {
 
   /// (array group)
   @override
-  final E6Score score;
+  final e621.Score score;
 
   /// (array group)
   @override
@@ -267,6 +267,12 @@ class E6PostResponse implements PostListing, e621.Post {
   List<String> get tagList => tags.allTags;
   bool get isAnimatedGif =>
       file.extension == "gif" && tags.meta.contains("animated");
+
+  /// `true` if the user upvoted this post, `false` if the user downvoted this post, `null` if the user didn't vote on this post.
+  bool? get voteState => score is e621.UpdatedScore
+      ? (score as e621.UpdatedScore).voteState
+      : null;
+  // ignore: unnecessary_late
   static late final error = E6PostResponse(
     id: -1,
     createdAt: DateTime.now(),
@@ -274,7 +280,7 @@ class E6PostResponse implements PostListing, e621.Post {
     file: E6FileResponse.error,
     preview: E6Preview.error,
     sample: E6Sample.error,
-    score: E6Score.error,
+    score: errorScore,
     tags: E6PostTags.error,
     lockedTags: [],
     changeSeq: -1,
@@ -319,9 +325,11 @@ class E6PostResponse implements PostListing, e621.Post {
   });
   factory E6PostResponse.fromRawJson(String json) {
     final t = jsonDecode(json);
-    return t["post"] != null
-        ? E6PostResponse.fromJson(t["post"])
-        : E6PostResponse.fromJson(t);
+    return t["posts"] != null
+        ? E6PostResponse.fromJson(t["posts"])
+        : t["post"] != null
+            ? E6PostResponse.fromJson(t["post"])
+            : E6PostResponse.fromJson(t);
   }
   factory E6PostResponse.fromJson(JsonOut json) => E6PostResponse(
         id: json["id"] as int,
@@ -330,7 +338,7 @@ class E6PostResponse implements PostListing, e621.Post {
         file: E6FileResponse.fromJson(json["file"]),
         preview: E6Preview.fromJson(json["preview"]),
         sample: E6Sample.fromJson(json["sample"]),
-        score: E6Score.fromJson(json["score"]),
+        score: e621.Score.fromJson(json["score"]),
         tags: E6PostTags.fromJson(json["tags"]),
         lockedTags: (json["locked_tags"] as List).cast<String>(),
         changeSeq: json["change_seq"] as int,
@@ -406,7 +414,7 @@ class E6PostResponse implements PostListing, e621.Post {
         file: file as E6FileResponse? ?? this.file,
         preview: preview as E6Preview? ?? this.preview,
         sample: sample as E6Sample? ?? this.sample,
-        score: score as E6Score? ?? this.score,
+        score: score ?? this.score,
         tags: tags as E6PostTags? ?? this.tags,
         lockedTags: lockedTags ?? this.lockedTags,
         changeSeq: changeSeq ?? this.changeSeq,
@@ -454,7 +462,7 @@ class E6PostMutable implements E6PostResponse {
 
   /// (array group)
   @override
-  E6Score score;
+  e621.Score score;
 
   /// (array group)
   @override
@@ -531,6 +539,10 @@ class E6PostMutable implements E6PostResponse {
   @override
   bool get isAnimatedGif =>
       file.extension == "gif" && tags.meta.contains("animated");
+  @override
+  bool? get voteState => score is e621.UpdatedScore
+      ? (score as e621.UpdatedScore).voteState
+      : null;
   // ignore: unnecessary_late
   static late final error = E6PostMutable(
     id: -1,
@@ -539,7 +551,7 @@ class E6PostMutable implements E6PostResponse {
     file: E6FileResponse.error,
     preview: E6Preview.error,
     sample: E6Sample.error,
-    score: E6Score.error,
+    score: errorScore,
     tags: E6PostTags.error,
     lockedTags: [],
     changeSeq: -1,
@@ -590,7 +602,7 @@ class E6PostMutable implements E6PostResponse {
         file: E6FileResponse.fromJson(json["file"]),
         preview: E6Preview.fromJson(json["preview"]),
         sample: E6Sample.fromJson(json["sample"]),
-        score: E6Score.fromJson(json["score"]),
+        score: e621.Score.fromJson(json["score"]),
         tags: E6PostTags.fromJson(json["tags"]),
         lockedTags: (json["locked_tags"] as List).cast<String>(),
         changeSeq: json["change_seq"] as int,
@@ -641,7 +653,7 @@ class E6PostMutable implements E6PostResponse {
         file: file as E6FileResponse? ?? this.file,
         preview: preview as E6Preview? ?? this.preview,
         sample: sample as E6Sample? ?? this.sample,
-        score: score as E6Score? ?? this.score,
+        score: score ?? this.score,
         tags: tags as E6PostTags? ?? this.tags,
         lockedTags: lockedTags ?? this.lockedTags,
         changeSeq: changeSeq ?? this.changeSeq,
@@ -691,7 +703,7 @@ class E6PostMutable implements E6PostResponse {
     this.file = file as E6FileResponse? ?? this.file;
     this.preview = preview as E6Preview? ?? this.preview;
     this.sample = sample as E6Sample? ?? this.sample;
-    this.score = score as E6Score? ?? this.score;
+    this.score = score ?? this.score;
     this.tags = tags as E6PostTags? ?? this.tags;
     this.lockedTags = lockedTags ?? this.lockedTags;
     this.changeSeq = changeSeq ?? this.changeSeq;
@@ -709,6 +721,32 @@ class E6PostMutable implements E6PostResponse {
     this.isFavorited = isFavorited ?? this.isFavorited;
     this.hasNotes = hasNotes ?? this.hasNotes;
     this.duration = (duration ?? 1) < 0 ? duration : this.duration;
+  }
+
+  void overwriteFrom(E6PostResponse other) {
+    id = other.id;
+    createdAt = other.createdAt;
+    updatedAt = other.updatedAt;
+    file = other.file;
+    preview = other.preview;
+    sample = other.sample;
+    score = other.score;
+    tags = other.tags;
+    lockedTags = other.lockedTags;
+    changeSeq = other.changeSeq;
+    flags = other.flags;
+    rating = other.rating;
+    favCount = other.favCount;
+    sources = other.sources;
+    pools = other.pools;
+    relationships = other.relationships;
+    approverId = other.approverId;
+    uploaderId = other.uploaderId;
+    description = other.description;
+    commentCount = other.commentCount;
+    isFavorited = other.isFavorited;
+    hasNotes = other.hasNotes;
+    duration = other.duration;
   }
 
   E6PostResponse toImmutable() => E6PostResponse(
@@ -736,6 +774,30 @@ class E6PostMutable implements E6PostResponse {
         hasNotes: hasNotes,
         duration: duration,
       );
+  E6PostMutable.fromImmutable(E6PostResponse i)
+      : id = i.id,
+        createdAt = i.createdAt,
+        updatedAt = i.updatedAt,
+        file = i.file,
+        preview = i.preview,
+        sample = i.sample,
+        score = i.score,
+        tags = i.tags,
+        lockedTags = i.lockedTags,
+        changeSeq = i.changeSeq,
+        flags = i.flags,
+        rating = i.rating,
+        favCount = i.favCount,
+        sources = i.sources,
+        pools = i.pools,
+        relationships = i.relationships,
+        approverId = i.approverId,
+        uploaderId = i.uploaderId,
+        description = i.description,
+        commentCount = i.commentCount,
+        isFavorited = i.isFavorited,
+        hasNotes = i.hasNotes,
+        duration = i.duration;
 
   @override
   Map<String, dynamic> toJson() => {
@@ -924,43 +986,48 @@ class E6Sample extends E6Preview implements ISampleInfo, e621.Sample {
       };
 }
 
-class E6Score extends e621.Score {
-  static const error = E6Score(
-    up: -1,
-    down: -1,
-    total: -1,
-  );
+const errorScore = e621.Score(
+  up: -1,
+  down: -1,
+  total: -1,
+);
+// class E6Score extends e621.Score {
+//   static const error = E6Score(
+//     up: -1,
+//     down: -1,
+//     total: -1,
+//   );
 
-  const E6Score({
-    required super.up,
-    required super.down,
-    required super.total,
-  });
-  factory E6Score.fromJson(JsonOut json) => E6Score(
-        up: json["up"] as int,
-        down: json["down"] as int,
-        total: json["total"] as int,
-      );
+//   const E6Score({
+//     required super.up,
+//     required super.down,
+//     required super.total,
+//   });
+//   factory E6Score.fromJson(JsonOut json) => E6Score(
+//         up: json["up"] as int,
+//         down: json["down"] as int,
+//         total: json["total"] as int,
+//       );
 
-  @override
-  Map<String, dynamic> toJson() => {
-        "up": up,
-        "down": down,
-        "total": total,
-      };
+//   @override
+//   Map<String, dynamic> toJson() => {
+//         "up": up,
+//         "down": down,
+//         "total": total,
+//       };
 
-  @override
-  E6Score copyWith({
-    int? up,
-    int? down,
-    int? total,
-  }) =>
-      E6Score(
-        up: up ?? this.up,
-        down: down ?? this.down,
-        total: total ?? this.total,
-      );
-}
+//   @override
+//   E6Score copyWith({
+//     int? up,
+//     int? down,
+//     int? total,
+//   }) =>
+//       E6Score(
+//         up: up ?? this.up,
+//         down: down ?? this.down,
+//         total: total ?? this.total,
+//       );
+// }
 
 class E6PostTags extends e621.PostTags implements ITagData {
   List<String> get allTags => [

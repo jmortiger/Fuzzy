@@ -68,10 +68,10 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   Future<int> _lpi() => E621.findTotalPostNumber().then((v) {
         _numPostsInSearch = v;
         notifyListeners();
+        logger.info(
+            "tags: ${parameters.tags} numPostsInSearch: ${_numPostsInSearch = v}");
         return _numPostsInSearch!;
-      })
-        ..then((v) => logger.info(
-            "tags: ${parameters.tags} numPostsInSearch: ${_numPostsInSearch = v}"));
+      });
   late LazyInitializer<int> totalPostsInSearch;
   int? _numPostsInSearch;
   int? get numPostsInSearch => _numPostsInSearch ?? totalPostsInSearch.$Safe;
@@ -150,6 +150,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   /// Defined by [SearchView.postsPerPage].
   int get numStoredPages =>
       (collection._posts.length / SearchView.i.postsPerPage).ceil();
+
+  int get postsPerPage => SearchView.i.postsPerPage;
 
   PostSearchQueryRecord get parameters => _parameters;
 
@@ -752,7 +754,13 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     }
     logger.info(out);
     // Provider.of<SearchResultsNotifier?>(context, listen: false)
-    (searchViewNotifier ?? context?.read<srn.SearchResultsNotifier?>())
+    // (searchViewNotifier ?? context?.read<srn.SearchResultsNotifier?>())
+    (searchViewNotifier ??
+            // mounted check?
+            ((context != null)
+                ? Provider.of<srn.SearchResultsNotifier?>(context,
+                    listen: false)
+                : null))
         ?.clearSelections();
     hasNextPageCached = null;
     lastPostOnPageIdCached = null;

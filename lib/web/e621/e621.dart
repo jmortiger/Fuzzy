@@ -908,6 +908,7 @@ sealed class E621 extends Site {
             initialSearchName: null,
             initialSearchShortname: null,
             onSelected: (e621.PostSet set) => Navigator.pop(context, set),
+          showCreateSetButton: true,
           ),
           // scrollable: true,
         );

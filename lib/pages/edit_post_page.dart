@@ -557,7 +557,7 @@ class _WTagItemState extends State<WTagItem> {
     );
   }
 }
-
+// typedef EditPostPage
 class EditPostPageLoader extends StatelessWidget
     implements IRoute<EditPostPageLoader> {
   static lm.FileLogger get logger => _EditPostPageState.logger;

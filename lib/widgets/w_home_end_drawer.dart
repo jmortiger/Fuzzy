@@ -188,9 +188,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             leading: E621AccessData.useLoginData
                 ? const Icon(Icons.check_box)
                 : const Icon(Icons.check_box_outline_blank),
-            subtitle: Text(E621AccessData.useLoginData
-                ? "On"
-                : "Off"),
+            subtitle: Text(E621AccessData.useLoginData ? "On" : "Off"),
             onTap: () {
               print("Before: ${E621AccessData.useLoginData}");
               setState(
@@ -299,7 +297,8 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 context: context,
                 builder: (context) {
                   return const AlertDialog(
-                    content: WBackButton.doNotBlockChild(child: WUpdateSet.create()),
+                    content:
+                        WBackButton.doNotBlockChild(child: WUpdateSet.create()),
                     // scrollable: true,
                   );
                 },
@@ -329,10 +328,51 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             leading: const Icon(Icons.question_mark),
             onTap: () {
               Navigator.pop(context);
-              checkAndLaunch(context);
+              if (!checkAndLaunch(context)) {
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
+                    const SnackBar(content: Text("No page to load")),
+                  );
+              }
+            },
+          ),
+          ListTile(
+            title: const Text("Help"),
+            leading: const Icon(Icons.question_mark),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HelpPage()),
+              );
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class HelpPage extends StatelessWidget {
+  const HelpPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Help")),
+      body: const SafeArea(
+        child: Column(
+          children: [
+            Text("If no posts are selected, tap on a post to view it."),
+            Text("If no posts are selected, tap and hold on a post to select."),
+            Text("If posts are selected, tap on a post to select/deselect."),
+            Text("If posts are selected, tap and hold on a post to view it."),
+            Text("Selections carry over between pages."),
+            Text("You can clear selections by using the floating button."),
+            Text("The floating button is disabled when no posts are selected."),
+          ],
+        ),
       ),
     );
   }
@@ -426,15 +466,15 @@ class _WUserDrawerHeaderLoaderState extends State<WUserDrawerHeaderLoader> {
     if (widget.user == null || widget.user is! e621.UserDetailed) {
       final t = E621.retrieveUserMostSpecific(user: user, data: widget.data);
       if (t is Future<e621.User?>?) {
-        userFuture = t
-          ?.then((v) {
-            setState(() {
-              user = v;
-              userFuture = null;
-            });
-            E621.tryUpdateLoggedInUser(user);
-            return v;
-          })?..ignore();
+        userFuture = t?.then((v) {
+          setState(() {
+            user = v;
+            userFuture = null;
+          });
+          E621.tryUpdateLoggedInUser(user);
+          return v;
+        })
+          ?..ignore();
       } else {
         logger.warning("Unexpected failure retrieving "
             "User in _WUserDrawerHeaderLoaderState.initState");

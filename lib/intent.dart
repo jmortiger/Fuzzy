@@ -4,6 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_sharing_intent/flutter_sharing_intent.dart';
 import 'package:flutter_sharing_intent/model/sharing_file.dart';
 import 'package:j_util/platform_finder.dart';
+
+// #region Logger
+import 'package:fuzzy/log_management.dart' as lm;
+
+lm.Printer get _print => _lRecord.print;
+lm.FileLogger get _logger => _lRecord.logger;
+// ignore: unnecessary_late
+late final _lRecord = lm.generateLogger("Intent");
+// #endregion Logger
 // import 'package:app_links/app_links.dart';
 
 // final _appLinks = AppLinks(); // AppLinks is singleton
@@ -34,22 +43,22 @@ void handleShareIntent(List<SharedFile> f) {
   switch (t?.type) {
     case SharedMediaType.URL:
     case SharedMediaType.TEXT:
-      print("Share intent received: ${t!.value}");
+      _print("Share intent received: ${t!.value}");
       final u = Uri.tryParse(t.value!);
       if (u != null) requestedUrls.add(u);
-      print("Failed parsing");
+      _print("Failed parsing");
       break;
     case null:
     default:
-      print("Share not handled");
+      _print("Share not handled");
   }
 }
 
-void checkAndLaunch(BuildContext context) {
+bool checkAndLaunch(BuildContext context) {
   if (requestedUrls.isNotEmpty) {
     final u = requestedUrls.removeAt(0);
     final uFormatted = Uri(path: u.path, query: u.query);
-    print("navigating to ${u.toString()} (${uFormatted.toString()})");
+    _print("navigating to ${u.toString()} (${uFormatted.toString()})");
     Navigator.pushNamed(context, uFormatted.toString());
     // ScaffoldMessenger.of(context)
     //     .showSnackBar(SnackBar(content: Text(u.toString())));
@@ -61,5 +70,8 @@ void checkAndLaunch(BuildContext context) {
     //     );
     //   },
     // );
+    return true;
+  } else {
+    return false;
   }
 }
