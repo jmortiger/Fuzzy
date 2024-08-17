@@ -169,8 +169,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       logger.info("Tag Parameter changed from ${_parameters.tagSet} "
           "to ${value.tagSet}, clearing collection and notifying listeners");
       _parameters = value;
-      lastPostIdCached =
-          firstPostIdCached = hasNextPageCached = lastPostOnPageIdCached = null;
+      lastPostIdCached = firstPostIdCached = /* hasNextPageCached =  */
+          lastPostOnPageIdCached = null;
       collection.clear();
       logger.finest("Length after clearing: ${collection.length}");
       notifyListeners();
@@ -422,15 +422,22 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     }
   }
 
+  /// TODO: make handle unloaded pages
+  bool isPageAfter(int pageIndex) => (isPageLoaded(pageIndex) &&
+      collection.elementAt(getPageLastPostIndex(pageIndex)).inst.$.id !=
+          lastPostIdCached);
   bool isPageLoaded(int pageIndex) =>
       pageIndex >= startingPageIndex && pageIndex <= lastStoredPageIndex;
 
   bool? couldPageBeLoadable(int pageIndex) => isPageLoaded(pageIndex) ||
           (pageIndex < startingPageIndex && (hasPriorPage ?? false)) ||
-          (pageIndex > lastStoredPageIndex && (hasNextPageCached ?? false))
+          // (pageIndex > lastStoredPageIndex && (hasNextPageCached ?? false))
+          (pageIndex > lastStoredPageIndex && (isPageAfter(pageIndex)))
       ? true
       : (pageIndex < startingPageIndex && (hasPriorPage == false)) ||
-              (pageIndex > lastStoredPageIndex && (hasNextPageCached == false))
+              // (pageIndex > lastStoredPageIndex && (hasNextPageCached == false))
+              (pageIndex > lastStoredPageIndex &&
+                  (isPageAfter(pageIndex) == false))
           ? false
           : null;
 
@@ -471,15 +478,18 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     if (isPageLoaded(currentPageIndex + 1)) {
       logger.info("Next page already loaded");
       return true;
-    } else if (hasNextPageCached ?? false) {
+      // } else if (hasNextPageCached ?? false) {
+    } else if (isPageAfter(currentPageIndex)) {
       return doIt();
     } else {
-      final t = getHasNextPageById(tags: parameters.tags);
-      return t is Future<bool>
-          ? t.then((np) => np ? doIt() : false)
-          : t
-              ? doIt()
-              : false;
+      return getHasNextPageById(tags: parameters.tags)
+          .then((np) => np ? doIt() : false);
+      // final t = getHasNextPageById(tags: parameters.tags);
+      // return t is Future<bool>
+      //     ? t.then((np) => np ? doIt() : false)
+      //     : t
+      //         ? doIt()
+      //         : false;
     }
   }
 
@@ -628,15 +638,18 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     if (lastStoredPageIndex > pageIndex) {
       logger.info("Page index $pageIndex already loaded");
       return true;
-    } else if (hasNextPageCached ?? false) {
+      // } else if (hasNextPageCached ?? false) {
+    } else if (isPageAfter(pageIndex)) {
       return doIt();
     } else {
-      final t = getHasNextPageById(tags: parameters.tags);
-      return t is Future<bool>
-          ? t.then((np) => np ? doIt() : false)
-          : t
-              ? doIt()
-              : false;
+      return getHasNextPageById(tags: parameters.tags)
+          .then((np) => np ? doIt() : false);
+      // final t = getHasNextPageById(tags: parameters.tags);
+      // return t is Future<bool>
+      //     ? t.then((np) => np ? doIt() : false)
+      //     : t
+      //         ? doIt()
+      //         : false;
     }
   }
 
@@ -762,7 +775,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
                     listen: false)
                 : null))
         ?.clearSelections();
-    hasNextPageCached = null;
+    // hasNextPageCached = null;
     lastPostOnPageIdCached = null;
     if (true /* isNewRequest */) {
       var username = E621AccessData.fallback?.username,
@@ -902,6 +915,86 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   //     (this as ChangeNotifier).dispose();
   //   }
   // }
+
+  @override
+  Future<bool> getHasNextPageById({
+    required String tags,
+    int? lastPostId, // = 9223372036854775807,//double.maxFinite.toInt(),
+    // required BuildContext context,
+    // required String priorSearchText,
+    int? pageIndex,
+  }) async {
+    pageIndex ??= currentPageIndex;
+    // if (posts == null) throw StateError("No current posts");
+    var posts = this.posts ??= getPostsOnPageAsObjSync(pageIndex);
+    posts ??= this.posts ??= await getPostsOnPageAsObjAsync(pageIndex);
+    if (posts == null) {
+      logger.warning(StateError("No current posts"));
+      return false;
+    }
+    if (lastPostId == null) {
+      // if (posts.runtimeType == E6PostsLazy) {
+      // Advance to the end, fully load the list
+      posts.advanceToEnd();
+      // }
+      // lastPostId ??= posts!.tryGet(posts!.count - 1)?.id;
+      lastPostId ??= posts.lastOrNull?.id;
+      // if (lastPostId == null) {
+      //   logger.warning(
+      //       "Couldn't determine current page's last post's id. Will default to the first page.");
+      //   lastPostId = -1;
+      // }
+    }
+    if (lastPostId == null) {
+      logger.severe("Couldn't determine current page's last post's id. "
+          "To default to the first page, pass in a negative value.");
+      throw StateError("Couldn't determine current page's last post's id.");
+    }
+    // if (lastPostOnPageIdCached == lastPostId && hasNextPageCached != null) {
+    //   return hasNextPageCached!;
+    // }
+    if (isPageAfter(pageIndex)) {
+      return hasNextPageCached!;
+    }
+    return E621
+        .sendRequest(
+          E621.initSearchForLastPostRequest(
+            tags: tags, //priorSearchText,
+          ),
+        )
+        .then((v) => v.stream.bytesToString())
+        .then((v) => E6PostsSync.fromJson(
+              dc.jsonDecode(v) as JsonOut,
+            ))
+        .then((out) {
+      if (out.posts.isEmpty) {
+        // try {
+        //   // setState(() {
+        //   hasNextPageCached = false;
+        //   // });
+        // } catch (e) {
+        //   print(e);
+        //   hasNextPageCached = false;
+        // }
+        return hasNextPageCached = false;
+      }
+      if (out.posts.length != 1) {
+        logger.warning(
+          "Last post search gave not 1 but ${out.posts.length} results.",
+        );
+      }
+      // try {
+      if (lastPostId! < 0) {
+        lastPostOnPageIdCached = out.posts.first.id + 1;
+      }
+      return hasNextPageCached =
+          (lastPostId != (lastPostIdCached = out.posts.last.id));
+      // } catch (e) {
+      //   lastPostIdCached = out.posts.last.id;
+      //   return hasNextPageCached = (lastPostId != out.posts.last.id);
+      // }
+    });
+  }
 }
 
 class PostCollectionSync with ListMixin<E6PostEntrySync> {
@@ -962,39 +1055,4 @@ class PostCollectionEvent extends JEventArgs {
     required this.parameters,
     required this.posts,
   });
-}
-
-abstract interface class ISearchResultSwipePageData {
-  Iterable<E6PostResponse> get posts;
-  Set<int> get restrictedIndices;
-  Set<int> get selectedIndices;
-
-  ISearchResultPageData generateChildData();
-}
-
-abstract interface class ISearchResultPageData {
-  Iterable<E6PostResponse> get postsOnPage;
-  Set<int> get restrictedIndicesOnPage;
-  Set<int> get selectedIndicesOnPage;
-}
-
-abstract interface class IPostTileData {
-  E6PostResponse get post;
-  bool get isSelected;
-}
-
-abstract interface class IPostTileSwipeRouteData extends IPostTileData {
-  Iterable<E6PostResponse> get posts;
-}
-
-abstract interface class IPostSwipePageData {
-  Iterable<E6PostResponse> get posts;
-  int get postIndex;
-
-  IPostPageData generateChildData();
-}
-
-abstract interface class IPostPageData {
-  /// The post being displayed.
-  E6PostResponse get post;
 }
