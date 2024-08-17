@@ -57,7 +57,7 @@ class _SavedSearchesPageSingletonState
       LateInstance<ListNotifier<ListNotifier<SavedEntry>>>();
   // var selected = <({int parentIndex, int childIndex, SavedEntry entry})>{};
   var selected =
-      SetNotifier<({int parentIndex, int childIndex, SavedEntry entry})>();
+      SetNotifier<SavedEntry>();
   @override
   void initState() {
     super.initState();
@@ -86,15 +86,20 @@ class _SavedSearchesPageSingletonState
     }
   }
 
-  void _addSearchDirect(SavedElementRecord value) =>
-      data.$ /* SavedDataE6 */ .addAndSaveSearch(
-        SavedSearchData.fromTagsString(
-          searchString: value.mainData,
-          title: value.title,
-          uniqueId: value.uniqueId ?? "",
-          parent: value.parent ?? "",
-        ),
-      );
+  void _addSearchDirect(SavedElementRecord value) {
+    data.$ /* SavedDataE6 */ .addAndSaveSearch(
+      SavedSearchData.fromTagsString(
+        searchString: value.mainData,
+        title: value.title,
+        uniqueId: value.uniqueId ?? "",
+        parent: value.parent ?? "",
+      ),
+    );
+    setState(() {
+      parentedCollection.$ = data.$.$parented;
+    });
+  }
+
   void _addSearch() => showSavedElementEditDialogue(
         context,
       ).then((value) {
@@ -194,7 +199,7 @@ class _SavedSearchesPageSingletonState
         content: Text(selected.fold(
           "Entries include: ",
           (previousValue, element) =>
-              "$previousValue\n${element.entry.searchString}",
+              "$previousValue\n${element.searchString}",
         )),
         actions: [
           TextButton.icon(
@@ -212,7 +217,7 @@ class _SavedSearchesPageSingletonState
     ).then(
       (value) {
         if (value ?? false) {
-          data.$.removeEntries(selected.map((e) => e.entry));
+          data.$.removeEntries(selected);
           setState(() {
             selected.clear();
           });
@@ -260,8 +265,8 @@ class _SavedSearchesPageSingletonState
           setState(() {
             for (var e in selected) {
               data.$.editAndSave(
-                original: e.entry,
-                edited: e.entry.copyWith(parent: value),
+                original: e,
+                edited: e.copyWith(parent: value),
               );
             }
           });
@@ -377,11 +382,7 @@ class _SavedSearchesPageSingletonState
     ({int parentIndex, int childIndex})? index,
   }) {
     final r = index != null
-        ? (
-            parentIndex: index.parentIndex,
-            childIndex: index.childIndex,
-            entry: entry
-          )
+        ? entry
         : null;
     return StatefulBuilder(
       builder: (context, setState) {
