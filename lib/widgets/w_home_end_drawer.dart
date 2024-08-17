@@ -243,7 +243,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                     content: WSearchSet(
                       initialLimit: 10,
                       initialPage: null,
-                      initialSearchCreatorName: "***REMOVED***,
+                      initialSearchCreatorName: E621AccessData.fallback?.username,
                       initialSearchOrder: e621.SetOrder.updatedAt,
                       initialSearchName: null,
                       initialSearchShortname: null,
@@ -273,7 +273,6 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                   return AlertDialog(
                     content: WSearchPool(
                       initialLimit: 10,
-                      // initialSearchCreatorName: "***REMOVED***,
                       initialSearchOrder: e621.PoolOrder.updatedAt,
                       initialSearchNameMatches: null,
                       onSelected: (e621.Pool pool) =>

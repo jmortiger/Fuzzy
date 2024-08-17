@@ -922,7 +922,7 @@ sealed class E621 extends Site {
           content: WSearchSet(
             initialLimit: 10,
             initialPage: null,
-            initialSearchCreatorName: "***REMOVED***,
+            initialSearchCreatorName: E621AccessData.fallback?.username,
             initialSearchOrder: e621.SetOrder.updatedAt,
             initialSearchName: null,
             initialSearchShortname: null,
