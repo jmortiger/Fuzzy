@@ -11,7 +11,6 @@ import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/main.dart';
 import 'package:fuzzy/web/e621/e621_access_data.dart';
-import 'package:fuzzy/widgets/w_upvote_button.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
 import 'package:j_util/e621.dart';
 import 'package:j_util/j_util_full.dart';
@@ -107,7 +106,6 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
   /// 1. It's not an animated gif (the only animated gif asset
   /// is the original, no alternates)
   IImageInfo getImageInfo(double screenWidth) {
-    // var IImageInfo(width: w, height: h, url: url) = postListing.sample;
     var i = widget.postListing.file.isAVideo
         ? switch (PostView.i.imageQuality) {
             FilterQuality.low => e6Post.sample.alternates!.alternates["480p"] ??
@@ -120,7 +118,6 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
               e6Post.sample.alternates!.alternates["original"],
             FilterQuality.none =>
               e6Post.sample.alternates!.alternates["original"],
-            // _ => throw UnsupportedError("type not supported"),
           }
         : e6Post.isAnimatedGif
             ? e6Post.file
@@ -129,11 +126,8 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                 FilterQuality.medium => e6Post.sample,
                 FilterQuality.high => e6Post.file,
                 FilterQuality.none => e6Post.file,
-                // _ => throw UnsupportedError("type not supported"),
               };
-    if (i == null) {
-      return e6Post.file;
-    }
+    if (i == null) return e6Post.file;
     if (i.width > screenWidth &&
         !isFullScreen &&
         !pvs.forceHighQualityImage &&
@@ -188,10 +182,11 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
         dpr = MediaQuery.devicePixelRatioOf(context),
         screenWidth = width * dpr;
     logger.log(
-        lm.LogLevel.FINE,
-        "sizeOf.width: $width\n"
-        "devicePixelRatioOf: $dpr\n"
-        "Calculated pixel width (w * dpr): $screenWidth");
+      lm.LogLevel.FINE,
+      "sizeOf.width: $width\n"
+      "devicePixelRatioOf: $dpr\n"
+      "Calculated pixel width (w * dpr): $screenWidth",
+    );
     var IImageInfo(width: w, height: h, url: url) = getImageInfo(screenWidth);
     return Scaffold(
       body: SafeArea(
@@ -225,82 +220,78 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                   ),
                 ),
               ),
-            // if (treatAsFullscreen) _buildFullscreenToggle(),
             WPostViewBackButton(
-              // onPop: widget.onPop ?? () => Navigator.pop(context, this),
               onPop: !treatAsFullscreen
                   ? widget.onPop ?? () => Navigator.pop(context, this)
                   : toggleFullscreen,
             ),
             Positioned.fill(
               bottom: 0,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // WUpvoteButton.fromPost(
-                  //   post: e6Post,
-                  // ),
-                  if (e6Post.voteState != null)
-                    if (!e6Post.voteState!)
+              child: Opacity(
+                opacity: .75,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    if (e6Post.voteState != null)
+                      if (!e6Post.voteState!)
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: WFabBuilder.getSinglePostUpvoteAction(
+                            context,
+                            e6Post,
+                          ),
+                        )
+                      else
+                        Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: WFabBuilder.getSinglePostDownvoteAction(
+                              context,
+                              e6Post,
+                            ))
+                    else ...[
                       Padding(
                         padding: const EdgeInsets.all(8),
                         child: WFabBuilder.getSinglePostUpvoteAction(
-                            context, e6Post),
-                      )
-                    else
+                          context,
+                          e6Post,
+                        ),
+                      ),
                       Padding(
                           padding: const EdgeInsets.all(8),
                           child: WFabBuilder.getSinglePostDownvoteAction(
-                              context, e6Post))
-                  else ...[
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: WFabBuilder.getSinglePostUpvoteAction(
-                          context, e6Post),
+                            context,
+                            e6Post,
+                          )),
+                    ],
+                    WPullTab(
+                      anchorAlignment: AnchorAlignment.bottom,
+                      openIcon: const Icon(Icons.edit),
+                      distance: 200,
+                      color:
+                          Theme.of(context).buttonTheme.colorScheme?.onPrimary,
+                      children: [
+                        WFabBuilder.getSinglePostAddToSetAction(
+                            context, e6Post),
+                        WFabBuilder.getSinglePostRemoveFromSetAction(
+                            context, e6Post),
+                      ],
                     ),
                     Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: WFabBuilder.getSinglePostDownvoteAction(
-                            context, e6Post)),
+                      padding: const EdgeInsets.all(8),
+                      child: e6Post.isFavorited
+                          ? WFabBuilder.getSinglePostRemoveFavAction(
+                              context, e6Post)
+                          : WFabBuilder.getSinglePostAddFavAction(
+                              context, e6Post),
+                    ),
                   ],
-                  WPullTab(
-                    anchorAlignment: AnchorAlignment.bottom,
-                    openIcon: const Icon(Icons.edit),
-                    // initialOpen: true,
-                    distance: 200,
-                    color: Theme.of(context).buttonTheme.colorScheme?.onPrimary,
-                    children: [
-                      WFabBuilder.getSinglePostAddToSetAction(context, e6Post),
-                      WFabBuilder.getSinglePostRemoveFromSetAction(
-                          context, e6Post),
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: e6Post.isFavorited
-                        ? WFabBuilder.getSinglePostRemoveFavAction(
-                            context, e6Post)
-                        : WFabBuilder.getSinglePostAddFavAction(
-                            context, e6Post),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
         ),
       ),
-      // persistentFooterButtons: [
-      //   WUpvoteButton.fromPost(
-      //     post: e6Post,
-      //   ),
-      //   WUpvoteButton.fromPost(
-      //     post: e6Post,
-      //   ),
-      //   WUpvoteButton.fromPost(
-      //     post: e6Post,
-      //   ),
-      // ],
       floatingActionButton: WFabBuilder.singlePost(
         post: e6Post,
         customActions: widget.extraActions,

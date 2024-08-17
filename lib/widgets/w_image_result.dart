@@ -124,6 +124,7 @@ class WImageResult extends StatelessWidget {
           color: Colors.green,
           opticalSize: (IconTheme.of(context).opticalSize ?? 48) * 6,
           size: (IconTheme.of(context).size ?? 24) * 6,
+          shadows: const [Shadow(offset: Offset(2.5, 5), blurRadius: 5)],
         ),
       ),
     );

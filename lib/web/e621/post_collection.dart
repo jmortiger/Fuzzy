@@ -797,21 +797,22 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
               ? E6PostsLazy.fromJson(json as Map<String, dynamic>)
               : E6PostsSync.fromJson(json as Map<String, dynamic>);
         }
-        // if (sc.posts?.posts.firstOrNull != null) {
-        //   if (sc.posts.runtimeType == E6PostsLazy) {
-        //     (sc.posts as E6PostsLazy)
-        //         .onFullyIterated
-        //         .subscribe((a) => sc.getHasNextPage(
-        //               tags: sc.priorSearchText,
-        //               lastPostId: a.posts.last.id,
-        //             ));
-        //   } else {
-        //     sc.getHasNextPage(
-        //         tags: sc.priorSearchText,
-        //         lastPostId: (sc.posts as E6PostsSync).posts.last.id);
-        //   }
-        // }
+        if (posts?.posts.firstOrNull != null) {
+          // if (posts.runtimeType == E6PostsLazy) {
+          //   (posts as E6PostsLazy)
+          //       .onFullyIterated
+          //       .subscribe((a) => getHasNextPage(
+          //             tags: priorSearchText,
+          //             lastPostId: a.posts.last.id,
+          //           ));
+          // } else {
+          getHasNextPageById(
+              tags: searchText,
+              lastPostId: (posts as E6PostsSync).posts.last.id);
+          // }
+        }
         if (isNewRequest) firstPostIdCached = firstPostOnPageId;
+        // if (parameters.pageNumber == 1) firstPostIdCached = firstPostOnPageId;
         // });
       }).catchError((err, st) {
         print(err);

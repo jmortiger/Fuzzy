@@ -368,32 +368,51 @@ sealed class E621 extends Site {
   }
 
   static bool maxedOutFaves = false;
-  static Future<http.StreamedResponse> sendAddFavoriteRequest(
+  static Future<http.Response> sendAddFavoriteRequest(
     int postId, {
     String? username,
     String? apiKey,
-  }) {
-    return sendRequest(
-            initAddFavoriteRequest(postId, username: username, apiKey: apiKey))
-        .then((v) {
-      http.ByteStream(v.stream.asBroadcastStream()).bytesToString().then((v1) {
-        try {
-          favAdded.invoke(PostActionArgs(
-            post: E6PostResponse.fromJson(jsonDecode(v1)),
-            responseBody: v1,
-            statusCode: v.statusCodeInfo,
-          ));
-        } catch (e) {
-          favFailed.invoke(PostActionArgs.withoutPost(
-            postId: int.parse(v.request!.url.queryParameters["post_id"]!),
-            responseBody: v1,
-            statusCode: v.statusCodeInfo,
-          ));
-        }
-      });
-      return v;
-    });
-  }
+  }) =>
+      sendRequest(initAddFavoriteRequest(postId,
+              username: username, apiKey: apiKey))
+          .toResponse()
+        ..then((v1) {
+          try {
+            favAdded.invoke(PostActionArgs(
+              post: E6PostResponse.fromJson(jsonDecode(v1.body)),
+              responseBody: v1.body,
+              statusCode: v1.statusCodeInfo,
+            ));
+          } catch (e) {
+            favFailed.invoke(PostActionArgs.withoutPost(
+              postId: int.parse(v1.request!.url.queryParameters["post_id"]!),
+              responseBody: v1.body,
+              statusCode: v1.statusCodeInfo,
+            ));
+          }
+        });
+  // }) {
+  //   return sendRequest(
+  //           initAddFavoriteRequest(postId, username: username, apiKey: apiKey))
+  //       .then((v) {
+  //     http.ByteStream(v.stream.asBroadcastStream()).bytesToString().then((v1) {
+  //       try {
+  //         favAdded.invoke(PostActionArgs(
+  //           post: E6PostResponse.fromJson(jsonDecode(v1)),
+  //           responseBody: v1,
+  //           statusCode: v.statusCodeInfo,
+  //         ));
+  //       } catch (e) {
+  //         favFailed.invoke(PostActionArgs.withoutPost(
+  //           postId: int.parse(v.request!.url.queryParameters["post_id"]!),
+  //           responseBody: v1,
+  //           statusCode: v.statusCodeInfo,
+  //         ));
+  //       }
+  //     });
+  //     return v;
+  //   });
+  // }
 
   static http.Request initAddFavoriteRequest(
     int postId, {

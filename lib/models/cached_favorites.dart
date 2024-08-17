@@ -73,16 +73,22 @@ class CachedFavorites extends ChangeNotifier with Storable<CachedFavorites> {
   void onFavoriteSlotOpen() {
     print("Fav attempt ${postIds.firstOrNull}");
     if (postIds.isNotEmpty) {
-      E621
-          .sendAddFavoriteRequest(postIds.first)
-          .then((v1) => v1.stream.last.then((v2) {
-                print("${postIds.first}: ${v1.statusCode}");
-                if (v1.statusCodeInfo.isSuccessful) {
-                  postIds.removeAt(0);
-                  print("Cached Fav removed");
-                  Changed.invoke();
-                }
-              }));
+      E621.sendAddFavoriteRequest(postIds.first).then((v2) {
+        print("${postIds.first}: ${v2.statusCode}");
+        if (v2.statusCodeInfo.isSuccessful) {
+          postIds.removeAt(0);
+          print("Cached Fav removed");
+          Changed.invoke();
+        }
+      });
+      // .then((v1) => v1.stream.last.then((v2) {
+      //       print("${postIds.first}: ${v1.statusCode}");
+      //       if (v1.statusCodeInfo.isSuccessful) {
+      //         postIds.removeAt(0);
+      //         print("Cached Fav removed");
+      //         Changed.invoke();
+      //       }
+      //     }));
     }
   }
 
