@@ -119,7 +119,7 @@ void main(List<String> args) async {
                       builder: (cxt) => PostViewPage(
                         postListing:
                             (settings.arguments as PostViewParameters).post!,
-                            
+
                         // srn: null,//Provider.of(context),
                       ),
                     );

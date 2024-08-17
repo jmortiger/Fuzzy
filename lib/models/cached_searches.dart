@@ -112,9 +112,9 @@ class CachedSearches {
 
   // static void clear() => searches = const <SearchData>[];
   static void clear() => Changed.invoke(CachedSearchesEvent(
-      priorValue: List.unmodifiable(_searches),
-      currentValue: List.unmodifiable(_searches..clear()),
-    ));
+        priorValue: List.unmodifiable(_searches),
+        currentValue: List.unmodifiable(_searches..clear()),
+      ));
 
   static void onSearchBegan(SearchArgs a) {
     _searches = List.unmodifiable(

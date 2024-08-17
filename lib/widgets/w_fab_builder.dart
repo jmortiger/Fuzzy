@@ -2,29 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/pages/edit_post_page.dart';
-import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/e6_actions.dart' as actions;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
-import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:fuzzy/widgets/w_search_set.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
+// import 'package:fuzzy/models/search_results.dart' as srn_lib;
 
 import 'package:fuzzy/log_management.dart' as lm;
 
 import '../web/e621/e621_access_data.dart';
 
-// #region Logger
-late final lRecord = lm.generateLogger("WFabBuilder");
-lm.Printer get print => lRecord.print;
-lm.FileLogger get logger => lRecord.logger;
-// #endregion Logger
-
 class WFabBuilder extends StatelessWidget {
+  // #region Logger
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.generateLogger("WFabBuilder");
+  // #endregion Logger
   final List<ActionButton>? customActions;
   final List<E6PostResponse>? posts;
   final E6PostResponse? post;
@@ -33,6 +32,7 @@ class WFabBuilder extends StatelessWidget {
   final void Function()? onClearSelections;
   final bool Function(int)? toggleSelectionCallback;
   final bool Function(int)? isPostSelected;
+  // final srn_lib.SearchResultsNotifier? selectedPosts;
 
   const WFabBuilder.singlePost({
     super.key,
@@ -41,6 +41,7 @@ class WFabBuilder extends StatelessWidget {
     this.toggleSelectionCallback,
     this.isPostSelected,
     this.customActions,
+    // required this.selectedPosts,
   }) : posts = null;
   const WFabBuilder.multiplePosts({
     super.key,
@@ -49,15 +50,18 @@ class WFabBuilder extends StatelessWidget {
     this.toggleSelectionCallback,
     this.isPostSelected,
     this.customActions,
+    // this.selectedPosts,
   }) : post = null;
   static ActionButton getClearSelectionButton(
     BuildContext context, [
     void Function()? clearSelection,
+    // srn_lib.SearchResultsNotifier? selected,
   ]) =>
       ActionButton(
         icon: const Icon(Icons.clear),
         tooltip: "Clear Selections",
         onPressed: clearSelection ??
+            // selected?.clearSelections ??
             // context.watch<SearchResultsNotifier>().clearSelections,
             Provider.of<SearchResultsNotifier>(
               context,
@@ -557,6 +561,7 @@ class WFabBuilder extends StatelessWidget {
     String? tooltip = "Toggle selection",
     bool? isSelected,
     bool Function(int)? toggleSelection,
+    // srn_lib.SearchResultsNotifier? selected,
   }) {
     return ActionButton(
       icon: const Icon(Icons.edit),
@@ -576,6 +581,7 @@ class WFabBuilder extends StatelessWidget {
         );
         // context.watch<SearchResultsNotifier>().togglePostSelection(
         toggleSelection?.call(post.id) ??
+            // selected?.togglePostSelection(postId: post.id) ??
             Provider.of<SearchResultsNotifier>(context, listen: false)
                 .togglePostSelection(
               postId: post.id,
@@ -616,18 +622,21 @@ class WFabBuilder extends StatelessWidget {
       },
     );
   }
+
   // TODO: Figure out adding posts in post view (SRN)
   @override
   Widget build(BuildContext context) {
     bool? isSelected;
     try {
       if (isSinglePost) {
-        isSelected = isPostSelected?.call(post!.id) ??
+        isSelected = (isPostSelected?.call ??
+            // selectedPosts?.getIsPostSelected ??
             Provider.of<SearchResultsNotifier>(context, listen: false)
-                .getIsPostSelected(post!.id);
+                .getIsPostSelected)(post!.id);
       }
     } catch (e, s) {
-      logger.warning("Couldn't access SearchResultsNotifier in fab"/* , e, s */);
+      logger
+          .warning("Couldn't access SearchResultsNotifier in fab" /* , e, s */);
     }
     return ExpandableFab(
       useDefaultHeroTag: false,
@@ -640,7 +649,8 @@ class WFabBuilder extends StatelessWidget {
               (customActions?.isNotEmpty ?? false))
           ? [
               if (!isSinglePost)
-                WFabBuilder.getClearSelectionButton(context, onClearSelections),
+                WFabBuilder.getClearSelectionButton(
+                    context, onClearSelections/* , selectedPosts */),
               if (!isSinglePost)
                 WFabBuilder.getMultiplePostsAddToSetAction(context, posts!),
               if (isSinglePost)
@@ -669,6 +679,7 @@ class WFabBuilder extends StatelessWidget {
                     post!,
                     isSelected: isSelected,
                     toggleSelection: toggleSelectionCallback,
+                    // selected: selectedPosts,
                   )
                 else
                   getSinglePostToggleSelectAction(
@@ -676,6 +687,7 @@ class WFabBuilder extends StatelessWidget {
                     post!,
                     isSelected: isSelected,
                     toggleSelection: toggleSelectionCallback,
+                    // selected: selectedPosts,
                   ),
               // getPrintSelectionsAction(context, post, posts),
               if (customActions != null) ...customActions!,

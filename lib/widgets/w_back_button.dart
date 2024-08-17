@@ -7,6 +7,7 @@ class WBackButton extends StatelessWidget {
     this.onPop,
     this.child,
   }) : hover = true;
+
   /// Don't have the button hover over [child] (if non-null).
   const WBackButton.doNotBlockChild({
     super.key,
@@ -16,7 +17,7 @@ class WBackButton extends StatelessWidget {
 
   final void Function()? onPop;
 
-  /// To have this button lay itself out, set this to 
+  /// To have this button lay itself out, set this to
   /// a single element with the rest of the widget tree.
   /// Essentially a lightweight [Scaffold] + [AppBar].
   final Widget? child;

@@ -109,7 +109,8 @@ class _WUpdateSetState extends State<WUpdateSet> {
                 controller: postSetShortnameController,
                 onChanged: (value) => setState(() {
                   postSetShortname = value;
-                  postSetShortnameErrorText = determineShortnameErrorText(value);
+                  postSetShortnameErrorText =
+                      determineShortnameErrorText(value);
                 }),
                 decoration: InputDecoration(
                   border: const OutlineInputBorder(),
@@ -205,7 +206,8 @@ class _WUpdateSetState extends State<WUpdateSet> {
                             util.logResponse(res, logger, lm.LogLevel.INFO);
                             if (res.statusCodeInfo.isSuccessful) {
                               if (mounted) {
-                                Navigator.pop(this.context, e621.PostSet.fromRawJson(res.body));
+                                Navigator.pop(this.context,
+                                    e621.PostSet.fromRawJson(res.body));
                               }
                             }
                           }

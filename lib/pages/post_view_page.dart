@@ -18,6 +18,7 @@ import 'package:j_util/j_util_full.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
 import 'package:progressive_image/progressive_image.dart' show ProgressiveImage;
+// import 'package:fuzzy/models/search_results.dart' as srn_lib;
 
 import '../web/e621/e621.dart';
 import '../widgets/w_fab_builder.dart';
@@ -56,6 +57,7 @@ class PostViewPage extends StatefulWidget
   final List<ActionButton>? extraActions;
   @override
   final List<String>? tagsToAdd;
+  // final srn_lib.SearchResultsNotifier? selectedPosts;
   const PostViewPage({
     super.key,
     required this.postListing,
@@ -64,6 +66,7 @@ class PostViewPage extends StatefulWidget
     this.tagsToAdd,
     bool this.startFullscreen = false,
     this.extraActions,
+    // this.selectedPosts,
   })  : getFullscreen = null,
         setFullscreen = null;
   const PostViewPage.overrideFullscreen({
@@ -74,6 +77,7 @@ class PostViewPage extends StatefulWidget
     this.tagsToAdd,
     this.startFullscreen,
     this.extraActions,
+    // this.selectedPosts,
     required bool Function() this.getFullscreen,
     required void Function(bool) this.setFullscreen,
   });
@@ -300,6 +304,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
       floatingActionButton: WFabBuilder.singlePost(
         post: e6Post,
         customActions: widget.extraActions,
+        // selectedPosts: widget.selectedPosts,
       ),
     );
   }

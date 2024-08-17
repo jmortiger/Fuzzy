@@ -557,6 +557,7 @@ class _WTagItemState extends State<WTagItem> {
     );
   }
 }
+
 // typedef EditPostPage
 class EditPostPageLoader extends StatelessWidget
     implements IRoute<EditPostPageLoader> {

@@ -175,13 +175,15 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
             WBooleanField(
               getVal: () => AppSettings.i!.applyProfileBlacklist,
               name: "Apply Profile blacklist",
-              subtitle: "If profile is loaded, add its blacklist to the local blacklist",
+              subtitle:
+                  "If profile is loaded, add its blacklist to the local blacklist",
               setVal: (bool val) => AppSettings.i!.applyProfileBlacklist = val,
             ),
             WBooleanField(
               getVal: () => AppSettings.i!.applyProfileFavTags,
               name: "Apply Profile Fav tags",
-              subtitle: "If profile is loaded, add its fav tags to the local fav tags",
+              subtitle:
+                  "If profile is loaded, add its fav tags to the local fav tags",
               setVal: (bool val) => AppSettings.i!.applyProfileFavTags = val,
             ),
             // if (!AppSettings.i!.autoLoadUserProfile)
@@ -494,6 +496,7 @@ class _WBooleanTristateFieldState extends State<WBooleanTristateField> {
 
 class WSetStringField extends StatefulWidget {
   final String name;
+
   /// Null for generated subtitle, empty string for no subtitle
   /// Defaults to empty string
   final String? subtitle;

@@ -25,6 +25,7 @@ class PostSwipePage extends StatefulWidget
   final void Function(String addition)? onAddToSearch;
   @override
   final List<String>? tagsToAdd;
+  // final srn_lib.SearchResultsNotifier? selectedPosts;
 
   const PostSwipePage.postsCollection({
     super.key,
@@ -33,6 +34,7 @@ class PostSwipePage extends StatefulWidget
     this.onAddToSearch,
     this.tagsToAdd,
     this.startFullscreen = false,
+    // this.selectedPosts,
   })  : postsObj = null,
         postsIterable = posts;
   const PostSwipePage({
@@ -42,6 +44,7 @@ class PostSwipePage extends StatefulWidget
     this.onAddToSearch,
     this.tagsToAdd,
     this.startFullscreen = false,
+    // this.selectedPosts,
   })  : postsObj = posts,
         postsIterable = null;
 
@@ -106,6 +109,7 @@ class _PostSwipePageState extends State<PostSwipePage>
             setFullscreen: (v) => setState(() {
               isFullscreen = v;
             }),
+            // selectedPosts: widget.selectedPosts,
           ),
         ),
       );
@@ -181,6 +185,7 @@ class PostSwipePageManaged extends StatefulWidget
   final void Function(String addition)? onAddToSearch;
   @override
   final List<String>? tagsToAdd;
+  // final srn_lib.SearchResultsNotifier? selectedPosts;
 
   // const PostSwipePageManaged.postsCollection({
   //   super.key,
@@ -200,6 +205,7 @@ class PostSwipePageManaged extends StatefulWidget
     this.onAddToSearch,
     this.tagsToAdd,
     this.startFullscreen = false,
+    // required this.selectedPosts,
   }) : postsObj = posts;
 
   @override
@@ -339,6 +345,7 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
                   isFullscreen = v;
                 }),
                 extraActions: extras,
+                // selectedPosts: widget.selectedPosts,
               );
             } else {
               return const Column(
@@ -361,22 +368,26 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
         },
       );
     } else {
-      final p = t!.elementAtOrNull(widget.postsObj.getPostIndexOnPage(index, page));
-      return p != null ? PostViewPage.overrideFullscreen(
-        // postListing: t![widget.postsObj.currentPostIndex],
-        postListing: p,
-        onAddToSearch: (s) {
-          widget.onAddToSearch?.call(s);
-          toReturn = "$toReturn $s";
-          widget.tagsToAdd?.add(s);
-        },
-        onPop: () => Navigator.pop(context, widget),
-        getFullscreen: () => isFullscreen,
-        setFullscreen: (v) => setState(() {
-          isFullscreen = v;
-        }),
-        extraActions: extras,
-      ) : null;
+      final p =
+          t!.elementAtOrNull(widget.postsObj.getPostIndexOnPage(index, page));
+      return p != null
+          ? PostViewPage.overrideFullscreen(
+              // postListing: t![widget.postsObj.currentPostIndex],
+              postListing: p,
+              onAddToSearch: (s) {
+                widget.onAddToSearch?.call(s);
+                toReturn = "$toReturn $s";
+                widget.tagsToAdd?.add(s);
+              },
+              onPop: () => Navigator.pop(context, widget),
+              getFullscreen: () => isFullscreen,
+              setFullscreen: (v) => setState(() {
+                isFullscreen = v;
+              }),
+              extraActions: extras,
+              // selectedPosts: widget.selectedPosts,
+            )
+          : null;
     }
   }
 

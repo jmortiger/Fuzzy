@@ -177,6 +177,7 @@ class WImageResult extends StatelessWidget {
                     posts: getSc(context, false).mpcSync,
                     onAddToSearch: getOnAddToSearch(context),
                     tagsToAdd: [],
+                    // selectedPosts: srl,
                   )
                 : PostSwipePage.postsCollection(
                     initialIndex: index,
@@ -186,6 +187,7 @@ class WImageResult extends StatelessWidget {
                             .posts,
                     onAddToSearch: getOnAddToSearch(context),
                     tagsToAdd: [],
+                    // selectedPosts: srl,
                   )
             /* : PostViewPage(
                             postListing: imageListing,

@@ -32,16 +32,17 @@ class UserProfilePage extends StatelessWidget
   static Widget generateFavStats(UserLoggedIn userL) => Text.rich(TextSpan(
         text: "FavCount: ${userL.favoriteCount}/${userL.favoriteLimit} (",
         children: [
-          TextSpan(text: "${userL.favoriteLimit - userL.favoriteCount}", 
-            style: TextStyle(
-              color: switch (userL.favoriteLimit - userL.favoriteCount) {
-                >= 500 => Colors.green,
-                >= 100 && < 500 => Colors.amber,
-                < 100 => Colors.red,
-                _ => throw UnsupportedError("type not supported"),
-              },
-              fontWeight: FontWeight.bold,
-            )),
+          TextSpan(
+              text: "${userL.favoriteLimit - userL.favoriteCount}",
+              style: TextStyle(
+                color: switch (userL.favoriteLimit - userL.favoriteCount) {
+                  >= 500 => Colors.green,
+                  >= 100 && < 500 => Colors.amber,
+                  < 100 => Colors.red,
+                  _ => throw UnsupportedError("type not supported"),
+                },
+                fontWeight: FontWeight.bold,
+              )),
           const TextSpan(text: " left)"),
         ],
       ));

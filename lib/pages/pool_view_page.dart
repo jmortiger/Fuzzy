@@ -144,7 +144,9 @@ class _PoolViewPageState extends State<PoolViewPage> {
     );
   }
 }
+
 typedef PoolViewParameters = ({PoolModel? pool, int? id});
+
 class PoolViewPageBuilder extends StatelessWidget
     implements IRoute<PoolViewPageBuilder> {
   static const routeNameString = "/pools";

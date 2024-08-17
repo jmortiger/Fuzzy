@@ -369,7 +369,8 @@ class WPoolTile extends StatelessWidget {
   }
 }
 
-class PoolSearchParameterModel extends ChangeNotifier with PageSearchParameterNullable {
+class PoolSearchParameterModel extends ChangeNotifier
+    with PageSearchParameterNullable {
   String? _searchNameMatches;
   String? get searchNameMatches => _searchNameMatches;
   set searchNameMatches(String? value) {

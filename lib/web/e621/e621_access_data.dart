@@ -182,13 +182,15 @@ final class E621AccessData with Storable<E621AccessData> {
     required this.username,
     required this.userAgent,
   }) {
-    initStorageAsync(filePathFull.getItem()).onError(
-      (e, s) => logger.log(
-          Platform.isWeb ? lm.LogLevel.FINEST : lm.LogLevel.WARNING,
-          "Failed to initialize Storable",
-          e,
-          s),
-    );
+    !Platform.isWeb
+        ? initStorageAsync(filePathFull.getItem()).onError(
+            (e, s) => logger.log(
+                Platform.isWeb ? lm.LogLevel.FINEST : lm.LogLevel.WARNING,
+                "Failed to initialize Storable",
+                e,
+                s),
+          )
+        : pref.$Safe;
   }
   /* const  */ E621AccessData.nonSaved({
     required this.apiKey,

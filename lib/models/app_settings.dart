@@ -60,8 +60,8 @@ class AppSettingsRecord {
         forceSafe: json["forceSafe"] ?? defaultSettings.forceSafe,
         autoLoadUserProfile:
             json["autoLoadUserProfile"] ?? defaultSettings.autoLoadUserProfile,
-        applyProfileBlacklist:
-            json["applyProfileBlacklist"] ?? defaultSettings.applyProfileBlacklist,
+        applyProfileBlacklist: json["applyProfileBlacklist"] ??
+            defaultSettings.applyProfileBlacklist,
         applyProfileFavTags:
             json["applyProfileFavTags"] ?? defaultSettings.applyProfileFavTags,
         maxSearchesToSave:
@@ -255,12 +255,12 @@ class AppSettings implements AppSettingsRecord {
   @override
   bool get autoLoadUserProfile => _autoLoadUserProfile;
   set autoLoadUserProfile(bool value) => _autoLoadUserProfile = value;
-  
+
   bool _applyProfileBlacklist;
   @override
   bool get applyProfileBlacklist => _applyProfileBlacklist;
   set applyProfileBlacklist(bool value) => _applyProfileBlacklist = value;
-  
+
   bool _applyProfileFavTags;
   @override
   bool get applyProfileFavTags => _applyProfileFavTags;

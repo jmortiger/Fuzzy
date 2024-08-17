@@ -472,7 +472,7 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
         children: [
           Selector<ManagedPostCollectionSync, int?>(
             builder: (context, value, child) => Text(
-                "_currentPageIndex: $_currentPageIndex, totalPages: ${((value ?? 750 * SearchView.i.postsPerPage)/SearchView.i.postsPerPage).ceil()}"),
+                "_currentPageIndex: $_currentPageIndex, totalPages: ${((value ?? 750 * SearchView.i.postsPerPage) / SearchView.i.postsPerPage).ceil()}"),
             selector: (ctx, v) =>
                 v.totalPostsInSearch.$Safe ?? v.numPostsInSearch,
           ),
