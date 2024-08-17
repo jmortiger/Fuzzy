@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/util/util.dart';
+import 'package:j_util/e621.dart' as e6;
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/serialization.dart';
 
@@ -75,7 +76,13 @@ class SavedDataE6 extends ChangeNotifier {
         <String>{},
         (acc, element) => acc..add(element.parent),
       );
+
+  /// {@template parentCount}
+  /// The # of [SavedEntry]s with a given [SavedEntry.parent].
+  /// {@endtemplate}
   Map<String, int> get $parentCount => SavedDataE6.parentCount;
+
+  /// {@macro parentCount}
   static Map<String, int> get parentCount => searches.fold(
         <String, int>{},
         (acc, element) {
@@ -382,6 +389,18 @@ class SavedDataE6 extends ChangeNotifier {
     return true;
   }
 
+  /// Finds the first entry with the given [uniqueId] and returns it.
+  static SavedEntry? findByUniqueId(
+    String uniqueId, {
+    ListNotifier<SavedSearchData>? searches,
+  }) {
+    searches ??= SavedDataE6.searches;
+    for (var e in searches) {
+      if (e.uniqueId == uniqueId) return e;
+    }
+    return null;
+  }
+
   static void _$modify(void Function() modifier) {
     modifier();
     _$save();
@@ -432,6 +451,7 @@ class SavedDataE6 extends ChangeNotifier {
     _save();
   }
 
+  // #region removeEntry
   static void $removeEntry(SavedEntry entry) {
     searches.remove(entry);
     _$save();
@@ -441,6 +461,23 @@ class SavedDataE6 extends ChangeNotifier {
     searches.remove(entry);
     _save();
   }
+  // #endregion removeEntry
+
+  // #region removeEntries
+  static void $removeEntries(Iterable<SavedEntry> entries) {
+    for (var e in entries) {
+      searches.remove(e);
+    }
+    _$save();
+  }
+
+  void removeEntries(Iterable<SavedEntry> entries) {
+    for (var e in entries) {
+      searches.remove(e);
+    }
+    _save();
+  }
+  // #endregion removeEntries
 
   static Widget buildParentedView({
     required BuildContext context,
@@ -513,6 +550,7 @@ abstract base class SavedEntry implements Comparable<SavedEntry> {
   //     e.
   //   }
   // }
+  SavedEntry copyWith({String? searchString, String? title, String? parent});
 }
 
 @immutable
@@ -524,18 +562,27 @@ abstract base class SavedListData
   @override
   final String uniqueId;
   final int id;
+  final String name;
+  String? get searchableName;
+  final String modifiers;
   @override
   final String parent;
 
   const SavedListData({
     required this.title,
     required this.id,
+    // this.name = "",
+    required this.name,
+    // this.modifiers = "",
+    required this.modifiers,
     this.parent = "",
     this.uniqueId = "",
   });
 
+  @override
   SavedListData copyWith({
     String? title,
+    String? searchString,
     int? id,
     String? parent,
     String? uniqueId,
@@ -560,26 +607,56 @@ abstract base class SavedListData
 @immutable
 final class SavedSetData extends SavedListData {
   static const searchStringBase = "set:";
+  static const parseSearchString =
+      "($searchStringBase)([^${RegExpExt.whitespaceCharacters}]*)";
   @override
   String get searchString => "$searchStringBase$id";
+  @override
+  final String searchableName;
+  String get shortname => searchableName;
 
   const SavedSetData({
     String? title,
     required super.id,
     super.parent = "",
     super.uniqueId = "",
-  }) : super(title: title ?? "$searchStringBase$id");
+    super.name = "",
+    this.searchableName = "",
+    String modifiers = "",
+  }) : super(
+          title: title ?? "$searchStringBase$id",
+          modifiers: modifiers,
+        );
+  SavedSetData.fromSet({
+    String? title,
+    super.parent = "",
+    super.uniqueId = "",
+    super.modifiers = "",
+    required e6.PostSet set,
+  })  : searchableName = set.shortname,
+        super(
+          id: set.id,
+          title: title ?? set.name,
+          name: set.name,
+        );
   SavedSetData.fromSearchString({
     String? title,
     required String searchString,
     super.parent = "",
     super.uniqueId = "",
+    this.searchableName = "",
+    super.modifiers = "",
+    super.name = "",
   }) : super(
-            title: title ?? searchString,
-            id: int.parse(searchString.replaceAll(searchStringBase, "")));
+          title: title ?? searchString,
+          id: int.parse(
+            RegExp(parseSearchString).firstMatch(searchString)!.group(2)!,
+          ),
+        );
 
   @override
   SavedSetData copyWith({
+    String? searchString,
     String? title,
     int? id,
     String? parent,
@@ -623,23 +700,36 @@ final class SavedSetData extends SavedListData {
 @immutable
 final class SavedPoolData extends SavedListData {
   static const searchStringBase = "pool:";
+  static const parseSearchString =
+      "($searchStringBase)([^${RegExpExt.whitespaceCharacters}]*)";
   @override
   String get searchString => "$searchStringBase$id";
 
+  @override
+  String? get searchableName => name.contains(
+          RegExp("[^${RegExpExt.letters}_${RegExpExt.whitespaceCharacters}]"))
+      ? null
+      : name.replaceAll(RegExp("[${RegExpExt.whitespaceCharacters}]+"), "_");
   const SavedPoolData({
     String? title,
     required super.id,
     super.parent = "",
     super.uniqueId = "",
+    super.modifiers = "",
+    super.name = "",
   }) : super(title: title ?? "$searchStringBase$id");
   SavedPoolData.fromSearchString({
     String? title,
     required String searchString,
     super.parent = "",
     super.uniqueId = "",
+    super.modifiers = "",
+    super.name = "",
   }) : super(
             title: title ?? searchString,
-            id: int.parse(searchString.replaceAll(searchStringBase, "")));
+            id: int.parse(
+              RegExp(parseSearchString).firstMatch(searchString)!.group(2)!,
+            ));
 
   @override
   SavedPoolData copyWith({
@@ -647,6 +737,7 @@ final class SavedPoolData extends SavedListData {
     int? id,
     String? parent,
     String? uniqueId,
+    String? searchString,
   }) =>
       SavedPoolData(
         title: title ?? this.title,
@@ -867,38 +958,48 @@ final class SavedSearchData extends SavedEntry {
 
 Future<SavedElementRecord?> showSavedElementEditDialogue(
   BuildContext context, {
-  String initialTitle = "",
-  String initialData = "",
+  SavedEntry? initialEntry,
+  String? initialTitle = "",
+  String? initialData = "",
   String mainDataName = "Tags",
-  String initialParent = "",
-  String initialUniqueId = "",
+  String? initialParent = "",
+  String? initialUniqueId = "",
   bool isNumeric = false,
 }) {
   return showDialog<SavedElementRecord>(
     context: context,
     builder: (context) {
-      var title = initialTitle,
-          mainData = initialData,
-          parent = initialParent,
-          uniqueId = initialUniqueId;
-      var searchController = SearchController()..text = initialParent;
+      var title = initialTitle ??= initialEntry?.title ?? "",
+          mainData = initialData ??= initialEntry?.searchString ?? "",
+          parent = initialParent ??= initialEntry?.parent ?? "",
+          uniqueId = initialUniqueId ??= initialEntry?.uniqueId ?? "";
+      var searchController = SearchController()..text = parent;
       return AlertDialog(
         content: Column(
           children: [
             const Text("Title:"),
             TextField(
               onChanged: (value) => title = value,
-              controller: defaultSelection(initialTitle),
+              controller: defaultSelection(title),
             ),
             Text("$mainDataName:"),
             TextField(
               inputFormatters: isNumeric ? [numericFormatter] : null,
               onChanged: (value) => mainData = value,
-              controller: defaultSelection(initialData),
+              controller: defaultSelection(mainData),
               keyboardType: isNumeric ? TextInputType.number : null,
             ),
             const Text("Parent:"),
-            SearchAnchor(
+            buildParentSuggestionsEntry(
+              context,
+              searchController: searchController,
+              initialParent: parent,
+              onChanged: (value) {
+                // searchController.openView();
+                parent = value;
+              },
+            ),
+            /* SearchAnchor(
               viewHintText: "parent",
               viewOnChanged: (value) {
                 // searchController.openView();
@@ -937,16 +1038,16 @@ Future<SavedElementRecord?> showSavedElementEditDialogue(
                   ),
                 );
               },
-            ),
+            ), */
             const Text("UniqueId:"),
             TextField(
               onChanged: (value) => uniqueId = value,
-              controller: defaultSelection(initialUniqueId),
+              controller: defaultSelection(uniqueId),
               decoration: InputDecoration(
-                errorText:
-                    uniqueId.isNotEmpty && !SavedDataE6.isUnique(uniqueId)
-                        ? "Must be unique or empty"
-                        : null,
+                errorText: uniqueId.isNotEmpty &&
+                        SavedDataE6.findByUniqueId(uniqueId) != initialEntry
+                    ? "Must be unique or empty"
+                    : null,
               ),
             ),
           ],
@@ -969,6 +1070,52 @@ Future<SavedElementRecord?> showSavedElementEditDialogue(
             child: const Text("Cancel"),
           ),
         ],
+      );
+    },
+  );
+}
+
+Widget buildParentSuggestionsEntry(
+  BuildContext context, {
+  SearchController? searchController,
+  String initialParent = "",
+  void Function(String)? onChanged,
+}) {
+  searchController ??= SearchController()..text = initialParent;
+  return SearchAnchor(
+    viewHintText: "parent",
+    viewOnChanged: onChanged,
+    viewOnSubmitted: (value) => searchController?.closeView(value),
+    // controller: controller, //defaultSelection(initialParent),
+    // onTap: () => controller.openView(),
+    // onTapOutside: (e) => controller.closeView(null),
+    searchController: searchController,
+    builder: (context, controller) {
+      // controller.text = initialParent;
+      /* return SearchBar(
+                  hintText: "parent",
+                  onChanged: (value) {
+                    controller.openView();
+                    parent = value;
+                  },
+                  controller: controller, //defaultSelection(initialParent),
+                  onTap: () => controller.openView(),
+                  onTapOutside: (e) => controller.closeView(null),
+                ); */
+      return TextField(
+        controller: controller,
+        // icon: const Icon(Icons.search),
+        // onPressed: controller.openView,
+        onTap: controller.openView,
+      );
+    },
+    suggestionsBuilder: (context, controller) {
+      return (SavedDataE6.parents..add(initialParent)).map(
+        (e) => ListTile(
+          title: Text(e),
+          onTap: () => controller.closeView(e),
+          subtitle: Text("${SavedDataE6.parentCount[e] ?? "No"} entries"),
+        ),
       );
     },
   );

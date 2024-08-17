@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
+import 'package:j_util/e621.dart' as e6;
 import 'package:j_util/j_util_full.dart';
 
 import '../web/e621/e621.dart';
@@ -12,7 +13,6 @@ import 'package:fuzzy/log_management.dart' as lm;
 import '../web/e621/e621_access_data.dart';
 
 // #region Logger
-lm.Printer get print => lRecord.print;
 lm.FileLogger get logger => lRecord.logger;
 // ignore: unnecessary_late
 late final lRecord = lm.generateLogger("SearchViewModel");
@@ -139,7 +139,7 @@ class SearchData {
   const SearchData /* .constant */ ({
     required this.term,
     required this.idRange,
-    this.desiredPerPage = 50,
+    required this.desiredPerPage,
     //required this.createdAt,
   });
 
@@ -181,38 +181,22 @@ class SearchData {
         .posts
         .first
         .id; */
-    var lastF = E621
-            .sendRequest(E621.initSearchForLastPostRequest(
-              tags: tags,
-              apiKey: apiKey,
-              username: username,
-            ))
-            .then((v1) => v1.stream.bytesToString().then(
-                (v2) => E6PostsSync.fromJson(jsonDecode(v2)).posts.last.id)),
-        firstF = E621
-            .sendRequest(E621.initSearchRequest(
-              limit: 1,
-              tags: tags,
-              apiKey: apiKey,
-              username: username,
-            ))
-            .then((v1) => v1.stream.bytesToString().then(
-                (v2) => E6PostsSync.fromJson(jsonDecode(v2)).posts.first.id));
+    var lastF = e6.Api.sendRequest(E621.initSearchForLastPostRequest(
+          tags: tags,
+          apiKey: apiKey,
+          username: username,
+        )).then(
+            (v1) => E6PostsSync.fromJson(jsonDecode(v1.body)).posts.last.id),
+        firstF = e6.Api.sendRequest(E621.initSearchRequest(
+          limit: 1,
+          tags: tags,
+          apiKey: apiKey,
+          username: username,
+        )).then(
+            (v1) => E6PostsSync.fromJson(jsonDecode(v1.body)).posts.first.id);
     return SearchData(
         idRange: (largest: await firstF, smallest: await lastF),
         term: tags,
         desiredPerPage: limit);
   }
-}
-
-class SearchManager extends ChangeNotifier {
-  SearchData currentData;
-  DateTime currentDataTimestamp;
-  LazyList<E6PostResponse>? posts;
-
-  SearchManager({
-    required this.currentData,
-    DateTime? currentDataTimestamp,
-    // required this.currentPosts,
-  }) : currentDataTimestamp = currentDataTimestamp ?? DateTime.timestamp();
 }

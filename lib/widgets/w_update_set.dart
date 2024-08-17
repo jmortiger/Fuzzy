@@ -39,7 +39,7 @@ class _WUpdateSetState extends State<WUpdateSet> {
   // String? postSetDescriptionErrorText;
   String? determineNameErrorText(String value) =>
       value.length < 3 || value.length > 100
-          ? "must be between three and one hundred characters long"
+          ? "Value must be between three and one hundred characters long"
           : null;
   // String? determineDescriptionErrorText(String value) =>
   //     value.length < 3 || value.length > 100
@@ -74,12 +74,12 @@ class _WUpdateSetState extends State<WUpdateSet> {
           TextEditingValue(text: widget.set!.shortname));
       postSetDescriptionController = TextEditingController.fromValue(
           TextEditingValue(text: widget.set!.description));
-
-      postSetNameErrorText = determineNameErrorText(initialPostSetName!);
-      postSetShortnameErrorText =
-          determineShortnameErrorText(initialPostSetShortname!);
-      // postSetDescriptionErrorText = determineDescriptionErrorText(initialPostSetDescription);
     }
+
+    postSetNameErrorText = determineNameErrorText(initialPostSetName ?? "");
+    postSetShortnameErrorText =
+        determineShortnameErrorText(initialPostSetShortname ?? "");
+    // postSetDescriptionErrorText = determineDescriptionErrorText(initialPostSetDescription);
   }
 
   @override

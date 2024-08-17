@@ -1,15 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:j_util/j_util_full.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
 class SearchResultsNotifier with ChangeNotifier {
-  // #region Logger
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("SearchResultsNotifier");
-  // #endregion Logger
+  static late final logger = lm.generateLogger("SearchResultsNotifier").logger;
   SearchResultsNotifier({
     Set<int>? selectedIndices,
     Set<int>? selectedPostIds,
@@ -26,24 +22,30 @@ class SearchResultsNotifier with ChangeNotifier {
   SetNotifier<int> _selectedIndices;
   Set<int> get selectedIndices => _selectedIndices;
   set selectedIndices(Set<int> value) {
-    print("selectedIndices assignment");
-    if (_selectedIndices != value) {
-      print("necessary");
+    logger.finer("selectedIndices assignment");
+    if (setEquals(_selectedIndices, value)) {
+      logger.finest("New Set != Old Set, assigning and notifying listeners");
       _selectedIndices =
           value is SetNotifier<int> ? value : SetNotifier<int>.from(value);
       notifyListeners();
     } else {
-      print("unnecessary");
+      logger
+          .finest("New Set == Old Set, not assigning nor notifying listeners");
     }
   }
 
   SetNotifier<int> _selectedPostIds /*  = <int>{} */;
   Set<int> get selectedPostIds => _selectedPostIds;
   set selectedPostIds(Set<int> value) {
-    if (_selectedPostIds != value) {
+    logger.finer("selectedPostIds assignment");
+    if (setEquals(_selectedPostIds, value)) {
+      logger.finest("New Set != Old Set, assigning and notifying listeners");
       _selectedPostIds =
           value is SetNotifier<int> ? value : SetNotifier<int>.from(value);
       notifyListeners();
+    } else {
+      logger
+          .finest("New Set == Old Set, not assigning nor notifying listeners");
     }
   }
 

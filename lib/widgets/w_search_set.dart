@@ -500,6 +500,7 @@ class WSetTile extends StatelessWidget {
                                       initialParent: e.parent,
                                       initialTitle: e.title,
                                       initialUniqueId: e.uniqueId,
+                                      initialEntry: e,
                                     ).then((value) {
                                       if (value != null) {
                                         SavedDataE6.$editAndSave(
