@@ -226,19 +226,20 @@ Widget buildHomePageWithProviders({
         // ChangeNotifierProvider(create: (context) => SavedDataE6.$),
       ],
       child: searchText == null
-          // ? const HomePage()
-          ? Selector<ManagedPostCollectionSync, Future?>(
-              builder: (context, value, child) =>
-                  HomePage(initialTags: searchText),
-              selector: (cxt, p) => p.pr,
-              shouldRebuild: (previous, next) => previous != next,
-            )
-          : Selector<ManagedPostCollectionSync, Future?>(
-              builder: (context, value, child) =>
-                  HomePage(initialTags: searchText),
-              selector: (cxt, p) => p.pr,
-              shouldRebuild: (previous, next) => previous != next,
-            ),
+          ? const HomePage()
+          : HomePage(initialTags: searchText),
+      // ? Selector<ManagedPostCollectionSync, Future?>(
+      //     builder: (context, value, child) =>
+      //         HomePage(initialTags: searchText),
+      //     selector: (cxt, p) => p.pr,
+      //     shouldRebuild: (previous, next) => previous != next,
+      //   )
+      // : Selector<ManagedPostCollectionSync, Future?>(
+      //     builder: (context, value, child) =>
+      //         HomePage(initialTags: searchText),
+      //     selector: (cxt, p) => p.pr,
+      //     shouldRebuild: (previous, next) => previous != next,
+      //   ),
     );
 void pathSoundOff() {
   path
