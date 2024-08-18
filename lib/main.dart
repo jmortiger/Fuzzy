@@ -52,7 +52,7 @@ void main(List<String> args) async {
   );
   //.ignore();
   final searchText =
-      (await CachedSearches.loadFromStorageAsync()).firstOrNull?.searchString;
+      (await CachedSearches.loadFromStorageAsync()).lastOrNull?.searchString;
   await E621AccessData.tryLoad(); //.ignore();
   CachedFavorites.fileFullPath.getItem().ignore();
   SavedDataE6.init();

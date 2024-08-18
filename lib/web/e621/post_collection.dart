@@ -102,7 +102,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         logger.severe(e, e, s);
         return -1;
       });
-      tryRetrieveFirstPage();
+      final t = tryRetrieveFirstPage();
+      if (t is Future<bool>) t.ignore();
     }
   }
   // #endregion Ctor

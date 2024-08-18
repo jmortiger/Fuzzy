@@ -160,10 +160,10 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                   Text("Delete all ${CachedSearches.searches.length} searches"),
               onTap: CachedSearches.clear,
             ),
-            WBooleanField(
+            WBooleanField.subtitleBuilder(
               getVal: () => AppSettings.i!.forceSafe,
               name: "Disable non-safe posts",
-              subtitle: "Current site: ${e621.Api.baseUri.toString()}",
+              subtitleBuilder: () => "Current site: ${e621.Api.baseUri.toString()}",
               setVal: (bool val) => AppSettings.i!.forceSafe = val,
             ),
             WBooleanField(
@@ -193,6 +193,18 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
             //     subtitle: "Current site: ${e621.Api.baseUri.toString()}",
             //     setVal: (bool val) => SearchView.i.lazyBuilding = val,
             //   ),
+            WNumSliderField<int>(
+              min: 0,
+              max: 500,
+              getVal: () => AppSettings.i!.maxSearchesToSave,
+              name: "Searches to save",
+              setVal: (num val) =>
+                  AppSettings.i!.maxSearchesToSave = val.toInt(),
+              validateVal: (num? val) => (val?.toInt() ?? -1) >= 0,
+              defaultValue: AppSettingsRecord.defaultSettings.maxSearchesToSave,
+              // divisions: 500,
+              useIncrementalButtons: true,
+            ),
           ],
         ),
         ExpansionTile(
@@ -211,7 +223,19 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                 defaultValue: SearchViewData.defaultData.postsPerRow,
                 divisions: SearchViewData.postsPerRowBounds.max -
                     SearchViewData.postsPerRowBounds.min,
+                useIncrementalButtons: true,
               ),
+              // WIntegerSliderField(
+              //   min: SearchViewData.postsPerRowBounds.min,
+              //   max: SearchViewData.postsPerRowBounds.max,
+              //   getVal: () => SearchView.i.postsPerRow,
+              //   name: "Posts per row",
+              //   setVal: (int val) => SearchView.i.postsPerRow = val.toInt(),
+              //   validateVal: (int? val) => (val?.toInt() ?? -1) >= 0,
+              //   defaultValue: SearchViewData.defaultData.postsPerRow,
+              //   // divisions: SearchViewData.postsPerRowBounds.max -
+              //   //     SearchViewData.postsPerRowBounds.min,
+              // ),
               WIntegerField(
                 getVal: () => SearchView.i.postsPerRow,
                 name: "Posts per row",
@@ -305,22 +329,6 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               getVal: () => PostView.i.forceHighQualityImage,
               setVal: (p1) => PostView.i.forceHighQualityImage = p1,
             ),
-            /* ListTile(
-              title: const Text("Toggle Image Quality"),
-              onTap: () {
-                print("Before: ${PostView.i.imageQuality}");
-                setState(() {
-                  PostView.i.imageQuality = PostView.i.imageQuality == "low"
-                      ? "medium"
-                      : PostView.i.imageQuality == "medium"
-                          ? "high"
-                          : "low";
-                });
-                print("After: ${PostView.i.imageQuality}");
-                // Navigator.pop(context);
-              },
-              trailing: Text(PostView.i.imageQuality),
-            ), */
             WEnumField(
               name: "Image Quality",
               getVal: () => PostView.i.imageQuality,
@@ -403,6 +411,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
 class WBooleanField extends StatefulWidget {
   final String name;
   final String? subtitle;
+  final String Function()? subtitleBuilder;
 
   final bool Function() getVal;
 
@@ -418,7 +427,16 @@ class WBooleanField extends StatefulWidget {
     required this.setVal,
     // required this.settings,
     this.validateVal,
-  });
+  }) : subtitleBuilder = null;
+  const WBooleanField.subtitleBuilder({
+    super.key,
+    required this.name,
+    this.subtitleBuilder,
+    required this.getVal,
+    required this.setVal,
+    // required this.settings,
+    this.validateVal,
+  }) : subtitle = null;
 
   // final AppSettings settings;
 
@@ -437,7 +455,9 @@ class _WBooleanFieldState extends State<WBooleanField> {
   Widget build(BuildContext context) {
     return ListTile(
       title: Text(widget.name),
-      subtitle: widget.subtitle != null ? Text(widget.subtitle!) : null,
+      subtitle: (widget.subtitle ?? widget.subtitleBuilder) != null
+          ? Text(widget.subtitle ?? widget.subtitleBuilder!())
+          : null,
       onTap: onChanged,
       trailing: Checkbox(
         onChanged: onChanged,
@@ -944,6 +964,7 @@ class WNumSliderField<T extends num> extends StatefulWidget {
   final T? defaultValue;
 
   final int? divisions;
+  final bool useIncrementalButtons;
   const WNumSliderField({
     super.key,
     required this.name,
@@ -955,6 +976,7 @@ class WNumSliderField<T extends num> extends StatefulWidget {
     this.divisions,
     this.defaultValue,
     this.validateVal,
+    this.useIncrementalButtons = false,
   });
 
   @override
@@ -989,25 +1011,45 @@ class _WNumSliderFieldState<T extends num> extends State<WNumSliderField<T>> {
     // var t = T;
     // logger.severe(t);
     return ListTile(
-      key: ValueKey(getVal),
+      // key: ValueKey(getVal),
       title: Row(children: [
         Text(name),
-        Slider(
-          label: getVal.toString(),
-          value: getVal.toDouble(),
-          onChanged: (v) => (validateVal?.call(v) ?? true)
-              ? setState(() => setVal(tempValue = v))
-              : setState(() {
-                  tempValue = v;
-                }),
-          min: widget.min.toDouble(),
-          max: widget.max.toDouble(),
-          secondaryTrackValue: widget.defaultValue?.toDouble(),
-          divisions: divisions,
-          // onChangeStart: (value) => ,
-          // onChangeEnd: (v) => ,
-          // allowedInteraction: SliderInteraction.tapAndSlide,
-        )
+        if (widget.useIncrementalButtons)
+          IconButton(
+            onPressed: validateVal?.call(getVal - 1) ?? true
+                ? () => setState(() {
+                      setVal(tempValue = getVal - 1);
+                    })
+                : null,
+            icon: const Icon(Icons.arrow_left),
+          ),
+        Expanded(
+          child: Slider(
+            label: getVal.toString(),
+            value: getVal.toDouble(),
+            onChanged: (v) => (validateVal?.call(v) ?? true)
+                ? setState(() => setVal(tempValue = v))
+                : setState(() {
+                    tempValue = v;
+                  }),
+            min: widget.min.toDouble(),
+            max: widget.max.toDouble(),
+            // secondaryTrackValue: widget.defaultValue?.toDouble(),
+            divisions: divisions,
+            // onChangeStart: (value) => ,
+            // onChangeEnd: (v) => ,
+            // allowedInteraction: SliderInteraction.tapAndSlide,
+          ),
+        ),
+        if (widget.useIncrementalButtons)
+          IconButton(
+            onPressed: validateVal?.call(getVal + 1) ?? true
+                ? () => setState(() {
+                      setVal(tempValue = getVal + 1);
+                    })
+                : null,
+            icon: const Icon(Icons.arrow_right),
+          ),
       ]),
       subtitle: widget.subtitle != null ? Text(widget.subtitle!) : null,
       trailing: Text(getVal.toString()),
@@ -1066,6 +1108,84 @@ class _WNumSliderFieldState<T extends num> extends State<WNumSliderField<T>> {
       //     }
       //   }).onError((error, stackTrace) => print(error));
       // },
+    );
+  }
+}
+
+class WIntegerSliderField extends StatefulWidget {
+  final String name;
+
+  final String? subtitle;
+
+  final int Function() getVal;
+
+  final void Function(int p1) setVal;
+
+  final bool Function(int? p1)? validateVal;
+
+  final int min;
+
+  final int max;
+
+  final int? defaultValue;
+
+  const WIntegerSliderField({
+    super.key,
+    required this.name,
+    this.subtitle,
+    required this.getVal,
+    required this.setVal,
+    required this.min,
+    required this.max,
+    this.defaultValue,
+    this.validateVal,
+  });
+
+  @override
+  State<WIntegerSliderField> createState() => _WIntegerSliderFieldState();
+}
+
+class _WIntegerSliderFieldState extends State<WIntegerSliderField> {
+  String get name => widget.name;
+
+  int get getVal => widget.getVal();
+
+  void Function(int p1) get setVal => widget.setVal;
+
+  bool Function(int? p1)? get validateVal => widget.validateVal;
+
+  double tempValue = 0;
+
+  int? get divisions => (widget.max.toInt() - widget.min.toInt());
+
+  @override
+  void initState() {
+    super.initState();
+    tempValue = getVal.toDouble();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Row(children: [
+        Text(name),
+        Slider(
+          label: getVal.toString(),
+          value: getVal.toDouble(),
+          onChanged: (v) => (validateVal?.call(v.toInt()) ?? true)
+              ? setState(() => setVal((tempValue = v).toInt()))
+              : setState(() {
+                  tempValue = v;
+                }),
+          min: widget.min.toDouble(),
+          max: widget.max.toDouble(),
+          divisions: divisions,
+        )
+      ]),
+      subtitle: widget.subtitle != null ? Text(widget.subtitle!) : null,
+      trailing: Text(getVal.toString()),
+      leadingAndTrailingTextStyle:
+          SettingsPage.titleStyle.copyWith(fontSize: 20),
     );
   }
 }

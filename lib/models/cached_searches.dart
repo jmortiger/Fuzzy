@@ -1,5 +1,6 @@
 import 'dart:async' as async_lib;
 import 'dart:convert';
+import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_data.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:j_util/j_util_full.dart';
@@ -117,8 +118,14 @@ class CachedSearches {
       ));
 
   static void onSearchBegan(SearchArgs a) {
-    _searches = List.unmodifiable(
-      _searches.toSet()..add(SearchData.fromList(tagList: a.tags)),
+    final t = _searches.toSet()..add(SearchData.fromList(tagList: a.tags));
+    Changed.invoke(
+      CachedSearchesEvent(
+          priorValue: List.unmodifiable(_searches),
+          currentValue: _searches = List.unmodifiable(
+              t.length > AppSettings.i!.maxSearchesToSave
+                  ? (t.toList()..removeAt(0))
+                  : t)),
     );
     _save();
   }
