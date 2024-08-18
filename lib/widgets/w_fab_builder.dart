@@ -374,7 +374,7 @@ class WFabBuilder extends StatelessWidget {
             Provider.of<SearchResultsNotifier>(context, listen: false)
                 .getIsPostSelected)(post!.id);
       }
-    } catch (e, s) {
+    } catch (e/* , s */) {
       logger
           .warning("Couldn't access SearchResultsNotifier in fab" /* , e, s */);
     }

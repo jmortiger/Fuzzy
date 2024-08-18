@@ -882,6 +882,7 @@ class E6FileResponse extends E6Preview implements e621.File {
         md5: json["md5"] as String,
         url: json["url"] as String? ?? "",
       );
+  @override
   JsonOut toJson() => {
         "width": width,
         "height": height,

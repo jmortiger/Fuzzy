@@ -34,7 +34,7 @@ class CachedSearches {
   });
 
   static async_lib.FutureOr<List<SearchData>> loadFromStorageAsync() async {
-    E621.searchBegan.subscribe(onSearchBegan);
+    // E621.searchBegan.subscribe(onSearchBegan);
     Changed.subscribe(CachedSearches._save);
     var t = await (await file.getItem())?.readAsString();
     return (t != null)

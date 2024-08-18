@@ -186,7 +186,7 @@ class _WSearchPoolState extends State<WSearchPool> {
   bool isExpanded = false;
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: double.maxFinite,
       height: double.maxFinite,
       child: ListView(

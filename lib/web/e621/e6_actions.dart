@@ -379,7 +379,7 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithPosts({
   bool updatePost = true,
 }) {
   var str = "Adding ${posts.length} posts to favorites...";
-  logger.finer(str);
+  _logger.finer(str);
   if (context?.mounted ?? false) {
     ScaffoldMessenger.of(context!).showSnackBar(
       SnackBar(content: Text(str)),
@@ -444,7 +444,7 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithIds({
   required final Iterable<int> postIds,
 }) {
   var str = "Adding ${postIds.length} posts to favorites...";
-  logger.finer(str);
+  _logger.finer(str);
   if (context?.mounted ?? false) {
     ScaffoldMessenger.of(context!).showSnackBar(
       SnackBar(content: Text(str)),
@@ -509,7 +509,7 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithPosts({
   bool updatePost = true,
 }) {
   var str = "Removing ${posts.length} posts from favorites...";
-  logger.finer(str);
+  _logger.finer(str);
   if (context?.mounted ?? false) {
     ScaffoldMessenger.of(context!).showSnackBar(
       SnackBar(content: Text(str)),
@@ -574,7 +574,7 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithIds({
   required final Iterable<int> postIds,
 }) {
   var str = "Removing ${postIds.length} posts from favorites...";
-  logger.finer(str);
+  _logger.finer(str);
   if (context?.mounted ?? false) {
     ScaffoldMessenger.of(context!).showSnackBar(
       SnackBar(content: Text(str)),

@@ -9,9 +9,10 @@ import 'package:fuzzy/log_management.dart' as lm;
 
 final class E621AccessData with Storable<E621AccessData> {
   // #region Logger
-  static late final lRecord = lm.generateLogger("E621AccessData");
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.generateLogger("E621AccessData");
   // #endregion Logger
   static final devAccessData = LazyInitializer<E621AccessData>(() async =>
       E621AccessData.fromJson((await devData.getItem())["e621"] as JsonOut));

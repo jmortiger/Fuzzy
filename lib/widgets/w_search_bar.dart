@@ -8,7 +8,6 @@ import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
-import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/web/e621/search_helper.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';

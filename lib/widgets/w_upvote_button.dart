@@ -23,12 +23,12 @@ class WUpvoteButton extends StatelessWidget {
       openIcon: const Icon(Icons.import_export),
       // initialOpen: true,
       distance: 200,
+      color: Theme.of(context).buttonTheme.colorScheme?.onPrimary,
       children: [
         WFabBuilder.getSinglePostDownvoteAction(context, post!),
         WFabBuilder.getSinglePostUpvoteAction(context, post!),
         // WFabBuilder.getSinglePostDownvoteAction(context, post!),
       ],
-      color: Theme.of(context).buttonTheme.colorScheme?.onPrimary,
     );
   }
 }

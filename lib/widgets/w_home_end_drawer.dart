@@ -35,9 +35,10 @@ class WHomeEndDrawer extends StatefulWidget {
 
 class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
   // #region Logger
-  static late final lRecord = lm.generateLogger("WHomeEndDrawer");
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.generateLogger("WHomeEndDrawer");
   // #endregion Logger
   SearchViewModel get svm =>
       Provider.of<SearchViewModel>(context, listen: false);

@@ -843,6 +843,7 @@ final class SavedSearchData extends SavedEntry {
             uniqueId: uniqueId,
             title: title);
 
+  @override
   SavedSearchData copyWith({
     String? title,
     String? searchString,

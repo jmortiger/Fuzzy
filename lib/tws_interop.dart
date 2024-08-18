@@ -3,14 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:j_util/j_util_full.dart';
-
-// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
-late final lRecord = lm.generateLogger("TwsInterop");
-lm.Printer get print => lRecord.print;
-lm.FileLogger get logger => lRecord.logger;
-// #endregion Logger
+// ignore: unnecessary_late
+late final _logger = lm.generateLogger("TwsInterop").logger;
 
 class SavedSearch {
   final String title;
@@ -182,7 +178,7 @@ Future<List<SavedElementRecord>?> showEnhancedImportElementEditDialogue(
             const Text("Enter replacement patterns (delimit w/,)"),
             TextField(
               onChanged: (value) {
-                logger.info("New value = $value");
+                _logger.info("New value = $value");
                 patterns = value;
               },
               textInputAction: TextInputAction.none,

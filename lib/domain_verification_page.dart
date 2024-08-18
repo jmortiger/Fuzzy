@@ -30,23 +30,23 @@ class _DomainVerificationPageState extends State<DomainVerificationPage> {
 
   Future<bool> getIsSupported() async {
     String result;
-    bool _supported = false;
+    bool supported = false;
     try {
-      _supported = await DomainVerificationManager.isSupported;
-      result = _supported.toString();
+      supported = await DomainVerificationManager.isSupported;
+      result = supported.toString();
     } on PlatformException {
       result = 'Failed to get getIsSupported';
     }
     if (!mounted) {
       _isSupported = result;
-      return _supported;
+      return supported;
     }
 
     setState(() {
       _isSupported = result;
     });
 
-    return _supported;
+    return supported;
   }
 
   Future<void> getDomainStageVerified() async {

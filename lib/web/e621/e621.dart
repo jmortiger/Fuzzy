@@ -22,9 +22,10 @@ import 'package:url_launcher/url_launcher.dart';
 import 'e621_access_data.dart';
 
 // #region Logger
-late final lRecord = lm.generateLogger("E621");
-lm.Printer get print => lRecord.print;
-lm.FileLogger get logger => lRecord.logger;
+lm.Printer get _print => _lRecord.print;
+lm.FileLogger get _logger => _lRecord.logger;
+// ignore: unnecessary_late
+late final _lRecord = lm.generateLogger("E621");
 
 // #endregion Logger
 sealed class E621 extends Site {
@@ -36,7 +37,7 @@ sealed class E621 extends Site {
   static final favAdded = JEvent<PostActionArgs>();
   @event
   static final searchBegan = JEvent<SearchArgs>([
-    (e) => logger.info("New User Search initiated"
+    (e) => _logger.info("New User Search initiated"
         "\n\tTags: ${e.tags.foldToString()},"
         "\n\tPage: ${e.page},\n\t"
         "Limit: ${e.limit}")
@@ -94,17 +95,17 @@ sealed class E621 extends Site {
   static FutureOr<e621.User?> retrieveUserNonDetailed(
       {e621.User? user, E621AccessData? data, String? username}) {
     if (user != null) return user;
-    logger.finest("No User obj, trying access data");
+    _logger.finest("No User obj, trying access data");
     var d = (data ??
             E621AccessData.userData.$Safe ??
             (isDebug ? E621AccessData.devAccessData.$Safe : null))
         ?.cred;
     if (d == null) {
-      logger.finest("No access data, trying by name");
+      _logger.finest("No access data, trying by name");
     }
     username ??= d?.username;
     if (username == null || username.isEmpty) {
-      logger.warning("No user info available: cannot find user");
+      _logger.warning("No user info available: cannot find user");
       return null;
     }
     var r = e621.Api.initSearchUsersRequest(
@@ -112,16 +113,16 @@ sealed class E621 extends Site {
       credentials: d,
       limit: 1,
     );
-    logRequest(r, logger);
+    logRequest(r, _logger);
     return e621.Api.sendRequest(r).then((v) {
       if (v.statusCodeInfo.isError) {
-        logResponse(v, logger, lm.LogLevel.SEVERE);
+        logResponse(v, _logger, lm.LogLevel.SEVERE);
         return null;
       } else if (!v.statusCodeInfo.isSuccessful) {
-        logResponse(v, logger, lm.LogLevel.WARNING);
+        logResponse(v, _logger, lm.LogLevel.WARNING);
         return null;
       } else {
-        logResponse(v, logger, lm.LogLevel.INFO);
+        logResponse(v, _logger, lm.LogLevel.INFO);
         try {
           return e621.UserLoggedIn.fromRawJson(v.body);
         } catch (e) {
@@ -149,11 +150,11 @@ sealed class E621 extends Site {
         return user;
       } else {
         id ??= user.id;
-        logger.finest("Attempting to retrieve more specific user "
+        _logger.finest("Attempting to retrieve more specific user "
             "info for user ${user.id}/$id (${user.name}/$username)");
       }
     } else {
-      logger.finest("No User obj, trying id");
+      _logger.finest("No User obj, trying id");
     }
     var d = (data ??
             E621AccessData.userData.$Safe ??
@@ -161,22 +162,22 @@ sealed class E621 extends Site {
         ?.cred;
     if (id != null) {
       if (d == null) {
-        logger.info("No credential data, can't get logged in data.");
+        _logger.info("No credential data, can't get logged in data.");
       }
       var r = e621.Api.initGetUserRequest(
         id,
         credentials: d,
       );
-      logRequest(r, logger);
+      logRequest(r, _logger);
       return e621.Api.sendRequest(r).then(E621.resolveGetUserFuture);
     }
-    logger.finest("No id, trying access data");
+    _logger.finest("No id, trying access data");
     if (d == null) {
-      logger.finest("No access data, trying by name");
+      _logger.finest("No access data, trying by name");
     }
     username ??= d?.username;
     if (username == null || username.isEmpty) {
-      logger.warning("No user info available: cannot find user");
+      _logger.warning("No user info available: cannot find user");
       return null;
     }
     var r = e621.Api.initSearchUsersRequest(
@@ -184,28 +185,28 @@ sealed class E621 extends Site {
       credentials: d,
       limit: 1,
     );
-    logRequest(r, logger);
+    logRequest(r, _logger);
     return e621.Api.sendRequest(r).then((v) {
       if (v.statusCodeInfo.isError) {
-        logResponse(v, logger, lm.LogLevel.SEVERE);
+        logResponse(v, _logger, lm.LogLevel.SEVERE);
         return null;
       } else if (!v.statusCodeInfo.isSuccessful) {
-        logResponse(v, logger, lm.LogLevel.WARNING);
+        logResponse(v, _logger, lm.LogLevel.WARNING);
         return null;
       } else {
-        logResponse(v, logger, lm.LogLevel.FINER);
+        logResponse(v, _logger, lm.LogLevel.FINER);
         e621.User t;
         try {
           t = e621.UserLoggedIn.fromRawJson(v.body);
         } catch (e) {
           t = e621.User.fromRawJson(v.body);
         }
-        logger.info("Launching request for User ${t.id} (${t.name})");
+        _logger.info("Launching request for User ${t.id} (${t.name})");
         var r = e621.Api.initGetUserRequest(
           t.id,
           credentials: d,
         );
-        logRequest(r, logger);
+        logRequest(r, _logger);
         return e621.Api.sendRequest(r).then(resolveGetUserFuture);
       }
     });
@@ -244,7 +245,7 @@ sealed class E621 extends Site {
       r"(?=$|[\u2028\n\r\u000B\f\u2029\u0085 	])",
       caseSensitive: false);
   static String fillTagTemplate(String tags) {
-    print("fillTagTemplate: Before: $tags");
+    _print("fillTagTemplate: Before: $tags");
     tags = tags.replaceAllMapped(
       savedSearchInsertion,
       (match) {
@@ -257,16 +258,16 @@ sealed class E621 extends Site {
         }
       },
     );
-    print("fillTagTemplate: After: $tags", lm.LogLevel.FINER);
+    _print("fillTagTemplate: After: $tags", lm.LogLevel.FINER);
     if (!tags.contains(userFavoriteSearchFinder)) {
       tags += AppSettings.i?.blacklistedTags.map((e) => "-$e").fold(
                 "",
                 (p, e) => "$p $e",
               ) ??
           "";
-      print("fillTagTemplate: After Blacklist: $tags", lm.LogLevel.FINER);
+      _print("fillTagTemplate: After Blacklist: $tags", lm.LogLevel.FINER);
     } else {
-      print("fillTagTemplate: User favorite search, not applying blacklist",
+      _print("fillTagTemplate: User favorite search, not applying blacklist",
           lm.LogLevel.FINER);
     }
     return tags;
@@ -506,7 +507,7 @@ sealed class E621 extends Site {
   }
 
   static Future<http.Response> logAndSendRequest(http.Request r) {
-    logRequest(r, logger);
+    logRequest(r, _logger);
     return e621.Api.sendRequest(r);
   }
 
@@ -514,13 +515,13 @@ sealed class E621 extends Site {
   static e621.UserDetailed? resolveGetUserFuture(http.Response v,
       [bool updateIfLoggedIn = true]) {
     if (v.statusCodeInfo.isError) {
-      logResponse(v, logger, lm.LogLevel.SEVERE);
+      logResponse(v, _logger, lm.LogLevel.SEVERE);
       return null;
     } else if (!v.statusCodeInfo.isSuccessful) {
-      logResponse(v, logger, lm.LogLevel.WARNING);
+      logResponse(v, _logger, lm.LogLevel.WARNING);
       return null;
     } else {
-      logResponse(v, logger, lm.LogLevel.FINER);
+      logResponse(v, _logger, lm.LogLevel.FINER);
       try {
         final t = e621.UserLoggedInDetail.fromRawJson(v.body);
         if (updateIfLoggedIn) tryUpdateLoggedInUser(t);
@@ -535,13 +536,13 @@ sealed class E621 extends Site {
       [e621.E6Credentials? c]) {
     var d = c ?? E621AccessData.fallback?.cred;
     if (d == null) {
-      logger.finest("No access data");
+      _logger.finest("No access data");
     }
     var r = e621.Api.initGetUserRequest(
       id,
       credentials: d,
     );
-    logRequest(r, logger, lm.LogLevel.FINEST);
+    logRequest(r, _logger, lm.LogLevel.FINEST);
     return e621.Api.sendRequest(r).then(resolveGetUserFuture);
   }
 
@@ -572,7 +573,7 @@ sealed class E621 extends Site {
     String? apiKey,
   }) async {
     limit ??= SearchView.i.postsPerPage;
-    print(tags);
+    _print(tags);
     var a1 = SearchArgs(
         // tags: [tags], //tags.split(RegExpExt.whitespace),
         tags: tags.split(RegExp(RegExpExt.whitespacePattern)),
@@ -597,7 +598,7 @@ sealed class E621 extends Site {
     try {
       t2 = E6PostsSync.fromJson(jsonDecode(t1));
     } catch (e) {
-      print("performPostSearch: $e");
+      _print("performPostSearch: $e");
     }
     var a2 = SearchResultArgs.fromSearchArgs(
       responseBody: t1,
@@ -621,7 +622,7 @@ sealed class E621 extends Site {
     String? apiKey,
   }) async {
     limit ??= SearchView.i.postsPerPage;
-    print(tags);
+    _print(tags);
     var a1 = SearchArgs(
         // tags: [tags], //tags.split(RegExpExt.whitespace),
         tags: tags.split(RegExp(RegExpExt.whitespacePattern)),
@@ -646,7 +647,7 @@ sealed class E621 extends Site {
     try {
       t2 = E6PostsSync.fromJson(jsonDecode(t1));
     } catch (e) {
-      print("performPostSearch: $e");
+      _print("performPostSearch: $e");
     }
     var a2 = SearchResultArgs.fromSearchArgs(
       responseBody: t1,
@@ -744,13 +745,13 @@ sealed class E621 extends Site {
           if ((temp.lastOrNull?.id ?? -1) == lastId) {
             results = temp;
             finalPage = currentPageNumber++;
-            logger.warning(
+            _logger.warning(
                 "Should have completed prior; page ${currentPageNumber - 1} wasn't full, but page $currentPageNumber's last id ${results.lastOrNull?.id ?? -1} equals $lastId. Either the posts were edited over the course of the run, or the supposition was wrong.");
             break;
           } else if (temp.isEmpty) {
             break;
           } else {
-            logger.warning("findLastPageNumber: this is weird, investigate"
+            _logger.warning("findLastPageNumber: this is weird, investigate"
                 "\ntags:$tags,"
                 "\nusername:$username,"
                 "\napiKey:$apiKey,"
@@ -911,7 +912,7 @@ sealed class E621 extends Site {
   static Future<void> addPostToSetHeavyLifter(
       BuildContext context, PostListing postListing,
       [e621.E6Credentials? cred]) async {
-    print("Adding ${postListing.id} to a set");
+    _print("Adding ${postListing.id} to a set");
     // ScaffoldMessenger.of(context).showSnackBar(
     //   const SnackBar(content: Text("To Be Implemented")),
     // );
@@ -934,7 +935,7 @@ sealed class E621 extends Site {
       },
     );
     if (v != null) {
-      print("Adding ${postListing.id} to set ${v.id}");
+      _print("Adding ${postListing.id} to set ${v.id}");
       var res = await E621
           .sendRequest(e621.Api.initAddToSetRequest(
             v.id,
@@ -943,7 +944,7 @@ sealed class E621 extends Site {
           ))
           .toResponse();
       if (res.statusCode == 201) {
-        print("${postListing.id} successfully added to set ${v.id}");
+        _print("${postListing.id} successfully added to set ${v.id}");
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1127,7 +1128,7 @@ Future<({String username, String apiKey})?> launchLogInDialog(
                     style: DefaultTextStyle.of(context).style,
                     onOpen: (link) async =>
                         (await launchUrl(Uri.parse(link.url)))
-                            ? print('ALLEGEDLY Could not launch ${link.url}')
+                            ? _print('ALLEGEDLY Could not launch ${link.url}')
                             : "",
                   ),
                   hintText: "API Key",
