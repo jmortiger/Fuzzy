@@ -68,14 +68,27 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   Future<CacheType>? checkLoading(PostSearchQueryRecord p) => _loading[p];
   Future<int> _numSearchPostsInit() => E621.findTotalPostNumber().then((v) {
         _numPostsInSearch = v;
+        _numPagesInSearch.$ = (v / postsPerPage).ceil();
         notifyListeners();
         logger.info(
-            "tags: ${parameters.tags} numPostsInSearch: ${_numPostsInSearch = v}");
+            "tags: ${parameters.tags} numPostsInSearch: $_numPostsInSearch");
         return _numPostsInSearch!;
       });
   late LazyInitializer<int> totalPostsInSearch;
   int? _numPostsInSearch;
   int? get numPostsInSearch => _numPostsInSearch ?? totalPostsInSearch.$Safe;
+  final _numPagesInSearch = LateInstance<int>();
+  int? get numPagesInSearch =>
+      _numPagesInSearch.$Safe ??
+      (totalPostsInSearch.isAssigned
+          ? (totalPostsInSearch.$ / postsPerPage).ceil()
+          : null);
+  // ValueAsync<int> get numPagesInSearch => _numPostsInSearch != null
+  //     ? ValueAsync(value: (_numPostsInSearch! / postsPerPage).ceil())
+  //     : ValueAsync(
+  //         value: totalPostsInSearch
+  //             .getItem()
+  //             .then((v) => (v / postsPerPage).ceil()));
   // #endregion Fields
 
   // #region Ctor
@@ -95,7 +108,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     if (parameters != null) {
       E621
           .sendSearchForFirstPostRequest(tags: parameters.tags)
-          .then((v) => logger.info("firstPostId: ${firstPostIdCached = v.id}"));
+          .then((v) => logger.info("firstPostId: ${firstPostIdCached = v.id}"))
+          .ignore();
       // E621
       //     .findTotalPostNumber(/* limit: parameters.validLimit */)
       // .then((v) => logger.info("tags: ${parameters.tags} numPostsInSearch: ${_numPostsInSearch = v}"))
@@ -152,6 +166,9 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   /// Defined by [SearchView.postsPerPage].
   int get numStoredPages =>
       (collection._posts.length / SearchView.i.postsPerPage).ceil();
+
+  /// How many results are currently in [collection]?
+  int get numStoredPosts => collection._posts.length;
 
   int get postsPerPage => SearchView.i.postsPerPage;
 
@@ -956,7 +973,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     //   return hasNextPageCached!;
     // }
     if (isPageAfter(pageIndex)) {
-      return hasNextPageCached!;
+      return hasNextPageCached = true;
     }
     return E621
         .sendRequest(
@@ -987,6 +1004,74 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       }
       // try {
       if (lastPostId! < 0) {
+        lastPostOnPageIdCached = out.posts.first.id + 1;
+      }
+      return hasNextPageCached =
+          (lastPostId != (lastPostIdCached = out.posts.last.id));
+      // } catch (e) {
+      //   lastPostIdCached = out.posts.last.id;
+      //   return hasNextPageCached = (lastPostId != out.posts.last.id);
+      // }
+    });
+  }
+
+  Future<bool> getHasNextPageByPageIndex({
+    required String tags,
+    // required BuildContext context,
+    // required String priorSearchText,
+    int? pageIndex,
+  }) async {
+    pageIndex ??= currentPageIndex;
+    // if (posts == null) throw StateError("No current posts");
+    var posts = this.posts ??= getPostsOnPageAsObjSync(pageIndex);
+    posts ??= this.posts ??= await getPostsOnPageAsObjAsync(pageIndex);
+    if (posts == null) {
+      logger.warning(StateError("No current posts"));
+      return false;
+    }
+    // if (lastPostOnPageIdCached == lastPostId && hasNextPageCached != null) {
+    //   return hasNextPageCached!;
+    // }
+    if (isPageAfter(pageIndex)) {
+      return hasNextPageCached = true;
+    }
+    return E621
+        .sendRequest(
+          E621.initSearchForLastPostRequest(
+            tags: tags, //priorSearchText,
+          ),
+        )
+        .then((v) => v.stream.bytesToString())
+        .then((v) => E6PostsSync.fromJson(
+              dc.jsonDecode(v) as JsonOut,
+            ))
+        .then((out) {
+      if (out.posts.isEmpty) {
+        // try {
+        //   // setState(() {
+        //   hasNextPageCached = false;
+        //   // });
+        // } catch (e) {
+        //   print(e);
+        //   hasNextPageCached = false;
+        // }
+        return hasNextPageCached = false;
+      }
+      if (out.posts.length != 1) {
+        logger.warning(
+          "Last post search gave not 1 but ${out.posts.length} results.",
+        );
+      }
+      // Advance to the end, fully load the list
+      posts!.advanceToEnd();
+      final lastPostId = posts.lastOrNull?.id;
+      if (lastPostId == null) {
+        logger.severe("Couldn't determine current page's last post's id. "
+            "To default to the first page, pass in a negative value.");
+        throw StateError("Couldn't determine current page's last post's id.");
+      }
+      // try {
+      if (lastPostId < 0) {
         lastPostOnPageIdCached = out.posts.first.id + 1;
       }
       return hasNextPageCached =
