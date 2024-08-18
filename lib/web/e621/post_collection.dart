@@ -19,9 +19,10 @@ import 'post_search_parameters.dart';
 final class E6PostEntrySync extends LinkedListEntry<E6PostEntrySync>
     with ValueAsyncMixin<E6PostResponse> {
   // #region Logger
-  static late final lRecord = lm.generateLogger("E6PostEntrySync");
   static lm.FileLogger get logger => lRecord.logger;
   static lm.Printer get print => lRecord.print;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.generateLogger("E6PostEntrySync");
   // #endregion Logger
 
   @override
@@ -65,7 +66,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   int _currentPostIndex = 0;
   final _loading = <PostSearchQueryRecord, Future<CacheType>>{};
   Future<CacheType>? checkLoading(PostSearchQueryRecord p) => _loading[p];
-  Future<int> _lpi() => E621.findTotalPostNumber().then((v) {
+  Future<int> _numSearchPostsInit() => E621.findTotalPostNumber().then((v) {
         _numPostsInSearch = v;
         notifyListeners();
         logger.info(
@@ -90,7 +91,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         _startingPage =
             (parameters ?? const PostSearchQueryRecord()).pageIndex ?? 0,
         collection = PostCollectionSync() {
-    totalPostsInSearch = LazyInitializer<int>(_lpi);
+    totalPostsInSearch = LazyInitializer<int>(_numSearchPostsInit);
     if (parameters != null) {
       E621
           .sendSearchForFirstPostRequest(tags: parameters.tags)
