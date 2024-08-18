@@ -26,3 +26,9 @@ An all-in-one mobile frontend for multiple image submission sites.
 * Notes
 * DText parsing
 * Improve loading shared urls
+* Downloading
+* Ordering
+* Subscriptions
+* Favorites page (order preserved)
+* Warn about blacklist before loading parent/child w/ blacklisted tag
+* Combining (at least 2) searches (e.g. (a or b) and (c or d))
