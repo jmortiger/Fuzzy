@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
@@ -39,6 +40,7 @@ abstract class E6Posts with ListMixin<E6PostResponse> {
   Set<int> get deletedIndices;
 
   void advanceToEnd();
+  Set<int> get unavailableIndices => restrictedIndices.union(deletedIndices);
 }
 
 class FullyIteratedArgs extends JEventArgs {
@@ -60,6 +62,7 @@ final class E6PostsLazy extends E6Posts {
   final Set<int> restrictedIndices = {};
   @override
   final Set<int> deletedIndices = {};
+  @override
   Set<int> get unavailableIndices => restrictedIndices.union(deletedIndices);
   @override
   E6PostResponse? tryGet(
@@ -78,7 +81,11 @@ final class E6PostsLazy extends E6Posts {
               : restrictedIndices.add(index++);
         }
       }
-      return this[index];
+      return !unavailableIndices.contains(index)
+          ? this[index]
+          : this[index].copyWith(
+              file:
+                  this[index].file.copyWith(url: util.deletedPreviewImagePath));
     } catch (e) {
       return null;
     }
@@ -130,6 +137,8 @@ final class E6PostsSync extends E6Posts {
   @override
   final Set<int> deletedIndices = {};
   @override
+  Set<int> get unavailableIndices => restrictedIndices.union(deletedIndices);
+  @override
   int get count => posts.length;
   @override
   E6PostResponse? tryGet(
@@ -143,7 +152,12 @@ final class E6PostsSync extends E6Posts {
             ? restrictedIndices.where((element) => element <= index).length
             : deletedIndices.where((element) => element <= index).length;
       }
-      return this[index];
+      // return this[index];
+      return !unavailableIndices.contains(index)
+          ? this[index]
+          : this[index].copyWith(
+              file:
+                  this[index].file.copyWith(url: util.deletedPreviewImagePath));
       // return (!checkForValidFileUrl || this[index].file.url != "")
       //     ? this[index]
       //     : this[index + 1];
@@ -914,6 +928,23 @@ class E6FileResponse extends E6Preview implements e621.File {
         "md5": md5,
         "url": url,
       };
+  @override
+  E6FileResponse copyWith({
+    String? ext,
+    int? size,
+    String? md5,
+    String? url,
+    int? width,
+    int? height,
+  }) =>
+      E6FileResponse(
+        ext: ext ?? this.ext,
+        size: size ?? this.size,
+        md5: md5 ?? this.md5,
+        height: height ?? this.height,
+        url: url ?? this.url,
+        width: width ?? this.width,
+      );
 }
 
 class E6Preview extends e621.Preview implements IImageInfo {

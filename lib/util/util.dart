@@ -202,3 +202,5 @@ void logResponse(
     "\n\t${v.headers}",
   );
 }
+// final deletedPreviewImage = LazyInitializer<Image>(() => rootBundle.load("assets/deleted-preview.png").then((v) => Image.asset(name)))
+const deletedPreviewImagePath = "assets/deleted-preview.png";

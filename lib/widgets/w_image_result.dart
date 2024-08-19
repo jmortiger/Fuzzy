@@ -8,7 +8,7 @@ import 'package:fuzzy/models/search_cache.dart' show SearchCacheLegacy;
 import 'package:fuzzy/models/search_results.dart' show SearchResultsNotifier;
 import 'package:fuzzy/pages/post_swipe_page.dart';
 import 'package:fuzzy/pages/post_view_page.dart' show IReturnsTags;
-import 'package:fuzzy/util/util.dart' show placeholder;
+import 'package:fuzzy/util/util.dart' show placeholder, deletedPreviewImagePath;
 import 'package:fuzzy/web/e621/models/e6_models.dart' show E6PostResponse;
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/models/image_listing.dart'
@@ -282,21 +282,24 @@ class WImageResult extends StatelessWidget {
       );
       return imageFit != BoxFit.cover ? Center(child: i) : i;
     }
-    dynamic i = ResizeImage.resizeIfNeeded(
-      cacheWidth?.toInt(),
-      cacheHeight?.toInt(),
-      NetworkImage(
-        url,
-        scale: cacheWidth?.isFinite ?? false
-            ? cacheWidth! / w
-            : cacheHeight?.isFinite ?? false
-                ? cacheHeight! / h
-                : 1,
-      ),
-    );
+    dynamic i = url != deletedPreviewImagePath
+        ? ResizeImage.resizeIfNeeded(
+            cacheWidth?.toInt(),
+            cacheHeight?.toInt(),
+            NetworkImage(
+              url,
+              scale: cacheWidth?.isFinite ?? false
+                  ? cacheWidth! / w
+                  : cacheHeight?.isFinite ?? false
+                      ? cacheHeight! / h
+                      : 1,
+            ),
+          )
+        : AssetImage(url);
     final fWidth = width, fHeight = height;
     // if (imageListing.preview.url != url) {
     var IImageInfo(width: w2, height: h2, url: url2) = imageListing.preview;
+    // var IImageInfo(width: w2, height: h2, url: url2) = imageListing.preview.hasValidUrl ? imageListing.preview : imageListing.;
     var (
       width: width2,
       height: height2,
