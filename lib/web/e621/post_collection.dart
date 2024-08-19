@@ -66,15 +66,15 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   int _currentPostIndex = 0;
   final _loading = <PostSearchQueryRecord, Future<CacheType>>{};
   Future<CacheType>? checkLoading(PostSearchQueryRecord p) => _loading[p];
-  Future<int> _numSearchPostsInit() =>
-      E621.findTotalPostNumber(tags: parameters.tags)
-        ..then((v) {
-          // _numPostsInSearch = v;
-          _numPagesInSearch = (v / postsPerPage).ceil();
-          notifyListeners();
-          logger.info("tags: ${parameters.tags} numPostsInSearch: $v");
-          return v;
-        }).ignore();
+  Future<int> _numSearchPostsInit() => E621.findTotalPostNumber(
+      tags: parameters.tags, limit: parameters.validLimit)
+    ..then((v) {
+      // _numPostsInSearch = v;
+      _numPagesInSearch = (v / postsPerPage).ceil();
+      notifyListeners();
+      logger.info("tags: ${parameters.tags} numPostsInSearch: $v");
+      return v;
+    }).ignore();
   late LazyInitializer<int> _totalPostsInSearch;
   FutureOr<int> get retrieveNumPostsInSearch => _totalPostsInSearch.getItem();
   int? get numPostsInSearch => /* _numPostsInSearch ??  */
@@ -84,7 +84,15 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       _numPagesInSearch ??
       (_totalPostsInSearch.isAssigned
           ? (_totalPostsInSearch.$ / postsPerPage).ceil()
-          : null);
+          : _totalPostsInSearch.$Safe);
+  int? get numAccessiblePagesInSearch {
+    final n = numPagesInSearch;
+    return n == null
+        ? null
+        : n <= E621.maxPageNumber
+            ? n
+            : E621.maxPageNumber;
+  }
   // ValueAsync<int> get numPagesInSearch => _numPostsInSearch != null
   //     ? ValueAsync(value: (_numPostsInSearch! / postsPerPage).ceil())
   //     : ValueAsync(
@@ -194,6 +202,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           lastPostOnPageIdCached = null;
       collection.clear();
       logger.finest("Length after clearing: ${collection.length}");
+      _numPagesInSearch = null;
       _totalPostsInSearch = LazyInitializer<int>(_numSearchPostsInit)
         ..getItemAsync().ignore();
       notifyListeners();

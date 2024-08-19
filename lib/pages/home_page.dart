@@ -50,6 +50,13 @@ class _HomePageState extends State<HomePage> {
     toFillSearchWith = sc.searchText;
   }
 
+  void searchRequestedCallback(String searchText) {
+    _sendSearchAndUpdateState(tags: searchText);
+    setState(() {
+      toFillSearchWith = /* sc.searchText =  */ searchText;
+    });
+  }
+
   String? toFillSearchWith;
   @override
   Widget build(BuildContext context) {
@@ -60,8 +67,8 @@ class _HomePageState extends State<HomePage> {
         title: Padding(
           padding: const EdgeInsets.all(8.0),
           child: WSearchBar(
-            key: ObjectKey(fsw ?? sc/* Watch */.searchText),
-            initialValue: fsw ?? sc/* Watch */.searchText,
+            key: ObjectKey(fsw ?? sc.searchText),
+            initialValue: fsw ?? sc.searchText,
           ),
         ),
         leading: IconButton(
@@ -71,57 +78,31 @@ class _HomePageState extends State<HomePage> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const SavedSearchesPageProvider(),
-                )).then(
-              (value) {
-                if (value != null) {
-                  _sendSearchAndUpdateState(tags: value);
-                  setState(() {
-                    toFillSearchWith = /* sc.searchText =  */ value;
-                  });
-                }
-              },
-            );
+                )).then((value) {
+              if (value != null) searchRequestedCallback(value);
+            });
           },
         ),
       ),
       body: SafeArea(child: buildSearchView(context)),
       endDrawer: WHomeEndDrawer(
-        onSearchRequested: (searchText) {
-          _sendSearchAndUpdateState(tags: searchText);
-          setState(() {
-            toFillSearchWith = /* sc.searchText =  */ searchText;
-          });
-        },
+        onSearchRequested: searchRequestedCallback,
         getMountedContext: () => this.context,
       ),
-      floatingActionButton: Selector2<SearchResultsNotifier, ManagedPostCollectionSync, (SearchResultsNotifier, PostCollectionSync)>(
+      floatingActionButton: Selector2<
+          SearchResultsNotifier,
+          ManagedPostCollectionSync,
+          (SearchResultsNotifier, PostCollectionSync)>(
         builder: (context, value, child) => WFabBuilder.multiplePosts(
-          posts: /* sc.isMpcSync
-              ? scWatch.mpcSync.collection */
-              value.$2
-                  .where((e) =>
-                      value.$1 // Provider.of<SearchResultsNotifier>(context, listen: true)
-                          .selectedPostIds
-                          .contains(e.inst.$Safe?.id))
-                  .map((e) => e.inst.$)
-                  .toList()
-              /* : Provider.of<SearchCacheLegacy>(context, listen: true)
-                      .posts
-                      ?.posts
-                      .where((e) =>
-                          value // Provider.of<SearchResultsNotifier>(context, listen: true)
-                              .selectedPostIds
-                              .contains(e.id))
-                      .toList() ??
-                  [] */,
+          posts: value.$2
+              .where((e) => value.$1.selectedPostIds.contains(e.inst.$Safe?.id))
+              .map((e) => e.inst.$)
+              .toList(),
         ),
         selector: (ctx, p1, p2) => (p1, p2.collection),
       ),
     );
   }
-
-  // #region From WSearchView
-  // JPureEvent onSelectionCleared = JPureEvent();
 
   ManagedPostCollectionSync get sc =>
       Provider.of<ManagedPostCollectionSync>(context, listen: false);
@@ -132,35 +113,13 @@ class _HomePageState extends State<HomePage> {
   Widget buildSearchView(BuildContext context) {
     logger.info("buildSearchView");
     return Column(
-      // key: ObjectKey(sc.parameters.tags),
       children: [
-        // if (sc.posts == null && sc.pr != null)
-        //   const Expanded(
-        //     child: Center(
-        //         child: AspectRatio(
-        //       aspectRatio: 1,
-        //       child: CircularProgressIndicator(),
-        //     )),
-        //   ),
-        // if (sc.posts != null)
         Selector<ManagedPostCollectionSync, String>(
           builder: (context, value, child) => Expanded(
-            key: ObjectKey(value), // key: ObjectKey(sc.parameters.tags),
-            child: /* sc.isMpcSync
-                ?  */WPostSearchResultsSwiper(
-                    // key: ObjectKey(sc.parameters.tags),
-                    // posts: sc,
-                    useLazyBuilding: SearchView.i.lazyBuilding,
-                  )/* 
-                : WPostSearchResults(
-                    key: ObjectKey(sc.posts!),
-                    posts: sc.posts!,
-                    expectedCount: SearchView.i.lazyLoad
-                        ? SearchView.i.postsPerPage
-                        : sc.posts!.count,
-                    useLazyBuilding: SearchView.i.lazyBuilding,
-                  ) */,
-          ),
+              key: ObjectKey(value),
+              child: WPostSearchResultsSwiper(
+                useLazyBuilding: SearchView.i.lazyBuilding,
+              )),
           selector: (ctx, p1) => p1.parameters.tags,
         ),
       ],
@@ -194,5 +153,4 @@ class _HomePageState extends State<HomePage> {
     //   tags: tags,
     // );
   }
-  // #endregion From WSearchView
 }

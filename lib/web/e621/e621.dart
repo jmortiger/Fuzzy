@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
@@ -53,8 +54,10 @@ sealed class E621 extends Site {
   static const int idealRateLimit = 3;
   static final http.Client client = http.Client();
   static const maxPostsPerSearch = e621.Api.maxPostsPerSearch;
+  static const maxPageNumber = e621.Api.maxPageNumber;
   static DateTime timeOfLastRequest =
       DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+  static ListQueue<DateTime> burstTimes = ListQueue(60);
 
   // #region User Account Data
   static final loggedInUser = LateInstance<e621.UserLoggedIn>();
@@ -312,10 +315,19 @@ sealed class E621 extends Site {
 
   /// Won't blow the rate limit
   static Future<http.StreamedResponse> sendRequest(
-    http.Request request,
-  ) async {
+    http.Request request, {
+    bool useBurst = false,
+  }) async {
     var t = DateTime.timestamp().difference(timeOfLastRequest);
     if (t.inSeconds < softRateLimit) {
+      if (useBurst &&
+          burstTimes.length < (loggedInUser.$Safe?.apiBurstLimit ?? 60)) {
+        final ts = DateTime.timestamp();
+        burstTimes.add(ts);
+        Future.delayed(e621.Api.softRateLimit, () => burstTimes.remove(ts))
+            .ignore();
+        return client.send(request);
+      }
       return Future.delayed(const Duration(seconds: softRateLimit) - t, () {
         timeOfLastRequest = DateTime.timestamp();
         return client.send(request);
@@ -676,13 +688,17 @@ sealed class E621 extends Site {
         checkOnNonFullPages: checkOnNonFullPages,
       ).then((v) => (v / (limit ?? SearchView.i.postsPerPage)).ceil());
 
+  /// Including [limit] will stop counting posts past [e621.Api.maxPageNumber] * [limit].
+  /// It may not find the full post number.
+  ///
   /// Should take at most 12 iterations to find, forcibly ends after 16;
   /// profiled with https://dartpad.dev/?id=ec269e2c4c7ccd4019bd07d3470e0d97
   static Future<int> findTotalPostNumber({
     required String tags,
-    String? username,
-    String? apiKey,
-    bool checkOnNonFullPages = false,
+    final int? limit,
+    final String? username,
+    final String? apiKey,
+    final bool checkOnNonFullPages = false,
   }) async {
     const sLimit = e621.Api.maxPostsPerSearch;
     tags = fillTagTemplate(tags);
@@ -710,32 +726,29 @@ sealed class E621 extends Site {
     ))
         .id;
     int finalPage = 1, safety = 1;
+    final maxNumByLimit = (limit ?? sLimit * 2) * e621.Api.maxPageNumber;
     num delta = e621.Api.maxPageNumber * 2;
     // Should take at most 12 iterations, I'll add the leeway of 3 iterations
     for (int currentPageNumber = 0 /* , safety = 1 */;
-        // for (int currentPageNumber = 0, delta = e621.Api.maxPageNumber * 2;
-        // (results.lastOrNull?.id ?? -1) != lastId && delta > 0;
-        (results.lastOrNull?.id ?? -1) != lastId &&
-            (!checkOnNonFullPages &&
-                results.isNotEmpty &&
-                results.length == sLimit) &&
-            safety < 15;
+        safety < 15 &&
+            (results.lastOrNull?.id ?? -1) != lastId &&
+            (checkOnNonFullPages ||
+                results.isEmpty ||
+                results.length >= sLimit) &&
+            (limit == null ||
+                results.isEmpty ||
+                ((finalPage - 1) * sLimit) + results.length < maxNumByLimit);
         safety++,
         // delta ~/= 2,
-        currentPageNumber =
-            currentPageNumber + (results.isEmpty ? -delta : delta).toInt(),
+        currentPageNumber += (results.isEmpty ? -delta : delta).toInt(),
         // currentPageNumber += results.isEmpty ? -delta : delta,
         finalPage = currentPageNumber,
-        results = parsePostsResults(await e621.Api.sendRequest(f(
-      pageNumber: currentPageNumber,
-    ))) /* .toList() */) {
-      if (results.isNotEmpty && currentPageNumber == e621.Api.maxPageNumber) {
+        results = parsePostsResults(await e621.Api.sendRequest(
+            useBurst: true, f(pageNumber: currentPageNumber)))) {
+      if (results.isNotEmpty && currentPageNumber >= e621.Api.maxPageNumber) {
         break;
       }
-      // if (currentPageNumber != 0 &&
-      //     results.length != sLimit &&
-      //     results.isNotEmpty) {
-      if (results.length != sLimit && results.isNotEmpty) {
+      if (results.isNotEmpty && results.length < sLimit) {
         // This should only happen when it's at the end.
         if (checkOnNonFullPages) {
           safety++;
@@ -767,26 +780,7 @@ sealed class E621 extends Site {
         delta /= 2;
       }
     }
-    // int currentPageNumber = 0, delta = e621.Api.maxPageNumber * 2;
-    // do {
-    //   if (results.length != sLimit && results.isNotEmpty) {
-
-    //   }
-    //   if (results.isNotEmpty && currentPageNumber == e621.Api.maxPageNumber) {
-    //     break;
-    //   }
-    //   // if (results.length != sLimit) {
-    //   //   currentPageNumber += 1;
-    //   //   // continue;
-    //   // } else {
-    //   delta ~/= 2;
-    //   currentPageNumber += results.isEmpty ? -delta : delta;
-    //   // }
-    //   results = parsePostsResults(await e621.Api.sendRequest(f(
-    //     pageNumber: currentPageNumber,
-    //   ))) /* .toList() */;
-    // } while ((results.lastOrNull?.id ?? -1) != lastId && delta > 0);
-    _logger.finer("Iterations: $safety");
+    _logger.info("Iterations: $safety");
     return (((finalPage - 1) * sLimit) + results.length);
   }
 

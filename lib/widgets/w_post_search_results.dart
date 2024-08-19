@@ -468,10 +468,14 @@ class _WPostSearchResultsSwiperState extends State<
     logger.info("build called");
     return Column(
       children: [
-        Selector<ManagedPostCollectionSync, (int?, int?)>(
+        Selector<ManagedPostCollectionSync, (int?, int?, int?)>(
           builder: (context, value, child) => Text(
-              "_currentPageIndex: $_currentPageIndex, # Posts: ${value.$1 ?? "?"}, # Pages: ${value.$2 ?? "?"}"),
-          selector: (ctx, v) => (v.numPostsInSearch, v.numPagesInSearch),
+              "_currentPageIndex: $_currentPageIndex, # Posts: ${value.$1 ?? "?"}, # Pages: ${value.$2 ?? "?"} (${value.$3 ?? "?"} accessible)"),
+          selector: (ctx, v) => (
+            v.numPostsInSearch,
+            v.numPagesInSearch,
+            v.numAccessiblePagesInSearch,
+          ),
         ),
         Expanded(
           // key: ObjectKey(
@@ -602,7 +606,7 @@ class _WPostSearchResultsSwiperState extends State<
                       pageIndicatorBuilder: (cxt, currentPageIndex) =>
                           IgnorePointer(
                               child: Text(
-                        "tabController.index: $currentPageIndex",
+                        "tabController.index: $currentPageIndex, tabController.length: $numPagesInSearch",
                         textAlign: TextAlign.center,
                         style: const TextStyle(shadows: [
                           Shadow(color: Colors.black, blurRadius: 1),

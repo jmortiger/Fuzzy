@@ -39,13 +39,56 @@ class UserProfilePage extends StatelessWidget
                   >= 500 => Colors.green,
                   >= 100 && < 500 => Colors.amber,
                   < 100 => Colors.red,
-                  _ => throw UnsupportedError("type not supported"),
+                  _ => throw UnsupportedError("value not supported"),
                 },
                 fontWeight: FontWeight.bold,
               )),
           const TextSpan(text: " left)"),
         ],
       ));
+  static Widget generateFavStatsFull(UserLoggedIn userL, [int? deletedFavs]) =>
+      deletedFavs != null
+          ? Text.rich(TextSpan(
+              text: "FavCount: ${userL.favoriteCount}/${userL.favoriteLimit} (",
+              children: [
+                TextSpan(
+                    text: "${userL.favoriteLimit - userL.favoriteCount}",
+                    style: TextStyle(
+                      color: switch (
+                          userL.favoriteLimit - userL.favoriteCount) {
+                        >= 500 => Colors.green,
+                        >= 100 && < 500 => Colors.amber,
+                        < 100 => Colors.red,
+                        _ => throw UnsupportedError("value not supported"),
+                      },
+                      fontWeight: FontWeight.bold,
+                    )),
+                TextSpan(text: " left; $deletedFavs deleted)"),
+              ],
+            ))
+          : FutureBuilder(
+              future: E621.findTotalPostNumber(
+                  tags: "fav:${userL.name} status:deleted"),
+              builder: (context, snapshot) => Text.rich(TextSpan(
+                    text:
+                        "FavCount: ${userL.favoriteCount}/${userL.favoriteLimit} (",
+                    children: [
+                      TextSpan(
+                          text: "${userL.favoriteLimit - userL.favoriteCount}",
+                          style: TextStyle(
+                            color: switch (
+                                userL.favoriteLimit - userL.favoriteCount) {
+                              >= 500 => Colors.green,
+                              >= 100 && < 500 => Colors.amber,
+                              < 100 => Colors.red,
+                              _ =>
+                                throw UnsupportedError("value not supported"),
+                            },
+                            fontWeight: FontWeight.bold,
+                          )),
+                      TextSpan(text: " left; ${snapshot.hasData ? snapshot.data! : "..."} deleted)"),
+                    ],
+                  )));
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,7 +108,7 @@ class UserProfilePage extends StatelessWidget
         Text("Can Approve Posts: ${user.canApprovePosts}"),
         Text("Can Upload Free: ${user.canUploadFree}"),
         Text("Base Upload Limit: ${user.baseUploadLimit}"),
-        if (userL != null) generateFavStats(userL!),
+        if (userL != null) generateFavStatsFull(userL!),
         if (userL != null) Text("Tag Query Limit: ${userL!.tagQueryLimit}"),
         if (userL != null) Text("Blacklist Users: ${userL!.blacklistUsers}"),
         if (userL != null) Text("Blacklisted Tags: ${userL!.blacklistedTags}"),

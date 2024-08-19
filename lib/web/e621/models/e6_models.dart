@@ -33,8 +33,10 @@ abstract class E6Posts with ListMixin<E6PostResponse> {
   E6PostResponse? tryGet(
     int index, {
     bool checkForValidFileUrl = true,
+    bool allowDeleted = true,
   });
   Set<int> get restrictedIndices;
+  Set<int> get deletedIndices;
 
   void advanceToEnd();
 }
@@ -57,15 +59,23 @@ final class E6PostsLazy extends E6Posts {
   @override
   final Set<int> restrictedIndices = {};
   @override
+  final Set<int> deletedIndices = {};
+  Set<int> get unavailableIndices => restrictedIndices.union(deletedIndices);
+  @override
   E6PostResponse? tryGet(
     int index, {
     bool checkForValidFileUrl = true,
+    bool allowDeleted = true,
   }) {
     try {
       if (checkForValidFileUrl) {
-        index += restrictedIndices.where((element) => element < index).length;
+        index += allowDeleted
+            ? restrictedIndices.where((element) => element <= index).length
+            : deletedIndices.where((element) => element <= index).length;
         while (this[index].file.url == "") {
-          restrictedIndices.add(index++);
+          this[index].flags.deleted
+              ? deletedIndices.add(index++)
+              : restrictedIndices.add(index++);
         }
       }
       return this[index];
@@ -116,17 +126,22 @@ final class E6PostsLazy extends E6Posts {
 
 final class E6PostsSync extends E6Posts {
   @override
-  final Set<int> restrictedIndices /*  = {} */;
+  final Set<int> restrictedIndices = {};
+  @override
+  final Set<int> deletedIndices = {};
   @override
   int get count => posts.length;
   @override
   E6PostResponse? tryGet(
     int index, {
     bool checkForValidFileUrl = true,
+    bool allowDeleted = true,
   }) {
     try {
       if (checkForValidFileUrl) {
-        index += restrictedIndices.where((element) => element <= index).length;
+        index += allowDeleted
+            ? restrictedIndices.where((element) => element <= index).length
+            : deletedIndices.where((element) => element <= index).length;
       }
       return this[index];
       // return (!checkForValidFileUrl || this[index].file.url != "")
@@ -145,9 +160,17 @@ final class E6PostsSync extends E6Posts {
   @override
   final List<E6PostResponse> posts;
 
-  E6PostsSync({required this.posts})
-      : restrictedIndices =
-            posts.indicesWhere((e, i, l) => !e.file.hasValidUrl).toSet();
+  E6PostsSync({required this.posts}) {
+    for (var i = 0; i < posts.length; i++) {
+      if (!posts[i].file.hasValidUrl) {
+        posts[i].flags.deleted
+            ? deletedIndices.add(i)
+            : restrictedIndices.add(i);
+      }
+    }
+  }
+  // : restrictedIndices =
+  //       posts.indicesWhere((e, i, l) => !e.file.hasValidUrl).toSet();
   factory E6PostsSync.fromJson(JsonOut json) => E6PostsSync(
       posts: (json["posts"] as List)
           .mapAsList((e, i, l) => E6PostResponse.fromJson(e)));
