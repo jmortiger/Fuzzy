@@ -92,12 +92,12 @@ final class E621AccessData with Storable<E621AccessData> {
       );
   static const localStorageKey = "e6Access";
   static Future<bool> tryWriteToLocalStorage(E621AccessData data) =>
-      pref.getItem().then((v) => v.setString(
+      pref.getItemAsync().then((v) => v.setString(
             localStorageKey,
             jsonEncode(data.toJson()),
           ));
   static Future<bool> tryClearFromLocalStorage(E621AccessData data) =>
-      pref.getItem().then((v) => v.setString(localStorageKey, ""));
+      pref.getItemAsync().then((v) => v.setString(localStorageKey, ""));
 
   static Future<bool> tryWrite([E621AccessData? data]) async {
     data ??= userData.$Safe;

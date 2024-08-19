@@ -85,7 +85,7 @@ const mainFileName = "main";
 final mainFile = LateFinal<File?>();
 Future<void> init() async {
   hierarchicalLoggingEnabled = true;
-  await logPath.getItem().then(
+  await logPath.getItemAsync().then(
         (v) => Platform.isWeb
             ? null
             : Storable.handleInitStorageAsync(
@@ -137,7 +137,7 @@ class FileLogger implements Logger {
     Level level = Level.FINE,
   ]) : $ = Logger(name) {
     $.level = level;
-    logPath.getItem().then(
+    logPath.getItemAsync().then(
           (v) => Platform.isWeb
               ? null
               : Storable.handleInitStorageAsync("$v$fileName")
@@ -172,7 +172,7 @@ class FileLogger implements Logger {
   }
   FileLogger.detached(String name, String? fileName)
       : $ = Logger.detached(name) {
-    logPath.getItem().then(
+    logPath.getItemAsync().then(
           (v) => Platform.isWeb
               ? null
               : Storable.handleInitStorageAsync("$v$fileName")

@@ -142,7 +142,7 @@ class SavedDataE6 extends ChangeNotifier {
   }
 
   static Future<ListNotifier<SavedSearchData>> get storageAsync async =>
-      await ((await file.getItem())
+      await ((await file.getItemAsync())
               ?.readAsString()
               .then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
           loadFromPref());
@@ -165,7 +165,7 @@ class SavedDataE6 extends ChangeNotifier {
       searches.addListener(notifyListeners);
       return;
     }
-    file.getItem().then((value) {
+    file.getItemAsync().then((value) {
       (value?.readAsString().then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
               loadFromPref())
           .then((v) {
@@ -203,7 +203,7 @@ class SavedDataE6 extends ChangeNotifier {
         return;
       }
     }
-    file.getItem().then((value) {
+    file.getItemAsync().then((value) {
       (value?.readAsString().then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
               loadFromPref())
           .then((v) {
@@ -227,7 +227,7 @@ class SavedDataE6 extends ChangeNotifier {
   //     : Storable.tryLoadToInstanceSync(fileFullPath.$) ?? SavedDataE6();
   static Future<bool> writeToPref([List<SavedSearchData>? searches]) {
     searches ??= SavedDataE6.searches;
-    return pref.getItem().then((v) {
+    return pref.getItemAsync().then((v) {
       final l = v.setInt(localStorageLengthKey, searches!.length);
       final success = <Future<bool>>[];
       for (var i = 0; i < searches.length; i++) {
@@ -255,7 +255,7 @@ class SavedDataE6 extends ChangeNotifier {
   }
 
   static Future<ListNotifier<SavedSearchData>> loadFromPref() =>
-      pref.getItem().then((v) {
+      pref.getItemAsync().then((v) {
         final length = v.getInt(localStorageLengthKey) ?? 0;
         var data = ListNotifier<SavedSearchData>();
         for (var i = 0; i < length; i++) {

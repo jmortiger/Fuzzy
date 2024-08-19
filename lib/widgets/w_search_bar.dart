@@ -8,6 +8,7 @@ import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
+import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/web/e621/search_helper.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
@@ -285,16 +286,23 @@ class _WSearchBarState extends State<WSearchBar> {
     int? postId,
     int? pageNumber,
   }) {
-    var sc = Provider.of<ManagedPostCollectionSync>(context, listen: false);
-    sc.launchSearch(
-      context: context,
-      searchViewNotifier:
-          Provider.of<SearchResultsNotifier?>(context, listen: false),
-      limit: limit,
-      pageModifier: pageModifier,
-      pageNumber: pageNumber,
-      postId: postId,
+    Provider.of<ManagedPostCollectionSync>(context, listen: false).parameters =
+        PostSearchQueryRecord(
       tags: tags,
+      limit: limit ?? -1,
+      page: encodePageParameterFromOptions(
+              pageModifier: pageModifier, id: postId, pageNumber: pageNumber) ??
+          "1",
     );
+    // Provider.of<ManagedPostCollectionSync>(context, listen: false).launchSearch(
+    //   context: context,
+    //   searchViewNotifier:
+    //       Provider.of<SearchResultsNotifier?>(context, listen: false),
+    //   limit: limit,
+    //   pageModifier: pageModifier,
+    //   pageNumber: pageNumber,
+    //   postId: postId,
+    //   tags: tags,
+    // );
   }
 }

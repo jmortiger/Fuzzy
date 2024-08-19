@@ -54,7 +54,7 @@ void main(List<String> args) async {
   final searchText =
       (await CachedSearches.loadFromStorageAsync()).lastOrNull?.searchString;
   await E621AccessData.tryLoad(); //.ignore();
-  CachedFavorites.fileFullPath.getItem().ignore();
+  CachedFavorites.fileFullPath.getItemAsync().ignore();
   SavedDataE6.init();
   try {
     runApp(

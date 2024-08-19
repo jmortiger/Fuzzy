@@ -45,7 +45,7 @@ class _PoolViewPageState extends State<PoolViewPage> {
     if (widget.pool.posts.isAssigned) {
       posts = widget.pool.posts.$;
     } else {
-      loadingPosts = widget.pool.posts.getItem()
+      loadingPosts = widget.pool.posts.getItemAsync()
         ..then((data) {
           logger.finest("Done loading");
           setState(() {

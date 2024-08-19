@@ -46,7 +46,7 @@ class CachedSearches {
   static const localStorageLengthKey = '$localStoragePrefix.length';
   static Future<bool> writeToPref([List<SearchData>? searches]) {
     searches ??= CachedSearches.searches;
-    return pref.getItem().then((v) {
+    return pref.getItemAsync().then((v) {
       final l = v.setInt(localStorageLengthKey, searches!.length);
       final success = <Future<bool>>[];
       for (var i = 0; i < searches.length; i++) {
@@ -62,7 +62,7 @@ class CachedSearches {
     });
   }
 
-  static Future<List<SearchData>> loadFromPref() => pref.getItem().then((v) {
+  static Future<List<SearchData>> loadFromPref() => pref.getItemAsync().then((v) {
         final length = v.getInt(localStorageLengthKey) ?? 0;
         var data = <SearchData>[];
         for (var i = 0; i < length; i++) {
@@ -133,7 +133,7 @@ class CachedSearches {
   static void _save([CachedSearchesEvent? e]) {
     print("Writing search cache");
     file
-        .getItem()
+        .getItemAsync()
         .then<async_lib.FutureOr<Object?>>(
           (v) =>
               v?.writeAsString(jsonEncode(CachedSearches.toJson())) ??

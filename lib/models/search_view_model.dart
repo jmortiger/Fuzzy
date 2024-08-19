@@ -23,7 +23,7 @@ class SearchViewModel extends ChangeNotifier {
     E621AccessData.useLoginData = !E621AccessData.useLoginData;
     notifyListeners();
     if (E621AccessData.useLoginData && E621AccessData.fallback == null) {
-      E621AccessData.devAccessData.getItem().then(
+      E621AccessData.devAccessData.getItemAsync().then(
             (v) => logger.fine("Dev e621 Auth Loaded"),
           );
     }

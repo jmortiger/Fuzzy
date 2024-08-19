@@ -663,7 +663,7 @@ sealed class E621 extends Site {
   /// Should take at most 12 iterations to find, forcibly ends after 16;
   /// profiled with https://dartpad.dev/?id=ec269e2c4c7ccd4019bd07d3470e0d97
   static Future<int> findLastPageNumber({
-    String tags = "",
+    required String tags,
     int? limit,
     String? username,
     String? apiKey,
@@ -679,7 +679,7 @@ sealed class E621 extends Site {
   /// Should take at most 12 iterations to find, forcibly ends after 16;
   /// profiled with https://dartpad.dev/?id=ec269e2c4c7ccd4019bd07d3470e0d97
   static Future<int> findTotalPostNumber({
-    String tags = "",
+    required String tags,
     String? username,
     String? apiKey,
     bool checkOnNonFullPages = false,
@@ -709,10 +709,10 @@ sealed class E621 extends Site {
       username: username,
     ))
         .id;
-    int finalPage = 1;
+    int finalPage = 1, safety = 1;
     num delta = e621.Api.maxPageNumber * 2;
     // Should take at most 12 iterations, I'll add the leeway of 3 iterations
-    for (int currentPageNumber = 0, safety = 1;
+    for (int currentPageNumber = 0 /* , safety = 1 */;
         // for (int currentPageNumber = 0, delta = e621.Api.maxPageNumber * 2;
         // (results.lastOrNull?.id ?? -1) != lastId && delta > 0;
         (results.lastOrNull?.id ?? -1) != lastId &&
@@ -786,6 +786,7 @@ sealed class E621 extends Site {
     //     pageNumber: currentPageNumber,
     //   ))) /* .toList() */;
     // } while ((results.lastOrNull?.id ?? -1) != lastId && delta > 0);
+    _logger.finer("Iterations: $safety");
     return (((finalPage - 1) * sLimit) + results.length);
   }
 

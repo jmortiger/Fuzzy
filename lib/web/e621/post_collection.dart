@@ -66,22 +66,24 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   int _currentPostIndex = 0;
   final _loading = <PostSearchQueryRecord, Future<CacheType>>{};
   Future<CacheType>? checkLoading(PostSearchQueryRecord p) => _loading[p];
-  Future<int> _numSearchPostsInit() => E621.findTotalPostNumber().then((v) {
-        _numPostsInSearch = v;
-        _numPagesInSearch.$ = (v / postsPerPage).ceil();
-        notifyListeners();
-        logger.info(
-            "tags: ${parameters.tags} numPostsInSearch: $_numPostsInSearch");
-        return _numPostsInSearch!;
-      });
-  late LazyInitializer<int> totalPostsInSearch;
-  int? _numPostsInSearch;
-  int? get numPostsInSearch => _numPostsInSearch ?? totalPostsInSearch.$Safe;
-  final _numPagesInSearch = LateInstance<int>();
+  Future<int> _numSearchPostsInit() =>
+      E621.findTotalPostNumber(tags: parameters.tags)
+        ..then((v) {
+          // _numPostsInSearch = v;
+          _numPagesInSearch = (v / postsPerPage).ceil();
+          notifyListeners();
+          logger.info("tags: ${parameters.tags} numPostsInSearch: $v");
+          return v;
+        }).ignore();
+  late LazyInitializer<int> _totalPostsInSearch;
+  FutureOr<int> get retrieveNumPostsInSearch => _totalPostsInSearch.getItem();
+  int? get numPostsInSearch => /* _numPostsInSearch ??  */
+      _totalPostsInSearch.$Safe;
+  int? _numPagesInSearch;
   int? get numPagesInSearch =>
-      _numPagesInSearch.$Safe ??
-      (totalPostsInSearch.isAssigned
-          ? (totalPostsInSearch.$ / postsPerPage).ceil()
+      _numPagesInSearch ??
+      (_totalPostsInSearch.isAssigned
+          ? (_totalPostsInSearch.$ / postsPerPage).ceil()
           : null);
   // ValueAsync<int> get numPagesInSearch => _numPostsInSearch != null
   //     ? ValueAsync(value: (_numPostsInSearch! / postsPerPage).ceil())
@@ -104,7 +106,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         _startingPage =
             (parameters ?? const PostSearchQueryRecord()).pageIndex ?? 0,
         collection = PostCollectionSync() {
-    totalPostsInSearch = LazyInitializer<int>(_numSearchPostsInit);
+    _totalPostsInSearch = LazyInitializer<int>(_numSearchPostsInit);
     if (parameters != null) {
       E621
           .sendSearchForFirstPostRequest(tags: parameters.tags)
@@ -113,10 +115,10 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       // E621
       //     .findTotalPostNumber(/* limit: parameters.validLimit */)
       // .then((v) => logger.info("tags: ${parameters.tags} numPostsInSearch: ${_numPostsInSearch = v}"))
-      totalPostsInSearch.getItem().onError((e, s) {
+      _totalPostsInSearch.getItemAsync().onError((e, s) {
         logger.severe(e, e, s);
         return -1;
-      });
+      }).ignore();
       final t = tryRetrieveFirstPage();
       if (t is Future<bool>) t.ignore();
     }
@@ -192,6 +194,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           lastPostOnPageIdCached = null;
       collection.clear();
       logger.finest("Length after clearing: ${collection.length}");
+      _totalPostsInSearch = LazyInitializer<int>(_numSearchPostsInit)
+        ..getItemAsync().ignore();
       notifyListeners();
     } else {
       logger.finer("Unchanged tag parameter, not "
@@ -729,7 +733,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       newSearchText.split(RegExp(RegExpExt.whitespacePattern)).toSet(),
       parameters.tagSet);
 
-  void launchSearch({
+  void _launchSearch({
     BuildContext? context,
     srn.SearchResultsNotifier? searchViewNotifier,
     String tags = "",

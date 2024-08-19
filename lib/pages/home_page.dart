@@ -5,6 +5,7 @@ import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/pages/saved_searches_page.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
+import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/widgets/w_fab_builder.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:provider/provider.dart';
@@ -59,8 +60,8 @@ class _HomePageState extends State<HomePage> {
         title: Padding(
           padding: const EdgeInsets.all(8.0),
           child: WSearchBar(
-            key: ObjectKey(fsw ?? scWatch.searchText),
-            initialValue: fsw ?? scWatch.searchText,
+            key: ObjectKey(fsw ?? sc/* Watch */.searchText),
+            initialValue: fsw ?? sc/* Watch */.searchText,
           ),
         ),
         leading: IconButton(
@@ -93,17 +94,18 @@ class _HomePageState extends State<HomePage> {
         },
         getMountedContext: () => this.context,
       ),
-      floatingActionButton: Consumer<SearchResultsNotifier>(
+      floatingActionButton: Selector2<SearchResultsNotifier, ManagedPostCollectionSync, (SearchResultsNotifier, PostCollectionSync)>(
         builder: (context, value, child) => WFabBuilder.multiplePosts(
-          posts: sc.isMpcSync
-              ? scWatch.mpcSync.collection
+          posts: /* sc.isMpcSync
+              ? scWatch.mpcSync.collection */
+              value.$2
                   .where((e) =>
-                      value // Provider.of<SearchResultsNotifier>(context, listen: true)
+                      value.$1 // Provider.of<SearchResultsNotifier>(context, listen: true)
                           .selectedPostIds
                           .contains(e.inst.$Safe?.id))
                   .map((e) => e.inst.$)
                   .toList()
-              : Provider.of<SearchCacheLegacy>(context, listen: true)
+              /* : Provider.of<SearchCacheLegacy>(context, listen: true)
                       .posts
                       ?.posts
                       .where((e) =>
@@ -111,8 +113,9 @@ class _HomePageState extends State<HomePage> {
                               .selectedPostIds
                               .contains(e.id))
                       .toList() ??
-                  [],
+                  [] */,
         ),
+        selector: (ctx, p1, p2) => (p1, p2.collection),
       ),
     );
   }
@@ -129,7 +132,7 @@ class _HomePageState extends State<HomePage> {
   Widget buildSearchView(BuildContext context) {
     logger.info("buildSearchView");
     return Column(
-      key: ObjectKey(sc.mpcSync.parameters.tags),
+      // key: ObjectKey(sc.parameters.tags),
       children: [
         // if (sc.posts == null && sc.pr != null)
         //   const Expanded(
@@ -140,24 +143,25 @@ class _HomePageState extends State<HomePage> {
         //     )),
         //   ),
         // if (sc.posts != null)
-        Expanded(
-          key: ObjectKey(sc.mpcSync.parameters.tags),
-          child: sc.isMpcSync
-              ? WPostSearchResultsSwiper(
-                  key: ObjectKey(sc.mpcSync.parameters.tags),
-                  posts: sc.mpcSync,
-                  // expectedCount:
-                  // SearchView.i.lazyLoad ? SearchView.i.postsPerPage : sc.posts!.count,
-                  useLazyBuilding: SearchView.i.lazyBuilding,
-                )
-              : WPostSearchResults(
-                  key: ObjectKey(sc.posts!),
-                  posts: sc.posts!,
-                  expectedCount: SearchView.i.lazyLoad
-                      ? SearchView.i.postsPerPage
-                      : sc.posts!.count,
-                  useLazyBuilding: SearchView.i.lazyBuilding,
-                ),
+        Selector<ManagedPostCollectionSync, String>(
+          builder: (context, value, child) => Expanded(
+            key: ObjectKey(value), // key: ObjectKey(sc.parameters.tags),
+            child: /* sc.isMpcSync
+                ?  */WPostSearchResultsSwiper(
+                    // key: ObjectKey(sc.parameters.tags),
+                    // posts: sc,
+                    useLazyBuilding: SearchView.i.lazyBuilding,
+                  )/* 
+                : WPostSearchResults(
+                    key: ObjectKey(sc.posts!),
+                    posts: sc.posts!,
+                    expectedCount: SearchView.i.lazyLoad
+                        ? SearchView.i.postsPerPage
+                        : sc.posts!.count,
+                    useLazyBuilding: SearchView.i.lazyBuilding,
+                  ) */,
+          ),
+          selector: (ctx, p1) => p1.parameters.tags,
         ),
       ],
     );
@@ -171,16 +175,24 @@ class _HomePageState extends State<HomePage> {
     int? postId,
     int? pageNumber,
   }) {
-    Provider.of<ManagedPostCollectionSync>(context, listen: false).launchSearch(
-      context: context,
-      searchViewNotifier:
-          Provider.of<SearchResultsNotifier?>(context, listen: false),
-      limit: limit,
-      pageModifier: pageModifier,
-      pageNumber: pageNumber,
-      postId: postId,
+    Provider.of<ManagedPostCollectionSync>(context, listen: false).parameters =
+        PostSearchQueryRecord(
       tags: tags,
+      limit: limit ?? -1,
+      page: encodePageParameterFromOptions(
+              pageModifier: pageModifier, id: postId, pageNumber: pageNumber) ??
+          "1",
     );
+    // Provider.of<ManagedPostCollectionSync>(context, listen: false).launchSearch(
+    //   context: context,
+    //   searchViewNotifier:
+    //       Provider.of<SearchResultsNotifier?>(context, listen: false),
+    //   limit: limit,
+    //   pageModifier: pageModifier,
+    //   pageNumber: pageNumber,
+    //   postId: postId,
+    //   tags: tags,
+    // );
   }
   // #endregion From WSearchView
 }
