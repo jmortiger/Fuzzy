@@ -303,7 +303,11 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
           //   ),
           // ),
           IndeterminatePageIndicator.builder(
-            tabController: _tabController,
+            determineNextPage: (currentPageIndex) =>
+                (currentPageIndex == _tabController.length - 1)
+                    ? null
+                    : currentPageIndex + 1,
+            // tabController: _tabController,
             currentPageIndex: _currentPostPageIndex,
             // onUpdateCurrentPageIndex: _updateCurrentPageIndex,
             onUpdateCurrentPageIndex: _updateCurrentPageIndexWrapper,

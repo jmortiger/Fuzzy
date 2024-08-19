@@ -127,6 +127,7 @@ class _HomePageState extends State<HomePage> {
 
   @widgetFactory
   Widget buildSearchView(BuildContext context) {
+    logger.info("buildSearchView");
     return Column(
       key: ObjectKey(sc.mpcSync.parameters.tags),
       children: [

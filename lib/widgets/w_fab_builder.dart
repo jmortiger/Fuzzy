@@ -385,9 +385,9 @@ class WFabBuilder extends StatelessWidget {
           : const Icon(Icons.create),
       useDefaultHeroTag: false,
       distance: Platform.isDesktop ? 112 : 224,
-      disabledTooltip: (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
-          ? ""
-          : "Long-press to select posts and perform bulk actions.",
+      // disabledTooltip: (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
+      //     ? ""
+      //     : "Long-press to select posts and perform bulk actions.",
       children: (isSinglePost ||
               (isMultiplePosts && posts!.isNotEmpty) ||
               (customActions?.isNotEmpty ?? false))

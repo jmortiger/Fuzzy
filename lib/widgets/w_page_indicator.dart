@@ -78,10 +78,10 @@ class PageIndicator extends StatelessWidget {
 class IndeterminatePageIndicator extends StatelessWidget {
   const IndeterminatePageIndicator({
     super.key,
-    required this.tabController,
+    /* required  */this.tabController,
     required this.currentPageIndex,
     required this.onUpdateCurrentPageIndex,
-    this.determineNextPage = _defaultNext,
+    required this.determineNextPage,// = _defaultNext,
     this.determinePriorPage = _defaultPrior,
     this.pageIndicator,
     this.isExpanded = true,
@@ -89,31 +89,31 @@ class IndeterminatePageIndicator extends StatelessWidget {
   }) : pageIndicatorBuilder = null;
   const IndeterminatePageIndicator.builder({
     super.key,
-    required this.tabController,
+    /* required  */this.tabController,
     required this.currentPageIndex,
     required this.onUpdateCurrentPageIndex,
-    this.determineNextPage = _defaultNext,
+    required this.determineNextPage,// = _defaultNext,
     this.determinePriorPage = _defaultPrior,
     this.pageIndicatorBuilder,
     this.isExpanded = true,
     this.padding = const EdgeInsets.all(8.0),
   }) : pageIndicator = null;
 
-  static int? _defaultNext(int currentPageIndex, TabController tabController) =>
-      (currentPageIndex == tabController.length - 1)
-          ? null
-          : currentPageIndex + 1;
+  // static int? _defaultNext(int currentPageIndex/* , TabController tabController */) =>
+  //     (currentPageIndex == tabController.length - 1)
+  //         ? null
+  //         : currentPageIndex + 1;
   static int? _defaultPrior(
-          int currentPageIndex, TabController tabController) =>
+          int currentPageIndex/* , TabController tabController */) =>
       (currentPageIndex == 0) ? null : currentPageIndex - 1;
 
   final int currentPageIndex;
-  final TabController tabController;
+  final TabController? tabController;
   final void Function(int newPageIndex, int oldPageIndex)
       onUpdateCurrentPageIndex;
-  final int? Function(int currentPageIndex, TabController controller)?
+  final int? Function(int currentPageIndex/* , TabController controller */)?
       determineNextPage;
-  final int? Function(int currentPageIndex, TabController controller)?
+  final int? Function(int currentPageIndex/* , TabController controller */)?
       determinePriorPage;
   final Widget? Function(BuildContext cxt, int currentPageIndex)?
       pageIndicatorBuilder;
@@ -127,8 +127,8 @@ class IndeterminatePageIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final int? priorIndex =
-            determinePriorPage?.call(currentPageIndex, tabController),
-        nextIndex = determineNextPage?.call(currentPageIndex, tabController);
+            determinePriorPage?.call(currentPageIndex/* , tabController */),
+        nextIndex = determineNextPage?.call(currentPageIndex/* , tabController */);
     Widget? indicator = _getPageIndicator(context, currentPageIndex);
     if (isExpanded && indicator != null) indicator = Expanded(child: indicator);
     // final root = ListView (

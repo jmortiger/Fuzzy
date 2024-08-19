@@ -425,8 +425,10 @@ class WPostSearchResultsSwiper extends StatefulWidget {
       _WPostSearchResultsSwiperState();
 }
 
-class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
-    with TickerProviderStateMixin {
+class _WPostSearchResultsSwiperState extends State<
+    WPostSearchResultsSwiper> /* 
+    with TickerProviderStateMixin */
+{
   // #region Logger
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
@@ -434,21 +436,21 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
       lm.generateLogger("WPostSearchResultsSwiperState");
   // #endregion Logger
   late PageController _pageViewController;
-  late TabController _tabController;
+  // late TabController _tabController;
   int _currentPageIndex = 0;
-  int _numPages = 50;
+  // int _numPages = 50;
 
   @override
   void initState() {
     super.initState();
     _pageViewController = PageController();
-    _tabController = TabController(length: _numPages, vsync: this);
+    // _tabController = TabController(length: _numPages, vsync: this);
   }
 
   @override
   void dispose() {
     _pageViewController.dispose();
-    _tabController.dispose();
+    // _tabController.dispose();
     super.dispose();
   }
 
@@ -470,11 +472,10 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
           // scWatch.mpcSync.parameters.tags,
         ),
         children: [
-          Selector<ManagedPostCollectionSync, int?>(
+          Selector<ManagedPostCollectionSync, (int?, int?)>(
             builder: (context, value, child) => Text(
-                "_currentPageIndex: $_currentPageIndex, totalPages: ${((value ?? 750 * SearchView.i.postsPerPage) / SearchView.i.postsPerPage).ceil()}"),
-            selector: (ctx, v) =>
-                v.totalPostsInSearch.$Safe ?? v.numPostsInSearch,
+                "_currentPageIndex: $_currentPageIndex, # Posts: ${value.$1 ?? "?"}, # Pages: ${value.$2 ?? "?"}"),
+            selector: (ctx, v) => (v.numPostsInSearch, v.numPagesInSearch),
           ),
           Expanded(
             key: ObjectKey(
@@ -500,6 +501,7 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
                   onPageChanged:
                       _handlePageViewChanged, //Platform.isDesktop ? _handlePageViewChanged : null,
                   itemBuilder: (context, index) {
+                    logger.info("itemBuilder called $index");
                     // var ps = widget.posts[index], t = ps.$Safe;
                     // logger.finest("${widget.posts.parameters.tags} $index");
                     logger.finest("$tags $index");
@@ -589,11 +591,69 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
                   },
                 ),
                 if (Platform.isDesktop)
-                  PageIndicator(
-                    tabController: _tabController,
-                    currentPageIndex: _currentPageIndex,
-                    onUpdateCurrentPageIndex: _updateCurrentPageIndex,
+                  Selector<ManagedPostCollectionSync, int>(
+                    builder: (context, numPagesInSearch, child) {
+                      return IndeterminatePageIndicator.builder(
+                        determineNextPage: (currentPageIndex) =>
+                            (currentPageIndex == numPagesInSearch - 1)
+                                ? null
+                                : currentPageIndex + 1,
+                        // tabController: _tabController,
+                        currentPageIndex: _currentPageIndex,
+                        // onUpdateCurrentPageIndex: _updateCurrentPageIndex,
+                        onUpdateCurrentPageIndex:
+                            _updateCurrentPageIndexWrapper,
+                        pageIndicatorBuilder: (cxt, currentPageIndex) =>
+                            IgnorePointer(
+                                child: Text(
+                          "tabController.index: $currentPageIndex",
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(shadows: [
+                            Shadow(color: Colors.black, blurRadius: 1)
+                          ]),
+                        )),
+                      );
+
+                      // return TabIndicatorWrapper(
+                      //     key: ObjectKey("$tags$numPagesInSearch"),
+                      //     numPagesInSearch: numPagesInSearch,
+                      //     updateCurrentPageIndex: _updateCurrentPageIndex,
+                      //     currentPageIndex: _currentPageIndex);
+
+                      // final tabController =
+                      //     TabController(length: numPagesInSearch, vsync: this);
+                      // final ColorScheme colorScheme =
+                      //     Theme.of(context).colorScheme;
+                      // return IndeterminatePageIndicator(
+                      //   determineNextPage: (currentPageIndex) =>
+                      //       (currentPageIndex == /* _tabController.length */
+                      //               /* _numPages */numPagesInSearch - 1)
+                      //           ? null
+                      //           : currentPageIndex + 1,
+                      //   // tabController: _tabController,
+                      //   currentPageIndex: _currentPageIndex,
+                      //   // onUpdateCurrentPageIndex: _updateCurrentPageIndex,
+                      //   onUpdateCurrentPageIndex: (newPageIndex, oldPageIndex) {
+                      //     tabController.index = newPageIndex;
+                      //     _updateCurrentPageIndex(newPageIndex);
+                      //   },
+                      //   pageIndicator: IgnorePointer(
+                      //     child: TabPageSelector(
+                      //       controller: tabController,
+                      //       color: colorScheme.surface,
+                      //       selectedColor: colorScheme.primary,
+                      //     ),
+                      //   ),
+                      // );
+                    },
+                    selector: (ctx, v) =>
+                        v.totalPostsInSearch.$Safe ?? v.numPostsInSearch ?? 1,
                   ),
+                // PageIndicator(
+                //   tabController: _tabController,
+                //   currentPageIndex: _currentPageIndex,
+                //   onUpdateCurrentPageIndex: _updateCurrentPageIndex,
+                // ),
               ],
             ),
           ),
@@ -609,14 +669,14 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper>
     if (!Platform.isDesktop) {
       return;
     }
-    _tabController.index = currentPageIndex;
+    // _tabController.index = currentPageIndex;
     setState(() {
       _currentPageIndex = currentPageIndex;
     });
   }
 
   void _updateCurrentPageIndex(int index) {
-    if (Platform.isDesktop) _tabController.index = index;
+    // if (Platform.isDesktop) _tabController.index = index;
     _pageViewController.animateToPage(
       index,
       duration: const Duration(milliseconds: 400),
