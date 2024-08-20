@@ -6,13 +6,14 @@ import 'package:fuzzy/models/app_settings.dart' show SearchView;
 import 'package:fuzzy/models/saved_data.dart' show SavedDataE6;
 import 'package:fuzzy/models/search_cache.dart' show SearchCacheLegacy;
 import 'package:fuzzy/models/search_results.dart' show SearchResultsNotifier;
+import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/post_swipe_page.dart';
 import 'package:fuzzy/pages/post_view_page.dart' show IReturnsTags;
 import 'package:fuzzy/util/util.dart' show placeholder, deletedPreviewImagePath;
-import 'package:fuzzy/web/e621/models/e6_models.dart' show E6PostResponse;
+import 'package:fuzzy/web/e621/models/e6_models.dart'/*  show E6PostResponse */;
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/models/image_listing.dart'
-    show IImageInfo, PostListing;
+    show IImageInfo, PostListing, RetrieveImageProvider;
 import 'package:j_util/j_util_full.dart';
 import 'package:progressive_image/progressive_image.dart' show ProgressiveImage;
 import 'package:provider/provider.dart' show Provider;
@@ -54,27 +55,26 @@ class WImageResult extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     assert(debugCheckHasMaterial(context));
-    int w, h;
-    String url;
+    IImageInfo imageInfo;
     if (Platform.isAndroid || Platform.isIOS) {
-      IImageInfo(width: w, height: h, url: url) = imageListing.preview;
+      imageInfo = imageListing.preview;
     } else if (imageListing.sample.has &&
         imageListing.sample.width > imageListing.preview.width) {
-      IImageInfo(width: w, height: h, url: url) = imageListing.sample;
+      imageInfo = imageListing.sample;
     } else {
-      IImageInfo(width: w, height: h, url: url) = imageListing.file;
+      imageInfo = imageListing.file;
     }
     logger.fine(
-      "[$index/${imageListing.id}]: w: $w, "
-      "h: $h, "
+      "[$index/${imageListing.id}]: w: ${imageInfo.width}, "
+      "h: ${imageInfo.height}, "
       "sampleWidth: ${imageListing.sample.width}, "
       "fileWidth: ${imageListing.file.width}, "
       "isSelected: $isSelected, "
-      "url: $url",
+      "url: ${imageInfo.url}",
     );
     return Stack(
       children: [
-        _buildPane(context, w, h, url),
+        _buildPane(context, imageInfo),
         if (SearchView.i.postInfoBannerItems.isNotEmpty)
           PostInfoPane(post: imageListing),
         if (isSelected ||
@@ -93,7 +93,7 @@ class WImageResult extends StatelessWidget {
               top: 0,
               end: 0,
               child: const Icon(Icons.play_circle_outline)),
-        _buildInputDetector(context, w, h, url),
+        _buildInputDetector(context),
       ],
     );
   }
@@ -136,7 +136,7 @@ class WImageResult extends StatelessWidget {
   SearchResultsNotifier srl(BuildContext context) =>
       Provider.of<SearchResultsNotifier>(context);
 
-  Widget _buildInputDetector(BuildContext context, int w, int h, String url) {
+  Widget _buildInputDetector(BuildContext context) {
     SearchResultsNotifier? srl;
     if (!disallowSelections) srl = Provider.of<SearchResultsNotifier>(context);
     void toggle() {
@@ -262,7 +262,11 @@ class WImageResult extends StatelessWidget {
       };
   static const progressiveImageBlur = 5.0;
   @widgetFactory
-  Widget _buildPane(BuildContext ctx, int w, int h, String url) {
+  Widget _buildPane(BuildContext ctx, IImageInfo imageInfo) {
+    int w;
+    int h;
+    String url;
+    IImageInfo(width: w, height: h, url: url) = imageInfo;
     if (url == "") {
       print("NO URL");
     }
@@ -271,19 +275,43 @@ class WImageResult extends StatelessWidget {
     var (:width, :height, :cacheWidth, :cacheHeight, :aspectRatio) =
         determineResolution(w, h, sizeWidth, sizeHeight, imageFit);
     if (!SearchView.i.useProgressiveImages) {
-      Widget i = Image.network(
-        url,
-        errorBuilder: (context, error, stackTrace) => throw error,
+      Widget i = Image(
+        errorBuilder: (context, e, s) {
+          return ErrorPage(
+            error: e,
+            stackTrace: s,
+            logger: logger,
+            message: "Couldn't load ${imageInfo.url}",
+            isFullPage: false,
+          );
+        },
         fit: imageFit,
         width: width.toDouble(),
         height: height.toDouble(),
-        cacheWidth: cacheWidth?.toInt(),
-        cacheHeight: cacheHeight?.toInt(),
+        image: imageInfo is RetrieveImageProvider
+            ? imageInfo.createResizeImage(
+                cacheWidth: cacheWidth?.toInt(),
+                cacheHeight: cacheHeight?.toInt(),
+              )
+            : ResizeImage.resizeIfNeeded(
+                cacheWidth?.toInt(),
+                cacheHeight?.toInt(),
+                NetworkImage(url),
+              ),
       );
       return imageFit != BoxFit.cover ? Center(child: i) : i;
     }
-    dynamic i = url != deletedPreviewImagePath
-        ? ResizeImage.resizeIfNeeded(
+    dynamic i = imageInfo is RetrieveImageProvider
+        ? imageInfo.createResizeImage(
+            cacheWidth: cacheWidth?.toInt(),
+            cacheHeight: cacheHeight?.toInt(),
+            scale: cacheWidth?.isFinite ?? false
+                ? cacheWidth! / w
+                : cacheHeight?.isFinite ?? false
+                    ? cacheHeight! / h
+                    : 1,
+          )
+        : ResizeImage.resizeIfNeeded(
             cacheWidth?.toInt(),
             cacheHeight?.toInt(),
             NetworkImage(
@@ -294,23 +322,20 @@ class WImageResult extends StatelessWidget {
                       ? cacheHeight! / h
                       : 1,
             ),
-          )
-        : AssetImage(url);
+          );
     final fWidth = width, fHeight = height;
-    // if (imageListing.preview.url != url) {
-    var IImageInfo(width: w2, height: h2, url: url2) = imageListing.preview;
-    // var IImageInfo(width: w2, height: h2, url: url2) = imageListing.preview.hasValidUrl ? imageListing.preview : imageListing.;
-    var (
-      width: width2,
-      height: height2,
-      cacheWidth: cacheWidth2,
-      cacheHeight: cacheHeight2,
-      aspectRatio: aspectRatio2,
-    ) = determineResolution(w2, h2, sizeWidth, sizeHeight, imageFit);
-    // if (sizeWidth.isFinite && sizeHeight.isFinite) {
-    //   assert(fWidth == w && fHeight == h);
-    // }
-    logger.finest("fWidth: $fWidth"
+    ImageProvider thumb;
+    if (imageListing.preview != imageInfo) {
+      var IImageInfo(width: w2, height: h2, url: url2) = imageListing.preview;
+      var (
+        width: width2,
+        height: height2,
+        cacheWidth: cacheWidth2,
+        cacheHeight: cacheHeight2,
+        aspectRatio: aspectRatio2,
+      ) = determineResolution(w2, h2, sizeWidth, sizeHeight, imageFit);
+      logger.finest(
+        "fWidth: $fWidth"
         "\nwidth2: $width2"
         "\nfHeight: $fHeight"
         "\nheight2: $height2"
@@ -319,22 +344,45 @@ class WImageResult extends StatelessWidget {
         "\nw: $w"
         "\nw2: $w2"
         "\nh: $h"
-        "\nh2: $h2");
+        "\nh2: $h2",
+      );
+      thumb = imageListing.preview is RetrieveImageProvider
+          ? (imageListing.preview as RetrieveImageProvider).createResizeImage(
+              cacheWidth: cacheWidth2?.toInt(),
+              cacheHeight: cacheHeight2?.toInt(),
+              scale: cacheWidth2?.isFinite ?? false
+                  ? cacheWidth2! / w2
+                  : cacheHeight2?.isFinite ?? false
+                      ? cacheHeight2! / h2
+                      : 1,
+            )
+          : ResizeImage.resizeIfNeeded(
+              cacheWidth2?.toInt(),
+              cacheHeight2?.toInt(),
+              NetworkImage(
+                url2,
+                scale: cacheWidth2?.isFinite ?? false
+                    ? cacheWidth2! / w2
+                    : cacheHeight2?.isFinite ?? false
+                        ? cacheHeight2! / h2
+                        : 1,
+              ),
+            );
+    } else {
+      logger.finest(
+        "Same thumbnail as image\n"
+        "fWidth: $fWidth"
+        "\nfHeight: $fHeight"
+        "\naspect: $aspectRatio"
+        "\nw: $w"
+        "\nh: $h",
+      );
+      thumb = i;
+    }
     i = ProgressiveImage(
       blur: progressiveImageBlur,
       placeholder: placeholder,
-      thumbnail: ResizeImage.resizeIfNeeded(
-        cacheWidth2?.toInt(),
-        cacheHeight2?.toInt(),
-        NetworkImage(
-          url2,
-          scale: cacheWidth2?.isFinite ?? false
-              ? cacheWidth2! / w2
-              : cacheHeight2?.isFinite ?? false
-                  ? cacheHeight2! / h2
-                  : 1,
-        ),
-      ),
+      thumbnail: thumb,
       image: i,
       width: fWidth.toDouble(),
       height: fHeight.toDouble(),
@@ -538,7 +586,6 @@ enum PostInfoPaneItem {
   final bool finiteRatios = widthRatio.isFinite && heightRatio.isFinite;
   if ((finiteRatios && widthRatio != heightRatio) || fileWidth != fileHeight) {
     switch (fit) {
-      // TODO: Implement
       case BoxFit.scaleDown:
         if ((widthRatio <= 1 || !widthRatio.isFinite) &&
             (heightRatio <= 1 || !heightRatio.isFinite)) {

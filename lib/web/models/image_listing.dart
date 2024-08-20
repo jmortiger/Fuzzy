@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart'
     show AssetImage, ImageProvider, NetworkImage, ResizeImage;
-import 'package:fuzzy/util/util.dart' as util show deletedPreviewImagePath;
+import 'package:fuzzy/util/util.dart'
+    as util /* "deletedPreview" : {
+    "path": "assets/deleted-preview.png",
+    "width": 150,
+    "height": 150,
+  }, */
+    ;
+
+const deletedUrl = "deleted";
 
 abstract interface class PostListing extends PostListingBare {
   @override
@@ -26,11 +34,12 @@ abstract interface class ITagData {
   List<String> get species;
 }
 
-abstract interface class IImageInfoBare {
+mixin IImageInfoBare {
   Uri get address;
   String get url;
-  bool get hasValidUrl => Uri.tryParse(url) != null;
-  static bool hasValidUrlImpl(IImageInfoBare i) => Uri.tryParse(i.url) != null;
+  bool get hasValidUrl => hasValidUrlImpl(this);
+  static bool hasValidUrlImpl(IImageInfoBare i) =>
+      i.url.isNotEmpty && i.url != deletedUrl && Uri.tryParse(i.url) != null;
   String get extension;
   static String extensionImpl(IImageInfoBare i) =>
       i.url.substring(i.url.lastIndexOf(".") + 1);
@@ -47,15 +56,35 @@ mixin RetrieveImageProvider on IImageInfo {
   }) =>
       hasValidUrl && !isAVideo
           ? NetworkImage(url, scale: scale, headers: headers)
-          : const AssetImage(util.deletedPreviewImagePath) as ImageProvider;
+          : url != deletedUrl
+              ? const AssetImage(util.StaticImageDataNotFound4x.path)
+              : const AssetImage(util.StaticImageDataDeleted4x.path)
+                  as ImageProvider;
+
+  /// The base provider that can be wrapped in a [ResizeImage].
+  ImageProvider createResizeImage({
+    int? cacheWidth,
+    int? cacheHeight,
+    double scale = 1.0,
+    Map<String, String>? headers,
+  }) =>
+      ResizeImage.resizeIfNeeded(
+        cacheWidth,
+        cacheHeight,
+        createRootProvider(scale: scale, headers: headers),
+      );
 }
 
-abstract interface class IImageInfo extends IImageInfoBare {
+mixin IImageInfo implements IImageInfoBare {
   int get width;
   int get height;
+  @override
+  bool get hasValidUrl => IImageInfoBare.hasValidUrlImpl(this);
+  @override
+  bool get isAVideo => IImageInfoBare.isAVideoImpl(this);
 }
 
-abstract interface class ISampleInfo extends IImageInfo {
+abstract interface class ISampleInfo with IImageInfo {
   bool get has;
 }
 

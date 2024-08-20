@@ -74,18 +74,19 @@ final class E6PostsLazy extends E6Posts {
       if (checkForValidFileUrl) {
         index += allowDeleted
             ? restrictedIndices.where((element) => element <= index).length
-            : deletedIndices.where((element) => element <= index).length;
+            : unavailableIndices.where((element) => element <= index).length;
         while (this[index].file.url == "") {
           this[index].flags.deleted
               ? deletedIndices.add(index++)
               : restrictedIndices.add(index++);
         }
       }
-      return !unavailableIndices.contains(index)
-          ? this[index]
-          : this[index].copyWith(
-              file:
-                  this[index].file.copyWith(url: util.deletedPreviewImagePath));
+      return this[index];
+      // return !unavailableIndices.contains(index)
+      //     ? this[index]
+      //     : this[index].copyWith(
+      //         file:
+      //             this[index].file.copyWith(url: util.deletedPreviewImagePath));
     } catch (e) {
       return null;
     }
@@ -150,7 +151,7 @@ final class E6PostsSync extends E6Posts {
       if (checkForValidFileUrl) {
         index += allowDeleted
             ? restrictedIndices.where((element) => element <= index).length
-            : deletedIndices.where((element) => element <= index).length;
+            : unavailableIndices.where((element) => element <= index).length;
       }
       // return this[index];
       return !unavailableIndices.contains(index)
@@ -372,9 +373,12 @@ class E6PostResponse implements PostListing, e621.Post {
         id: json["id"] as int,
         createdAt: DateTime.parse(json["created_at"]),
         updatedAt: DateTime.parse(json["updated_at"]),
-        file: E6FileResponse.fromJson(json["file"]),
-        preview: E6Preview.fromJson(json["preview"]),
-        sample: E6Sample.fromJson(json["sample"]),
+        file: E6FileResponse.fromJson(json["file"]
+          ..["url"] ??= (json["flags"]["deleted"] as bool) ? deletedUrl : null),
+        preview: E6Preview.fromJson(json["preview"]
+          ..["url"] ??= (json["flags"]["deleted"] as bool) ? deletedUrl : null),
+        sample: E6Sample.fromJson(json["sample"]
+          ..["url"] ??= (json["flags"]["deleted"] as bool) ? deletedUrl : null),
         score: e621.Score.fromJson(json["score"]),
         tags: E6PostTags.fromJson(json["tags"]),
         lockedTags: (json["locked_tags"] as List).cast<String>(),
@@ -632,31 +636,8 @@ class E6PostMutable implements E6PostResponse {
     required this.duration,
   });
 
-  factory E6PostMutable.fromJson(JsonOut json) => E6PostMutable(
-        id: json["id"] as int,
-        createdAt: DateTime.parse(json["created_at"]),
-        updatedAt: DateTime.parse(json["updated_at"]),
-        file: E6FileResponse.fromJson(json["file"]),
-        preview: E6Preview.fromJson(json["preview"]),
-        sample: E6Sample.fromJson(json["sample"]),
-        score: e621.Score.fromJson(json["score"]),
-        tags: E6PostTags.fromJson(json["tags"]),
-        lockedTags: (json["locked_tags"] as List).cast<String>(),
-        changeSeq: json["change_seq"] as int,
-        flags: E6FlagsBit.fromJson(json["flags"]),
-        rating: json["rating"] as String,
-        favCount: json["fav_count"] as int,
-        sources: (json["sources"] as List).cast<String>(),
-        pools: (json["pools"] as List).cast<int>(),
-        relationships: E6Relationships.fromJson(json["relationships"]),
-        approverId: json["approver_id"] as int?,
-        uploaderId: json["uploader_id"] as int,
-        description: json["description"] as String,
-        commentCount: json["comment_count"] as int,
-        isFavorited: json["is_favorited"] as bool,
-        hasNotes: json["has_notes"] as bool,
-        duration: json["duration"] as num?,
-      );
+  factory E6PostMutable.fromJson(JsonOut json) =>
+      E6PostMutable.fromImmutable(E6PostResponse.fromJson(json));
   @override
   E6PostMutable copyWith({
     int? id,
@@ -947,29 +928,12 @@ class E6FileResponse extends E6Preview implements e621.File {
       );
 }
 
-class E6Preview extends e621.Preview implements IImageInfo {
+class E6Preview extends e621.Preview with IImageInfo, RetrieveImageProvider {
   @override
   String get extension => url.substring(url.lastIndexOf(".") + 1);
 
   @override
   bool get isAVideo => extension == "webm" || extension == "mp4";
-
-  // #region Non-Const
-  /* @override
-  bool get hasValidUrl =>
-      url.isNotEmpty &&
-      (_address.isAssigned
-          ? true
-          : (_address.$Safe = Uri.tryParse(url)) != null);
-
-  final _address = LateFinal<Uri>();
-  @override
-  Uri get address =>
-      _address.isAssigned ? _address.$ : _address.$Safe = Uri.parse(url); */
-  // #endregion Non-Const
-  // #region Const
-  @override
-  bool get hasValidUrl => url.isNotEmpty && Uri.tryParse(url) != null;
 
   @override
   Uri get address => Uri.parse(url);
@@ -979,7 +943,6 @@ class E6Preview extends e621.Preview implements IImageInfo {
     height: -1,
     url: "",
   );
-  // #endregion Const
 
   const E6Preview({
     required super.width,
@@ -1274,9 +1237,9 @@ enum PostFlags {
   bool hasFlag(int f) => (PostFlags.toInt(this) & f) == PostFlags.toInt(this);
 }
 
-class E6FlagsBit implements E6Flags {
+class E6FlagsBit implements E6Flags, e621.PostFlags {
   @override
-  bool get deleted => (_data & pendingFlag) == pendingFlag;
+  bool get deleted => (_data & deletedFlag) == deletedFlag;
 
   @override
   bool get flagged => (_data & flaggedFlag) == flaggedFlag;
@@ -1285,13 +1248,13 @@ class E6FlagsBit implements E6Flags {
   bool get noteLocked => (_data & noteLockedFlag) == noteLockedFlag;
 
   @override
-  bool get pending => (_data & statusLockedFlag) == statusLockedFlag;
+  bool get pending => (_data & pendingFlag) == pendingFlag;
 
   @override
   bool get ratingLocked => (_data & ratingLockedFlag) == ratingLockedFlag;
 
   @override
-  bool get statusLocked => (_data & deletedFlag) == deletedFlag;
+  bool get statusLocked => (_data & statusLockedFlag) == statusLockedFlag;
   final int _data;
   E6FlagsBit({
     required bool pending,
@@ -1424,7 +1387,7 @@ class Alternates {
       };
 }
 
-class Alternate extends e621.Alternate implements IImageInfo {
+class Alternate extends e621.Alternate with IImageInfo {
   static const types = ["video"];
   // @override
   // int height;

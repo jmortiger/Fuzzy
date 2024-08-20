@@ -4,12 +4,14 @@ import 'package:fuzzy/log_management.dart' as lm;
 class ErrorPage extends StatelessWidget {
   final dynamic error;
   final StackTrace? stackTrace;
+  final bool isFullPage;
   factory ErrorPage({
     Key? key,
     required dynamic error,
     required StackTrace? stackTrace,
     required lm.FileLogger logger,
     Object? message,
+    bool isFullPage = true,
     // lm.LogLevel level = lm.LogLevel.SEVERE,
   }) =>
       ErrorPage.logError(
@@ -17,11 +19,13 @@ class ErrorPage extends StatelessWidget {
         stackTrace: stackTrace,
         logger: logger,
         message: message,
+        isFullPage: isFullPage,
       );
   const ErrorPage.makeConst({
     super.key,
     required this.error,
     required this.stackTrace,
+    this.isFullPage = true,
   });
   ErrorPage.logError({
     super.key,
@@ -29,6 +33,7 @@ class ErrorPage extends StatelessWidget {
     required this.stackTrace,
     required lm.FileLogger logger,
     Object? message,
+    this.isFullPage = true,
     // lm.LogLevel level = lm.LogLevel.SEVERE,
   }) {
     logger.severe(message ?? error, error, stackTrace);
@@ -40,6 +45,7 @@ class ErrorPage extends StatelessWidget {
     required BuildContext context,
     required lm.FileLogger logger,
     Object? message,
+    bool isFullPage = true,
   }) {
     try {
       return task();
@@ -48,7 +54,11 @@ class ErrorPage extends StatelessWidget {
       Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ErrorPage.makeConst(error: e, stackTrace: s),
+            builder: (context) => ErrorPage.makeConst(
+              error: e,
+              stackTrace: s,
+              isFullPage: isFullPage,
+            ),
           ));
       return null;
     }
@@ -64,6 +74,7 @@ class ErrorPage extends StatelessWidget {
     RT Function() task, {
     required lm.FileLogger logger,
     Object? message,
+    bool isFullPage = true,
   }) {
     try {
       return (
@@ -78,23 +89,35 @@ class ErrorPage extends StatelessWidget {
         value: null,
         e: e,
         s: s,
-        page: ErrorPage.makeConst(error: e, stackTrace: s),
+        page: ErrorPage.makeConst(
+          error: e,
+          stackTrace: s,
+          isFullPage: isFullPage,
+        ),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(title: SelectableText(error.runtimeType.toString())),
-        body: ListView(
-          children: [
-            SelectableText("ERROR: $error"),
-            SelectableText("StackTrace: $stackTrace"),
-          ],
-        ),
-      ),
-    );
+    return isFullPage
+        ? SafeArea(
+            child: Scaffold(
+              appBar:
+                  AppBar(title: SelectableText(error.runtimeType.toString())),
+              body: ListView(
+                children: [
+                  SelectableText("ERROR: $error"),
+                  SelectableText("StackTrace: $stackTrace"),
+                ],
+              ),
+            ),
+          )
+        : Column(
+            children: [
+              SelectableText("ERROR: $error"),
+              SelectableText("StackTrace: $stackTrace"),
+            ],
+          );
   }
 }

@@ -150,3 +150,100 @@ const placeholderPath = "assets/snake_loader.webp";
 const placeholder = AssetImage(placeholderPath);
 // final deletedPreviewImage = LazyInitializer<Image>(() => rootBundle.load("assets/deleted-preview.png").then((v) => Image.asset(name)))
 const deletedPreviewImagePath = "assets/deleted-preview.png";
+
+// class StaticImageData {
+//   static const deletedPreview = _DeletedPreview,
+//       deleted4x = _Deleted4x,
+//       notFoundPreview = _NotFoundPreview,
+//       notFound4x = _NotFound4x;
+//   // static const deletedPreview = StaticImageRecord(
+//   //       path: "assets/deleted-preview.png",
+//   //       width: 150,
+//   //       height: 150,
+//   //     ),
+//   //     deleted4x = StaticImageRecord(
+//   //       path: "assets/deleted_4x.png",
+//   //       width: 600,
+//   //       height: 600,
+//   //     ),
+//   //     notFoundPreview = StaticImageRecord(
+//   //       path: "assets/not_found.png",
+//   //       width: 150,
+//   //       height: 150,
+//   //     ),
+//   //     notFound4x = StaticImageRecord(
+//   //       path: "assets/not_found_4x.png",
+//   //       width: 600,
+//   //       height: 600,
+//   //     );
+// }
+
+@immutable
+class StaticImageRecord {
+  final String path;
+  final int width;
+  final int height;
+
+  const StaticImageRecord(
+      {required this.path, required this.width, required this.height});
+}
+
+class StaticImageDataDeletedPreview {
+  static const path = "assets/deleted-preview.png", width = 150, height = 150;
+}
+
+class StaticImageDataDeleted4x {
+  static const path = "assets/deleted_4x.png", width = 600, height = 600;
+}
+
+class StaticImageDataNotFoundPreview {
+  static const path = "assets/not_found.png", width = 150, height = 150;
+}
+
+class StaticImageDataNotFound4x {
+  static const path = "assets/not_found_4x.png", width = 600, height = 600;
+}
+// const staticImageData = (
+//   deletedPreview : (
+//     path: "assets/deleted-preview.png",
+//     width: 150,
+//     height: 150,
+//   ),
+//   deleted4x : (
+//     path: "assets/deleted_4x.png",
+//     width: 600,
+//     height: 600,
+//   ),
+//   notFoundPreview : (
+//     path: "assets/not_found.png",
+//     width: 150,
+//     height: 150,
+//   ),
+//   notFound4x : (
+//     path: "assets/not_found_4x.png",
+//     width: 600,
+//     height: 600,
+//   ),
+// );
+// const staticImageData = {
+//   "deletedPreview" : {
+//     "path": "assets/deleted-preview.png",
+//     "width": 150,
+//     "height": 150,
+//   },
+//   "deleted4x" : {
+//     "path": "assets/deleted_4x.png",
+//     "width": 600,
+//     "height": 600,
+//   },
+//   "notFoundPreview" : {
+//     "path": "assets/not_found.png",
+//     "width": 150,
+//     "height": 150,
+//   },
+//   "notFound4x" : {
+//     "path": "assets/not_found_4x.png",
+//     "width": 600,
+//     "height": 600,
+//   },
+// };
