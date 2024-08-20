@@ -98,6 +98,37 @@ class ErrorPage extends StatelessWidget {
     }
   }
 
+  /// If an error occurs, logs the error with the given [logger] and returns an [ErrorPage] representing the error, then rethrows the error.
+  static ({
+    Widget value,
+    Object? e,
+    StackTrace? s,
+  }) errorWidgetWrapper<RT extends Widget>(
+    RT Function() task, {
+    required lm.FileLogger logger,
+    Object? message,
+    bool isFullPage = true,
+  }) {
+    try {
+      return (
+        value: task(),
+        e: null as Object?,
+        s: null as StackTrace?,
+      );
+    } catch (e, s) {
+      logger.severe(message ?? e, e, s);
+      return (
+        value: ErrorPage.makeConst(
+          error: e,
+          stackTrace: s,
+          isFullPage: isFullPage,
+        ),
+        e: e,
+        s: s,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return isFullPage

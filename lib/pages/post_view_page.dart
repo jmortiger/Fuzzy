@@ -56,7 +56,7 @@ class PostViewPage extends StatefulWidget
   final List<ActionButton>? extraActions;
   @override
   final List<String>? tagsToAdd;
-  // final srn_lib.SearchResultsNotifier? selectedPosts;
+  final List<E6PostResponse>? selectedPosts;
   const PostViewPage({
     super.key,
     required this.postListing,
@@ -65,7 +65,7 @@ class PostViewPage extends StatefulWidget
     this.tagsToAdd,
     bool this.startFullscreen = false,
     this.extraActions,
-    // this.selectedPosts,
+    this.selectedPosts,
   })  : getFullscreen = null,
         setFullscreen = null;
   const PostViewPage.overrideFullscreen({
@@ -76,7 +76,7 @@ class PostViewPage extends StatefulWidget
     this.tagsToAdd,
     this.startFullscreen,
     this.extraActions,
-    // this.selectedPosts,
+    this.selectedPosts,
     required bool Function() this.getFullscreen,
     required void Function(bool) this.setFullscreen,
   });
@@ -295,7 +295,8 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
       floatingActionButton: WFabBuilder.singlePost(
         post: e6Post,
         customActions: widget.extraActions,
-        // selectedPosts: widget.selectedPosts,
+        selectedPosts: widget.selectedPosts,
+        onClearSelections: () => widget.selectedPosts?.clear(),
       ),
     );
   }
@@ -407,33 +408,25 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                       .then((v) => jsonDecode(v.body)),
                   builder: (context, snapshot) {
                     if (snapshot.hasData) {
-                      try {
+                      return ErrorPage.errorWidgetWrapper(() {
                         final accessor =
                             snapshot.data["post"] != null ? "post" : "posts";
                         return PostViewPage(
                           postListing: E6PostResponse.fromJson(
                             snapshot.data[accessor],
                           ),
+                          onPop: widget.onPop,
+                          selectedPosts: widget.selectedPosts,
+                          onAddToSearch: widget.onAddToSearch,
                         );
-                      } catch (e, s) {
-                        PostViewPage.logger
-                            .severe("Failed: ${snapshot.data}", e, s);
-                        return Scaffold(
-                          appBar: AppBar(),
-                          body: Text("$e\n$s\n${snapshot.data}"),
-                        );
-                      }
+                      }, logger: PostViewPage.logger)
+                          .value;
                     } else if (snapshot.hasError) {
-                      PostViewPage.logger.severe(
-                        "Failed: ${snapshot.data}",
-                        snapshot.error,
-                        snapshot.stackTrace,
-                      );
-                      return Scaffold(
-                        appBar: AppBar(),
-                        body: Text(
-                          "${snapshot.error}\n${snapshot.stackTrace}",
-                        ),
+                      return ErrorPage.logError(
+                        error: snapshot.error,
+                        stackTrace: snapshot.stackTrace,
+                        logger: PostViewPage.logger,
+                        message: "Failed: ${snapshot.data}",
                       );
                     } else {
                       return fullPageSpinner;

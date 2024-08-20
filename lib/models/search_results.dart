@@ -38,7 +38,7 @@ class SearchResultsNotifier with ChangeNotifier {
   Set<int> get selectedPostIds => _selectedPostIds;
   set selectedPostIds(Set<int> value) {
     logger.finer("selectedPostIds assignment");
-    if (setEquals(_selectedPostIds, value)) {
+    if (!setEquals(_selectedPostIds, value)) {
       logger.finest("New Set != Old Set, assigning and notifying listeners");
       _selectedPostIds =
           value is SetNotifier<int> ? value : SetNotifier<int>.from(value);

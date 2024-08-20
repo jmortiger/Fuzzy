@@ -23,6 +23,7 @@ class WFabBuilder extends StatelessWidget {
   final bool Function(int)? toggleSelectionCallback;
   final bool Function(int)? isPostSelected;
   // final srn_lib.SearchResultsNotifier? selectedPosts;
+  final List<E6PostResponse>? selectedPosts;
 
   const WFabBuilder.singlePost({
     super.key,
@@ -31,7 +32,7 @@ class WFabBuilder extends StatelessWidget {
     this.toggleSelectionCallback,
     this.isPostSelected,
     this.customActions,
-    // required this.selectedPosts,
+    this.selectedPosts,
   }) : posts = null;
   const WFabBuilder.multiplePosts({
     super.key,
@@ -41,11 +42,13 @@ class WFabBuilder extends StatelessWidget {
     this.isPostSelected,
     this.customActions,
     // this.selectedPosts,
-  }) : post = null;
+  })  : post = null,
+        selectedPosts = null /* posts */;
   static ActionButton getClearSelectionButton(
     BuildContext context, [
     void Function()? clearSelection,
     // srn_lib.SearchResultsNotifier? selected,
+    List<E6PostResponse>? selected,
   ]) =>
       ActionButton(
         icon: const Icon(Icons.clear),
@@ -302,6 +305,7 @@ class WFabBuilder extends StatelessWidget {
     bool? isSelected,
     bool Function(int)? toggleSelection,
     // srn_lib.SearchResultsNotifier? selected,
+    List<E6PostResponse>? selected,
   }) {
     return ActionButton(
       icon: const Icon(Icons.edit),
@@ -320,14 +324,18 @@ class WFabBuilder extends StatelessWidget {
           ),
         );
         // context.watch<SearchResultsNotifier>().togglePostSelection(
-        toggleSelection?.call(post.id) ??
-            // selected?.togglePostSelection(postId: post.id) ??
-            Provider.of<SearchResultsNotifier>(context, listen: false)
-                .togglePostSelection(
-              postId: post.id,
-              resolveDesync: false,
-              throwOnDesync: false,
-            );
+        (selected == null)
+            ? toggleSelection?.call(post.id) ??
+                // selected?.togglePostSelection(postId: post.id) ??
+                Provider.of<SearchResultsNotifier>(context, listen: false)
+                    .togglePostSelection(
+                  postId: post.id,
+                  resolveDesync: false,
+                  throwOnDesync: false,
+                )
+            : selected.remove(post.id)
+                ? ""
+                : selected.add(post);
       },
     );
   }
@@ -369,10 +377,11 @@ class WFabBuilder extends StatelessWidget {
     bool? isSelected;
     try {
       if (isSinglePost) {
-        isSelected = (isPostSelected?.call ??
-            // selectedPosts?.getIsPostSelected ??
+        isSelected = isPostSelected?.call(post!.id) ??
+            // selectedPosts?.getIsPostSelected(post!.id) ??
+            selectedPosts?.any((e) => e.id == post!.id) ??
             Provider.of<SearchResultsNotifier>(context, listen: false)
-                .getIsPostSelected)(post!.id);
+                .getIsPostSelected(post!.id);
       }
     } catch (e /* , s */) {
       logger
@@ -423,7 +432,7 @@ class WFabBuilder extends StatelessWidget {
                     post!,
                     isSelected: isSelected,
                     toggleSelection: toggleSelectionCallback,
-                    // selected: selectedPosts,
+                    selected: selectedPosts,
                   )
                 else
                   getSinglePostToggleSelectAction(
@@ -431,7 +440,7 @@ class WFabBuilder extends StatelessWidget {
                     post!,
                     isSelected: isSelected,
                     toggleSelection: toggleSelectionCallback,
-                    // selected: selectedPosts,
+                    selected: selectedPosts,
                   ),
               // getPrintSelectionsAction(context, post, posts),
               if (customActions != null) ...customActions!,

@@ -10,7 +10,7 @@ import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/post_swipe_page.dart';
 import 'package:fuzzy/pages/post_view_page.dart' show IReturnsTags;
 import 'package:fuzzy/util/util.dart' show placeholder, deletedPreviewImagePath;
-import 'package:fuzzy/web/e621/models/e6_models.dart'/*  show E6PostResponse */;
+import 'package:fuzzy/web/e621/models/e6_models.dart' /*  show E6PostResponse */;
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/models/image_listing.dart'
     show IImageInfo, PostListing, RetrieveImageProvider;
@@ -157,13 +157,31 @@ class WImageResult extends StatelessWidget {
     void viewPost() {
       SavedDataE6.init();
       int? p;
-      if (!disallowSelections && getSc(context, false).isMpcSync) {
-        // await getSc(context, false).mpcSync.updateCurrentPostIndex(index);
-        p = getSc(context, false).mpcSync.getPageOfGivenPostIndexOnPage(index);
-        getSc(context, false).mpcSync.updateCurrentPostIndex(index);
-      }
       final sc = getSc(context, false).mpcSync;
-      Navigator.push<IReturnsTags>(
+      if (!disallowSelections) {
+        // await getSc(context, false).mpcSync.updateCurrentPostIndex(index);
+        p = sc.getPageOfGivenPostIndexOnPage(index);
+        sc.updateCurrentPostIndex(index);
+      }
+      void parseReturnValue(v) {
+        if (v == null) return;
+        try {
+          if (v.tagsToAddToSearch is List<String> &&
+              (v.tagsToAddToSearch as List<String>).firstOrNull != null) {
+            sc.searchText +=
+                (v.tagsToAddToSearch as List<String>).foldToString();
+          }
+          if (!disallowSelections) {
+            this.sr(context)?.selectedPostIds =
+                ((v.selectedPosts as Iterable<E6PostResponse>).map((e) => e.id))
+                    .toSet();
+          }
+        } catch (e, s) {
+          logger.severe(e, e, s);
+        }
+      }
+
+      Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => allowPostViewNavigation && !disallowSelections
@@ -178,6 +196,16 @@ class WImageResult extends StatelessWidget {
                     posts: getSc(context, false).mpcSync,
                     onAddToSearch: getOnAddToSearch(context),
                     tagsToAdd: [],
+                    selectedPosts: !disallowSelections
+                        ? sc.collection
+                            .where(
+                              (element) => sr(context)
+                                  .selectedPostIds
+                                  .contains(element.$.id),
+                            )
+                            .map((e) => e.$)
+                            .toList()
+                        : null,
                     // selectedPosts: srl,
                   )
                 : PostSwipePage.postsCollection(
@@ -187,29 +215,20 @@ class WImageResult extends StatelessWidget {
                             .posts!
                             .posts,
                     onAddToSearch: getOnAddToSearch(context),
+                    selectedPosts: !disallowSelections
+                        ? sc.collection
+                            .where(
+                              (element) => sr(context)
+                                  .selectedPostIds
+                                  .contains(element.$.id),
+                            )
+                            .map((e) => e.$)
+                            .toList()
+                        : null,
                     tagsToAdd: [],
-                    // selectedPosts: srl,
                   )
-            /* : PostViewPage(
-                            postListing: imageListing,
-                            onAddToSearch: getOnAddToSearch(context),
-                            tagsToAdd: [],
-                          ) */
             ,
-          )).then<void>((v) {
-        if (v?.tagsToAdd?.firstOrNull != null) {
-          try {
-            // getSc(context, false).mpcSync.searchText +=
-            // v!.tagsToAdd!.foldToString();
-            sc.searchText += v!.tagsToAdd!.foldToString();
-          } catch (e, s) {
-            logger.severe(e, e, s);
-            // getSc(context, false).mpcSync.searchText +=
-            // v!.tagsToAdd!.foldToString();
-            sc.searchText += v!.tagsToAdd!.foldToString();
-          }
-        }
-      });
+          )).then<void>(parseReturnValue);
     }
 
     return Positioned.fill(

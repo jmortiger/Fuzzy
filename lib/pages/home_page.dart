@@ -99,6 +99,7 @@ class _HomePageState extends State<HomePage> {
               .toList(),
         ),
         selector: (ctx, p1, p2) => (p1, p2.collection),
+        // shouldRebuild: (previous, next) => previous.$1.selectedPostIds != next.$1.selectedPostIds,
       ),
     );
   }

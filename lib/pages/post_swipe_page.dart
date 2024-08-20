@@ -26,6 +26,7 @@ class PostSwipePage extends StatefulWidget
   @override
   final List<String>? tagsToAdd;
   // final srn_lib.SearchResultsNotifier? selectedPosts;
+  final List<E6PostResponse>? selectedPosts;
 
   const PostSwipePage.postsCollection({
     super.key,
@@ -34,7 +35,7 @@ class PostSwipePage extends StatefulWidget
     this.onAddToSearch,
     this.tagsToAdd,
     this.startFullscreen = false,
-    // this.selectedPosts,
+    this.selectedPosts,
   })  : postsObj = null,
         postsIterable = posts;
   const PostSwipePage({
@@ -44,7 +45,7 @@ class PostSwipePage extends StatefulWidget
     this.onAddToSearch,
     this.tagsToAdd,
     this.startFullscreen = false,
-    // this.selectedPosts,
+    this.selectedPosts,
   })  : postsObj = posts,
         postsIterable = null;
 
@@ -88,59 +89,34 @@ class _PostSwipePageState extends State<PostSwipePage>
 
   @override
   Widget build(BuildContext context) {
-    if (!Platform.isDesktop) {
-      return PageView(
-        // scrollBehavior: MyScrollBehavior(),
+    final root = PageView(
+      // scrollBehavior: MyScrollBehavior(),
 
-        /// [PageView.scrollDirection] defaults to [Axis.horizontal].
-        /// Use [Axis.vertical] to scroll vertically.
-        controller: _pageViewController,
-        allowImplicitScrolling: true,
-        // onPageChanged: _handlePageViewChanged,
-        children: widget.posts.mapAsList(
-          (elem, index, list) => PostViewPage.overrideFullscreen(
-            postListing: elem,
-            onAddToSearch: (s) {
-              widget.onAddToSearch?.call(s);
-              toReturn = "$toReturn $s";
-              widget.tagsToAdd?.add(s);
-            },
-            getFullscreen: () => isFullscreen,
-            setFullscreen: (v) => setState(() {
-              isFullscreen = v;
-            }),
-            // selectedPosts: widget.selectedPosts,
-          ),
+      /// [PageView.scrollDirection] defaults to [Axis.horizontal].
+      /// Use [Axis.vertical] to scroll vertically.
+      controller: _pageViewController,
+      allowImplicitScrolling: true,
+      // onPageChanged: _handlePageViewChanged,
+      children: widget.posts.mapAsList(
+        (elem, index, list) => PostViewPage.overrideFullscreen(
+          postListing: elem,
+          onAddToSearch: onAddToSearch,
+          getFullscreen: () => isFullscreen,
+          setFullscreen: (v) => setState(() {
+            isFullscreen = v;
+          }),
+          onPop: onPop,
+          selectedPosts: widget.selectedPosts,
         ),
-      );
+      ),
+    );
+    if (!Platform.isDesktop) {
+      return root;
     }
     return Stack(
       alignment: Alignment.bottomCenter,
       children: <Widget>[
-        PageView(
-          // scrollBehavior: MyScrollBehavior(),
-
-          /// [PageView.scrollDirection] defaults to [Axis.horizontal].
-          /// Use [Axis.vertical] to scroll vertically.
-          controller: _pageViewController,
-          onPageChanged: _handlePageViewChanged,
-          allowImplicitScrolling: true,
-          children: widget.posts.mapAsList(
-            (elem, index, list) => PostViewPage.overrideFullscreen(
-              postListing: elem,
-              onAddToSearch: (s) {
-                widget.onAddToSearch?.call(s);
-                toReturn = "$toReturn $s";
-                widget.tagsToAdd?.add(s);
-              },
-              onPop: () => Navigator.pop(context, widget),
-              getFullscreen: () => isFullscreen,
-              setFullscreen: (v) => setState(() {
-                isFullscreen = v;
-              }),
-            ),
-          ),
-        ),
+        root,
         PageIndicator(
           tabController: _tabController,
           currentPageIndex: _currentPageIndex,
@@ -149,6 +125,19 @@ class _PostSwipePageState extends State<PostSwipePage>
       ],
     );
   }
+
+  void onAddToSearch(String s) {
+    // widget.onAddToSearch?.call(s);
+    toReturn = "$toReturn $s";
+    widget.tagsToAdd?.add(s);
+    tagsToAddToSearch.add(s);
+  }
+
+  final tagsToAddToSearch = <String>[];
+  void onPop() => Navigator.pop(context, (
+        tagsToAddToSearch: tagsToAddToSearch,
+        postsSelected: widget.selectedPosts,
+      ));
 
   void _handlePageViewChanged(int currentPageIndex) {
     if (!Platform.isDesktop) {
@@ -186,6 +175,7 @@ class PostSwipePageManaged extends StatefulWidget
   @override
   final List<String>? tagsToAdd;
   // final srn_lib.SearchResultsNotifier? selectedPosts;
+  final List<E6PostResponse>? selectedPosts;
 
   // const PostSwipePageManaged.postsCollection({
   //   super.key,
@@ -205,7 +195,7 @@ class PostSwipePageManaged extends StatefulWidget
     this.onAddToSearch,
     this.tagsToAdd,
     this.startFullscreen = false,
-    // required this.selectedPosts,
+    required this.selectedPosts,
   }) : postsObj = posts;
 
   @override
@@ -230,6 +220,7 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
   List<ActionButton> get extras =>
       (loopy ?? onFinished) != null ? [cancel] : _extras;
   late final ActionButton cancel;
+  final tagsToAddToSearch = <String>[];
   @override
   void initState() {
     super.initState();
@@ -338,18 +329,14 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
                 postListing: snapshot
                     .data![widget.postsObj.getPostIndexOnPage(index, page)],
                 // snapshot.data![widget.postsObj.currentPostIndex],
-                onAddToSearch: (s) {
-                  widget.onAddToSearch?.call(s);
-                  toReturn = "$toReturn $s";
-                  widget.tagsToAdd?.add(s);
-                },
-                onPop: () => Navigator.pop(context, widget),
+                onAddToSearch: onAddToSearch,
+                onPop: onPop,
                 getFullscreen: () => isFullscreen,
                 setFullscreen: (v) => setState(() {
                   isFullscreen = v;
                 }),
                 extraActions: extras,
-                // selectedPosts: widget.selectedPosts,
+                selectedPosts: widget.selectedPosts,
               );
             } else {
               return const Column(
@@ -378,21 +365,31 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
           ? PostViewPage.overrideFullscreen(
               // postListing: t![widget.postsObj.currentPostIndex],
               postListing: p,
-              onAddToSearch: (s) {
-                widget.onAddToSearch?.call(s);
-                toReturn = "$toReturn $s";
-                widget.tagsToAdd?.add(s);
-              },
-              onPop: () => Navigator.pop(context, widget),
+              onAddToSearch: onAddToSearch,
+              onPop: onPop,
               getFullscreen: () => isFullscreen,
               setFullscreen: (v) => setState(() {
                 isFullscreen = v;
               }),
               extraActions: extras,
-              // selectedPosts: widget.selectedPosts,
+              selectedPosts: widget.selectedPosts,
             )
           : null;
     }
+  }
+
+  void onAddToSearch(String s) {
+    // widget.onAddToSearch?.call(s);
+    toReturn = "$toReturn $s";
+    widget.tagsToAdd?.add(s);
+    tagsToAddToSearch.add(s);
+  }
+
+  void onPop() {
+    Navigator.pop(context, (
+      tagsToAddToSearch: tagsToAddToSearch,
+      selectedPosts: widget.selectedPosts,
+    ));
   }
 
   // #region Slideshow
