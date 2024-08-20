@@ -86,7 +86,9 @@ class UserProfilePage extends StatelessWidget
                             },
                             fontWeight: FontWeight.bold,
                           )),
-                      TextSpan(text: " left; ${snapshot.hasData ? snapshot.data! : "..."} deleted)"),
+                      TextSpan(
+                          text:
+                              " left; ${snapshot.hasData ? snapshot.data! : "..."} deleted)"),
                     ],
                   )));
   @override

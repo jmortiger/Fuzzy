@@ -9,6 +9,7 @@ import 'package:j_util/serialization.dart';
 import 'package:logging/logging.dart';
 
 import 'util/util.dart' as f_util;
+import 'package:http/http.dart' as http;
 
 typedef LogLevel = Level;
 typedef Printer = void Function(Object? message,
@@ -260,3 +261,46 @@ class FileLogger implements Logger {
       $.warning(message, error, stackTrace);
   // #endregion Overrides
 }
+
+// #region Logging Helpers
+void logRequest(
+  http.BaseRequest r,
+  Logger logger, [
+  Level level = Level.FINEST,
+]) {
+  logger.log(
+    level,
+    "${switch (r.runtimeType) {
+      http.Request => "",
+      http.StreamedRequest => "Streamed",
+      http.MultipartRequest => "Multipart",
+      _ => "Base",
+    }}Request:"
+    "\n\t$r"
+    "\n\t${r.url}"
+    "\n\t${r.url.query}"
+    "${r is http.Request ? "\n\t${r.body}" : ""}"
+    "\n\t${r.headers}",
+  );
+}
+
+void logResponse(
+  http.BaseResponse r,
+  Logger logger, [
+  Level level = Level.FINEST,
+]) {
+  logger.log(
+    level,
+    "${switch (r.runtimeType) {
+      http.Response => "",
+      http.StreamedResponse => "Streamed",
+      _ => "Base",
+    }}Response:"
+    "\n\t$r"
+    "${r is http.Response ? "\n\t${r.body}" : ""}"
+    "\n\t${r.statusCode}"
+    "\n\t${r.reasonPhrase}"
+    "\n\t${r.headers}",
+  );
+}
+// #endregion Logging Helpers

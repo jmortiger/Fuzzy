@@ -142,10 +142,10 @@ class _EditPostPageState extends State<EditPostPage> {
                 postEditReason: postEditReason,
                 credentials: E621AccessData.fallback?.cred,
               );
-              util.logRequest(req, logger, lm.LogLevel.INFO);
+              lm.logRequest(req, logger, lm.LogLevel.INFO);
               if (debugDeactivate) return;
               final res = await e621.Api.sendRequest(req);
-              util.logResponse(res, logger, lm.LogLevel.INFO);
+              lm.logResponse(res, logger, lm.LogLevel.INFO);
               Navigator.pop(
                 context,
               );
@@ -166,7 +166,7 @@ class _EditPostPageState extends State<EditPostPage> {
                 postEditReason: postEditReason,
                 credentials: E621AccessData.fallback?.cred,
               );
-              util.logRequest(req, logger, lm.LogLevel.INFO);
+              lm.logRequest(req, logger, lm.LogLevel.INFO);
             }
           },
           icon: const Icon(Icons.check),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:fuzzy/log_management.dart' as lm;
@@ -190,7 +189,7 @@ class _WUpdateSetState extends State<WUpdateSet> {
                                         postSetTransferOnDelete,
                                     credentials: E621AccessData.fallback?.cred,
                                   );
-                            util.logRequest(r, logger, lm.LogLevel.INFO);
+                            lm.logRequest(r, logger, lm.LogLevel.INFO);
                             if ((determineNameErrorText(postSetName) ??
                                     determineShortnameErrorText(
                                         postSetShortname)) !=
@@ -203,7 +202,7 @@ class _WUpdateSetState extends State<WUpdateSet> {
                               return;
                             }
                             final res = await e621.Api.sendRequest(r);
-                            util.logResponse(res, logger, lm.LogLevel.INFO);
+                            lm.logResponse(res, logger, lm.LogLevel.INFO);
                             if (res.statusCodeInfo.isSuccessful) {
                               if (mounted) {
                                 Navigator.pop(this.context,

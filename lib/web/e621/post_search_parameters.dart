@@ -592,13 +592,14 @@ dynamic parsePageParameterDirectly(String? page) => !isValidPage(page)
     : usesPageOffsetStrict(page!)
         ? (pageModifier: toPageModifierStrict(page)!, id: toIdStrict(page)!)
         : toPageNumberStrict(page)!;
-PageParsed? parsePageParameterStrict(String? page) => page == null || !isValidPage(page)
-    ? null
-    : (
-        pageModifier: toPageModifierStrict(page),
-        id: toIdStrict(page),
-        pageNumber: toPageNumberStrict(page)
-      );
+PageParsed? parsePageParameterStrict(String? page) =>
+    page == null || !isValidPage(page)
+        ? null
+        : (
+            pageModifier: toPageModifierStrict(page),
+            id: toIdStrict(page),
+            pageNumber: toPageNumberStrict(page)
+          );
 PageParsed parsePageParameter(String? page) => (
       pageModifier: toPageModifier(page),
       id: toId(page),

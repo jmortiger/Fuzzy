@@ -1,3 +1,7 @@
+import 'package:flutter/material.dart'
+    show AssetImage, ImageProvider, NetworkImage, ResizeImage;
+import 'package:fuzzy/util/util.dart' as util show deletedPreviewImagePath;
+
 abstract interface class PostListing extends PostListingBare {
   @override
   IImageInfo get file;
@@ -35,16 +39,23 @@ abstract interface class IImageInfoBare {
       i.extension == "webm" || i.extension == "mp4";
 }
 
+mixin RetrieveImageProvider on IImageInfo {
+  /// The base provider that can be wrapped in a [ResizeImage].
+  ImageProvider createRootProvider({
+    double scale = 1.0,
+    Map<String, String>? headers,
+  }) =>
+      hasValidUrl && !isAVideo
+          ? NetworkImage(url, scale: scale, headers: headers)
+          : const AssetImage(util.deletedPreviewImagePath) as ImageProvider;
+}
+
 abstract interface class IImageInfo extends IImageInfoBare {
   int get width;
   int get height;
 }
 
 abstract interface class ISampleInfo extends IImageInfo {
-  // Uri get address;
-  // String get url;
-  // int get width;
-  // int get height;
   bool get has;
 }
 

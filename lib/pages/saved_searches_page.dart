@@ -56,8 +56,7 @@ class _SavedSearchesPageSingletonState
   var parentedCollection =
       LateInstance<ListNotifier<ListNotifier<SavedEntry>>>();
   // var selected = <({int parentIndex, int childIndex, SavedEntry entry})>{};
-  var selected =
-      SetNotifier<SavedEntry>();
+  var selected = SetNotifier<SavedEntry>();
   @override
   void initState() {
     super.initState();
@@ -198,8 +197,7 @@ class _SavedSearchesPageSingletonState
             Text("Are you sure you want to delete ${selected.length} entries?"),
         content: Text(selected.fold(
           "Entries include: ",
-          (previousValue, element) =>
-              "$previousValue\n${element.searchString}",
+          (previousValue, element) => "$previousValue\n${element.searchString}",
         )),
         actions: [
           TextButton.icon(
@@ -381,9 +379,7 @@ class _SavedSearchesPageSingletonState
     required T entry,
     ({int parentIndex, int childIndex})? index,
   }) {
-    final r = index != null
-        ? entry
-        : null;
+    final r = index != null ? entry : null;
     return StatefulBuilder(
       builder: (context, setState) {
         void l() {

@@ -62,7 +62,8 @@ class CachedSearches {
     });
   }
 
-  static Future<List<SearchData>> loadFromPref() => pref.getItemAsync().then((v) {
+  static Future<List<SearchData>> loadFromPref() =>
+      pref.getItemAsync().then((v) {
         final length = v.getInt(localStorageLengthKey) ?? 0;
         var data = <SearchData>[];
         for (var i = 0; i < length; i++) {

@@ -1,0 +1,43 @@
+{
+	"deleted-preview.png": {
+		"width": 150,
+		"height": 150,
+		"font": "",
+		"fontSize": null,
+		"misc": {
+			"gradientTop": "#FFFFFFFF",
+			"gradientBottom": "#DEDEDEFF",
+			"border": "#7B7B7BFF"
+		}
+	},
+	"error.png": {
+		"width": 200,
+		"height": 200,
+		"font": "Calibri",
+		"fontSize": null
+	},
+	"deleted.png": {
+		"width": 150,
+		"height": 150,
+		"font": "Segoe UI",
+		"fontSize": 16
+	},
+	"not_found.png": {
+		"width": 150,
+		"height": 150,
+		"font": "Segoe UI",
+		"fontSize": 16
+	},
+	"not_found_4x.png": {
+		"width": 600,
+		"height": 600,
+		"font": "Segoe UI",
+		"fontSize": 64
+	},
+	"deleted_4x.png": {
+		"width": 600,
+		"height": 600,
+		"font": "Segoe UI",
+		"fontSize": 64
+	}
+}

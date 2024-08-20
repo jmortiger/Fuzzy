@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/models/saved_data.dart';
-import 'package:fuzzy/models/search_results.dart';
-import 'package:fuzzy/util/util.dart' as util;
+import 'package:fuzzy/util/tag_db_import.dart' as dbi;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
@@ -211,13 +210,12 @@ class _WSearchBarState extends State<WSearchBar> {
   }
 
   bool allSuggestionSourcesEmpty() =>
-      (util.DO_NOT_USE_TAG_DB || util.tagDbLazy.$Safe == null) &&
+      (dbi.DO_NOT_USE_TAG_DB || dbi.tagDbLazy.$Safe == null) &&
       (AppSettings.i?.favoriteTags.isEmpty ?? true) &&
       !SavedDataE6.isInit &&
       CachedSearches.searches.isEmpty;
 
-  TagDB? retrieveTagDB() =>
-      !util.DO_NOT_USE_TAG_DB ? util.tagDbLazy.$Safe : null;
+  TagDB? retrieveTagDB() => !dbi.DO_NOT_USE_TAG_DB ? dbi.tagDbLazy.$Safe : null;
 
   /// [currText] is all the text in the field; the value of [TextEditingValue.text].
   Iterable<String> genSearchOptionsFromTagDB({

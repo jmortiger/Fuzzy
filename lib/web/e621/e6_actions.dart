@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_favorites.dart' as cf;
 import 'package:fuzzy/models/search_results.dart';
-import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
@@ -11,10 +10,9 @@ import 'package:fuzzy/widgets/w_search_set.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
-
-// #region Logger
 import 'package:fuzzy/log_management.dart' as lm;
 
+// #region Logger
 lm.Printer get _print => lRecord.print;
 lm.FileLogger get _logger => lRecord.logger;
 // ignore: unnecessary_late
@@ -163,7 +161,7 @@ Future<E6PostResponse> addPostToFavoritesWithPost({
   )
       .then(
     (v) {
-      util.logResponse(
+      lm.logResponse(
           v,
           _logger,
           v.statusCodeInfo.isSuccessful
@@ -222,7 +220,7 @@ Future<E6PostResponse> removePostFromFavoritesWithPost({
       .toResponse()
       .then(
     (v) {
-      util.logResponse(
+      lm.logResponse(
           v,
           _logger,
           v.statusCodeInfo.isSuccessful
@@ -285,7 +283,7 @@ Future<E6PostResponse?> addPostToFavoritesWithId({
   )
       .then(
     (v) {
-      util.logResponse(
+      lm.logResponse(
           v,
           _logger,
           v.statusCodeInfo.isSuccessful
@@ -339,7 +337,7 @@ Future<E6PostResponse?> removePostFromFavoritesWithId({
       .toResponse()
       .then(
     (v) {
-      util.logResponse(
+      lm.logResponse(
           v,
           _logger,
           v.statusCodeInfo.isSuccessful
@@ -697,7 +695,7 @@ Future<e621.PostSet?> removeFromSetWithPosts({
         ))
         .toResponse();
 
-    util.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponse(res, _logger, lm.LogLevel.INFO);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -837,7 +835,7 @@ Future<e621.PostSet?> addToSetWithPosts({
         ))
         .toResponse();
 
-    util.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponse(res, _logger, lm.LogLevel.INFO);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -977,7 +975,7 @@ Future<e621.PostSet?> removeFromSetWithIds({
         ))
         .toResponse();
 
-    util.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponse(res, _logger, lm.LogLevel.INFO);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -1118,7 +1116,7 @@ Future<e621.PostSet?> addToSetWithIds({
         ))
         .toResponse();
 
-    util.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponse(res, _logger, lm.LogLevel.INFO);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -1248,7 +1246,7 @@ Future<e621.PostSet?> removeFromSetWithPost({
         ))
         .toResponse();
 
-    util.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponse(res, _logger, lm.LogLevel.INFO);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -1376,7 +1374,7 @@ Future<e621.PostSet?> addToSetWithPost({
         ))
         .toResponse();
 
-    util.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponse(res, _logger, lm.LogLevel.INFO);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -1504,7 +1502,7 @@ Future<e621.PostSet?> removeFromSetWithId({
         ))
         .toResponse();
 
-    util.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponse(res, _logger, lm.LogLevel.INFO);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -1633,7 +1631,7 @@ Future<e621.PostSet?> addToSetWithId({
         ))
         .toResponse();
 
-    util.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponse(res, _logger, lm.LogLevel.INFO);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -1736,7 +1734,7 @@ Future<E6PostResponse> voteOnPostWithPost({
     ),
   ).then(
     (v) {
-      util.logResponse(
+      lm.logResponse(
           v,
           _logger,
           v.statusCodeInfo.isSuccessful
@@ -1799,7 +1797,7 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
     ),
   ).then(
     (v) {
-      util.logResponse(
+      lm.logResponse(
           v,
           _logger,
           v.statusCodeInfo.isSuccessful

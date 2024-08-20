@@ -10,7 +10,6 @@ import 'package:fuzzy/widgets/w_fab_builder.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:provider/provider.dart';
 
-import '../models/search_cache.dart';
 import '../web/e621/e621_access_data.dart';
 import '../widgets/w_home_end_drawer.dart';
 import '../widgets/w_search_bar.dart';

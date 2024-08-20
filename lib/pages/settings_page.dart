@@ -163,7 +163,8 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
             WBooleanField.subtitleBuilder(
               getVal: () => AppSettings.i!.forceSafe,
               name: "Disable non-safe posts",
-              subtitleBuilder: () => "Current site: ${e621.Api.baseUri.toString()}",
+              subtitleBuilder: () =>
+                  "Current site: ${e621.Api.baseUri.toString()}",
               setVal: (bool val) => AppSettings.i!.forceSafe = val,
             ),
             WBooleanField(

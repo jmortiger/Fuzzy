@@ -116,16 +116,16 @@ sealed class E621 extends Site {
       credentials: d,
       limit: 1,
     );
-    logRequest(r, _logger);
+    lm.logRequest(r, _logger);
     return e621.Api.sendRequest(r).then((v) {
       if (v.statusCodeInfo.isError) {
-        logResponse(v, _logger, lm.LogLevel.SEVERE);
+        lm.logResponse(v, _logger, lm.LogLevel.SEVERE);
         return null;
       } else if (!v.statusCodeInfo.isSuccessful) {
-        logResponse(v, _logger, lm.LogLevel.WARNING);
+        lm.logResponse(v, _logger, lm.LogLevel.WARNING);
         return null;
       } else {
-        logResponse(v, _logger, lm.LogLevel.INFO);
+        lm.logResponse(v, _logger, lm.LogLevel.INFO);
         try {
           return e621.UserLoggedIn.fromRawJson(v.body);
         } catch (e) {
@@ -171,7 +171,7 @@ sealed class E621 extends Site {
         id,
         credentials: d,
       );
-      logRequest(r, _logger);
+      lm.logRequest(r, _logger);
       return e621.Api.sendRequest(r).then(E621.resolveGetUserFuture);
     }
     _logger.finest("No id, trying access data");
@@ -188,16 +188,16 @@ sealed class E621 extends Site {
       credentials: d,
       limit: 1,
     );
-    logRequest(r, _logger);
+    lm.logRequest(r, _logger);
     return e621.Api.sendRequest(r).then((v) {
       if (v.statusCodeInfo.isError) {
-        logResponse(v, _logger, lm.LogLevel.SEVERE);
+        lm.logResponse(v, _logger, lm.LogLevel.SEVERE);
         return null;
       } else if (!v.statusCodeInfo.isSuccessful) {
-        logResponse(v, _logger, lm.LogLevel.WARNING);
+        lm.logResponse(v, _logger, lm.LogLevel.WARNING);
         return null;
       } else {
-        logResponse(v, _logger, lm.LogLevel.FINER);
+        lm.logResponse(v, _logger, lm.LogLevel.FINER);
         e621.User t;
         try {
           t = e621.UserLoggedIn.fromRawJson(v.body);
@@ -209,7 +209,7 @@ sealed class E621 extends Site {
           t.id,
           credentials: d,
         );
-        logRequest(r, _logger);
+        lm.logRequest(r, _logger);
         return e621.Api.sendRequest(r).then(resolveGetUserFuture);
       }
     });
@@ -519,7 +519,7 @@ sealed class E621 extends Site {
   }
 
   static Future<http.Response> logAndSendRequest(http.Request r) {
-    logRequest(r, _logger);
+    lm.logRequest(r, _logger);
     return e621.Api.sendRequest(r);
   }
 
@@ -527,13 +527,13 @@ sealed class E621 extends Site {
   static e621.UserDetailed? resolveGetUserFuture(http.Response v,
       [bool updateIfLoggedIn = true]) {
     if (v.statusCodeInfo.isError) {
-      logResponse(v, _logger, lm.LogLevel.SEVERE);
+      lm.logResponse(v, _logger, lm.LogLevel.SEVERE);
       return null;
     } else if (!v.statusCodeInfo.isSuccessful) {
-      logResponse(v, _logger, lm.LogLevel.WARNING);
+      lm.logResponse(v, _logger, lm.LogLevel.WARNING);
       return null;
     } else {
-      logResponse(v, _logger, lm.LogLevel.FINER);
+      lm.logResponse(v, _logger, lm.LogLevel.FINER);
       try {
         final t = e621.UserLoggedInDetail.fromRawJson(v.body);
         if (updateIfLoggedIn) tryUpdateLoggedInUser(t);
@@ -554,7 +554,7 @@ sealed class E621 extends Site {
       id,
       credentials: d,
     );
-    logRequest(r, _logger, lm.LogLevel.FINEST);
+    lm.logRequest(r, _logger, lm.LogLevel.FINEST);
     return e621.Api.sendRequest(r).then(resolveGetUserFuture);
   }
 
