@@ -638,6 +638,8 @@ class E6PostMutable implements E6PostResponse {
 
   factory E6PostMutable.fromJson(JsonOut json) =>
       E6PostMutable.fromImmutable(E6PostResponse.fromJson(json));
+  factory E6PostMutable.fromRawJson(String json) =>
+      E6PostMutable.fromImmutable(E6PostResponse.fromRawJson(json));
   @override
   E6PostMutable copyWith({
     int? id,

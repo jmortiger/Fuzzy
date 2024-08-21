@@ -455,23 +455,20 @@ class _SavedSearchesPageSingletonState
           ),
         SavedEntryDialogOptions.addToClipboard =>
           Clipboard.setData(ClipboardData(text: entry.searchString)).then((v) {
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(
-                content: Text("${entry.searchString} added to clipboard."),
-              ));
+            util.showUserMessage(
+                context: context,
+                content: Text("${entry.searchString} added to clipboard."));
             Navigator.pop(context);
           }),
         SavedEntryDialogOptions.addIdToClipboard =>
           Clipboard.setData(ClipboardData(
             text: "${mye6.E621.delimiter}${entry.uniqueId}",
           )).then((v) {
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(
-                  content: Text(
-                "${mye6.E621.delimiter}${entry.uniqueId} added to clipboard.",
-              )));
+            util.showUserMessage(
+                context: context,
+                content: Text(
+                  "${mye6.E621.delimiter}${entry.uniqueId} added to clipboard.",
+                ));
             Navigator.pop(context);
           }),
         SavedEntryDialogOptions.delete =>

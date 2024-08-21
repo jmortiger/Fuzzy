@@ -283,7 +283,7 @@ sealed class E621 extends Site {
   }) async {
     var responses = <http.StreamedResponse>[],
         stream = E621
-            .sendRequests(requestGenerator())
+            .sendRequestsRaw(requestGenerator())
             .asyncMap((event) => event)
             .asyncMap((event) async {
           var s = event.stream.asBroadcastStream();
@@ -305,11 +305,37 @@ sealed class E621 extends Site {
     onComplete?.call(responses);
   }
 
-  static Stream<Future<http.StreamedResponse>> sendRequests(
+  static Stream<Future<http.StreamedResponse>> sendRequestsRaw(
       Iterable<http.Request> requests) async* {
     for (var request in requests) {
       yield sendRequest(request);
       await Future.delayed(const Duration(seconds: idealRateLimit));
+    }
+  }
+
+  static Stream<Future<http.Response>> sendRequests(
+    Iterable<http.Request> requests, {
+    Iterable<void Function(http.Response)>? onResponses,
+    bool useBurst = false,
+  }) async* {
+    for (var request in requests) {
+      yield e621.Api.sendRequest(request, useBurst: useBurst);
+      if (!useBurst) {
+        await Future.delayed(e621.Api.currentRateLimit);
+      }
+    }
+  }
+
+  static Stream<Future<R>> sendAndRespondToRequests<R>(
+    Iterable<(http.Request, R Function(http.Response))> requests, {
+    bool useBurst = false,
+  }) async* {
+    for (var request in requests) {
+      yield e621.Api.sendRequest(request.$1, useBurst: useBurst)
+          .then(request.$2);
+      if (!useBurst) {
+        await Future.delayed(e621.Api.currentRateLimit);
+      }
     }
   }
 
@@ -356,7 +382,30 @@ sealed class E621 extends Site {
         .toResponse()
         .onError(defaultOnError)
         .then((v) {
-      favDeleted.invoke();
+      lm.logResponseSmart(v, _logger);
+      if (v.statusCodeInfo.isSuccessful) {
+        favDeleted.invoke();
+      }
+      return v;
+    });
+  }
+
+  static Future<http.Response> sendDeleteFavoriteRequestWithPost(
+    E6PostResponse post, {
+    bool updatePost = true,
+    String? username,
+    String? apiKey,
+  }) {
+    return sendRequest(initDeleteFavoriteRequest(post.id,
+            username: username, apiKey: apiKey))
+        .toResponse()
+        .onError(defaultOnError)
+        .then((v) {
+      lm.logResponseSmart(v, _logger);
+      if (v.statusCodeInfo.isSuccessful) {
+        favDeleted.invoke();
+        if (updatePost && post is E6PostMutable) post.isFavorited = false;
+      }
       return v;
     });
   }
@@ -372,10 +421,12 @@ sealed class E621 extends Site {
         () => postIdGenerator.map((e) =>
             initDeleteFavoriteRequest(e, username: username, apiKey: apiKey)),
         onComplete: (responses) => onComplete?.call(responses.map((v) {
-              v.stream
-                  .asBroadcastStream()
-                  .last
-                  .then((v1) => favDeleted.invoke());
+              v.stream.asBroadcastStream().last.then((v1) {
+                lm.logResponseSmart(v, _logger);
+                if (v.statusCodeInfo.isSuccessful) {
+                  favDeleted.invoke();
+                }
+              });
               return v;
             }).toList()));
   }
@@ -390,6 +441,7 @@ sealed class E621 extends Site {
               username: username, apiKey: apiKey))
           .toResponse()
         ..then((v1) {
+          lm.logResponseSmart(v1, _logger);
           try {
             favAdded.invoke(PostActionArgs(
               post: E6PostResponse.fromJson(jsonDecode(v1.body)),

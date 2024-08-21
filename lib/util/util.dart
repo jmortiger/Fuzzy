@@ -51,9 +51,32 @@ T defaultOnError<T>(Object? error, StackTrace trace) {
   return _print(trace) as T;
 }
 
-final List<SnackBar> snackbarMessageQueue = <SnackBar>[];
-final List<SnackBar Function(BuildContext context)>
-    snackbarBuilderMessageQueue = <SnackBar Function(BuildContext context)>[];
+ScaffoldFeatureController showUserMessage({
+  required BuildContext context,
+  required Widget content,
+  bool autoHidePrior = true,
+  Duration? duration = const Duration(seconds: 2),
+  (String label, VoidCallback onTap)? action,
+  List<(String label, VoidCallback onTap)>? actions,
+}) {
+  final message = SnackBar(
+        content: content,
+        action: _makeSnackBarAction(action, actions),
+      ),
+      sm = ScaffoldMessenger.of(context);
+  if (autoHidePrior) sm.hideCurrentSnackBar();
+  return sm.showSnackBar(message);
+}
+
+SnackBarAction? _makeSnackBarAction(
+    (String label, VoidCallback onTap)? action,
+    List<(String label, VoidCallback onTap)>? actions) {
+  return (action ?? actions?.firstOrNull) != null
+      ? SnackBarAction(
+          label: action?.$1 ?? actions!.first.$1,
+          onPressed: action?.$2 ?? actions!.first.$2)
+      : null;
+}
 
 VoidCallback generateAlertDialog<DialogOutput>(
   BuildContext context, {

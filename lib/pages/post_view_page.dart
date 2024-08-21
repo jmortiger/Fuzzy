@@ -873,11 +873,9 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                   title: const Text("Add to clipboard"),
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: tag)).then((v) {
-                      ScaffoldMessenger.of(context)
-                        ..hideCurrentSnackBar()
-                        ..showSnackBar(SnackBar(
-                          content: Text("$tag added to clipboard."),
-                        ));
+                      util.showUserMessage(
+                          context: context,
+                          content: Text("$tag added to clipboard."));
                       Navigator.pop(context);
                     });
                   },

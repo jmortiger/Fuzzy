@@ -284,6 +284,7 @@ void logRequest(
   );
 }
 
+@Deprecated("Use logResponseSmart")
 void logResponse(
   http.BaseResponse r,
   Logger logger, [
@@ -291,6 +292,34 @@ void logResponse(
 ]) {
   logger.log(
     level,
+    "${switch (r.runtimeType) {
+      http.Response => "",
+      http.StreamedResponse => "Streamed",
+      _ => "Base",
+    }}Response:"
+    "\n\t$r"
+    "${r is http.Response ? "\n\t${r.body}" : ""}"
+    "\n\t${r.statusCode}"
+    "\n\t${r.reasonPhrase}"
+    "\n\t${r.headers}",
+  );
+}
+
+void logResponseSmart(
+  http.BaseResponse r,
+  Logger logger, {
+  Level baseLevel = Level.FINEST,
+  Level nonSuccessLevel = Level.WARNING,
+  Level errorLevel = Level.SEVERE,
+  Level? overrideLevel,
+}) {
+  logger.log(
+    overrideLevel ??
+        (r.statusCodeInfo.isError
+            ? errorLevel
+            : r.statusCodeInfo.isSuccessful
+                ? baseLevel
+                : nonSuccessLevel),
     "${switch (r.runtimeType) {
       http.Response => "",
       http.StreamedResponse => "Streamed",

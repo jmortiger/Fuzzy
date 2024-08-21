@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_sharing_intent/flutter_sharing_intent.dart';
 import 'package:flutter_sharing_intent/model/sharing_file.dart';
 import 'package:j_util/platform_finder.dart';
+import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/util/util.dart' as util;
 
 // #region Logger
-import 'package:fuzzy/log_management.dart' as lm;
-
 lm.Printer get _print => _lRecord.print;
 lm.FileLogger get _logger => _lRecord.logger;
 // ignore: unnecessary_late
@@ -58,11 +58,10 @@ bool checkAndLaunch(BuildContext context) {
   if (requestedUrls.isNotEmpty) {
     final u = requestedUrls.removeAt(0);
     final uFormatted = Uri(path: u.path, query: u.query);
-    _print("navigating to ${u.toString()} (${uFormatted.toString()})");
+    final message = "navigating to ${u.toString()} (${uFormatted.toString()})";
+    _print(message);
+    util.showUserMessage(context: context, content: Text(message));
     Navigator.pushNamed(context, uFormatted.toString());
-    // ScaffoldMessenger.of(context)
-    //   ..hideCurrentSnackBar()
-    //   ..showSnackBar(SnackBar(content: Text(u.toString())));
     // showDialog(
     //   context: context,
     //   builder: (context) {

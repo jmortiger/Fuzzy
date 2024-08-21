@@ -6,6 +6,7 @@ import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_searches.dart';
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
@@ -71,49 +72,45 @@ class SettingsPage extends StatelessWidget implements IRoute<SettingsPage> {
                 .then((val) => val?.readAsString() ?? Future.sync(() => ""))
                 .then((v) {
               print(v);
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(
+              util.showUserMessage(
+                  context: context,
                   content: const Text("Saved!"),
-                  action: SnackBarAction(
-                    label: "See Contents",
-                    onPressed: () => showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        content: SelectableText(
-                          "Saved: $v\nValue: ${jsonEncode(
-                            settings.toJson(),
-                          )}",
-                        ),
-                      ),
-                    ),
-                  ),
-                ));
+                  action: (
+                    "See Contents",
+                    () => showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            content: SelectableText(
+                              "Saved: $v\nValue: ${jsonEncode(
+                                settings.toJson(),
+                              )}",
+                            ),
+                          ),
+                        )
+                  ));
             }),
             child: const Text("Save Settings"),
           ),
           TextButton(
             onPressed: () => settings.loadFromFile().then((v) {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(
+              util.showUserMessage(
+                  context: context,
                   content: const Text("Loaded from file!"),
-                  action: SnackBarAction(
-                    label: "See Contents",
-                    onPressed: () => showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        content: SelectableText(
-                          "Loaded: ${jsonEncode(
-                            v.toJson(),
-                          )}\nValue: ${jsonEncode(
-                            settings.toJson(),
-                          )}",
-                        ),
-                      ),
-                    ),
-                  ),
-                ));
+                  action: (
+                    "See Contents",
+                    () => showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            content: SelectableText(
+                              "Loaded: ${jsonEncode(
+                                v.toJson(),
+                              )}\nValue: ${jsonEncode(
+                                settings.toJson(),
+                              )}",
+                            ),
+                          ),
+                        )
+                  ));
             }),
             child: const Text("Load Settings"),
           ),

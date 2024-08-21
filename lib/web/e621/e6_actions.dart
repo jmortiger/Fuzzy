@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_favorites.dart' as cf;
 import 'package:fuzzy/models/search_results.dart';
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
@@ -139,13 +140,13 @@ Future<E6PostResponse> addPostToFavoritesWithPost({
   required E6PostResponse post,
   bool updatePost = true,
 }) {
-  _logger.finer("Adding ${post.id} to favorites...");
+  final out = "Adding ${post.id} to favorites...";
+  _logger.finer(out);
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text("Adding ${post.id} to favorites...")),
-      );
+    util.showUserMessage(
+      context: context!,
+      content: Text(out),
+    );
   }
   return E621
       // .sendRequest(
@@ -173,25 +174,21 @@ Future<E6PostResponse> addPostToFavoritesWithPost({
           ? E6PostResponse.fromRawJson(v.body)
           : post;
       if (context?.mounted ?? false) {
-        ScaffoldMessenger.of(context!)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            !v.statusCodeInfo.isSuccessful
-                ? SnackBar(
-                    content: Text("${v.statusCode}: ${v.reasonPhrase}"),
-                  )
-                : SnackBar(
-                    content: Text("${post.id} added to favorites"),
-                    action: SnackBarAction(
-                      label: "Undo",
-                      onPressed: () => removePostFromFavoritesWithPost(
-                        post: post,
-                        updatePost: updatePost,
-                        context: context,
-                      ),
-                    ),
-                  ),
-          );
+        !v.statusCodeInfo.isSuccessful
+            ? util.showUserMessage(
+                context: context!,
+                content: Text("${v.statusCode}: ${v.reasonPhrase}"))
+            : util.showUserMessage(
+                context: context!,
+                content: Text("${post.id} added to favorites"),
+                action: (
+                    "Undo",
+                    () => removePostFromFavoritesWithPost(
+                          post: post,
+                          updatePost: updatePost,
+                          context: context,
+                        )
+                  ));
       }
       return updatePost && post is E6PostMutable
           ? (post..overwriteFrom(postRet))
@@ -205,73 +202,66 @@ Future<E6PostResponse> removePostFromFavoritesWithPost({
   required E6PostResponse post,
   bool updatePost = true,
 }) {
-  _logger.finer("Removing ${post.id} from favorites...");
-  if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text("Removing ${post.id} from favorites...")),
-      );
-  }
-  return E621
-      .sendRequest(
-        E621.initDeleteFavoriteRequest(
-          post.id,
-          username: E621AccessData.fallback?.username,
-          apiKey: E621AccessData.fallback?.apiKey,
-        ),
-      )
-      .toResponse()
-      .then(
-    (v) {
-      lm.logResponse(
-          v,
-          _logger,
-          v.statusCodeInfo.isSuccessful
-              ? lm.LogLevel.FINEST
-              : lm.LogLevel.SEVERE);
-      E6PostResponse postRet = v.statusCodeInfo.isSuccessful
-          ? E6PostResponse.fromRawJson(v.body)
-          : post;
-      if (context?.mounted ?? false) {
-        ScaffoldMessenger.of(context!)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            !v.statusCodeInfo.isSuccessful
-                ? SnackBar(
-                    content: Text("${v.statusCode}: ${v.reasonPhrase}"),
-                  )
-                : SnackBar(
-                    content: Text("${post.id} removed from favorites"),
-                    action: SnackBarAction(
-                      label: "Undo",
-                      onPressed: () => addPostToFavoritesWithPost(
-                        post: post,
-                        updatePost: updatePost,
-                        context: context,
-                      ),
-                    ),
-                  ),
-          );
-      }
-      return updatePost && post is E6PostMutable
-          ? (post..overwriteFrom(postRet))
-          : postRet;
-    },
-  );
+  return removePostFromFavorites(
+          context: context, post: post, updatePost: updatePost)
+      .then((v) => v!);
+  // final out = "Removing ${post.id} from favorites...";
+  // _logger.finer(out);
+  // if (context?.mounted ?? false) {
+  //   util.showUserMessage(context: context!, content: Text(out));
+  // }
+  // return E621
+  //     .sendRequest(
+  //       E621.initDeleteFavoriteRequest(
+  //         post.id,
+  //         username: E621AccessData.fallback?.username,
+  //         apiKey: E621AccessData.fallback?.apiKey,
+  //       ),
+  //     )
+  //     .toResponse()
+  //     .then(
+  //   (v) {
+  //     lm.logResponse(
+  //         v,
+  //         _logger,
+  //         v.statusCodeInfo.isSuccessful
+  //             ? lm.LogLevel.FINEST
+  //             : lm.LogLevel.SEVERE);
+  //     E6PostResponse postRet = v.statusCodeInfo.isSuccessful
+  //         ? E6PostResponse.fromRawJson(v.body)
+  //         : post;
+  //     if (context?.mounted ?? false) {
+  //       !v.statusCodeInfo.isSuccessful
+  //           ? util.showUserMessage(
+  //               context: context!,
+  //               content: Text("${v.statusCode}: ${v.reasonPhrase}"))
+  //           : util.showUserMessage(
+  //               context: context!,
+  //               content: Text("${post.id} removed from favorites"),
+  //               action: (
+  //                   "Undo",
+  //                   () => addPostToFavoritesWithPost(
+  //                         post: post,
+  //                         updatePost: updatePost,
+  //                         context: context,
+  //                       )
+  //                 ));
+  //     }
+  //     return updatePost && post is E6PostMutable
+  //         ? (post..overwriteFrom(postRet))
+  //         : postRet;
+  //   },
+  // );
 }
 
 Future<E6PostResponse?> addPostToFavoritesWithId({
   BuildContext? context,
   required int postId,
 }) {
-  _logger.finer("Adding $postId to favorites...");
+  final out = "Adding $postId to favorites...";
+  _logger.finer(out);
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text("Adding $postId to favorites...")),
-      );
+    util.showUserMessage(context: context!, content: Text(out));
   }
   return E621
       // .sendRequest(
@@ -299,22 +289,20 @@ Future<E6PostResponse?> addPostToFavoritesWithId({
           ? E6PostResponse.fromRawJson(v.body)
           : null;
       if (context?.mounted ?? false) {
-        ScaffoldMessenger.of(context!)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            !v.statusCodeInfo.isSuccessful
-                ? SnackBar(content: Text("${v.statusCode}: ${v.reasonPhrase}"))
-                : SnackBar(
-                    content: Text("$postId added to favorites"),
-                    action: SnackBarAction(
-                      label: "Undo",
-                      onPressed: () => removePostFromFavoritesWithId(
-                        postId: postId,
-                        context: context,
-                      ),
-                    ),
-                  ),
-          );
+        !v.statusCodeInfo.isSuccessful
+            ? util.showUserMessage(
+                context: context!,
+                content: Text("${v.statusCode}: ${v.reasonPhrase}"))
+            : util.showUserMessage(
+                context: context!,
+                content: Text("$postId added to favorites"),
+                action: (
+                    "Undo",
+                    () => removePostFromFavoritesWithId(
+                          postId: postId,
+                          context: context,
+                        )
+                  ));
       }
       return postRet;
     },
@@ -324,20 +312,73 @@ Future<E6PostResponse?> addPostToFavoritesWithId({
 Future<E6PostResponse?> removePostFromFavoritesWithId({
   BuildContext? context,
   required int postId,
+}) {
+  return removePostFromFavorites(context: context, postId: postId);
+  // final out = "Removing $postId from favorites...";
+  // _logger.finer(out);
+  // if (context?.mounted ?? false) {
+  //   util.showUserMessage(context: context!, content: Text(out));
+  // }
+  // return E621
+  //     .sendRequest(
+  //       E621.initDeleteFavoriteRequest(
+  //         postId,
+  //         username: E621AccessData.fallback?.username,
+  //         apiKey: E621AccessData.fallback?.apiKey,
+  //       ),
+  //     )
+  //     .toResponse()
+  //     .then(
+  //   (v) {
+  //     lm.logResponse(
+  //         v,
+  //         _logger,
+  //         v.statusCodeInfo.isSuccessful
+  //             ? lm.LogLevel.FINEST
+  //             : lm.LogLevel.SEVERE);
+  //     final postRet = v.statusCodeInfo.isSuccessful
+  //         ? E6PostResponse.fromRawJson(v.body)
+  //         : null;
+  //     if (context?.mounted ?? false) {
+  //       !v.statusCodeInfo.isSuccessful
+  //           ? util.showUserMessage(
+  //               context: context!,
+  //               content: Text("${v.statusCode}: ${v.reasonPhrase}"))
+  //           : util.showUserMessage(
+  //               context: context!,
+  //               content: Text("$postId removed from favorites"),
+  //               action: (
+  //                   "Undo",
+  //                   () => addPostToFavoritesWithId(
+  //                         postId: postId,
+  //                         context: context,
+  //                       )
+  //                 ));
+  //     }
+  //     return postRet;
+  //   },
+  // );
+}
+
+Future<E6PostResponse?> removePostFromFavorites({
+  BuildContext? context,
+  int? postId,
+  E6PostResponse? post,
   bool updatePost = true,
 }) {
-  _logger.finer("Removing $postId from favorites...");
+  if ((postId ?? post) == null) {
+    throw ArgumentError.value("Either postId or post must be non-null");
+  }
+  final id = postId ?? post!.id;
+  final out = "Removing $id from favorites...";
+  _logger.finer(out);
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text("Removing $postId from favorites...")),
-      );
+    util.showUserMessage(context: context!, content: Text(out));
   }
   return E621
       .sendRequest(
         E621.initDeleteFavoriteRequest(
-          postId,
+          id,
           username: E621AccessData.fallback?.username,
           apiKey: E621AccessData.fallback?.apiKey,
         ),
@@ -351,30 +392,34 @@ Future<E6PostResponse?> removePostFromFavoritesWithId({
           v.statusCodeInfo.isSuccessful
               ? lm.LogLevel.FINEST
               : lm.LogLevel.SEVERE);
-      final postRet = v.statusCodeInfo.isSuccessful
-          ? E6PostResponse.fromRawJson(v.body)
-          : null;
+      var postRet = v.statusCodeInfo.isSuccessful
+          ? E6PostMutable.fromRawJson(v.body)
+          : post;
       if (context?.mounted ?? false) {
-        ScaffoldMessenger.of(context!)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            !v.statusCodeInfo.isSuccessful
-                ? SnackBar(
-                    content: Text("${v.statusCode}: ${v.reasonPhrase}"),
-                  )
-                : SnackBar(
-                    content: Text("$postId removed from favorites"),
-                    action: SnackBarAction(
-                      label: "Undo",
-                      onPressed: () => addPostToFavoritesWithId(
-                        postId: postId,
-                        context: context,
-                      ),
-                    ),
-                  ),
-          );
+        !v.statusCodeInfo.isSuccessful
+            ? util.showUserMessage(
+                context: context!,
+                content: Text("${v.statusCode}: ${v.reasonPhrase}"))
+            : util.showUserMessage(
+                context: context!,
+                content: Text("$id removed from favorites"),
+                action: (
+                    "Undo",
+                    post != null
+                        ? () => addPostToFavoritesWithPost(
+                              post: post,
+                              updatePost: updatePost,
+                              context: context,
+                            )
+                        : () => addPostToFavoritesWithId(
+                              postId: id,
+                              context: context,
+                            )
+                  ));
       }
-      return postRet;
+      return updatePost && post is E6PostMutable
+          ? (post..overwriteFrom(postRet!))
+          : postRet;
     },
   );
 }
