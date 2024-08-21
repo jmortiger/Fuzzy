@@ -61,7 +61,8 @@ bool checkAndLaunch(BuildContext context) {
     _print("navigating to ${u.toString()} (${uFormatted.toString()})");
     Navigator.pushNamed(context, uFormatted.toString());
     // ScaffoldMessenger.of(context)
-    //     .showSnackBar(SnackBar(content: Text(u.toString())));
+    //   ..hideCurrentSnackBar()
+    //   ..showSnackBar(SnackBar(content: Text(u.toString())));
     // showDialog(
     //   context: context,
     //   builder: (context) {

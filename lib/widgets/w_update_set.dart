@@ -195,10 +195,11 @@ class _WUpdateSetState extends State<WUpdateSet> {
                                         postSetShortname)) !=
                                 null) {
                               ScaffoldMessenger.of(context)
-                                  .showSnackBar(const SnackBar(
-                                      content: Text(
-                                "Resolve Errors with Name and/or shortname",
-                              )));
+                                ..hideCurrentSnackBar()
+                                ..showSnackBar(const SnackBar(
+                                    content: Text(
+                                  "Resolve Errors with Name and/or shortname",
+                                )));
                               return;
                             }
                             final res = await e621.Api.sendRequest(r);

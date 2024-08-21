@@ -4,24 +4,23 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fuzzy/i_route.dart';
+import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/main.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
-import 'package:fuzzy/util/util.dart';
-import 'package:fuzzy/main.dart';
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621_access_data.dart';
+import 'package:fuzzy/web/e621/models/e6_models.dart';
+import 'package:fuzzy/web/models/image_listing.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
 import 'package:j_util/e621.dart';
 import 'package:j_util/j_util_full.dart';
-import 'package:fuzzy/web/e621/models/e6_models.dart';
-import 'package:fuzzy/web/models/image_listing.dart';
 import 'package:progressive_image/progressive_image.dart' show ProgressiveImage;
-// import 'package:fuzzy/models/search_results.dart' as srn_lib;
 
 import '../web/e621/e621.dart';
 import '../widgets/w_fab_builder.dart';
-import 'package:fuzzy/log_management.dart' as lm;
 
 abstract interface class IReturnsTags {
   List<String>? get tagsToAdd;
@@ -429,7 +428,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                         message: "Failed: ${snapshot.data}",
                       );
                     } else {
-                      return fullPageSpinner;
+                      return util.fullPageSpinner;
                     }
                   },
                 ),
@@ -562,7 +561,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
     if (url == e6Post.preview.url) {
       return ProgressiveImage(
         blur: progressiveImageBlur,
-        placeholder: placeholder,
+        placeholder: util.placeholder,
         thumbnail: iFinal,
         image: iFinal,
         width: screenWidth, //cWidth.toDouble(),
@@ -596,7 +595,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
       } else {
         return ProgressiveImage(
           blur: progressiveImageBlur,
-          placeholder: placeholder,
+          placeholder: util.placeholder,
           thumbnail: iPreview,
           image: iFinal,
           width: screenWidth, //cWidth.toDouble(),
@@ -874,9 +873,11 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                   title: const Text("Add to clipboard"),
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: tag)).then((v) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text("$tag added to clipboard."),
-                      ));
+                      ScaffoldMessenger.of(context)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(SnackBar(
+                          content: Text("$tag added to clipboard."),
+                        ));
                       Navigator.pop(context);
                     });
                   },
@@ -976,7 +977,7 @@ class PostViewPageLoader extends StatelessWidget
             logger: PostViewPage.logger,
           );
         } else {
-          return fullPageSpinner;
+          return util.fullPageSpinner;
         }
       },
     );

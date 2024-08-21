@@ -127,7 +127,9 @@ class WFabBuilder extends StatelessWidget {
       ),
       // onPressed: () async {
       //   logger.finer("Adding ${posts.length} posts to favorites...");
-      //   ScaffoldMessenger.of(context).showSnackBar(
+      //   ScaffoldMessenger.of(context)
+      //    ..hideCurrentSnackBar()
+      //    ..showSnackBar(
       //     SnackBar(
       //         content: Text("Adding ${posts.length} posts to favorites...")),
       //   );
@@ -151,7 +153,7 @@ class WFabBuilder extends StatelessWidget {
       //           sbs += " $pId Cached";
       //         }
       //       });
-      //       ScaffoldMessenger.of(context).showSnackBar(
+      //       ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(
       //         SnackBar(
       //           content: Text(sbs),
       //           action: SnackBarAction(
@@ -164,7 +166,7 @@ class WFabBuilder extends StatelessWidget {
       //                 username: E621AccessData.fallback?.username,
       //                 apiKey: E621AccessData.fallback?.apiKey,
       //                 onComplete: (responses) =>
-      //                     ScaffoldMessenger.of(context).showSnackBar(
+      //                     ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(
       //                   SnackBar(
       //                     content: Text(
       //                         "${responses.where((element) => element.statusCodeInfo.isSuccessful).length}/${responses.length} posts removed from favorites!"),
@@ -262,7 +264,7 @@ class WFabBuilder extends StatelessWidget {
       tooltip: "Edit",
       onPressed: () async {
         logger.finer("Editing ${post.id}...");
-        // ScaffoldMessenger.of(context).showSnackBar(
+        // ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(
         //   SnackBar(
         //     content: Text("Editing ${post.id}..."),
         //   ),
@@ -282,7 +284,7 @@ class WFabBuilder extends StatelessWidget {
         //     ));
         //     .onError(defaultOnError)
         //     .then(
-        //       (value) => ScaffoldMessenger.of(context).showSnackBar(
+        //       (value) => ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(
         //         SnackBar(
         //           content: Text(
         //             "${value.statusCode}: ${value.reasonPhrase}",
@@ -318,11 +320,13 @@ class WFabBuilder extends StatelessWidget {
       onPressed: () {
         final p = "${post.id}: $tooltip";
         logger.finer(p);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(p),
-          ),
-        );
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(p),
+            ),
+          );
         // context.watch<SearchResultsNotifier>().togglePostSelection(
         (selected == null)
             ? toggleSelection?.call(post.id) ??
@@ -355,18 +359,22 @@ class WFabBuilder extends StatelessWidget {
           (previousValue, element) => "$previousValue, ${element.id}",
         )}";
         logger.finer(s);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(s),
-          ),
-        );
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(s),
+            ),
+          );
         s = "post: ${post?.id}";
         logger.finer(s);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(s),
-          ),
-        );
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(s),
+            ),
+          );
       },
     );
   }

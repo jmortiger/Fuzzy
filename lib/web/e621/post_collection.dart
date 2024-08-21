@@ -831,9 +831,11 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           print("Response failed: $json");
           if (json["reason"].contains("Access Denied")) {
             if (context != null) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text("Access Denied. Did you mean to login?"),
-              ));
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(const SnackBar(
+                  content: Text("Access Denied. Did you mean to login?"),
+                ));
             }
           }
           posts = E6PostsSync(posts: []);

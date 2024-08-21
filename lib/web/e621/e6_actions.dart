@@ -141,9 +141,11 @@ Future<E6PostResponse> addPostToFavoritesWithPost({
 }) {
   _logger.finer("Adding ${post.id} to favorites...");
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!).showSnackBar(
-      SnackBar(content: Text("Adding ${post.id} to favorites...")),
-    );
+    ScaffoldMessenger.of(context!)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text("Adding ${post.id} to favorites...")),
+      );
   }
   return E621
       // .sendRequest(
@@ -205,9 +207,11 @@ Future<E6PostResponse> removePostFromFavoritesWithPost({
 }) {
   _logger.finer("Removing ${post.id} from favorites...");
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!).showSnackBar(
-      SnackBar(content: Text("Removing ${post.id} from favorites...")),
-    );
+    ScaffoldMessenger.of(context!)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text("Removing ${post.id} from favorites...")),
+      );
   }
   return E621
       .sendRequest(
@@ -263,9 +267,11 @@ Future<E6PostResponse?> addPostToFavoritesWithId({
 }) {
   _logger.finer("Adding $postId to favorites...");
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!).showSnackBar(
-      SnackBar(content: Text("Adding $postId to favorites...")),
-    );
+    ScaffoldMessenger.of(context!)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text("Adding $postId to favorites...")),
+      );
   }
   return E621
       // .sendRequest(
@@ -322,9 +328,11 @@ Future<E6PostResponse?> removePostFromFavoritesWithId({
 }) {
   _logger.finer("Removing $postId from favorites...");
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!).showSnackBar(
-      SnackBar(content: Text("Removing $postId from favorites...")),
-    );
+    ScaffoldMessenger.of(context!)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text("Removing $postId from favorites...")),
+      );
   }
   return E621
       .sendRequest(
@@ -379,9 +387,11 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithPosts({
   var str = "Adding ${posts.length} posts to favorites...";
   _logger.finer(str);
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!).showSnackBar(
-      SnackBar(content: Text(str)),
-    );
+    ScaffoldMessenger.of(context!)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(str)),
+      );
   }
   final pIds = posts.map((e) => e.id);
   return E621.sendAddFavoriteRequestBatch(
@@ -405,33 +415,37 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithPosts({
         }
       });
       if (context?.mounted ?? false) {
-        ScaffoldMessenger.of(context!).showSnackBar(
-          SnackBar(
-            content: Text(sbs),
-            action: SnackBarAction(
-              label: "Undo",
-              onPressed: () async {
-                E621.sendDeleteFavoriteRequestBatch(
-                  pIds,
-                  username: E621AccessData.fallback?.username,
-                  apiKey: E621AccessData.fallback?.apiKey,
-                  onComplete: (rs) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
-                            "/${rs.length} posts removed from favorites!",
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                );
-              },
+        ScaffoldMessenger.of(context!)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(sbs),
+              action: SnackBarAction(
+                label: "Undo",
+                onPressed: () async {
+                  E621.sendDeleteFavoriteRequestBatch(
+                    pIds,
+                    username: E621AccessData.fallback?.username,
+                    apiKey: E621AccessData.fallback?.apiKey,
+                    onComplete: (rs) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
+                                "/${rs.length} posts removed from favorites!",
+                              ),
+                            ),
+                          );
+                      }
+                    },
+                  );
+                },
+              ),
             ),
-          ),
-        );
+          );
       }
     },
   );
@@ -444,9 +458,11 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithIds({
   var str = "Adding ${postIds.length} posts to favorites...";
   _logger.finer(str);
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!).showSnackBar(
-      SnackBar(content: Text(str)),
-    );
+    ScaffoldMessenger.of(context!)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(str)),
+      );
   }
   return E621.sendAddFavoriteRequestBatch(
     postIds,
@@ -469,33 +485,37 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithIds({
         }
       });
       if (context?.mounted ?? false) {
-        ScaffoldMessenger.of(context!).showSnackBar(
-          SnackBar(
-            content: Text(sbs),
-            action: SnackBarAction(
-              label: "Undo",
-              onPressed: () async {
-                E621.sendDeleteFavoriteRequestBatch(
-                  postIds,
-                  username: E621AccessData.fallback?.username,
-                  apiKey: E621AccessData.fallback?.apiKey,
-                  onComplete: (rs) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
-                            "/${rs.length} posts removed from favorites!",
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                );
-              },
+        ScaffoldMessenger.of(context!)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(sbs),
+              action: SnackBarAction(
+                label: "Undo",
+                onPressed: () async {
+                  E621.sendDeleteFavoriteRequestBatch(
+                    postIds,
+                    username: E621AccessData.fallback?.username,
+                    apiKey: E621AccessData.fallback?.apiKey,
+                    onComplete: (rs) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
+                                "/${rs.length} posts removed from favorites!",
+                              ),
+                            ),
+                          );
+                      }
+                    },
+                  );
+                },
+              ),
             ),
-          ),
-        );
+          );
       }
     },
   );
@@ -509,9 +529,11 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithPosts({
   var str = "Removing ${posts.length} posts from favorites...";
   _logger.finer(str);
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!).showSnackBar(
-      SnackBar(content: Text(str)),
-    );
+    ScaffoldMessenger.of(context!)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(str)),
+      );
   }
   final pIds = posts.map((e) => e.id);
   return E621.sendDeleteFavoriteRequestBatch(
@@ -535,33 +557,37 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithPosts({
       //   }
       // });
       if (context?.mounted ?? false) {
-        ScaffoldMessenger.of(context!).showSnackBar(
-          SnackBar(
-            content: Text(sbs),
-            action: SnackBarAction(
-              label: "Undo",
-              onPressed: () async {
-                E621.sendAddFavoriteRequestBatch(
-                  pIds,
-                  username: E621AccessData.fallback?.username,
-                  apiKey: E621AccessData.fallback?.apiKey,
-                  onComplete: (rs) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
-                            "/${rs.length} posts added to favorites!",
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                );
-              },
+        ScaffoldMessenger.of(context!)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(sbs),
+              action: SnackBarAction(
+                label: "Undo",
+                onPressed: () async {
+                  E621.sendAddFavoriteRequestBatch(
+                    pIds,
+                    username: E621AccessData.fallback?.username,
+                    apiKey: E621AccessData.fallback?.apiKey,
+                    onComplete: (rs) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
+                                "/${rs.length} posts added to favorites!",
+                              ),
+                            ),
+                          );
+                      }
+                    },
+                  );
+                },
+              ),
             ),
-          ),
-        );
+          );
       }
     },
   );
@@ -574,9 +600,11 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithIds({
   var str = "Removing ${postIds.length} posts from favorites...";
   _logger.finer(str);
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!).showSnackBar(
-      SnackBar(content: Text(str)),
-    );
+    ScaffoldMessenger.of(context!)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(str)),
+      );
   }
   return E621.sendDeleteFavoriteRequestBatch(
     postIds,
@@ -599,33 +627,37 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithIds({
         }
       });
       if (context?.mounted ?? false) {
-        ScaffoldMessenger.of(context!).showSnackBar(
-          SnackBar(
-            content: Text(sbs),
-            action: SnackBarAction(
-              label: "Undo",
-              onPressed: () async {
-                E621.sendAddFavoriteRequestBatch(
-                  postIds,
-                  username: E621AccessData.fallback?.username,
-                  apiKey: E621AccessData.fallback?.apiKey,
-                  onComplete: (rs) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
-                            "/${rs.length} posts added to favorites!",
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                );
-              },
+        ScaffoldMessenger.of(context!)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(sbs),
+              action: SnackBarAction(
+                label: "Undo",
+                onPressed: () async {
+                  E621.sendAddFavoriteRequestBatch(
+                    postIds,
+                    username: E621AccessData.fallback?.username,
+                    apiKey: E621AccessData.fallback?.apiKey,
+                    onComplete: (rs) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
+                                "/${rs.length} posts added to favorites!",
+                              ),
+                            ),
+                          );
+                      }
+                    },
+                  );
+                },
+              ),
             ),
-          ),
-        );
+          );
       }
     },
   );
@@ -1783,10 +1815,13 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
 }) {
   _print("${isUpvote ? "Upvoting" : "Downvoting"} $postId...");
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!).showSnackBar(
-      SnackBar(
-          content: Text("${isUpvote ? "Upvoting" : "Downvoting"} $postId...")),
-    );
+    ScaffoldMessenger.of(context!)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+            content:
+                Text("${isUpvote ? "Upvoting" : "Downvoting"} $postId...")),
+      );
   }
   return e621.Api.sendRequest(
     e621.Api.initVotePostRequest(

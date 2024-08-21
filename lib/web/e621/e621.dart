@@ -908,9 +908,11 @@ sealed class E621 extends Site {
       BuildContext context, PostListing postListing,
       [e621.E6Credentials? cred]) async {
     _print("Adding ${postListing.id} to a set");
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   const SnackBar(content: Text("To Be Implemented")),
-    // );
+    // ScaffoldMessenger.of(context)
+    //   ..hideCurrentSnackBar()
+    //   ..showSnackBar(
+    //     const SnackBar(content: Text("Adding ${postListing.id} to a set")),
+    //   );
     var v = await showDialog<e621.PostSet>(
       context: context,
       builder: (context) {
@@ -941,33 +943,37 @@ sealed class E621 extends Site {
       if (res.statusCode == 201) {
         _print("${postListing.id} successfully added to set ${v.id}");
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text("${postListing.id} successfully added to set ${v.id}"),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(),
-                      body: WPostSearchResults.directResultFromSearch(
-                        'set:${v.shortname}',
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(
+                content:
+                    Text("${postListing.id} successfully added to set ${v.id}"),
+                action: SnackBarAction(
+                  label: "See Set",
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Scaffold(
+                        appBar: AppBar(),
+                        body: WPostSearchResults.directResultFromSearch(
+                          'set:${v.shortname}',
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          );
+            );
         }
       }
       return;
     } else if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No Set Selected, canceling.")),
-      );
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text("No Set Selected, canceling.")),
+        );
       return;
     } else {
       return;
@@ -1154,7 +1160,9 @@ Future<({String username, String apiKey})?> launchLogInDialog(
           E621AccessData.userData.$ = v2;
           E621AccessData.tryWrite().then<void>(
             (success) => success
-                ? ScaffoldMessenger.of(context).showSnackBar(
+                ? (ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
                     SnackBar(
                       content: const Text("Successfully stored! Test it!"),
                       duration: snackbarDuration,
@@ -1166,7 +1174,7 @@ Future<({String username, String apiKey})?> launchLogInDialog(
                             )
                           : null,
                     ),
-                  )
+                  ))
                 : "",
           );
         });

@@ -526,9 +526,10 @@ class WSetTile extends StatelessWidget {
                             Clipboard.setData(ClipboardData(text: text))
                                 .then((v) {
                               ScaffoldMessenger.of(context)
-                                  .showSnackBar(SnackBar(
-                                content: Text("$text added to clipboard."),
-                              ));
+                                ..hideCurrentSnackBar()
+                                ..showSnackBar(SnackBar(
+                                  content: Text("$text added to clipboard."),
+                                ));
                               Navigator.pop(context);
                             });
                           },

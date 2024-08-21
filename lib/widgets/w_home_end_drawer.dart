@@ -138,11 +138,12 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                     case true:
                       E621AccessData.userData.$Safe?.tryClearAsync().then(
                           (success) => this.context.mounted
-                              ? ScaffoldMessenger.of(this.context).showSnackBar(
-                                  SnackBar(
-                                      content: Text(success
-                                          ? "Successfully cleared login data"
-                                          : "Failed to clear login data")))
+                              ? (ScaffoldMessenger.of(this.context)
+                                ..hideCurrentSnackBar()
+                                ..showSnackBar(SnackBar(
+                                    content: Text(success
+                                        ? "Successfully cleared login data"
+                                        : "Failed to clear login data"))))
                               : "");
                       continue falseC;
                     falseC:
