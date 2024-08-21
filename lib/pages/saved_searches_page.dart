@@ -115,12 +115,12 @@ class _SavedSearchesPageSingletonState
           IconButton(
             onPressed: _addSearch,
             icon: const Icon(Icons.add),
-            tooltip: "Add Saved Search",
+            tooltip: "Add",
           ),
           TextButton.icon(
             onPressed: data.$Safe?.$searches.clear,
             icon: const Icon(Icons.clear),
-            label: const Text("Clear Saved Searches"),
+            label: const Text("Clear"),
           ),
           TextButton.icon(
             onPressed: () {
@@ -136,7 +136,7 @@ class _SavedSearchesPageSingletonState
               });
             },
             icon: const Icon(Icons.import_export),
-            label: const Text("Import Saved Searches from The Wolf's Stash"),
+            label: const Text("Import from TWS"),
           ),
         ],
       ),

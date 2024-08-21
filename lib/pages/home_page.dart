@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
@@ -91,15 +92,16 @@ class _HomePageState extends State<HomePage> {
       floatingActionButton: Selector2<
           SearchResultsNotifier,
           ManagedPostCollectionSync,
-          (SearchResultsNotifier, PostCollectionSync)>(
+          (Set<int>, PostCollectionSync)>(
         builder: (context, value, child) => WFabBuilder.multiplePosts(
+          key: ObjectKey(value.$1),
           posts: value.$2
-              .where((e) => value.$1.selectedPostIds.contains(e.inst.$Safe?.id))
+              .where((e) => value.$1.contains(e.inst.$Safe?.id))
               .map((e) => e.inst.$)
               .toList(),
         ),
-        selector: (ctx, p1, p2) => (p1, p2.collection),
-        // shouldRebuild: (previous, next) => previous.$1.selectedPostIds != next.$1.selectedPostIds,
+        selector: (ctx, p1, p2) => (p1.selectedPostIds, p2.collection),
+        shouldRebuild: (previous, next) => setEquals(previous.$1, next.$1),
       ),
     );
   }

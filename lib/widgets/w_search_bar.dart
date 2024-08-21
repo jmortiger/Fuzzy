@@ -53,11 +53,11 @@ class _WSearchBarState extends State<WSearchBar> {
     var lastTermIndex = currText
         .lastIndexOf(RegExp('[$whitespaceCharacters$tagModifiersRegexString]'));
     lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
-    // final currSubString = currText.substring(lastTermIndex);
+    final currSubString = currText.substring(lastTermIndex);
     final currPrefix = currText.substring(0, lastTermIndex);
     logger.finer("currText: $currText");
     logger.finer("lastTermIndex: $lastTermIndex");
-    // logger.finer("currSubString: $currSubString");
+    logger.finer("currSubString: $currSubString");
     logger.finer("currPrefix: $currPrefix");
     if (allSuggestionSourcesEmpty() /*  || currText.isEmpty */) {
       return const Iterable<String>.empty();
@@ -70,37 +70,42 @@ class _WSearchBarState extends State<WSearchBar> {
       if ((AppSettings.i?.favoriteTags.isEmpty ?? true) &&
           !SavedDataE6.isInit &&
           CachedSearches.searches.isEmpty) {
-        return r.take(50).toList(growable: false)
-          ..sort(str_util.getFineInverseSimilarityComparator(
-            currText,
-          ));
+        return (r.toList()
+              ..sort(
+                str_util.getFineInverseSimilarityComparator(currText),
+              ))
+            .take(50);
       }
       return {
         currText,
         if (CachedSearches.searches.isNotEmpty)
           ...(() {
             var relatedSearches = CachedSearches.searches.where(
-              (element) => element.searchString.contains(currText),
+              (element) =>
+                  !currText.contains(element.searchString) &&
+                  element.searchString.contains(currText),
             );
             return relatedSearches.map((e) => e.searchString).toList()
               ..sort(
                 str_util.getFineInverseSimilarityComparator(currText),
               )
               ..removeRange(
-                min(
+                relatedSearches.length - min(
                   SearchView.i.numSavedSearchesInSearchBar,
                   relatedSearches.length,
                 ),
                 relatedSearches.length,
               );
           })(),
-        if (SavedDataE6.isInit)
+        if (SavedDataE6.isInit && currSubString.contains(E621.delimiter))
           ...SavedDataE6.all
               .where(
                 (v) =>
                     v.verifyUniqueness() &&
-                    !currText.contains(
-                        "${E621.delimiter}${v.uniqueId}") /*  &&
+                    !currText.contains("${E621.delimiter}${v.uniqueId}") &&
+                    // "${E621.delimiter}${v.uniqueId}".contains(currSubString)
+                    "${E621.delimiter}${v.uniqueId}".contains(currSubString)
+                /*  &&
                     "${E621.delimiter}${v.uniqueId}".contains(currText) */
                 ,
               )
@@ -110,15 +115,17 @@ class _WSearchBarState extends State<WSearchBar> {
               str_util.getFineInverseSimilarityComparator(currText),
             ),
         if (AppSettings.i?.favoriteTags.isNotEmpty ?? false)
-          ...AppSettings.i!.favoriteTags
-              .where((element) => !currText.contains(element))
-              .map((e) => "$currPrefix$e")
-              .toList()
-            ..sort(
-              str_util.getFineInverseSimilarityComparator(currText),
-            ),
+          ...(AppSettings.i!.favoriteTags
+                  .where((element) => !currPrefix.contains(element))
+                  .map((e) => "$currPrefix$e")
+                  .toList()
+                ..sort(
+                  str_util.getFineInverseSimilarityComparator(currText),
+                ))
+              .take(5),
         ...r.take(20),
-      };
+      }.toList()
+        ..sort(str_util.getFineInverseSimilarityComparator(currText));
     }
     return genSearchOptionsFromTagDB(
       db: db,

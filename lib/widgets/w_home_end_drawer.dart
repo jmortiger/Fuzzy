@@ -314,30 +314,33 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                   ;
             },
           ),
-          ListTile(
-            title: const Text("Search deleted favs"),
-            leading: const Icon(Icons.search),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => buildHomePageWithProviders(),
-                  ));
-            },
-          ),
-          ListTile(
-            title: const Text("Get deleted fav count"),
-            leading: const Icon(Icons.search),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => buildHomePageWithProviders(),
-                  ));
-            },
-          ),
+          if (isLoggedIn)
+            ListTile(
+              title: const Text("Search deleted favs"),
+              leading: const Icon(Icons.search),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => buildHomePageWithProviders(
+                          searchText: "fav:${E621.loggedInUser.$Safe?.name ??
+                              E621AccessData.fallbackForced?.username} status:deleted"),
+                    ));
+              },
+            ),
+          // ListTile(
+          //   title: const Text("Get deleted fav count"),
+          //   leading: const Icon(Icons.search),
+          //   onTap: () {
+          //     Navigator.pop(context);
+          //     Navigator.push(
+          //         context,
+          //         MaterialPageRoute(
+          //           builder: (context) => buildHomePageWithProviders(),
+          //         ));
+          //   },
+          // ),
           ListTile(
             title: const Text("Linking test"),
             leading: const Icon(Icons.question_mark),

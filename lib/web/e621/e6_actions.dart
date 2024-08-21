@@ -1787,6 +1787,142 @@ Future<e621.PostSet?> addToSetWithId({
 }
 
 // #endregion SetSingle
+List<Future<E6PostResponse>> voteOnPostsWithPosts({
+  BuildContext? context,
+  required bool isUpvote,
+  bool noUnvote = true,
+  required Iterable<E6PostResponse> posts,
+  bool updatePosts = true,
+}) {
+  final message =
+      "${isUpvote ? "Upvoting" : "Downvoting"} ${posts.length} posts...";
+  _logger.finer(message);
+  if (context?.mounted ?? false) {
+    util.showUserMessage(context: context!, content: Text(message));
+  }
+  return posts.map((post) {
+    lm.logRequest(
+        e621.Api.initVotePostRequest(
+          postId: post.id,
+          score: isUpvote ? 1 : -1,
+          noUnvote: noUnvote,
+          credentials: E621AccessData.fallback?.cred,
+        ),
+        _logger,
+        lm.LogLevel.INFO);
+    return e621.Api.sendRequest(
+      e621.Api.initVotePostRequest(
+        postId: post.id,
+        score: isUpvote ? 1 : -1,
+        noUnvote: noUnvote,
+        credentials: E621AccessData.fallback?.cred,
+      ),
+    ).then(
+      (v) {
+        _logger.info("${post.id} vote done");
+        lm.logResponseSmart(v, _logger, overrideLevel: lm.LogLevel.INFO);
+        // TODO: response
+        /* if (context?.mounted ?? false) {
+            if (!v.statusCodeInfo.isSuccessful) {
+              util.showUserMessage(
+                  context: context!,
+                  content: Text("${v.statusCode}: ${v.reasonPhrase}"));
+              return post;
+            } else {
+              final update = e621.UpdatedScore.fromJsonRaw(v.body);
+              util.showUserMessage(
+                  context: context!,
+                  content: Text(createPostVoteString(
+                    postId: post.id,
+                    score: update,
+                    oldScore: post.score,
+                  )));
+              return updatePosts ? updatePostWithScore(post, update) : post;
+            }
+          } */
+        final update = e621.UpdatedScore.fromJsonRaw(v.body);
+        return v.statusCodeInfo.isSuccessful && updatePosts
+            ? updatePostWithScore(post, update)
+            : post;
+      },
+    );
+  }).toList();
+  /* ..fold<Future?>(
+      null,
+      (previousValue, element) => previousValue != null
+          ? previousValue.then((e) async => await element)
+          : element,
+    ) */
+  ;
+}
+
+List<Future<e621.UpdatedScore?>> voteOnPostsWithPostIds({
+  BuildContext? context,
+  required bool isUpvote,
+  bool noUnvote = true,
+  required Iterable<int> postIds,
+  // bool updatePosts = true,
+  e621.Score? oldScore,
+}) {
+  final message =
+      "${isUpvote ? "Upvoting" : "Downvoting"} ${postIds.length} posts...";
+  _logger.finer(message);
+  if (context?.mounted ?? false) {
+    util.showUserMessage(context: context!, content: Text(message));
+  }
+  return postIds
+      .map((postId) => e621.Api.sendRequest(
+            e621.Api.initVotePostRequest(
+              postId: postId,
+              score: isUpvote ? 1 : -1,
+              noUnvote: noUnvote,
+              credentials: E621AccessData.fallback?.cred,
+            ),
+          ).then(
+            (v) {
+              lm.logResponseSmart(v, _logger);
+              // TODO: Response
+              // if (context?.mounted ?? false) {
+              //   if (!v.statusCodeInfo.isSuccessful) {
+              //     ScaffoldMessenger.of(context!)
+              //       ..hideCurrentSnackBar()
+              //       ..showSnackBar(
+              //         SnackBar(
+              //           content: Text("${v.statusCode}: ${v.reasonPhrase}"),
+              //         ),
+              //       );
+              //     return null;
+              //   } else {
+              //     final update = e621.UpdatedScore.fromJsonRaw(v.body);
+              //     ScaffoldMessenger.of(context!)
+              //       ..hideCurrentSnackBar()
+              //       ..showSnackBar(
+              //         SnackBar(
+              //           content: Text(createPostVoteString(
+              //             postId: postId,
+              //             score: update,
+              //             oldScore: oldScore,
+              //           )),
+              //         ),
+              //       );
+              //     return update;
+              //   }
+              // }
+              return v.statusCodeInfo.isSuccessful
+                  ? e621.UpdatedScore.fromJsonRaw(v.body)
+                  : null;
+            },
+          ))
+      .toList();
+  /* ..fold<Future?>(
+      null,
+      (previousValue, element) => previousValue != null
+          ? previousValue.then((e) async => await element)
+          : element,
+    ) */
+  ;
+}
+
 Future<E6PostResponse> voteOnPostWithPost({
   BuildContext? context,
   required bool isUpvote,
@@ -1794,13 +1930,10 @@ Future<E6PostResponse> voteOnPostWithPost({
   required E6PostResponse post,
   bool updatePost = true,
 }) {
-  _logger.finer("${isUpvote ? "Upvoting" : "Downvoting"} ${post.id}...");
+  final message = "${isUpvote ? "Upvoting" : "Downvoting"} ${post.id}...";
+  _logger.finer(message);
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!).showSnackBar(
-      SnackBar(
-        content: Text("${isUpvote ? "Upvoting" : "Downvoting"} ${post.id}..."),
-      ),
-    );
+    util.showUserMessage(context: context!, content: Text(message));
   }
   return e621.Api.sendRequest(
     e621.Api.initVotePostRequest(
@@ -1811,35 +1944,24 @@ Future<E6PostResponse> voteOnPostWithPost({
     ),
   ).then(
     (v) {
-      lm.logResponse(
-          v,
-          _logger,
-          v.statusCodeInfo.isSuccessful
-              ? lm.LogLevel.FINEST
-              : lm.LogLevel.SEVERE);
+      lm.logResponseSmart(v, _logger);
       if (context?.mounted ?? false) {
         if (!v.statusCodeInfo.isSuccessful) {
-          ScaffoldMessenger.of(context!)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(
-                content: Text("${v.statusCode}: ${v.reasonPhrase}"),
-              ),
-            );
+          util.showUserMessage(
+              context: context!,
+              content: Text("${v.statusCode}: ${v.reasonPhrase}"));
           return post;
         } else {
           final update = e621.UpdatedScore.fromJsonRaw(v.body);
-          ScaffoldMessenger.of(context!)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(
-                content: Text(createPostVoteString(
-                  postId: post.id,
-                  score: update,
-                  oldScore: post.score,
-                )),
-              ),
-            );
+          util.showUserMessage(
+              context: context!,
+              content: Text(createPostVoteStringStrict(
+                postId: post.id,
+                score: update,
+                oldScore: post.score,
+                noUnvote: noUnvote,
+                castVote: isUpvote ? 1 : -1,
+              )));
           return updatePost ? updatePostWithScore(post, update) : post;
         }
       }
@@ -1877,12 +1999,7 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
     ),
   ).then(
     (v) {
-      lm.logResponse(
-          v,
-          _logger,
-          v.statusCodeInfo.isSuccessful
-              ? lm.LogLevel.FINEST
-              : lm.LogLevel.SEVERE);
+      lm.logResponseSmart(v, _logger);
       if (context?.mounted ?? false) {
         if (!v.statusCodeInfo.isSuccessful) {
           ScaffoldMessenger.of(context!)
@@ -1899,10 +2016,12 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
             ..hideCurrentSnackBar()
             ..showSnackBar(
               SnackBar(
-                content: Text(createPostVoteString(
+                content: Text(createPostVoteStringStrict(
                   postId: postId,
                   score: update,
                   oldScore: oldScore,
+                  noUnvote: noUnvote,
+                  castVote: isUpvote ? 1 : -1,
                 )),
               ),
             );
@@ -1916,20 +2035,51 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
   );
 }
 
+/// TODO: FIX
 String createPostVoteString({
   required int postId,
   required e621.UpdatedScore score,
   e621.Score? oldScore,
+  required bool noUnvote,
+  required int castVote,
 }) {
-  if (score.ourScore == 0) {
+  if (!noUnvote && score.ourScore == 0) {
     return "Removed ${score.total == (oldScore?.total ?? score.total) + 1 ? "up" : score.total == (oldScore?.total ?? score.total) - 1 ? "down" : ""}vote on $postId";
   }
   final out = switch (score.ourScore) {
     > 0 => "upvote",
     < 0 => "downvote",
+    0 => switch (castVote) {
+        > 0 => "upvote",
+        < 0 => "downvote",
+        _ => throw UnsupportedError("type not supported"),
+      },
     _ => throw UnimplementedError(),
   };
-  return oldScore != null && score.total == oldScore.total
+  return oldScore != null && score.total == oldScore.total ||
+          noUnvote && score.ourScore == 0
+      ? "Already ${out}d $postId, kept $out"
+      : "$postId ${out}d";
+}
+
+String createPostVoteStringStrict({
+  required int postId,
+  required e621.UpdatedScore score,
+  e621.Score? oldScore,
+  required bool noUnvote,
+  required int castVote,
+}) {
+  final ourScore = e621.UpdatedScore.determineOurTrueScore(
+      castVote, score.ourScore, noUnvote);
+  if (!noUnvote && ourScore == 0) {
+    return "Removed ${score.total == (oldScore?.total ?? score.total) + 1 ? "up" : score.total == (oldScore?.total ?? score.total) - 1 ? "down" : ""}vote on $postId";
+  }
+  final out = switch (castVote) {
+    > 0 => "upvote",
+    < 0 => "downvote",
+    _ => throw UnimplementedError(),
+  };
+  return score.ourScore == 0 //oldScore != null && score.total == oldScore.total
       ? "Already ${out}d $postId, kept $out"
       : "$postId ${out}d";
 }

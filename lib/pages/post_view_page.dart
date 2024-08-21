@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/main.dart';
@@ -18,6 +19,7 @@ import 'package:fuzzy/widgets/w_video_player_screen.dart';
 import 'package:j_util/e621.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:progressive_image/progressive_image.dart' show ProgressiveImage;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../web/e621/e621.dart';
 import '../widgets/w_fab_builder.dart';
@@ -389,6 +391,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
               children: [SelectableText(e6Post.description)],
             ),
           ..._buildTagsDisplay(context),
+          _buildSourcesDisplay(),
         ],
       ),
     );
@@ -684,7 +687,9 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
             initiallyExpanded: PostView.i.startWithTagsExpanded,
             title: _buildTagDisplayHeader(context, headerStyle, category!),
             dense: true,
+            visualDensity: VisualDensity.compact,
             expandedAlignment: Alignment.centerLeft,
+            expandedCrossAxisAlignment: CrossAxisAlignment.start,
             children: _buildTagDisplayList(
               context,
               headerStyle,
@@ -893,6 +898,50 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
       },
     );
   }
+
+  Widget _buildSourcesDisplay() => ExpansionTile(
+        title: const Text("Sources", style: headerStyle),
+        children: _buildSources().toList(),
+      );
+  Iterable<Widget> _buildSources() => e6Post.sources.map(
+        (e) => Linkify(
+          onOpen: (link) async {
+            if (RegExp(r"(\.png|\.jpg|\.jpeg|\.gif)$").hasMatch(link.url)) {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => Scaffold(
+                      appBar: AppBar(),
+                      body: SafeArea(
+                        child: Image.network(
+                          link.url,
+                          errorBuilder: (context, error, stackTrace) {
+                            Navigator.pop(context);
+                            launchUrl(Uri.parse(link.url)).then((v) =>
+                                !v && !Platform.isWeb
+                                    ? throw Exception(
+                                        'Could not launch ${link.url}')
+                                    : null);
+                            return ErrorPage(
+                                error: error,
+                                stackTrace: stackTrace,
+                                logger: logger);
+                          },
+                        ),
+                      ),
+                    ),
+                  ));
+              return;
+            }
+            if (!await launchUrl(Uri.parse(link.url)) && !Platform.isWeb) {
+              throw Exception('Could not launch ${link.url}');
+            }
+          },
+          text: e,
+          // style: TextStyle(color: Colors.yellow),
+          linkStyle: const TextStyle(color: Colors.yellow),
+        ),
+      );
 }
 
 class WPostViewBackButton extends StatelessWidget {

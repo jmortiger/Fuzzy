@@ -80,6 +80,42 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
+  static ActionButton getMultiplePostsUpvoteAction(
+    BuildContext context,
+    List<E6PostResponse> posts, {
+    bool noUnvote = true,
+  }) {
+    return ActionButton(
+      icon: const Icon(Icons.keyboard_double_arrow_up),
+      tooltip: "Upvote Selected",
+      onPressed: () => actions.voteOnPostsWithPosts(
+        isUpvote: true,
+        noUnvote: noUnvote,
+        posts: posts,
+        context: context,
+        updatePosts: true,
+      ),
+    );
+  }
+
+  static ActionButton getMultiplePostsDownvoteAction(
+    BuildContext context,
+    List<E6PostResponse> posts, {
+    bool noUnvote = true,
+  }) {
+    return ActionButton(
+      icon: const Icon(Icons.keyboard_double_arrow_down),
+      tooltip: "Downvote Selected",
+      onPressed: () => actions.voteOnPostsWithPosts(
+        isUpvote: false,
+        noUnvote: noUnvote,
+        posts: posts,
+        context: context,
+        updatePosts: true,
+      ),
+    );
+  }
+
   static ActionButton getSinglePostDownvoteAction(
     BuildContext context,
     E6PostResponse post,
@@ -125,61 +161,6 @@ class WFabBuilder extends StatelessWidget {
         posts: posts,
         context: context,
       ),
-      // onPressed: () async {
-      //   logger.finer("Adding ${posts.length} posts to favorites...");
-      //   ScaffoldMessenger.of(context)
-      //    ..hideCurrentSnackBar()
-      //    ..showSnackBar(
-      //     SnackBar(
-      //         content: Text("Adding ${posts.length} posts to favorites...")),
-      //   );
-      //   E621.sendAddFavoriteRequestBatch(
-      //     posts.map((e) => e.id),
-      //     username: E621AccessData.fallback?.username,
-      //     apiKey: E621AccessData.fallback?.apiKey,
-      //     onComplete: (responses) {
-      //       var total = responses.length;
-      //       responses.removeWhere(
-      //         (element) => element.statusCodeInfo.isSuccessful,
-      //       );
-      //       var sbs = "${total - responses.length}/"
-      //           "$total posts added to favorites!";
-      //       responses.where((r) => r.statusCode == 422).forEach((r) async {
-      //         var pId = int.parse(r.request!.url.queryParameters["post_id"]!);
-      //         if (context.mounted &&
-      //             Provider.of<CachedFavorites>(context, listen: false)
-      //                 .postIds
-      //                 .contains(pId)) {
-      //           sbs += " $pId Cached";
-      //         }
-      //       });
-      //       ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(
-      //         SnackBar(
-      //           content: Text(sbs),
-      //           action: SnackBarAction(
-      //             label: "Undo",
-      //             onPressed: () async {
-      //               E621.sendDeleteFavoriteRequestBatch(
-      //                 responses.map((e) => int.parse(
-      //                       e.request!.url.queryParameters["post_id"]!,
-      //                     )),
-      //                 username: E621AccessData.fallback?.username,
-      //                 apiKey: E621AccessData.fallback?.apiKey,
-      //                 onComplete: (responses) =>
-      //                     ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(
-      //                   SnackBar(
-      //                     content: Text(
-      //                         "${responses.where((element) => element.statusCodeInfo.isSuccessful).length}/${responses.length} posts removed from favorites!"),
-      //                   ),
-      //                 ),
-      //               );
-      //             },
-      //           ),
-      //         ),
-      //       );
-      //     },
-      //   );
-      // },
     );
   }
 
@@ -432,6 +413,8 @@ class WFabBuilder extends StatelessWidget {
                 getSinglePostRemoveFavAction(context, post!),
               if (isSinglePost) getSinglePostUpvoteAction(context, post!),
               if (isSinglePost) getSinglePostDownvoteAction(context, post!),
+              if (isMultiplePosts) getMultiplePostsUpvoteAction(context, posts!),
+              if (isMultiplePosts) getMultiplePostsDownvoteAction(context, posts!),
               if (isSinglePost) getSinglePostEditAction(context, post!),
               if (isSinglePost && isSelected != null)
                 if (isSelected)
