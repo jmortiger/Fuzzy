@@ -413,8 +413,10 @@ class WFabBuilder extends StatelessWidget {
                 getSinglePostRemoveFavAction(context, post!),
               if (isSinglePost) getSinglePostUpvoteAction(context, post!),
               if (isSinglePost) getSinglePostDownvoteAction(context, post!),
-              if (isMultiplePosts) getMultiplePostsUpvoteAction(context, posts!),
-              if (isMultiplePosts) getMultiplePostsDownvoteAction(context, posts!),
+              if (isMultiplePosts)
+                getMultiplePostsUpvoteAction(context, posts!),
+              if (isMultiplePosts)
+                getMultiplePostsDownvoteAction(context, posts!),
               if (isSinglePost) getSinglePostEditAction(context, post!),
               if (isSinglePost && isSelected != null)
                 if (isSelected)

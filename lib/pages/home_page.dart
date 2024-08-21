@@ -89,10 +89,8 @@ class _HomePageState extends State<HomePage> {
         onSearchRequested: searchRequestedCallback,
         getMountedContext: () => this.context,
       ),
-      floatingActionButton: Selector2<
-          SearchResultsNotifier,
-          ManagedPostCollectionSync,
-          (Set<int>, PostCollectionSync)>(
+      floatingActionButton: Selector2<SearchResultsNotifier,
+          ManagedPostCollectionSync, (Set<int>, PostCollectionSync)>(
         builder: (context, value, child) => WFabBuilder.multiplePosts(
           key: ObjectKey(value.$1),
           posts: value.$2

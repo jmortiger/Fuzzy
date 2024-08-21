@@ -324,8 +324,8 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => buildHomePageWithProviders(
-                          searchText: "fav:${E621.loggedInUser.$Safe?.name ??
-                              E621AccessData.fallbackForced?.username} status:deleted"),
+                          searchText:
+                              "fav:${E621.loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username} status:deleted"),
                     ));
               },
             ),

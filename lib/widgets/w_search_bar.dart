@@ -90,10 +90,11 @@ class _WSearchBarState extends State<WSearchBar> {
                 str_util.getFineInverseSimilarityComparator(currText),
               )
               ..removeRange(
-                relatedSearches.length - min(
-                  SearchView.i.numSavedSearchesInSearchBar,
-                  relatedSearches.length,
-                ),
+                relatedSearches.length -
+                    min(
+                      SearchView.i.numSavedSearchesInSearchBar,
+                      relatedSearches.length,
+                    ),
                 relatedSearches.length,
               );
           })(),

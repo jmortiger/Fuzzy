@@ -68,8 +68,7 @@ ScaffoldFeatureController showUserMessage({
   return sm.showSnackBar(message);
 }
 
-SnackBarAction? _makeSnackBarAction(
-    (String label, VoidCallback onTap)? action,
+SnackBarAction? _makeSnackBarAction((String label, VoidCallback onTap)? action,
     List<(String label, VoidCallback onTap)>? actions) {
   return (action ?? actions?.firstOrNull) != null
       ? SnackBarAction(

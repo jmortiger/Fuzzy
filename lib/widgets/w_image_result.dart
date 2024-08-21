@@ -226,8 +226,7 @@ class WImageResult extends StatelessWidget {
                             .toList()
                         : null,
                     tagsToAdd: [],
-                  )
-            ,
+                  ),
           )).then<void>(parseReturnValue);
     }
 
