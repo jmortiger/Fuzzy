@@ -471,6 +471,107 @@ class _WPostSearchResultsSwiperState extends State<
     // logger.info(
     //     "Building widget.posts.parameters.tags: ${widget.posts.parameters.tags} Provider.of<SearchCacheLegacy>(context).mpcSync.parameters.tags: ${scWatch.mpcSync.parameters.tags}");
     logger.info("build called");
+    final root = PageView.builder(
+      // key: ObjectKey(
+      //   tags,
+      //   // scWatch.mpcSync.parameters.tags,
+      // ),
+
+      /// [PageView.scrollDirection] defaults to [Axis.horizontal].
+      /// Use [Axis.vertical] to scroll vertically.
+      controller: _pageViewController,
+      onPageChanged:
+          _handlePageViewChanged, //Platform.isDesktop ? _handlePageViewChanged : null,
+      itemBuilder: (context, index) {
+        logger.info("itemBuilder called $index");
+        // var ps = widget.posts[index], t = ps.$Safe;
+        // logger.finest("${widget.posts.parameters.tags} $index");
+        // logger.finest("$tags $index");
+        var ps = ValueAsync(value: sc.getPostsOnPageAsObj(index)),
+            // value: widget.posts.getPostsOnPageAsObj(index)),
+            t = ps.$Safe;
+        Widget ret;
+        /* Key? key;
+                    // key = widget.key;
+                    // key = ObjectKey(widget.posts.parameters.tags);
+                    // key = ObjectKey("${widget.posts.parameters.tags}$index");
+                    key = ObjectKey("$tags $index"); */
+        // logger.finer("index: $index, sync posts: ${t?.map(
+        //   (element) => element.id,
+        // )}");
+
+        if (ps.isComplete && t == null) {
+          logger.finer("index: $index, empty && complete}");
+          return null;
+        } else if (!ps.isComplete) {
+          ret = FutureBuilder(
+            future: ps.future,
+            builder: (context, snapshot) {
+              logger.info("Index: $index snapshot complete "
+                  "${snapshot.hasData || snapshot.hasError} "
+                  "${logE6Posts(snapshot.data)}");
+              if (snapshot.hasData || ps.isComplete) {
+                if (snapshot.data != null) {
+                  return WPostSearchResults(
+                    // key: key,
+                    posts: snapshot.data!,
+                    expectedCount: SearchView.i.postsPerPage,
+                    disallowSelections: widget.disallowSelections,
+                    fireRebuild: widget._fireRebuild,
+                    pageIndex: index,
+                    indexOffset: index * SearchView.i.postsPerPage,
+                    onPostsSelected: widget.onPostsSelected,
+                    stripToGridView: widget.stripToGridView,
+                    useLazyBuilding: widget.useLazyBuilding,
+                  );
+                } else {
+                  return const Column(
+                    children: [Expanded(child: Text("No Results"))],
+                  );
+                }
+              } else if (snapshot.hasError) {
+                return Column(
+                  children: [
+                    Text("ERROR: ${snapshot.error}"),
+                    Text("StackTrace: ${snapshot.stackTrace}"),
+                  ],
+                );
+              } else {
+                return const AspectRatio(
+                  aspectRatio: 1,
+                  child: CircularProgressIndicator(),
+                );
+              }
+            },
+          );
+        } else {
+          logger.finer("index: $index, sync posts: ${t?.map(
+            (element) => element.id,
+          )}");
+          ret = WPostSearchResults(
+            // key: key,
+            posts: t!,
+            expectedCount: SearchView.i.postsPerPage,
+            disallowSelections: widget.disallowSelections,
+            fireRebuild: widget._fireRebuild,
+            pageIndex: index,
+            indexOffset: index * SearchView.i.postsPerPage,
+            onPostsSelected: widget.onPostsSelected,
+            stripToGridView: widget.stripToGridView,
+            useLazyBuilding: widget.useLazyBuilding,
+          );
+        }
+        return Column(
+          // key: key,
+          children: [
+            Text(
+              "index: $index, indexOffset: ${index * SearchView.i.postsPerPage}",
+            ),
+            Expanded(child: ret),
+          ],
+        );
+      },
+    );
     return Column(
       children: [
         Selector<ManagedPostCollectionSync, (int?, int?, int?)>(
@@ -487,179 +588,81 @@ class _WPostSearchResultsSwiperState extends State<
           //   tags,
           //   // scWatch.mpcSync.parameters.tags,
           // ),
-          child: Stack(
-            // key: ObjectKey(
-            //   tags,
-            //   // scWatch.mpcSync.parameters.tags,
-            // ),
-            alignment: Alignment.bottomCenter,
-            children: <Widget>[
-              PageView.builder(
-                // key: ObjectKey(
-                //   tags,
-                //   // scWatch.mpcSync.parameters.tags,
-                // ),
+          child: Platform.isDesktop
+              ? Stack(
+                  // key: ObjectKey(
+                  //   tags,
+                  //   // scWatch.mpcSync.parameters.tags,
+                  // ),
+                  alignment: Alignment.bottomCenter,
+                  children: <Widget>[
+                    root,
+                    Selector<ManagedPostCollectionSync, int>(
+                      builder: (context, numPagesInSearch, child) {
+                        return IndeterminatePageIndicator.builder(
+                          determineNextPage: (currentPageIndex) =>
+                              (currentPageIndex == numPagesInSearch - 1)
+                                  ? null
+                                  : currentPageIndex + 1,
+                          // tabController: _tabController,
+                          currentPageIndex: _currentPageIndex,
+                          // onUpdateCurrentPageIndex: _updateCurrentPageIndex,
+                          onUpdateCurrentPageIndex:
+                              _updateCurrentPageIndexWrapper,
+                          pageIndicatorBuilder: (cxt, currentPageIndex) =>
+                              IgnorePointer(
+                                  child: Text(
+                            "tabController.index: $currentPageIndex, tabController.length: $numPagesInSearch",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(shadows: [
+                              Shadow(color: Colors.black, blurRadius: 1),
+                              Shadow(color: Colors.black, blurRadius: 5),
+                            ]),
+                          )),
+                        );
 
-                /// [PageView.scrollDirection] defaults to [Axis.horizontal].
-                /// Use [Axis.vertical] to scroll vertically.
-                controller: _pageViewController,
-                onPageChanged:
-                    _handlePageViewChanged, //Platform.isDesktop ? _handlePageViewChanged : null,
-                itemBuilder: (context, index) {
-                  logger.info("itemBuilder called $index");
-                  // var ps = widget.posts[index], t = ps.$Safe;
-                  // logger.finest("${widget.posts.parameters.tags} $index");
-                  // logger.finest("$tags $index");
-                  var ps = ValueAsync(value: sc.getPostsOnPageAsObj(index)),
-                      // value: widget.posts.getPostsOnPageAsObj(index)),
-                      t = ps.$Safe;
-                  Widget ret;
-                  /* Key? key;
-                    // key = widget.key;
-                    // key = ObjectKey(widget.posts.parameters.tags);
-                    // key = ObjectKey("${widget.posts.parameters.tags}$index");
-                    key = ObjectKey("$tags $index"); */
-                  // logger.finer("index: $index, sync posts: ${t?.map(
-                  //   (element) => element.id,
-                  // )}");
+                        // return TabIndicatorWrapper(
+                        //     key: ObjectKey("$tags$numPagesInSearch"),
+                        //     numPagesInSearch: numPagesInSearch,
+                        //     updateCurrentPageIndex: _updateCurrentPageIndex,
+                        //     currentPageIndex: _currentPageIndex);
 
-                  if (ps.isComplete && t == null) {
-                    logger.finer("index: $index, empty && complete}");
-                    return null;
-                  } else if (!ps.isComplete) {
-                    ret = FutureBuilder(
-                      future: ps.future,
-                      builder: (context, snapshot) {
-                        logger.info("Index: $index snapshot complete "
-                            "${snapshot.hasData || snapshot.hasError} "
-                            "${logE6Posts(snapshot.data)}");
-                        if (snapshot.hasData || ps.isComplete) {
-                          if (snapshot.data != null) {
-                            return WPostSearchResults(
-                              // key: key,
-                              posts: snapshot.data!,
-                              expectedCount: SearchView.i.postsPerPage,
-                              disallowSelections: widget.disallowSelections,
-                              fireRebuild: widget._fireRebuild,
-                              pageIndex: index,
-                              indexOffset: index * SearchView.i.postsPerPage,
-                              onPostsSelected: widget.onPostsSelected,
-                              stripToGridView: widget.stripToGridView,
-                              useLazyBuilding: widget.useLazyBuilding,
-                            );
-                          } else {
-                            return const Column(
-                              children: [Expanded(child: Text("No Results"))],
-                            );
-                          }
-                        } else if (snapshot.hasError) {
-                          return Column(
-                            children: [
-                              Text("ERROR: ${snapshot.error}"),
-                              Text("StackTrace: ${snapshot.stackTrace}"),
-                            ],
-                          );
-                        } else {
-                          return const AspectRatio(
-                            aspectRatio: 1,
-                            child: CircularProgressIndicator(),
-                          );
-                        }
+                        // final tabController =
+                        //     TabController(length: numPagesInSearch, vsync: this);
+                        // final ColorScheme colorScheme =
+                        //     Theme.of(context).colorScheme;
+                        // return IndeterminatePageIndicator(
+                        //   determineNextPage: (currentPageIndex) =>
+                        //       (currentPageIndex == /* _tabController.length */
+                        //               /* _numPages */numPagesInSearch - 1)
+                        //           ? null
+                        //           : currentPageIndex + 1,
+                        //   // tabController: _tabController,
+                        //   currentPageIndex: _currentPageIndex,
+                        //   // onUpdateCurrentPageIndex: _updateCurrentPageIndex,
+                        //   onUpdateCurrentPageIndex: (newPageIndex, oldPageIndex) {
+                        //     tabController.index = newPageIndex;
+                        //     _updateCurrentPageIndex(newPageIndex);
+                        //   },
+                        //   pageIndicator: IgnorePointer(
+                        //     child: TabPageSelector(
+                        //       controller: tabController,
+                        //       color: colorScheme.surface,
+                        //       selectedColor: colorScheme.primary,
+                        //     ),
+                        //   ),
+                        // );
                       },
-                    );
-                  } else {
-                    logger.finer("index: $index, sync posts: ${t?.map(
-                      (element) => element.id,
-                    )}");
-                    ret = WPostSearchResults(
-                      // key: key,
-                      posts: t!,
-                      expectedCount: SearchView.i.postsPerPage,
-                      disallowSelections: widget.disallowSelections,
-                      fireRebuild: widget._fireRebuild,
-                      pageIndex: index,
-                      indexOffset: index * SearchView.i.postsPerPage,
-                      onPostsSelected: widget.onPostsSelected,
-                      stripToGridView: widget.stripToGridView,
-                      useLazyBuilding: widget.useLazyBuilding,
-                    );
-                  }
-                  return Column(
-                    // key: key,
-                    children: [
-                      Text(
-                        "index: $index, indexOffset: ${index * SearchView.i.postsPerPage}",
-                      ),
-                      Expanded(child: ret),
-                    ],
-                  );
-                },
-              ),
-              if (Platform.isDesktop)
-                Selector<ManagedPostCollectionSync, int>(
-                  builder: (context, numPagesInSearch, child) {
-                    return IndeterminatePageIndicator.builder(
-                      determineNextPage: (currentPageIndex) =>
-                          (currentPageIndex == numPagesInSearch - 1)
-                              ? null
-                              : currentPageIndex + 1,
-                      // tabController: _tabController,
-                      currentPageIndex: _currentPageIndex,
-                      // onUpdateCurrentPageIndex: _updateCurrentPageIndex,
-                      onUpdateCurrentPageIndex: _updateCurrentPageIndexWrapper,
-                      pageIndicatorBuilder: (cxt, currentPageIndex) =>
-                          IgnorePointer(
-                              child: Text(
-                        "tabController.index: $currentPageIndex, tabController.length: $numPagesInSearch",
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(shadows: [
-                          Shadow(color: Colors.black, blurRadius: 1),
-                          Shadow(color: Colors.black, blurRadius: 5),
-                        ]),
-                      )),
-                    );
-
-                    // return TabIndicatorWrapper(
-                    //     key: ObjectKey("$tags$numPagesInSearch"),
-                    //     numPagesInSearch: numPagesInSearch,
-                    //     updateCurrentPageIndex: _updateCurrentPageIndex,
-                    //     currentPageIndex: _currentPageIndex);
-
-                    // final tabController =
-                    //     TabController(length: numPagesInSearch, vsync: this);
-                    // final ColorScheme colorScheme =
-                    //     Theme.of(context).colorScheme;
-                    // return IndeterminatePageIndicator(
-                    //   determineNextPage: (currentPageIndex) =>
-                    //       (currentPageIndex == /* _tabController.length */
-                    //               /* _numPages */numPagesInSearch - 1)
-                    //           ? null
-                    //           : currentPageIndex + 1,
-                    //   // tabController: _tabController,
+                      selector: (ctx, v) => v.numPostsInSearch ?? 1,
+                    ),
+                    // PageIndicator(
+                    //   tabController: _tabController,
                     //   currentPageIndex: _currentPageIndex,
-                    //   // onUpdateCurrentPageIndex: _updateCurrentPageIndex,
-                    //   onUpdateCurrentPageIndex: (newPageIndex, oldPageIndex) {
-                    //     tabController.index = newPageIndex;
-                    //     _updateCurrentPageIndex(newPageIndex);
-                    //   },
-                    //   pageIndicator: IgnorePointer(
-                    //     child: TabPageSelector(
-                    //       controller: tabController,
-                    //       color: colorScheme.surface,
-                    //       selectedColor: colorScheme.primary,
-                    //     ),
-                    //   ),
-                    // );
-                  },
-                  selector: (ctx, v) => v.numPostsInSearch ?? 1,
-                ),
-              // PageIndicator(
-              //   tabController: _tabController,
-              //   currentPageIndex: _currentPageIndex,
-              //   onUpdateCurrentPageIndex: _updateCurrentPageIndex,
-              // ),
-            ],
-          ),
+                    //   onUpdateCurrentPageIndex: _updateCurrentPageIndex,
+                    // ),
+                  ],
+                )
+              : root,
         ),
       ],
     ) /* ,
