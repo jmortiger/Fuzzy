@@ -37,9 +37,9 @@ class HomePage extends StatefulWidget implements IRoute<HomePage> {
 
 class _HomePageState extends State<HomePage> {
   // #region Logger
-  late final lRecord = lm.generateLogger("HomePage");
-  lm.Printer get print => lRecord.print;
-  lm.FileLogger get logger => lRecord.logger;
+  static late final lRecord = lm.generateLogger("HomePage");
+  static lm.Printer get print => lRecord.print;
+  static lm.FileLogger get logger => lRecord.logger;
   // #endregion Logger
   @override
   void initState() {
@@ -84,23 +84,12 @@ class _HomePageState extends State<HomePage> {
           },
         ),
       ),
-      body: SafeArea(child: buildSearchView(context)),
+      body: SafeArea(child: WPostSearchResultsSwiper.buildItFull(context)),
       endDrawer: WHomeEndDrawer(
         onSearchRequested: searchRequestedCallback,
         getMountedContext: () => this.context,
       ),
-      floatingActionButton: Selector2<SearchResultsNotifier,
-          ManagedPostCollectionSync, (Set<int>, PostCollectionSync)>(
-        builder: (context, value, child) => WFabBuilder.multiplePosts(
-          key: ObjectKey(value.$1),
-          posts: value.$2
-              .where((e) => value.$1.contains(e.inst.$Safe?.id))
-              .map((e) => e.inst.$)
-              .toList(),
-        ),
-        selector: (ctx, p1, p2) => (p1.selectedPostIds, p2.collection),
-        shouldRebuild: (previous, next) => setEquals(previous.$1, next.$1),
-      ),
+      floatingActionButton: WFabBuilder.buildItFull(context),
     );
   }
 
@@ -108,23 +97,6 @@ class _HomePageState extends State<HomePage> {
       Provider.of<ManagedPostCollectionSync>(context, listen: false);
   ManagedPostCollectionSync get scWatch =>
       Provider.of<ManagedPostCollectionSync>(context, listen: true);
-
-  @widgetFactory
-  Widget buildSearchView(BuildContext context) {
-    logger.info("buildSearchView");
-    return Column(
-      children: [
-        Selector<ManagedPostCollectionSync, String>(
-          builder: (context, value, child) => Expanded(
-              key: ObjectKey(value),
-              child: WPostSearchResultsSwiper(
-                useLazyBuilding: SearchView.i.lazyBuilding,
-              )),
-          selector: (ctx, p1) => p1.parameters.tags,
-        ),
-      ],
-    );
-  }
 
   /// Call inside of setState
   void _sendSearchAndUpdateState({

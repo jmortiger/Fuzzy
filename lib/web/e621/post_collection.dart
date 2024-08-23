@@ -57,6 +57,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   // #endregion Logger
   // #region Fields
   bool treatAsNull = true;
+  bool tryValidatingSearches = true;
   final PostCollectionSync collection;
   final onPageRetrievalFailure = JEvent<PostCollectionEvent>();
   PostSearchQueryRecord _parameters;
@@ -127,10 +128,21 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         logger.severe(e, e, s);
         return -1;
       }).ignore();
-      final t = tryRetrieveFirstPage();
-      if (t is Future<bool>) t.ignore();
+      tryRetrieveFirstPageAsync().ignore();
     }
   }
+  ManagedPostCollectionSync._bare({
+    // int currentPageOffset = 0,
+    PostSearchQueryRecord? parameters,
+    super.firstPostIdCached,
+    super.lastPostIdCached,
+    super.lastPostOnPageIdCached,
+    super.hasNextPageCached,
+  })  : _parameters = parameters ?? const PostSearchQueryRecord(),
+        _currentPageOffset = 0,
+        _startingPage =
+            (parameters ?? const PostSearchQueryRecord()).pageIndex ?? 0,
+        collection = PostCollectionSync();
   // #endregion Ctor
 
   // #region Properties
@@ -454,9 +466,11 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     }
   }
 
+  /// Is there a page after the given one?
+  ///
   /// TODO: make handle unloaded pages
   bool isPageAfter(int pageIndex) => (isPageLoaded(pageIndex) &&
-      collection.elementAt(getPageLastPostIndex(pageIndex)).inst.$.id !=
+      collection.elementAt(getPageLastPostIndex(pageIndex)).$.id !=
           lastPostIdCached);
   bool isPageLoaded(int pageIndex) =>
       pageIndex >= startingPageIndex && pageIndex <= lastStoredPageIndex;
@@ -511,7 +525,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       logger.info("Next page already loaded");
       return true;
       // } else if (hasNextPageCached ?? false) {
-    } else if (isPageAfter(currentPageIndex)) {
+    } else if (!tryValidatingSearches || isPageAfter(currentPageIndex)) {
       return doIt();
     } else {
       return getHasNextPageById(tags: parameters.tags)
@@ -559,7 +573,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       logger.info("Prior page already loaded");
       return true;
     }
-    if (hasPriorPage ?? false) {
+    if (!tryValidatingSearches || (hasPriorPage ?? false)) {
       return doIt();
     } else {
       logger.info(
@@ -615,7 +629,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       logger.info("Page index $pageIndex already loaded");
       return true;
     }
-    if (hasPriorPage ?? false) {
+    if (!tryValidatingSearches || (hasPriorPage ?? false)) {
       return doIt();
     } else {
       logger.info(
@@ -671,7 +685,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       logger.info("Page index $pageIndex already loaded");
       return true;
       // } else if (hasNextPageCached ?? false) {
-    } else if (isPageAfter(pageIndex)) {
+    } else if (!tryValidatingSearches || isPageAfter(pageIndex)) {
       return doIt();
     } else {
       return getHasNextPageById(tags: parameters.tags)
@@ -686,6 +700,34 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   }
 
   FutureOr<bool> tryRetrieveFirstPage({
+    String? username,
+    String? apiKey,
+  }) {
+    if (isPageLoaded(0)) return true;
+    final param = _parameters.copyWith(pageIndex: 0);
+    return _fetchPage(param).then((v) {
+      if (v?.isEmpty ?? true) {
+        logger.info(
+          "No page index ${param.pageIndex} from server\n"
+          "\tvalidLimit: ${param.validLimit}\n"
+          "\tpageNumber: ${param.pageNumber}\n"
+          "\ttags: ${param.tags}",
+        );
+        return false;
+      }
+      logger.info(
+        "Got page ${param.pageIndex} from server\n"
+        "\tvalidLimit: ${param.validLimit}\n"
+        "\tpageNumber: ${param.pageNumber}\n"
+        "\ttags: ${param.tags}"
+        "Result length: ${v?.length}",
+      );
+      assignPagePosts(param.pageIndex!, v!);
+      return true;
+    });
+  }
+
+  Future<bool> tryRetrieveFirstPageAsync({
     String? username,
     String? apiKey,
   }) {
@@ -1096,6 +1138,100 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       //   return hasNextPageCached = (lastPostId != out.posts.last.id);
       // }
     });
+  }
+}
+
+class FavoritesCollectionLoader extends ManagedPostCollectionSync {
+  static lm.FileLogger get logger => ManagedPostCollectionSync.logger;
+  @override
+  bool get tryValidatingSearches => false;
+  @override
+  set tryValidatingSearches(bool _) => false;
+  @override
+  Future<int> _numSearchPostsInit() => E621.findTotalResultNumberInFavs(
+        // tags: parameters.tags,
+        limit: parameters.validLimit,
+      )..then((v) {
+          // _numPostsInSearch = v;
+          _numPagesInSearch = (v / postsPerPage).ceil();
+          notifyListeners();
+          logger.info("tags: ${parameters.tags} numPostsInSearch: $v");
+          return v;
+        }).ignore();
+
+  @override
+  PostSearchQueryRecord get parameters => _parameters;
+
+  @override
+  set parameters(PostSearchQueryRecord value) {
+    logger.finest("set parameters called"
+        "\n\told:"
+        "\n\t\ttags:${_parameters.tags}"
+        "\n\t\tlimit:${_parameters.limit}"
+        "\n\t\tpageNumber:${_parameters.pageNumber}"
+        "\n\tnew:"
+        "\n\t\ttags:${value.tags}"
+        "\n\t\tlimit:${value.limit}"
+        "\n\t\tpageNumber:${value.pageNumber}"
+        "\n\tDisregarding tags");
+    value.copyWith(tags: "");
+    /* if (!setEquals(_parameters.tagSet, value.tagSet)) {
+      logger.info("Tag Parameter changed from ${_parameters.tagSet} "
+          "to ${value.tagSet}, clearing collection and notifying listeners");
+      _parameters = value;
+      lastPostIdCached = firstPostIdCached = /* hasNextPageCached =  */
+          lastPostOnPageIdCached = null;
+      collection.clear();
+      logger.finest("Length after clearing: ${collection.length}");
+      _numPagesInSearch = null;
+      _totalPostsInSearch = LazyInitializer<int>(_numSearchPostsInit)
+        ..getItemAsync().ignore();
+      notifyListeners();
+    } else { */
+    logger.finer("Unchanged tag parameter, not "
+        "clearing collection nor notifying listeners");
+    _parameters = value;
+    // }
+  }
+
+  @override
+  Future<Iterable<E6PostResponse>?> _fetchPage(
+      [PostSearchQueryRecord? parameters]) {
+    parameters ??= _parameters;
+    logger.info("Getting page ${parameters.page}");
+    return _loading[parameters] ??
+        (_loading[parameters] = E621
+            .performListUserFavsSafe(
+          limit: parameters.validLimit,
+          page: parameters,
+        )
+            .then((v) {
+          if (v == null) {
+            onPageRetrievalFailure.invoke(PostCollectionEvent(
+                parameters: parameters!, posts: collection));
+          }
+          return v;
+        }))
+      ..then((v) => _loading.remove(parameters!)).ignore();
+  }
+
+  FavoritesCollectionLoader({
+    // int currentPageOffset = 0,
+    PostSearchQueryRecord? parameters,
+    super.firstPostIdCached,
+    super.lastPostIdCached,
+    super.lastPostOnPageIdCached,
+    super.hasNextPageCached,
+  }) : super._bare(parameters: parameters) {
+    super.tryValidatingSearches = false;
+    _totalPostsInSearch = LazyInitializer<int>(_numSearchPostsInit);
+    if (parameters != null) {
+      _totalPostsInSearch.getItemAsync().onError((e, s) {
+        logger.severe(e, e, s);
+        return -1;
+      }).ignore();
+      tryRetrieveFirstPageAsync().ignore;
+    }
   }
 }
 

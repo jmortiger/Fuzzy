@@ -7,7 +7,10 @@ import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/pages/user_profile_page.dart';
 import 'package:fuzzy/web/e621/e621.dart';
+import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/widgets/w_back_button.dart';
+import 'package:fuzzy/widgets/w_fab_builder.dart';
+import 'package:fuzzy/widgets/w_post_search_results.dart' as psr;
 import 'package:fuzzy/widgets/w_update_set.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:fuzzy/widgets/w_search_pool.dart';
@@ -327,6 +330,45 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                           searchText:
                               "fav:${E621.loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username} status:deleted"),
                     ));
+              },
+            ),
+          if (isLoggedIn)
+            ListTile(
+              title: const Text("Search Favs (Order Preserved)"),
+              leading: const Icon(Icons.search),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => buildWithProviders(
+                              mpcProvider: ChangeNotifierProvider(
+                                  create: (context) =>
+                                      FavoritesCollectionLoader()),
+                              builder: (context, child) => Scaffold(
+                                appBar: AppBar(
+                                  title: Text(
+                                      "${E621.loggedInUser.$Safe?.name}'s Favorites"),
+                                ),
+                                body: Column(
+                                  children: [
+                                    Selector<ManagedPostCollectionSync, String>(
+                                      builder: (context, value, child) =>
+                                          Expanded(
+                                              key: ObjectKey(value),
+                                              child:
+                                                  psr.WPostSearchResultsSwiper(
+                                                useLazyBuilding:
+                                                    SearchView.i.lazyBuilding,
+                                              )),
+                                      selector: (ctx, p1) => p1.parameters.tags,
+                                    ),
+                                  ],
+                                ),
+                                floatingActionButton:
+                                    WFabBuilder.buildItFull(context),
+                              ),
+                            )));
               },
             ),
           // ListTile(

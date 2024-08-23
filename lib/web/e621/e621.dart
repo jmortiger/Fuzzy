@@ -60,6 +60,8 @@ sealed class E621 extends Site {
   static ListQueue<DateTime> burstTimes = ListQueue(60);
 
   // #region User Account Data
+  static String? get usernameFormatted =>
+      loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username;
   static final loggedInUser = LateInstance<e621.UserLoggedIn>();
 
   /// Won't update unless [user] is non-null and of type [e621.UserLoggedIn].
@@ -724,6 +726,30 @@ sealed class E621 extends Site {
     return a2;
   }
 
+  static Future<Iterable<E6PostResponse>?> performListUserFavsSafe({
+    int? limit,
+    PageSearchParameterNullable? page,
+    String? username,
+    String? apiKey,
+  }) async {
+    limit ??= SearchView.i.postsPerPage;
+    final a = getAuth(username, apiKey);
+    if (a == null) throw ArgumentError.value("Null credentials");
+    _print("Favs Listing for ${a.username} ($username)");
+    var t = await e621.Api.sendRequest(
+        e621.Api.initListFavoritesWithCredentialsRequest(
+      limit: limit,
+      page: page?.page,
+      credentials: a,
+    ));
+    lm.logResponseSmart(t, _logger);
+    try {
+      return E6PostMutable.fromRawJsonResults(t.body);
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Should take at most 12 iterations to find, forcibly ends after 16;
   /// profiled with https://dartpad.dev/?id=ec269e2c4c7ccd4019bd07d3470e0d97
   static Future<int> findLastPageNumber({
@@ -735,6 +761,22 @@ sealed class E621 extends Site {
   }) async =>
       await findTotalPostNumber(
         tags: tags,
+        username: username,
+        apiKey: apiKey,
+        checkOnNonFullPages: checkOnNonFullPages,
+      ).then((v) => (v / (limit ?? SearchView.i.postsPerPage)).ceil());
+
+  /// Should take at most 12 iterations to find, forcibly ends after 16;
+  /// profiled with https://dartpad.dev/?id=ec269e2c4c7ccd4019bd07d3470e0d97
+  static Future<int> findLastPageNumberInFavs({
+    // required String tags,
+    final int? limit,
+    final String? username,
+    final String? apiKey,
+    final bool checkOnNonFullPages = false,
+  }) async =>
+      await findTotalResultNumberInFavs(
+        // tags: tags,
         username: username,
         apiKey: apiKey,
         checkOnNonFullPages: checkOnNonFullPages,
@@ -834,6 +876,31 @@ sealed class E621 extends Site {
     }
     _logger.info("Iterations: $safety");
     return (((finalPage - 1) * sLimit) + results.length);
+  }
+
+  /// Including [limit] will stop counting posts past [e621.Api.maxPageNumber] * [limit].
+  /// It may not find the full post number.
+  ///
+  /// Should take at most 12 iterations to find, forcibly ends after 16;
+  /// profiled with https://dartpad.dev/?id=ec269e2c4c7ccd4019bd07d3470e0d97
+  static Future<int> findTotalResultNumberInFavs({
+    final int? limit,
+    String? username,
+    final String? apiKey,
+    final bool checkOnNonFullPages = false,
+  }) async {
+    username ??= getValidUsername(username);
+    if (username == null) {
+      throw ArgumentError.value(username, "username",
+          "Couldn't get username from credentials, so username can't be null.");
+    }
+    final tags = "fav:$username";
+    return findTotalPostNumber(
+        tags: tags,
+        limit: limit,
+        apiKey: apiKey,
+        username: username,
+        checkOnNonFullPages: checkOnNonFullPages);
   }
 
   /// For some reason, throws (at least on web) if not separated.
@@ -946,16 +1013,38 @@ sealed class E621 extends Site {
         pageNumber: 1,
       );
 
+  // #region Credentials
   static e621.E6Credentials? getAuth(
     String? username,
     String? apiKey,
   ) =>
-      (username?.isNotEmpty ?? false) && (apiKey?.isNotEmpty ?? false)
+      isValidUsername(username) && isValidApiKey(apiKey)
           ? e621.Api.activeCredentials = e621.E6Credentials(
               username: username!,
               apiKey: apiKey!,
             )
           : E621AccessData.fallback?.cred;
+  static String? getValidUsername(
+    String? username,
+  ) =>
+      (username?.isNotEmpty ?? false)
+          ? username
+          : E621AccessData.fallback?.cred.username;
+  static String? getValidApiKey(
+    String? apiKey,
+  ) =>
+      (apiKey?.isNotEmpty ?? false)
+          ? apiKey
+          : E621AccessData.fallback?.cred.apiKey;
+  static bool isValidUsername(
+    String? username,
+  ) =>
+      username?.isNotEmpty ?? false;
+  static bool isValidApiKey(
+    String? apiKey,
+  ) =>
+      apiKey?.isNotEmpty ?? false;
+  // #endregion Credentials
   static Future<void> addPostToSetHeavyLifter(
       BuildContext context, PostListing postListing,
       [e621.E6Credentials? cred]) async {

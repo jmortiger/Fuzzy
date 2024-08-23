@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show setEquals;
+import 'package:flutter/material.dart' show BuildContext, Icon, Icons, Navigator, ObjectKey, ScaffoldMessenger, SnackBar, StatelessWidget, Text, Widget, widgetFactory;
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/pages/edit_post_page.dart';
 import 'package:fuzzy/web/e621/e6_actions.dart' as actions;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
+import 'package:fuzzy/web/e621/post_collection.dart' show ManagedPostCollectionSync, PostCollectionSync;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
 
@@ -44,6 +46,23 @@ class WFabBuilder extends StatelessWidget {
     // this.selectedPosts,
   })  : post = null,
         selectedPosts = null /* posts */;
+
+  @widgetFactory
+  static Widget buildItFull(BuildContext context) {
+    return Selector2<SearchResultsNotifier,
+        ManagedPostCollectionSync, (Set<int>, PostCollectionSync)>(
+      builder: (context, value, child) => WFabBuilder.multiplePosts(
+        key: ObjectKey(value.$1),
+        posts: value.$2
+            .where((e) => value.$1.contains(e.inst.$Safe?.id))
+            .map((e) => e.inst.$)
+            .toList(),
+      ),
+      selector: (ctx, p1, p2) => (p1.selectedPostIds, p2.collection),
+      shouldRebuild: (previous, next) => setEquals(previous.$1, next.$1),
+    );
+  }
+
   static ActionButton getClearSelectionButton(
     BuildContext context, [
     void Function()? clearSelection,

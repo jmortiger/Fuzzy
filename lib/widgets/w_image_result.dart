@@ -4,12 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart' show SearchView;
 import 'package:fuzzy/models/saved_data.dart' show SavedDataE6;
-import 'package:fuzzy/models/search_cache.dart' show SearchCacheLegacy;
 import 'package:fuzzy/models/search_results.dart' show SearchResultsNotifier;
 import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/post_swipe_page.dart';
-import 'package:fuzzy/pages/post_view_page.dart' show IReturnsTags;
-import 'package:fuzzy/util/util.dart' show placeholder, deletedPreviewImagePath;
+import 'package:fuzzy/util/util.dart' show placeholder;
 import 'package:fuzzy/web/e621/models/e6_models.dart' /*  show E6PostResponse */;
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/models/image_listing.dart'
@@ -38,7 +36,8 @@ class WImageResult extends StatelessWidget {
 
   // final void Function(int index)? onSelectionToggle;
   final Iterable<E6PostResponse>? postsCache;
-  SearchCacheLegacy getSc(BuildContext context, [bool listen = false]) =>
+  ManagedPostCollectionSync getSc(BuildContext context,
+          [bool listen = false]) =>
       Provider.of<ManagedPostCollectionSync>(context, listen: listen);
   const WImageResult({
     super.key,
@@ -72,11 +71,12 @@ class WImageResult extends StatelessWidget {
       "isSelected: $isSelected, "
       "url: ${imageInfo.url}",
     );
+    final t = getGridSizeEstimate(context);
     return Stack(
       children: [
         _buildPane(context, imageInfo),
         if (SearchView.i.postInfoBannerItems.isNotEmpty)
-          PostInfoPane(post: imageListing),
+          PostInfoPane(post: imageListing, maxWidth: t.width,),
         if (isSelected ||
             (!disallowSelections &&
                 sr(context).getIsPostSelected(imageListing.id)))
@@ -157,7 +157,7 @@ class WImageResult extends StatelessWidget {
     void viewPost() {
       SavedDataE6.init();
       int? p;
-      final sc = getSc(context, false).mpcSync;
+      final sc = getSc(context, false);
       if (!disallowSelections) {
         // await getSc(context, false).mpcSync.updateCurrentPostIndex(index);
         p = sc.getPageOfGivenPostIndexOnPage(index);
@@ -172,7 +172,7 @@ class WImageResult extends StatelessWidget {
                 (v.tagsToAddToSearch as List<String>).foldToString();
           }
           if (!disallowSelections) {
-            this.sr(context)?.selectedPostIds =
+            sr(context).selectedPostIds =
                 ((v.selectedPosts as Iterable<E6PostResponse>).map((e) => e.id))
                     .toSet();
           }
@@ -191,9 +191,8 @@ class WImageResult extends StatelessWidget {
                     //     getSc(context, false).mpcSync.currentPageIndex,
                     initialPageIndex: p ??
                         getSc(context, false)
-                            .mpcSync
                             .getPageOfGivenPostIndexOnPage(index),
-                    posts: getSc(context, false).mpcSync,
+                    posts: getSc(context, false),
                     onAddToSearch: getOnAddToSearch(context),
                     tagsToAdd: [],
                     selectedPosts: !disallowSelections
@@ -210,10 +209,7 @@ class WImageResult extends StatelessWidget {
                   )
                 : PostSwipePage.postsCollection(
                     initialIndex: index,
-                    posts: postsCache ??
-                        Provider.of<SearchCacheLegacy>(context, listen: false)
-                            .posts!
-                            .posts,
+                    posts: postsCache ?? getSc(context, false).posts!.posts,
                     onAddToSearch: getOnAddToSearch(context),
                     selectedPosts: !disallowSelections
                         ? sc.collection
@@ -275,7 +271,7 @@ class WImageResult extends StatelessWidget {
         //   listen: false,
         // ).fillTextBarWithSearchString = true;
         print(
-          "After: ${getSc(context, false).mpcSync.searchText += " $addition"}",
+          "After: ${getSc(context, false).searchText += " $addition"}",
         );
       };
   static const progressiveImageBlur = 5.0;
@@ -412,19 +408,24 @@ class WImageResult extends StatelessWidget {
 
 class PostInfoPane extends StatelessWidget {
   final PostListing post;
+  final double maxWidth;
   E6PostResponse get e6Post => post as E6PostResponse;
   E6PostResponse? get e6PostSafe =>
       post.runtimeType == E6PostResponse ? post as E6PostResponse : null;
 
-  const PostInfoPane({super.key, required this.post});
+  const PostInfoPane({
+    super.key,
+    required this.post,
+    required this.maxWidth,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Align(
       alignment: AlignmentDirectional.bottomStart,
       child: Container(
-        constraints: const BoxConstraints(
-          maxWidth: 150,
+        constraints: BoxConstraints(
+          maxWidth: maxWidth,
           maxHeight: 150,
         ),
         height: 20,

@@ -27,6 +27,7 @@ class WSearchSet extends StatefulWidget {
   final int? limit;
   final bool showCreateSetButton;
   final bool returnOnCreateSet;
+  final bool popOnSelect;
 
   final void Function(e621.PostSet set)? onSelected;
   // final bool Function(e621.PostSet set)? disableResults;
@@ -51,6 +52,7 @@ class WSearchSet extends StatefulWidget {
     this.customFilterResultsAsync,
     this.showCreateSetButton = false,
     this.returnOnCreateSet = true,
+    this.popOnSelect = true,
   }) : hasInitialSearch = true;
   const WSearchSet.noInitialSearch({
     super.key,
@@ -62,6 +64,7 @@ class WSearchSet extends StatefulWidget {
     this.customFilterResultsAsync,
     this.showCreateSetButton = false,
     this.returnOnCreateSet = true,
+    this.popOnSelect = true,
   })  : hasInitialSearch = false,
         initialSearchName = null,
         initialSearchShortname = null,

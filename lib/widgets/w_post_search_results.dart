@@ -19,8 +19,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-import '../models/search_cache.dart';
-
 class WPostSearchResults extends StatefulWidget {
   // #region Logger
   static lm.Printer get print => lRecord.print;
@@ -210,9 +208,9 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
   Set<int> _selectedIndices = {};
   Set<int> _selectedPostIds = {};
 
-  SearchCacheLegacy get sc =>
+  ManagedPostCollectionSync get sc =>
       Provider.of<ManagedPostCollectionSync>(context, listen: false);
-  SearchCacheLegacy get scWatch =>
+  ManagedPostCollectionSync get scWatch =>
       Provider.of<ManagedPostCollectionSync>(context, listen: true);
   SearchResultsNotifier get sr =>
       Provider.of<SearchResultsNotifier>(context, listen: false);
@@ -325,43 +323,38 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
               childAspectRatio: SearchView.i.widthToHeightRatio,
             ),
             itemCount: estimatedCount,
-            itemBuilder: sc.isMpcSync
-                ? (context, index) {
-                    // var data = sc.mpcSync
-                    //     .collection
-                    //     .posts
-                    //     .elementAtOrNull(index)?.inst.$Safe;
-                    // TODO: Make not dependent on current page / first loaded page.
-                    index += sc.mpcSync.currentPageFirstPostIndex;
-                    var data = sc.mpcSync.collection[index].$Safe;
-                    return (data == null)
-                        ? null
-                        : constructImageResult(data, index);
-                  }
-                : (context, index) {
-                    if (trueCount == null &&
-                        widget.expectedCount - 1 == index) {
-                      posts.tryGet(index + 3);
-                    }
-                    var data = posts.tryGet(index);
-                    return (data == null)
-                        ? null
-                        : constructImageResult(data, index);
-                  },
-          )
+            itemBuilder: (context, index) {
+              // var data = sc.mpcSync
+              //     .collection
+              //     .posts
+              //     .elementAtOrNull(index)?.inst.$Safe;
+              // TODO: Make not dependent on current page / first loaded page.
+              index += sc.currentPageFirstPostIndex;
+              var data = sc.collection[index].$Safe;
+              return (data == null) ? null : constructImageResult(data, index);
+            }
+            // (context, index) {
+            //     if (trueCount == null &&
+            //         widget.expectedCount - 1 == index) {
+            //       posts.tryGet(index + 3);
+            //     }
+            //     var data = posts.tryGet(index);
+            //     return (data == null)
+            //         ? null
+            //         : constructImageResult(data, index);
+            //   },
+            )
         : GridView.count(
             crossAxisCount: AppSettings.i!.searchView.postsPerRow,
             crossAxisSpacing: 4,
             mainAxisSpacing: 4,
             childAspectRatio: SearchView.i.widthToHeightRatio,
             children: !widget.stripToGridView // sc.isMpcSync
-                ? sc.mpcSync
+                ? sc
                         .getPostsOnPageSync(widget.pageIndex)
                         ?.mapAsList((e, i, l) => constructImageResult(
                               e,
-                              i +
-                                  sc.mpcSync
-                                      .getPageFirstPostIndex(widget.pageIndex),
+                              i + sc.getPageFirstPostIndex(widget.pageIndex),
                             ))
                         .toList() ??
                     []
@@ -419,7 +412,19 @@ class WPostSearchResultsSwiper extends StatefulWidget {
     this.stripToGridView = false,
     JPureEvent? fireRebuild,
   }) : _fireRebuild = fireRebuild;
-
+  @widgetFactory
+  static Widget buildItFull(BuildContext context) => Column(
+        children: [
+          Selector<ManagedPostCollectionSync, String>(
+            builder: (context, value, child) => Expanded(
+                key: ObjectKey(value),
+                child: WPostSearchResultsSwiper(
+                  useLazyBuilding: SearchView.i.lazyBuilding,
+                )),
+            selector: (ctx, p1) => p1.parameters.tags,
+          ),
+        ],
+      );
   @override
   State<WPostSearchResultsSwiper> createState() =>
       _WPostSearchResultsSwiperState();
@@ -454,9 +459,9 @@ class _WPostSearchResultsSwiperState extends State<
     super.dispose();
   }
 
-  SearchCacheLegacy get sc =>
+  ManagedPostCollectionSync get sc =>
       Provider.of<ManagedPostCollectionSync>(context, listen: false);
-  SearchCacheLegacy get scWatch =>
+  ManagedPostCollectionSync get scWatch =>
       Provider.of<ManagedPostCollectionSync>(context, listen: true);
 
   @override
@@ -505,8 +510,7 @@ class _WPostSearchResultsSwiperState extends State<
                   // var ps = widget.posts[index], t = ps.$Safe;
                   // logger.finest("${widget.posts.parameters.tags} $index");
                   // logger.finest("$tags $index");
-                  var ps = ValueAsync(
-                          value: sc.mpcSync.getPostsOnPageAsObj(index)),
+                  var ps = ValueAsync(value: sc.getPostsOnPageAsObj(index)),
                       // value: widget.posts.getPostsOnPageAsObj(index)),
                       t = ps.$Safe;
                   Widget ret;

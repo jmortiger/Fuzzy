@@ -369,6 +369,17 @@ class E6PostResponse implements PostListing, e621.Post {
             ? E6PostResponse.fromJson(t["post"])
             : E6PostResponse.fromJson(t);
   }
+  static Iterable<E6PostResponse> fromRawJsonResults(String json) {
+    final t = jsonDecode(json);
+    return t["posts"] != null
+        ? t["posts"].map<E6PostResponse>((e) => E6PostResponse.fromJson(e))
+        : [
+            t["post"] != null
+                ? E6PostResponse.fromJson(t["post"])
+                : E6PostResponse.fromJson(t)
+          ];
+  }
+
   factory E6PostResponse.fromJson(JsonOut json) => E6PostResponse(
         id: json["id"] as int,
         createdAt: DateTime.parse(json["created_at"]),
@@ -640,6 +651,16 @@ class E6PostMutable implements E6PostResponse {
       E6PostMutable.fromImmutable(E6PostResponse.fromJson(json));
   factory E6PostMutable.fromRawJson(String json) =>
       E6PostMutable.fromImmutable(E6PostResponse.fromRawJson(json));
+  static Iterable<E6PostMutable> fromRawJsonResults(String json) {
+    final t = jsonDecode(json);
+    return t["posts"] != null
+        ? t["posts"].map<E6PostMutable>((e) => E6PostMutable.fromJson(e))
+        : [
+            t["post"] != null
+                ? E6PostMutable.fromJson(t["post"])
+                : E6PostMutable.fromJson(t)
+          ];
+  }
   @override
   E6PostMutable copyWith({
     int? id,

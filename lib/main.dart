@@ -206,6 +206,7 @@ void main(List<String> args) async {
 }
 
 Widget buildHomePageWithProviders({
+  // PostSearchQueryRecord? parameters,
   String? searchText,
   int? limit,
   String? page,
@@ -240,6 +241,33 @@ Widget buildHomePageWithProviders({
       //     selector: (cxt, p) => p.pr,
       //     shouldRebuild: (previous, next) => previous != next,
       //   ),
+    );
+Widget buildWithProviders({
+  // PostSearchQueryRecord? parameters,
+  String? searchText,
+  int? limit,
+  String? page,
+  Widget? child,
+  TransitionBuilder? builder,
+  ChangeNotifierProvider<ManagedPostCollectionSync>? mpcProvider,
+}) =>
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (context) => SearchViewModel(),
+        ),
+        mpcProvider ??
+        ChangeNotifierProvider(
+            create: (context) => ManagedPostCollectionSync(
+                parameters: searchText?.isNotEmpty ?? false
+                    ? PostSearchQueryRecord(tags: searchText!)
+                    : null)),
+        ChangeNotifierProvider(create: (context) => SearchResultsNotifier()),
+        ChangeNotifierProvider(
+            create: (context) => CachedFavorites.loadFromStorageSync()),
+      ],
+      builder: builder,
+      child: child,
     );
 void pathSoundOff() {
   path
