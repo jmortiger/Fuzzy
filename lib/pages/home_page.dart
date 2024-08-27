@@ -1,9 +1,6 @@
-import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
-import 'package:fuzzy/models/app_settings.dart';
-import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/pages/saved_searches_page.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
@@ -37,9 +34,10 @@ class HomePage extends StatefulWidget implements IRoute<HomePage> {
 
 class _HomePageState extends State<HomePage> {
   // #region Logger
-  static late final lRecord = lm.generateLogger("HomePage");
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
+  // ignore: unnecessary_late
+  static late final lRecord = lm.generateLogger("HomePage");
   // #endregion Logger
   @override
   void initState() {

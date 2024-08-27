@@ -144,6 +144,76 @@ class SearchResultsNotifier with ChangeNotifier {
     }
   }
 
+  /// true if it's been added, false if it's been removed
+  bool assignPostSelection({
+    required bool select,
+    required int postId,
+    int? index,
+    bool resolveDesync = true,
+    bool throwOnDesync = false,
+  }) {
+    logger.fine("assignPostSelection: Before");
+    logger.finer("\tindices: ${selectedIndices.toSet()}"
+        "\tposts: ${selectedPostIds.toSet()}");
+    if (getIsPostSelected(postId) && (index == null || getIsSelected(index))) {
+      if (!select) {
+        _selectedPostIds.remove(postId);
+        _selectedIndices.remove(index ?? -1);
+        logger.finer("After: "
+            "\n\tindices: ${selectedIndices.toSet()}"
+            "\n\tposts: ${selectedPostIds.toSet()}");
+        notifyListeners();
+        return false;
+      } else {
+        logger.finest("Already selected");
+        return true;
+      }
+    } else if (!getIsPostSelected(postId) &&
+        (index == null || !getIsSelected(index))) {
+      if (select) {
+        if (index != null) {
+          _selectedIndices.add(index);
+        }
+        _selectedPostIds.add(postId);
+        logger.finer("After: "
+            "\n\tindices: ${selectedIndices.toSet()}"
+            "\n\tposts: ${selectedPostIds.toSet()}");
+        notifyListeners();
+        return true;
+      } else {
+        logger.finest("Already unselected");
+        return true;
+      }
+    } else {
+      if (resolveDesync) {
+        logger.warning("Selected indices and posts desynced, resolving");
+        _selectedIndices.clear();
+        _selectedPostIds.clear();
+        notifyListeners();
+        return false;
+      }
+      logger.severe("Selected indices and posts desynced");
+      if (throwOnDesync) {
+        throw StateError("Selected indices and posts desynced");
+      } else {
+        return getIsPostSelected(postId);
+      }
+    }
+  }
+
+  /// true if it's been added, false if it's been removed
+  void assignPostSelections({
+    required bool select,
+    required List<int> postIds,
+    List<int>? index,
+    bool resolveDesync = true,
+    bool throwOnDesync = false,
+  }) {
+    for (var i = 0; i < postIds.length; i++) {
+      assignPostSelection(select: select, postId: postIds[i], index: index?[i]);
+    }
+  }
+
   void clearSelections({bool clearIndices = true, bool clearPostIds = true}) {
     logger.fine(
       "Before clearing: "

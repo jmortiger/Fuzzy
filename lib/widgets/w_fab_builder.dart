@@ -1,11 +1,25 @@
 import 'package:flutter/foundation.dart' show setEquals;
-import 'package:flutter/material.dart' show BuildContext, Icon, Icons, Navigator, ObjectKey, ScaffoldMessenger, SnackBar, StatelessWidget, Text, Widget, widgetFactory;
+import 'package:flutter/material.dart'
+    show
+        BuildContext,
+        Icon,
+        Icons,
+        Navigator,
+        ObjectKey,
+        ScaffoldMessenger,
+        SnackBar,
+        StatelessWidget,
+        Text,
+        Widget,
+        widgetFactory;
+import 'package:flutter/src/widgets/basic.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/pages/edit_post_page.dart';
 import 'package:fuzzy/web/e621/e6_actions.dart' as actions;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
-import 'package:fuzzy/web/e621/post_collection.dart' show ManagedPostCollectionSync, PostCollectionSync;
+import 'package:fuzzy/web/e621/post_collection.dart'
+    show ManagedPostCollectionSync, PostCollectionSync;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
 
@@ -49,8 +63,8 @@ class WFabBuilder extends StatelessWidget {
 
   @widgetFactory
   static Widget buildItFull(BuildContext context) {
-    return Selector2<SearchResultsNotifier,
-        ManagedPostCollectionSync, (Set<int>, PostCollectionSync)>(
+    return Selector2<SearchResultsNotifier, ManagedPostCollectionSync,
+        (Set<int>, PostCollectionSync)>(
       builder: (context, value, child) => WFabBuilder.multiplePosts(
         key: ObjectKey(value.$1),
         posts: value.$2
@@ -80,6 +94,32 @@ class WFabBuilder extends StatelessWidget {
               listen: false,
             ).clearSelections,
       );
+  static Widget getChangePageSelectionButton(
+    BuildContext context, {
+    required bool select,
+  }) {
+    final mpcW = Provider.of<ManagedPostCollectionSync>(context, listen: false);
+    return ActionButton(
+      icon: select
+          ? const Icon(Icons.playlist_add_check)
+          : const Icon(Icons.playlist_remove),
+      tooltip: "${select ? "Select" : "Deselect"} all on page",
+      onPressed: mpcW.getPostsOnPageSync(mpcW.currentPageIndex) != null
+          ? () {
+              final mpc = Provider.of<ManagedPostCollectionSync>(context,
+                      listen: false),
+                  page = mpc.getPostsOnPageSync(mpc.currentPageIndex);
+              Provider.of<SearchResultsNotifier>(
+                context,
+                listen: false,
+              ).assignPostSelections(
+                select: select,
+                postIds: page!.map((e) => e.id).toList(),
+              );
+            }
+          : null,
+    );
+  }
 
   static ActionButton getSinglePostUpvoteAction(
     BuildContext context,
@@ -383,6 +423,11 @@ class WFabBuilder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool? isSelected;
+    bool canSelect = false;
+    try {
+      Provider.of<SearchResultsNotifier>(context, listen: false);
+      canSelect = true;
+    } catch (e) {}
     try {
       if (isSinglePost) {
         isSelected = isPostSelected?.call(post!.id) ??
@@ -412,6 +457,11 @@ class WFabBuilder extends StatelessWidget {
               if (!isSinglePost)
                 WFabBuilder.getClearSelectionButton(
                     context, onClearSelections /* , selectedPosts */),
+              if (!isSinglePost && isSelected != canSelect)
+                WFabBuilder.getChangePageSelectionButton(context, select: true),
+              if (!isSinglePost && isSelected != canSelect)
+                WFabBuilder.getChangePageSelectionButton(context,
+                    select: false),
               if (!isSinglePost)
                 WFabBuilder.getMultiplePostsAddToSetAction(context, posts!),
               if (isSinglePost)

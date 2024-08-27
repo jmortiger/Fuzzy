@@ -673,7 +673,7 @@ class _WPostSearchResultsSwiperState extends State<
                         //   ),
                         // );
                       },
-                      selector: (ctx, v) => v.numPostsInSearch ?? 1,
+                      selector: (ctx, v) => v.numPostsInSearch ?? E621.maxPageNumber,
                     ),
                     // PageIndicator(
                     //   tabController: _tabController,
@@ -696,6 +696,8 @@ class _WPostSearchResultsSwiperState extends State<
     if (!Platform.isDesktop) {
       return;
     }
+    Provider.of<ManagedPostCollectionSync>(context, listen: false)
+        .goToPage(_currentPageIndex);
     // _tabController.index = currentPageIndex;
     setState(() {
       _currentPageIndex = currentPageIndex;

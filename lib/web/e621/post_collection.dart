@@ -466,6 +466,49 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     }
   }
 
+  FutureOr<bool> goToPage(
+    int pageIndex, {
+    // bool allowJumping = true,
+    String? username,
+    String? apiKey,
+  }) {
+    if (currentPageIndex == pageIndex) return true;
+    if (isPageLoaded(pageIndex)) {
+      // pageIndex = desiredPageOffset + startingPageIndex
+      // currentPageIndex = _currentPageOffset + startingPageIndex
+      // currentPageIndex - pageIndex = delta
+      // (_currentPageOffset + startingPageIndex) - (desiredPageOffset + startingPageIndex) = delta
+      // cpo + spi - dpo - spi = delta
+      // cpo - dpo = delta
+      // cpo = dpo + delta
+      // cpo - delta = dpo
+      _currentPageOffset -= currentPageIndex - pageIndex;
+      return true;
+    }
+    // if (allowJumping &&
+    //     (pageIndex < startingPageIndex - 1 ||
+    //         pageIndex > lastStoredPageIndex + 1)) {
+    //   return _tryRetrieveAndAssignPageBool(pageIndex);
+    // }
+    if (currentPageIndex > pageIndex) {
+      return goToEarlierPage(currentPageIndex - pageIndex);
+    } else if (currentPageIndex < pageIndex) {
+      return goToFuturePage(pageIndex - currentPageIndex);
+    } else {
+      return false;
+    }
+  }
+
+  FutureOr<bool> goToEarlierPage(int numPagesToTravel) async {
+    for (; numPagesToTravel > 0 && await goToPriorPage(); numPagesToTravel--) {}
+    return numPagesToTravel == 0;
+  }
+
+  FutureOr<bool> goToFuturePage(int numPagesToTravel) async {
+    for (; numPagesToTravel > 0 && await goToNextPage(); numPagesToTravel--) {}
+    return numPagesToTravel == 0;
+  }
+
   /// Is there a page after the given one?
   ///
   /// TODO: make handle unloaded pages
