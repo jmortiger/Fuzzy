@@ -170,7 +170,7 @@ class PostSwipePageManaged extends StatefulWidget
   final int initialPageIndex;
   final ManagedPostCollectionSync postsObj;
   Iterable<E6PostResponse> get posts => postsObj.posts!.posts;
-  Iterable<E6PostEntrySync> get postCache => postsObj.collection.posts;
+  Iterable<E6PostEntrySync> get postCache => postsObj.collection;
   final void Function(String addition)? onAddToSearch;
   @override
   final List<String>? tagsToAdd;

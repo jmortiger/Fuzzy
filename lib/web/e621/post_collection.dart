@@ -1,18 +1,15 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert' as dc;
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_cache.dart';
-import 'package:fuzzy/models/search_results.dart' as srn;
 import 'package:fuzzy/web/e621/e621.dart';
-import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:j_util/j_util_full.dart';
-import 'package:provider/provider.dart';
 
 import 'post_search_parameters.dart';
 
@@ -62,6 +59,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   final onPageRetrievalFailure = JEvent<PostCollectionEvent>();
   PostSearchQueryRecord _parameters;
   int _startingPage = 0;
+  int _maxLoadedPages;
   int _currentPageOffset;
   E6Posts? _e6posts;
   int _currentPostIndex = 0;
@@ -105,6 +103,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   // #region Ctor
   ManagedPostCollectionSync({
     // int currentPageOffset = 0,
+    int maxLoadedPages = 20,
     PostSearchQueryRecord? parameters,
     super.firstPostIdCached,
     super.lastPostIdCached,
@@ -112,6 +111,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     super.hasNextPageCached,
   })  : _parameters = parameters ?? const PostSearchQueryRecord(),
         _currentPageOffset = 0,
+        _maxLoadedPages = maxLoadedPages,
         _startingPage =
             (parameters ?? const PostSearchQueryRecord()).pageIndex ?? 0,
         collection = PostCollectionSync() {
@@ -133,6 +133,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   }
   ManagedPostCollectionSync._bare({
     // int currentPageOffset = 0,
+    int maxLoadedPages = 20,
     PostSearchQueryRecord? parameters,
     super.firstPostIdCached,
     super.lastPostIdCached,
@@ -140,6 +141,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     super.hasNextPageCached,
   })  : _parameters = parameters ?? const PostSearchQueryRecord(),
         _currentPageOffset = 0,
+        _maxLoadedPages = maxLoadedPages,
         _startingPage =
             (parameters ?? const PostSearchQueryRecord()).pageIndex ?? 0,
         collection = PostCollectionSync();
@@ -160,17 +162,19 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   set currentPostIndex(int value) => updateCurrentPostIndex(value);
 
   /// The index in [collection] of the 1st post of the [currentPageIndex].
+  ///
+  /// Dependant on [SearchView.postsPerPage].
   int get currentPageFirstPostIndex =>
       (_startingPage + _currentPageOffset) * SearchView.i.postsPerPage;
 
   /// The last page of results currently in [collection].
   ///
-  /// Defined by [SearchView.postsPerPage].
+  /// Dependant on [numStoredPages].
   int get lastStoredPageIndex => numStoredPages + _startingPage - 1;
 
   /// The last page of results currently in [collection].
   ///
-  /// Defined by [SearchView.postsPerPage].
+  /// Dependant on [lastStoredPageIndex].
   int get lastStoredPageNumber => lastStoredPageIndex + 1;
 
   ({
@@ -187,10 +191,10 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   ///
   /// Defined by [SearchView.postsPerPage].
   int get numStoredPages =>
-      (collection._posts.length / SearchView.i.postsPerPage).ceil();
+      (collection.length / SearchView.i.postsPerPage).ceil();
 
   /// How many results are currently in [collection]?
-  int get numStoredPosts => collection._posts.length;
+  int get numStoredPosts => collection.length;
 
   int get postsPerPage => SearchView.i.postsPerPage;
 
@@ -230,10 +234,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       ? null
       : _e6posts != null &&
               _e6posts!.tryGet(0) ==
-                  collection._posts
-                      .elementAtOrNull(currentPageFirstPostIndex)
-                      ?.inst
-                      .$
+                  collection.elementAtOrNull(currentPageFirstPostIndex)?.inst.$
           ? _e6posts
           : _e6posts = _genFromStartAndCount(
               start: currentPageFirstPostIndex,
@@ -250,10 +251,11 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     }
     treatAsNull = false;
     v.advanceToEnd();
-    if (v.count > collection._posts.length) {
-      for (var e in v.posts) {
-        collection._posts.add(E6PostEntrySync(value: e));
-      }
+    if (v.count > collection.length) {
+      collection.addAll(v.posts.map((e) => E6PostEntrySync(value: e)));
+      // for (var e in v.posts) {
+      //   collection.add(E6PostEntrySync(value: e));
+      // }
       return;
     }
     var unlinkIndices = <int>[];
@@ -277,10 +279,11 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       }
     }
     for (var element in unlinkIndices) {
-      _getFromStartAndCount(
-        start: currentPageFirstPostIndex,
-        count: SearchView.i.postsPerPage,
-      ).elementAt(element).unlink();
+      // _getFromStartAndCount(
+      //   start: currentPageFirstPostIndex,
+      //   count: SearchView.i.postsPerPage,
+      // ).elementAt(element).unlink();
+      subset.elementAt(element).unlink();
     }
   }
 
@@ -332,15 +335,16 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     final s = checkLoading(parameters.copyWith(pageIndex: index + 1));
     if (s != null) {
       return s.then((v) => v != null
-          ? _genFromStartAndCount(
+          ? E6PostsSync(
+              posts: v is List<E6PostResponse>
+                  ? v
+                  : v.toList()) /* _genFromStartAndCount(
               start: getPageFirstPostIndex(index),
-            )
+            ) */
           : null);
     }
     return await tryRetrievePage(index)
-        ? _genFromStartAndCount(
-            start: getPageFirstPostIndex(index),
-          )
+        ? _genFromStartAndCount(start: getPageFirstPostIndex(index))
         : null;
   }
 
@@ -361,34 +365,63 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   Future<Iterable<E6PostResponse>?> getPostsOnPageAsync(final int index) async {
     final s = checkLoading(parameters.copyWith(pageIndex: index + 1));
     if (s != null) {
-      return s.then((v) => v != null
-          ? _getRawPostFromStartAndCount(
-              start: getPageFirstPostIndex(index),
-            )
-          : null);
+      return s;
+      // return s.then((v) => v != null
+      //     ? _getRawPostFromStartAndCount(
+      //         start: getPageFirstPostIndex(index),
+      //       )
+      //     : null);
     }
     return await tryRetrievePage(index)
-        ? _getRawPostFromStartAndCount(
-            start: getPageFirstPostIndex(index),
-          )
+        ? _getRawPostFromStartAndCount(start: getPageFirstPostIndex(index))
         : null;
   }
 
-  bool assignPagePosts(
-      final int pageIndex, final Iterable<E6PostResponse> toAdd) {
+  bool _assignPagePostsContiguous(
+    final int pageIndex,
+    final Iterable<E6PostResponse> toAdd, {
+    bool reassign = false,
+  }) {
+    logger.info("_assignPagePostsContiguous: (index: $pageIndex)");
+    if (pageIndex >= startingPageIndex && pageIndex <= lastStoredPageIndex) {
+      if (!reassign) return false;
+    }
+    if (pageIndex > lastStoredPageIndex + 1) {
+      logger.info("WHY");
+    }
     var start = getPageFirstPostIndex(pageIndex);
     if (start < 0) {
-      do {
+      if (pageIndex < 0) {
+        throw ArgumentError.value(pageIndex, "pageIndex", "Must be >= 0");
+      }
+      if (startingPageIndex - pageIndex == 1) {
         _startingPage--;
-        start++;
         final t = toAdd.toList();
         do {
           collection._posts.addFirst(E6PostEntrySync(value: t.removeLast()));
+          start++;
         } while (t.isNotEmpty);
-      } while (start < 0);
-      return true;
+        if (numStoredPages > _maxLoadedPages) {
+          logger.info(
+              "_assignPagePostsContiguous: Resolving too many pages $numStoredPages > $_maxLoadedPages");
+          unloadPagesFromEnd(numStoredPages - _maxLoadedPages);
+          logger.info(
+              "_assignPagePostsContiguous: numStoredPages After: $numStoredPages");
+        }
+        return true;
+      } else {
+        // TODO: Implement
+        throw UnimplementedError("not implemented");
+      }
     } else if (start >= collection._posts.length) {
       collection._posts.addAll(toAdd.map((e) => E6PostEntrySync(value: e)));
+      if (numStoredPages > _maxLoadedPages) {
+        logger.info(
+            "_assignPagePostsContiguous: Resolving too many pages $numStoredPages > $_maxLoadedPages");
+        unloadPagesFromStart(numStoredPages - _maxLoadedPages);
+        logger.info(
+            "_assignPagePostsContiguous: numStoredPages After: $numStoredPages");
+      }
       return true;
     } else {
       // TODO: Allow Replacement
@@ -466,12 +499,64 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     }
   }
 
+  FutureOr<bool> goToPage(
+    int pageIndex, {
+    bool allowJumping = true,
+    String? username,
+    String? apiKey,
+  }) {
+    if (currentPageIndex == pageIndex) return true;
+    if (isPageLoaded(pageIndex)) {
+      // pageIndex = desiredPageOffset + startingPageIndex
+      // currentPageIndex = _currentPageOffset + startingPageIndex
+      // currentPageIndex - pageIndex = delta
+      // (_currentPageOffset + startingPageIndex) - (desiredPageOffset + startingPageIndex) = delta
+      // cpo + spi - dpo - spi = delta
+      // cpo - dpo = delta
+      // cpo = dpo + delta
+      // cpo - delta = dpo
+      _currentPageOffset -= currentPageIndex - pageIndex;
+      return true;
+    }
+    if (allowJumping &&
+        (pageIndex < startingPageIndex - 1 ||
+            pageIndex > lastStoredPageIndex + 1)) {
+      return _tryRetrieveAndAssignPageBool(pageIndex);
+    }
+    if (currentPageIndex > pageIndex) {
+      return goToEarlierPage(currentPageIndex - pageIndex);
+    } else if (currentPageIndex < pageIndex) {
+      return goToFuturePage(pageIndex - currentPageIndex);
+    } else {
+      return false;
+    }
+  }
+
+  FutureOr<bool> goToEarlierPage(int numPagesToTravel) async {
+    for (; numPagesToTravel > 0 && await goToPriorPage(); numPagesToTravel--) {}
+    return numPagesToTravel == 0;
+  }
+
+  FutureOr<bool> goToFuturePage(int numPagesToTravel) async {
+    for (; numPagesToTravel > 0 && await goToNextPage(); numPagesToTravel--) {}
+    return numPagesToTravel == 0;
+  }
+
   /// Is there a page after the given one?
   ///
-  /// TODO: make handle unloaded pages
+  /// Compares the last post on the page's id to the cached last id. If ![tryValidatingSearches], use [isPageLoaded] instead.
   bool isPageAfter(int pageIndex) => (isPageLoaded(pageIndex) &&
       collection.elementAt(getPageLastPostIndex(pageIndex)).$.id !=
           lastPostIdCached);
+
+  /// Is there a page before the given one?
+  ///
+  /// Compares the first post on the page's id to the cached first id. If ![tryValidatingSearches], use [isPageLoaded] instead.
+  bool isPageBefore(int pageIndex) =>
+      (isPageLoaded(pageIndex) &&
+          collection.elementAt(getPageFirstPostIndex(pageIndex)).$.id !=
+              firstPostIdCached) ||
+      (pageIndex < startingPageIndex && pageIndex >= 0);
   bool isPageLoaded(int pageIndex) =>
       pageIndex >= startingPageIndex && pageIndex <= lastStoredPageIndex;
 
@@ -496,46 +581,20 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           pageIndex: _currentPageOffset + 1 + _startingPage);
       return _fetchPage(p).then((v) {
         if (v?.isEmpty ?? true) {
-          logger.info(
-            "No next page from server\n"
-            "\tvalidLimit: ${p.validLimit}\n"
-            "\tpageNumber: ${p.pageNumber}\n"
-            // "\tpageNumber: ${_currentPageOffset + 1 + _startingPage + 1}\n"
-            "\ttags: ${p.tags}",
-          );
           return false;
         }
-        logger.info(
-          "Got next page from server\n"
-          "\tvalidLimit: ${p.validLimit}\n"
-          "\tpageNumber: ${p.pageNumber}\n"
-          // "\tpageNumber: ${_currentPageOffset + 1 + _startingPage + 1}\n"
-          "\ttags: ${p.tags}"
-          "Result length: ${v?.length}",
-        );
-        // collection._posts.addAll(v!.map((e) => E6PostEntrySync(value: e)));
-        assignPagePosts(p.pageIndex!, v!);
-
         return true;
       });
     }
 
-    // if (lastStoredPage > currentPage) {
     if (isPageLoaded(currentPageIndex + 1)) {
       logger.info("Next page already loaded");
       return true;
-      // } else if (hasNextPageCached ?? false) {
     } else if (!tryValidatingSearches || isPageAfter(currentPageIndex)) {
       return doIt();
     } else {
       return getHasNextPageById(tags: parameters.tags)
           .then((np) => np ? doIt() : false);
-      // final t = getHasNextPageById(tags: parameters.tags);
-      // return t is Future<bool>
-      //     ? t.then((np) => np ? doIt() : false)
-      //     : t
-      //         ? doIt()
-      //         : false;
     }
   }
 
@@ -548,27 +607,12 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           pageIndex: _currentPageOffset - 1 + _startingPage);
       return _fetchPage(p).then((v) {
         if (v?.isEmpty ?? true) {
-          logger.info(
-            "No prior page from server\n"
-            "\tvalidLimit: ${p.validLimit}\n"
-            "\tpageNumber: ${p.pageNumber}\n"
-            "\ttags: ${p.tags}",
-          );
           return false;
         }
-        logger.info(
-          "Got prior page from server\n"
-          "\tvalidLimit: ${p.validLimit}\n"
-          "\tpageNumber: ${p.pageNumber}\n"
-          "\ttags: ${p.tags}"
-          "Result length: ${v?.length}",
-        );
-        assignPagePosts(p.pageIndex!, v!);
         return true;
       });
     }
 
-    // if (currentPage > startingPage) {
     if (isPageLoaded(currentPageIndex - 1)) {
       logger.info("Prior page already loaded");
       return true;
@@ -596,22 +640,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         final param = _parameters.copyWith(pageIndex: p);
         return _fetchPage(param).then((v) {
           if (v?.isEmpty ?? true) {
-            logger.info(
-              "No prior page from server\n"
-              "\tvalidLimit: ${param.validLimit}\n"
-              "\tpageNumber: ${param.pageNumber}\n"
-              "\ttags: ${param.tags}",
-            );
             return false;
           }
-          logger.info(
-            "Got prior page from server\n"
-            "\tvalidLimit: ${param.validLimit}\n"
-            "\tpageNumber: ${param.pageNumber}\n"
-            "\ttags: ${param.tags}"
-            "Result length: ${v?.length}",
-          );
-          assignPagePosts(p, v!);
           return true;
         });
       }
@@ -652,22 +682,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         final param = _parameters.copyWith(pageIndex: p);
         return _fetchPage(param).then((v) {
           if (v?.isEmpty ?? true) {
-            logger.info(
-              "No page index $p from server\n"
-              "\tvalidLimit: ${param.validLimit}\n"
-              "\tpageNumber: ${param.pageNumber}\n"
-              "\ttags: ${param.tags}",
-            );
             return false;
           }
-          logger.info(
-            "Got page index $p from server\n"
-            "\tvalidLimit: ${param.validLimit}\n"
-            "\tpageNumber: ${param.pageNumber}\n"
-            "\ttags: ${param.tags}"
-            "Result length: ${v?.length}",
-          );
-          assignPagePosts(p, v!);
           return true;
         });
       }
@@ -684,18 +700,11 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     if (lastStoredPageIndex > pageIndex) {
       logger.info("Page index $pageIndex already loaded");
       return true;
-      // } else if (hasNextPageCached ?? false) {
     } else if (!tryValidatingSearches || isPageAfter(pageIndex)) {
       return doIt();
     } else {
       return getHasNextPageById(tags: parameters.tags)
           .then((np) => np ? doIt() : false);
-      // final t = getHasNextPageById(tags: parameters.tags);
-      // return t is Future<bool>
-      //     ? t.then((np) => np ? doIt() : false)
-      //     : t
-      //         ? doIt()
-      //         : false;
     }
   }
 
@@ -707,22 +716,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     final param = _parameters.copyWith(pageIndex: 0);
     return _fetchPage(param).then((v) {
       if (v?.isEmpty ?? true) {
-        logger.info(
-          "No page index ${param.pageIndex} from server\n"
-          "\tvalidLimit: ${param.validLimit}\n"
-          "\tpageNumber: ${param.pageNumber}\n"
-          "\ttags: ${param.tags}",
-        );
         return false;
       }
-      logger.info(
-        "Got page ${param.pageIndex} from server\n"
-        "\tvalidLimit: ${param.validLimit}\n"
-        "\tpageNumber: ${param.pageNumber}\n"
-        "\ttags: ${param.tags}"
-        "Result length: ${v?.length}",
-      );
-      assignPagePosts(param.pageIndex!, v!);
       return true;
     });
   }
@@ -734,28 +729,15 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     final param = _parameters.copyWith(pageIndex: 0);
     return _fetchPage(param).then((v) {
       if (v?.isEmpty ?? true) {
-        logger.info(
-          "No page index ${param.pageIndex} from server\n"
-          "\tvalidLimit: ${param.validLimit}\n"
-          "\tpageNumber: ${param.pageNumber}\n"
-          "\ttags: ${param.tags}",
-        );
         return false;
       }
-      logger.info(
-        "Got page ${param.pageIndex} from server\n"
-        "\tvalidLimit: ${param.validLimit}\n"
-        "\tpageNumber: ${param.pageNumber}\n"
-        "\ttags: ${param.tags}"
-        "Result length: ${v?.length}",
-      );
-      assignPagePosts(param.pageIndex!, v!);
       return true;
     });
   }
 
   FutureOr<bool> tryRetrievePage(
     int pageIndex, {
+    bool allowJumping = true,
     String? username,
     String? apiKey,
   }) async {
@@ -768,6 +750,12 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           return false;
         }
       }
+    }
+    if (isPageLoaded(pageIndex)) return true;
+    if (allowJumping &&
+        (pageIndex < startingPageIndex - 1 ||
+            pageIndex > lastStoredPageIndex + 1)) {
+      return _tryRetrieveAndAssignPageDirect(pageIndex);
     }
     if (pageIndex < startingPageIndex) {
       return tryRetrieveFormerPage(pageIndex,
@@ -784,135 +772,6 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       newSearchText.split(RegExp(RegExpExt.whitespacePattern)).toSet(),
       parameters.tagSet);
 
-  void _launchSearch({
-    BuildContext? context,
-    srn.SearchResultsNotifier? searchViewNotifier,
-    String tags = "",
-    int? limit,
-    String? pageModifier,
-    int? postId,
-    int? pageNumber,
-  }) {
-    // var sc = Provider.of<ManagedPostCollectionSync>(context, listen: false);
-    limit ??= SearchView.i.postsPerPage;
-    bool isNewRequest = false;
-    var out = "pageModifier = $pageModifier, "
-        "postId = $postId, "
-        "pageNumber = $pageNumber,"
-        // "projectedTrueTags = ${E621.fillTagTemplate(tags)})"
-        ")";
-    // if (isNewRequest = (sc.priorSearchText != tags)) {
-    if (isNewRequest = isNewSearch(tags)) {
-      // out = "Request For New Terms: ${sc.priorSearchText} -> $tags ($out";
-      out = "Request For New Terms: ${_parameters.tags} -> $tags ($out";
-      lastPostIdCached = null;
-      firstPostIdCached = null;
-      try {
-        // sc.searchText = tags;
-        parameters = PostSearchQueryRecord(
-          tags: tags,
-          limit: limit,
-          page: encodeValidPageParameterFromOptions(
-                  pageModifier: pageModifier,
-                  id: postId,
-                  pageNumber: pageNumber) ??
-              "1",
-        );
-      } catch (e, s) {
-        logger.severe(
-            // "Failed to set sc.priorSearchText ${sc.priorSearchText} to $tags",
-            "Failed to set sc.parameters.tags ${parameters.tags} to $tags",
-            e,
-            s);
-      }
-    } else {
-      // out = "Request For Same Terms: ${sc.priorSearchText} ($out";
-      out = "Request For Same Terms: ${parameters.tags} = $tags ($out";
-
-      parameters = PostSearchQueryRecord(
-        tags: tags,
-        limit: limit,
-        page: encodeValidPageParameterFromOptions(
-                pageModifier: pageModifier,
-                id: postId,
-                pageNumber: pageNumber) ??
-            "1",
-      );
-    }
-    logger.info(out);
-    // Provider.of<SearchResultsNotifier?>(context, listen: false)
-    // (searchViewNotifier ?? context?.read<srn.SearchResultsNotifier?>())
-    (searchViewNotifier ??
-            // mounted check?
-            ((context != null)
-                ? Provider.of<srn.SearchResultsNotifier?>(context,
-                    listen: false)
-                : null))
-        ?.clearSelections();
-    // hasNextPageCached = null;
-    lastPostOnPageIdCached = null;
-    if (true /* isNewRequest */) {
-      var username = E621AccessData.fallback?.username,
-          apiKey = E621AccessData.fallback?.apiKey;
-      pr = E621.performUserPostSearch(
-        // tags: AppSettings.i!.forceSafe ? "$tags rating:safe" : tags,
-        tags: tags,
-        limit: parameters.validLimit,
-        pageModifier: parameters.pageModifier,
-        pageNumber: parameters.pageNumber,
-        postId: parameters.id,
-        apiKey: apiKey,
-        username: username,
-      );
-      pr!.then((v) {
-        // setState(() {
-        print("pr reset");
-        pr = null;
-        var json = dc.jsonDecode(v.responseBody);
-        if (json["success"] == false) {
-          print("Response failed: $json");
-          if (json["reason"].contains("Access Denied")) {
-            if (context != null) {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(const SnackBar(
-                  content: Text("Access Denied. Did you mean to login?"),
-                ));
-            }
-          }
-          posts = E6PostsSync(posts: []);
-        } else {
-          posts = SearchView.i.lazyLoad
-              ? E6PostsLazy.fromJson(json as Map<String, dynamic>)
-              : E6PostsSync.fromJson(json as Map<String, dynamic>);
-        }
-        if (posts?.posts.firstOrNull != null) {
-          // if (posts.runtimeType == E6PostsLazy) {
-          //   (posts as E6PostsLazy)
-          //       .onFullyIterated
-          //       .subscribe((a) => getHasNextPage(
-          //             tags: priorSearchText,
-          //             lastPostId: a.posts.last.id,
-          //           ));
-          // } else {
-          getHasNextPageById(
-              tags: searchText,
-              lastPostId: (posts as E6PostsSync).posts.last.id);
-          // }
-        }
-        if (isNewRequest) firstPostIdCached = firstPostOnPageId;
-        // if (parameters.pageNumber == 1) firstPostIdCached = firstPostOnPageId;
-        // });
-      }).catchError((err, st) {
-        print(err);
-        print(st);
-      });
-    } else {
-      // this.isPageLoaded(pageIndex)
-      // TODO: This
-    }
-  }
-
   Future<void> updateCurrentPostIndex(int newIndex) async {
     _currentPostIndex = newIndex;
     while (getPageLastPostIndex(currentPageIndex) < _currentPostIndex) {
@@ -924,10 +783,11 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   }
 
   Future<Iterable<E6PostResponse>?> _fetchPage(
-      [PostSearchQueryRecord? parameters]) {
-    parameters ??= _parameters;
+    PostSearchQueryRecord parameters, {
+    bool assignOnSuccess = true,
+  }) {
     logger.info("Getting page ${parameters.page}");
-    return _loading[parameters] ??
+    final t = (_loading[parameters] ??
         (_loading[parameters] = E621
             .performUserPostSearch(
           limit: parameters.validLimit,
@@ -936,19 +796,478 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         )
             .then((v) {
           if (v.results == null) {
-            onPageRetrievalFailure.invoke(PostCollectionEvent(
-                parameters: parameters!, posts: collection));
+            onPageRetrievalFailure.invoke(
+                PostCollectionEvent(parameters: parameters, posts: collection));
           }
           return v.results?.posts;
-        }))
-      ..then((v) => _loading.remove(parameters!));
+        }).then((v) {
+          _loading.remove(parameters);
+          if (v?.isEmpty ?? true) {
+            logger.info(
+              "No page from server\n"
+              "\tpageNumber: ${parameters.pageNumber}\n"
+              "\ttags: ${parameters.tags}"
+              "\tvalidLimit: ${parameters.validLimit}\n",
+            );
+          } else {
+            logger.info(
+              "Got page from server\n"
+              "\tpageNumber: ${parameters.pageNumber}\n"
+              "\ttags: ${parameters.tags}"
+              "\tvalidLimit: ${parameters.validLimit}\n"
+              "Result length: ${v?.length}",
+            );
+            if (assignOnSuccess) {
+              _assignPagePostsContiguous(parameters.pageIndex!, v!);
+            }
+          }
+          return v;
+        })));
+    return /* assignOnSuccess
+        ? (t
+          ..then((v) {
+            if (/* ( */ v?.isNotEmpty ?? false /* ) && assignOnSuccess */) {
+              _assignPagePostsContiguous(parameters.pageIndex!, v!);
+            }
+          }).ignore())
+        :  */
+        t;
   }
 
-  /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
-  E6Posts _genFromRange({int start = 0, int? end}) => _genFromStartAndCount(
-        start: start,
-        count: (end ?? (SearchView.i.postsPerPage + start)) - start,
+  // Map<int, Iterable<E6PostResponse>>
+  Future<bool> _tryRetrieveAndAssignPageBool(
+    final int pageIndex, {
+    bool reload = false,
+  }) async {
+    final details = _RequestDetails.loadPage(
+        pageIndexToLoad: pageIndex,
+        maxLoadedPages: _maxLoadedPages,
+        startingPageIndex: startingPageIndex,
+        lastStoredPageIndex: lastStoredPageIndex);
+    if (details.unloadAny) {
+      final pageIndices = List.generate(
+        details.requiredPageCount,
+        details.unloadFromStart
+            ? (index) => index + details.requiredStart
+            : (index) => details.requiredEnd - index,
       );
+      if (!details.isContiguous) {
+        Iterable<E6PostResponse>? assign(
+          Iterable<E6PostResponse>? p,
+          int e, [
+          bool first = false,
+        ]) {
+          if (p != null) {
+            if (first) {
+              // if (numStoredPages + 1 > _maxLoadedPages) {
+              if (details.unloadFromStart) {
+                unloadPagesFromStart(/* 1 */ numStoredPages);
+                /* if (first)  */ _startingPage = e;
+              } else {
+                unloadPagesFromEnd(/* 1 */ numStoredPages);
+              }
+            }
+            _assignPagePostsContiguous(e, p);
+          }
+          return p;
+        }
+
+        Future<bool> i(int e, [bool first = false]) async =>
+            ((!reload ? getPostsOnPageSync(e) : null) ??
+                assign(
+                    await _fetchPage(parameters.copyWith(pageIndex: e),
+                        assignOnSuccess: false),
+                    e,
+                    first)) !=
+            null;
+        return pageIndices.fold(
+                null,
+                (prior, e) => (prior is Future<bool>
+                    ? prior.then((v) => (v ? i(e) : false) as FutureOr<bool>)
+                        as FutureOr<bool>
+                    : prior != null
+                        ? prior
+                            ? i(e)
+                            : false as FutureOr<bool>
+                        : i(e, true))) ??
+            false;
+      }
+      Future<bool> i(int e) async =>
+          ((!reload ? getPostsOnPageSync(e) : null) ??
+              await _fetchPage(parameters.copyWith(pageIndex: e),
+                  assignOnSuccess: true)) !=
+          null;
+      return pageIndices.fold(
+          true,
+          (prior, e) => (prior is Future<bool>
+              ? prior.then((v) => (v ? i(e) : false) as FutureOr<bool>)
+                  as FutureOr<bool>
+              : prior
+                  ? i(e)
+                  : false as FutureOr<bool>));
+    } else {
+      return _tryRetrieveAndAssignPages(_RequestDetails.determineRange(
+          pageIndex, startingPageIndex, lastStoredPageIndex));
+      // return tryRetrievePage(pageIndex);
+    }
+  }
+
+  Future<bool> _tryRetrieveAndAssignPageDirect(
+    final int pageIndex, {
+    bool reload = false,
+  }) async {
+    if (isPageLoaded(pageIndex)) return true;
+    var details = _RequestDetails.loadPage(
+        pageIndexToLoad: pageIndex,
+        maxLoadedPages: _maxLoadedPages,
+        startingPageIndex: startingPageIndex,
+        lastStoredPageIndex: lastStoredPageIndex);
+    if (details.unloadAny) {
+      Iterable<int> pageIndices = List.generate(
+        details.requiredPageCount,
+        /* details.unloadFromStart
+            ?  */
+        (index) =>
+            index +
+            details
+                .requiredStart /* : (index) => details.requiredEnd - index */,
+      );
+      Iterable<E6PostResponse>? assign(
+        Iterable<E6PostResponse>? p,
+        int e, {
+        int? toUnload,
+        bool first = false,
+      }) {
+        toUnload ??= numStoredPages;
+        if (p != null) {
+          if (toUnload > 0) {
+            if (details.unloadFromStart) {
+              unloadPagesFromStart(toUnload);
+              if (first) _startingPage = e;
+            } else {
+              unloadPagesFromEnd(toUnload);
+            }
+          }
+          _assignPagePostsContiguous(e, p);
+        }
+        return p;
+      }
+
+      if (reload || getPostsOnPageSync(details.requiredEnd) == null) {
+        var e = (pageIndices as List<int>).removeLast(),
+            f = await _fetchPage(parameters.copyWith(pageIndex: e),
+                assignOnSuccess: false);
+        for (;
+            f == null && pageIndices.isNotEmpty;
+            details = _RequestDetails.loadPage(
+                pageIndexToLoad: e,
+                maxLoadedPages: _maxLoadedPages,
+                startingPageIndex: startingPageIndex,
+                lastStoredPageIndex: lastStoredPageIndex),
+            e = pageIndices.removeLast(),
+            f = await _fetchPage(parameters.copyWith(pageIndex: e),
+                assignOnSuccess: false)) {}
+        if (f == null) {
+          return false;
+        } else {
+          pageIndices =
+              details.unloadFromStart ? pageIndices : pageIndices.reversed;
+          if (!details.isContiguous) {
+            FutureOr<List<Iterable<E6PostResponse>?>> iSlim(
+                    int e, FutureOr<List<Iterable<E6PostResponse>?>> c) async =>
+                await c
+                  ..add((!reload ? getPostsOnPageSync(e) : null) ??
+                      await _fetchPage(parameters.copyWith(pageIndex: e),
+                          assignOnSuccess: false));
+            final r = pageIndices
+                .fold<FutureOr<List<Iterable<E6PostResponse>?>>>([],
+                    (prior, e) {
+              return iSlim(e, prior);
+            });
+            parse(v) {
+              if (details.unloadFromStart) {
+                unloadPagesFromStart(numStoredPages);
+                _startingPage = pageIndices.first;
+                // bool wasAnyNonNull = false;
+                for (var i = 0; i < v.length; i++) {
+                  // wasAnyNonNull &= v[i] != null;
+                  assign(v[i], pageIndices.elementAt(i), toUnload: 0);
+                }
+                _assignPagePostsContiguous(e, f!);
+              } else {
+                assign(v.last, pageIndices.last, first: true);
+                for (var i = v.length - 1; i > 0; i--) {
+                  assign(v[i], pageIndices.elementAt(i), toUnload: 0);
+                }
+                assign(f, e, toUnload: 0);
+              }
+              // return wasAnyNonNull;
+              return true;
+            }
+
+            return r is Future<List<Iterable<E6PostResponse>?>>
+                ? r.then(parse) as FutureOr<bool>
+                : parse(r);
+          } else {
+            Future<Iterable<E6PostResponse>?> iSlim(int e) async =>
+                (!reload ? getPostsOnPageSync(e) : null) ??
+                await _fetchPage(parameters.copyWith(pageIndex: e),
+                    assignOnSuccess: false);
+            // assignOnSuccess: true);
+            final r = pageIndices.fold<FutureOr<Iterable<E6PostResponse>?>>(
+                [],
+                (prior, e) => (prior is Future<Iterable<E6PostResponse>?>
+                    ? prior.then((v) => (v != null
+                            ? iSlim(e).then((v1) => assign(v1, e, toUnload: 1))
+                            : null) as FutureOr<Iterable<E6PostResponse>?>)
+                        as FutureOr<Iterable<E6PostResponse>?>
+                    : prior != null
+                        ? iSlim(e).then((v1) => assign(v1, e, toUnload: 1))
+                        : null as FutureOr<Iterable<E6PostResponse>?>));
+            // return r is Future<Iterable<E6PostResponse>?>
+            //     ? r.then((v) => v != null) as FutureOr<bool>
+            //     : r != null;
+            await r;
+            assign(f, e, toUnload: 1);
+            return true;
+          }
+        }
+      } else {
+        pageIndices = details.unloadFromStart
+            ? pageIndices
+            : (pageIndices as List<int>).reversed;
+        logger.info(
+            "pageIndices.first: ${pageIndices.first}, pageIndices.last: ${pageIndices.last}");
+        Future<bool> i(int e) async =>
+            ((!reload ? getPostsOnPageSync(e) : null) ??
+                await _fetchPage(parameters.copyWith(pageIndex: e),
+                    assignOnSuccess: true)) !=
+            null;
+        return pageIndices.fold(
+            true,
+            (prior, e) => (prior is Future<bool>
+                ? prior.then((v) => (v ? i(e) : false) as FutureOr<bool>)
+                    as FutureOr<bool>
+                : prior
+                    ? i(e)
+                    : false as FutureOr<bool>));
+      }
+    } else {
+      return _tryRetrieveAndAssignPages(_RequestDetails.determineRange(
+          pageIndex, startingPageIndex, lastStoredPageIndex));
+      // return tryRetrievePage(pageIndex);
+    }
+  }
+  /* Future<Iterable<E6PostResponse>?> _tryRetrieveAndAssignPage(
+    final int pageIndex, {
+    bool reload = false,
+  }) async {
+    final details = _RequestDetails.loadPage(
+        pageIndexToLoad: pageIndex,
+        maxLoadedPages: _maxLoadedPages,
+        startingPageIndex: startingPageIndex,
+        lastStoredPageIndex: lastStoredPageIndex);
+    if (details.unloadAny) {
+      final pageIndices = List.generate(
+        details.requiredEnd - details.requiredStart,
+        details.unloadFromStart
+            ? (index) => index + details.requiredStart
+            : (index) => details.requiredEnd - index,
+      );
+      if (!details.isContiguous) {
+        Iterable<E6PostResponse>? assign(
+          Iterable<E6PostResponse>? p,
+          int e, [
+          bool first = false,
+        ]) {
+          if (p != null) {
+            if (numStoredPages + 1 > _maxLoadedPages) {
+              if (details.unloadFromStart) {
+                unloadPagesFromStart(1);
+                if (first) _startingPage = e;
+              } else {
+                unloadPagesFromEnd(1);
+              }
+            }
+            _assignPagePostsContiguous(e, p);
+          }
+          return p;
+        }
+
+        Future<bool> i(int e, [bool first = false]) async =>
+            ((!reload ? getPostsOnPageSync(e) : null) ??
+                assign(
+                    await _fetchPage(parameters.copyWith(pageIndex: e),
+                        assignOnSuccess: false),
+                    e,
+                    first)) !=
+            null;
+        return pageIndices.fold(
+                null,
+                (prior, e) => (prior is Future<bool>
+                    ? prior.then((v) => (v ? i(e) : false) as FutureOr<bool>)
+                        as FutureOr<bool>
+                    : prior != null
+                        ? prior
+                            ? i(e)
+                            : false as FutureOr<bool>
+                        : i(e, true))) ??
+            false;
+      }
+      Future<bool> i(int e) async =>
+          ((!reload ? getPostsOnPageSync(e) : null) ??
+              await _fetchPage(parameters.copyWith(pageIndex: e),
+                  assignOnSuccess: true)) !=
+          null;
+      return pageIndices.fold(
+          true,
+          (prior, e) => (prior is Future<bool>
+              ? prior.then((v) => (v ? i(e) : false) as FutureOr<bool>)
+                  as FutureOr<bool>
+              : prior
+                  ? i(e)
+                  : false as FutureOr<bool>));
+    } else {
+      return _tryRetrieveAndAssignPages(_RequestDetails.determineRange(
+          pageIndex, startingPageIndex, lastStoredPageIndex));
+      // return tryRetrievePage(pageIndex);
+    }
+  } */
+
+  Future<bool> _tryRetrieveAndAssignPages(
+    final (int start, int end) pageIndexRange, {
+    bool reload = false,
+  }) async {
+    final pageIndices = List.generate(
+      pageIndexRange.$2 - pageIndexRange.$1,
+      (index) => index + pageIndexRange.$1,
+    );
+    Future<Iterable<E6PostResponse>?>? a(int e) async =>
+        (!reload ? getPostsOnPageSync(e) : null) ??
+        await _fetchPage(parameters.copyWith(
+                pageIndex: e) /* ,
+            assignOnSuccess: false */
+            );
+    return pageIndices.fold(
+            true,
+            (previousValue, e) => previousValue is Future<bool>
+                ? previousValue.then((v) async => await a(e) != null)
+                : (() async => await a(e))().then((v) => v != null))
+        /* ..then(
+        (v) => _assignPagesPostsRange(pageIndexRange,
+            v.fold([], (p, e) => e != null ? (p..addAll(e)) : p)),
+      ).ignore() */
+        ;
+  }
+  /* Future<List<Iterable<E6PostResponse>?>?> _tryRetrieveAndAssignPages(
+    final (int start, int end) pageIndexRange, {
+    bool reload = false,
+  }) async {
+    final details = _RequestDetails(
+        pageIndexRangeToLoad: pageIndexRange,
+        maxLoadedPages: _maxLoadedPages,
+        startingPageIndex: startingPageIndex,
+        lastStoredPageIndex: lastStoredPageIndex);
+    if (details.unloadAny) {
+    } else {
+      final pageIndices = List.generate(
+        pageIndexRange.$2 - pageIndexRange.$1,
+        (index) => index + pageIndexRange.$1,
+      );
+      return pageIndices.fold<Future<List<Iterable<E6PostResponse>?>>?>(
+          null,
+          (previousValue, e) => previousValue != null
+              ? previousValue.then((v) async => v
+                ..add((!reload ? getPostsOnPageSync(e) : null) ??
+                    await _fetchPage(parameters.copyWith(pageIndex: e),
+                        assignOnSuccess: false)))
+              : (() async =>
+                      (!reload ? getPostsOnPageSync(e) : null) ??
+                      await _fetchPage(parameters.copyWith(pageIndex: e),
+                          assignOnSuccess: false))()
+                  .then((v) => [v]))
+        ?..then(
+          (v) => _assignPagesPostsRange(pageIndexRange,
+              v.fold([], (p, e) => e != null ? (p..addAll(e)) : p)),
+        ).ignore();
+    }
+  } */
+
+  void unloadPagesFromStart(int count) {
+    collection.removeRange(0, postsPerPage * count);
+    _startingPage += count;
+  }
+
+  void unloadPagesFromEnd(int count) {
+    collection.removeRange(
+        collection.length - 1 - postsPerPage * count, collection.length);
+  }
+
+  // bool _assignPagesPostsRange(final (int start, int end) pageIndexRange,
+  //     final List<E6PostResponse> toAdd) {
+  //   if (pageIndexRange.$1 < 0) {
+  //     throw ArgumentError.value(
+  //         pageIndexRange, "pageIndexRange.start", "Must be >= 0");
+  //   }
+  //   if (pageIndexRange.$1 > pageIndexRange.$2) {
+  //     throw ArgumentError.value(
+  //         pageIndexRange, "pageIndexRange", "start must be <= end");
+  //   }
+
+  //   if (pageIndexRange.$2 - pageIndexRange.$1 > _maxLoadedPages) {
+  //     throw ArgumentError.value(pageIndexRange, "pageIndexRange",
+  //         "Must contain <= _maxLoadedPages ($_maxLoadedPages)");
+  //   }
+
+  //   if (pageIndexRange.$1 >= startingPageIndex &&
+  //       pageIndexRange.$1 <= lastStoredPageIndex + 1) {
+  //     final desiredPageCount =
+  //             math.max(pageIndexRange.$2, lastStoredPageIndex) -
+  //                 startingPageIndex,
+  //         pagesToRemove = desiredPageCount - _maxLoadedPages;
+  //     if (desiredPageCount > _maxLoadedPages) {
+  //       unloadPagesFromStart(pagesToRemove);
+  //     }
+  //     var start = getPageFirstPostIndex(pageIndexRange.$1);
+  //     for (var i = toAdd.length;
+  //         i > 0 && start < collection.length;
+  //         i--, start++) {
+  //       collection[start].$ = toAdd.removeAt(0);
+  //     }
+  //     collection.addAllDirect(toAdd);
+  //     assert(numStoredPages <= _maxLoadedPages);
+  //     return true;
+  //   } else if (pageIndexRange.$2 <= lastStoredPageIndex &&
+  //       pageIndexRange.$2 >= startingPageIndex + 1) {
+  //     final desiredPageCount = lastStoredPageIndex -
+  //             math.min<int>(pageIndexRange.$1, startingPageIndex),
+  //         pagesToRemove = desiredPageCount - _maxLoadedPages;
+  //     if (desiredPageCount > _maxLoadedPages) {
+  //       unloadPagesFromEnd(pagesToRemove);
+  //     }
+  //     var start = getPageLastPostIndex(pageIndexRange.$2);
+  //     for (var i = toAdd.length;
+  //         i > 0 && start < collection.length && start >= 0;
+  //         i--, start--) {
+  //       collection[start].$ = toAdd.removeLast();
+  //     }
+  //     collection.insertAllDirect(0, toAdd);
+  //     assert(numStoredPages <= _maxLoadedPages);
+  //     return true;
+  //   } else {
+  //     collection
+  //       ..clear()
+  //       ..addAllDirect(toAdd);
+  //     _startingPage = pageIndexRange.$1;
+  //     return true;
+  //   }
+  // }
+
+  // /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
+  // E6Posts _genFromRange({int start = 0, int? end}) => _genFromStartAndCount(
+  //       start: start,
+  //       count: (end ?? (SearchView.i.postsPerPage + start)) - start,
+  //     );
 
   /// If null, [count] defaults to [SearchView.i.postsPerPage].
   E6Posts _genFromStartAndCount({int start = 0, int? count}) => E6PostsSync(
@@ -958,12 +1277,12 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         ).toList(),
       );
 
-  /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
-  Iterable<E6PostResponse> _getRawPostFromRange({int start = 0, int? end}) =>
-      _getRawPostFromStartAndCount(
-        start: start,
-        count: (end ?? (SearchView.i.postsPerPage + start)) - start,
-      );
+  // /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
+  // Iterable<E6PostResponse> _getRawPostFromRange({int start = 0, int? end}) =>
+  //     _getRawPostFromStartAndCount(
+  //       start: start,
+  //       count: (end ?? (SearchView.i.postsPerPage + start)) - start,
+  //     );
 
   /// If null, [count] defaults to [SearchView.i.postsPerPage].
   Iterable<E6PostResponse> _getRawPostFromStartAndCount(
@@ -973,12 +1292,12 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         count: count,
       ).map((e) => e.$);
 
-  /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
-  Iterable<E6PostEntrySync> _getFromRange({int start = 0, int? end}) =>
-      _getFromStartAndCount(
-        start: start,
-        count: (end ?? (SearchView.i.postsPerPage + start)) - start,
-      );
+  // /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
+  // Iterable<E6PostEntrySync> _getFromRange({int start = 0, int? end}) =>
+  //     _getFromStartAndCount(
+  //       start: start,
+  //       count: (end ?? (SearchView.i.postsPerPage + start)) - start,
+  //     );
 
   /// If null, [count] defaults to [SearchView.i.postsPerPage].
   Iterable<E6PostEntrySync> _getFromStartAndCount(
@@ -1196,10 +1515,11 @@ class FavoritesCollectionLoader extends ManagedPostCollectionSync {
 
   @override
   Future<Iterable<E6PostResponse>?> _fetchPage(
-      [PostSearchQueryRecord? parameters]) {
-    parameters ??= _parameters;
+    PostSearchQueryRecord parameters, {
+    bool assignOnSuccess = true,
+  }) {
     logger.info("Getting page ${parameters.page}");
-    return _loading[parameters] ??
+    final t = (_loading[parameters] ??
         (_loading[parameters] = E621
             .performListUserFavsSafe(
           limit: parameters.validLimit,
@@ -1207,12 +1527,37 @@ class FavoritesCollectionLoader extends ManagedPostCollectionSync {
         )
             .then((v) {
           if (v == null) {
-            onPageRetrievalFailure.invoke(PostCollectionEvent(
-                parameters: parameters!, posts: collection));
+            onPageRetrievalFailure.invoke(
+                PostCollectionEvent(parameters: parameters, posts: collection));
           }
           return v;
         }))
-      ..then((v) => _loading.remove(parameters!)).ignore();
+      ..then((v) {
+        _loading.remove(parameters);
+        if (v?.isEmpty ?? true) {
+          logger.info(
+            "No page from server\n"
+            "\tpageNumber: ${parameters.pageNumber}\n"
+            "\ttags: ${parameters.tags}"
+            "\tvalidLimit: ${parameters.validLimit}\n",
+          );
+        }
+        logger.info(
+          "Got page from server\n"
+          "\tpageNumber: ${parameters.pageNumber}\n"
+          "\ttags: ${parameters.tags}"
+          "\tvalidLimit: ${parameters.validLimit}\n"
+          "Result length: ${v?.length}",
+        );
+      }));
+    return assignOnSuccess
+        ? (t
+          ..then((v) {
+            if ((v?.isEmpty ?? false) && assignOnSuccess) {
+              _assignPagePostsContiguous(parameters.pageIndex!, v!);
+            }
+          }).ignore())
+        : t;
   }
 
   FavoritesCollectionLoader({
@@ -1235,16 +1580,25 @@ class FavoritesCollectionLoader extends ManagedPostCollectionSync {
   }
 }
 
+typedef PageRange = ({int start, int end});
+
 class PostCollectionSync with ListMixin<E6PostEntrySync> {
   final LinkedList<E6PostEntrySync> _posts;
-  @Event(name: "addPosts")
+  @Event(name: "AddPosts")
   final addPosts = JOwnedEvent<PostCollectionSync, PostCollectionEvent>();
   // #endregion Collection Overrides
-  PostCollectionSync() : _posts = LinkedList();
+  PostCollectionSync()
+      : _posts = LinkedList() /* ,
+        _pageMappings = {} */
+  ;
   PostCollectionSync.withPosts({
     required Iterable<E6PostResponse> posts,
+    // required Map<int, PageRange> pageMappings,
   }) : _posts = LinkedList()
-          ..addAll(posts.map((e) => E6PostEntrySync(value: e)));
+          ..addAll(posts.map((e) => E6PostEntrySync(
+              value: e))) /* ,
+        _pageMappings = pageMappings */
+  ;
 
   @override
   int get length => _posts.length;
@@ -1276,6 +1630,45 @@ class PostCollectionSync with ListMixin<E6PostEntrySync> {
     }
   }
 
+  // final Map<int, PageRange> _pageMappings;
+
+  // bool assignPagePosts(
+  //     final int pageIndex, final Iterable<E6PostResponse> toAdd) {
+  //   // var start = getPageFirstPostIndex(pageIndex);
+  //   final r = _pageMappings[pageIndex];
+  //   // if (start < 0) {
+  //   if (r == null) {
+  //     do {
+  //       _startingPage--;
+  //       start++;
+  //       final t = toAdd.toList();
+  //       do {
+  //         collection._posts.addFirst(E6PostEntrySync(value: t.removeLast()));
+  //       } while (t.isNotEmpty);
+  //     } while (start < 0);
+  //     return true;
+  //   } else if (start >= collection._posts.length) {
+  //     collection._posts.addAll(toAdd.map((e) => E6PostEntrySync(value: e)));
+  //     return true;
+  //   } else {
+  //     // TODO: Allow Replacement
+  //     return false;
+  //   }
+  // }
+
+  @override
+  E6PostEntrySync elementAt(int index) {
+    return _posts.elementAt(index);
+  }
+
+  void addAllDirect(Iterable<E6PostResponse> iterable) {
+    addAll(iterable.map((e) => E6PostEntrySync(value: e)));
+  }
+
+  void insertAllDirect(int index, Iterable<E6PostResponse> iterable) {
+    insertAll(index, iterable.map((e) => E6PostEntrySync(value: e)));
+  }
+
   LinkedList<E6PostEntrySync> get posts => _posts;
   @override
   operator [](int index) => _posts.elementAt(index);
@@ -1293,4 +1686,198 @@ class PostCollectionEvent extends JEventArgs {
     required this.parameters,
     required this.posts,
   });
+}
+
+/// TODO: Add `couldBeContiguous` for when an early termination would be contiguous
+class _RequestDetails {
+  final int maxLoadedPages;
+  late int requestedStart,
+      requestedEnd,
+      boundedStart,
+      boundedEnd,
+      requiredStart,
+      requiredEnd,
+      initialStart,
+      initialEnd,
+      resultantStart,
+      resultantEnd,
+      maxPotentialOverlap;
+  bool wouldUnloadFromStart;
+  late bool isContiguous, couldBeContiguous, hasOverlap, couldHaveOverlap;
+
+  // _RequestDetails({
+  //   required this.requestedStart,
+  //   required this.requestedEnd,
+  //   required this.boundedStart,
+  //   required this.boundedEnd,
+  //   required this.initialStart,
+  //   required this.initialEnd,
+  //   required this.resultantStart,
+  //   required this.resultantEnd,
+  //   required this.unloadFromStart,
+  //   required this.maxLoadedPages,
+  // });
+  _RequestDetails({
+    required (int start, int end) pageIndexRangeToLoad,
+    required this.maxLoadedPages,
+    required final int startingPageIndex,
+    required final int lastStoredPageIndex,
+    final bool? forceRespectStart,
+    final bool expand = true,
+  })  : initialStart = startingPageIndex,
+        resultantStart = startingPageIndex,
+        initialEnd = lastStoredPageIndex,
+        resultantEnd = lastStoredPageIndex,
+        requestedStart = pageIndexRangeToLoad.$1,
+        requestedEnd = pageIndexRangeToLoad.$2,
+        requiredStart = pageIndexRangeToLoad.$1,
+        requiredEnd = pageIndexRangeToLoad.$2,
+        boundedStart = pageIndexRangeToLoad.$1,
+        boundedEnd = pageIndexRangeToLoad.$2,
+        wouldUnloadFromStart = false {
+    if (requestedStart > requestedEnd) {
+      throw ArgumentError.value(
+          pageIndexRangeToLoad, "pageIndexRangeToLoad", "start must be <= end");
+    }
+    if (requestedStart < 0) {
+      ManagedPostCollectionSync.logger
+          .warning("pageIndexRangeToLoad.start < 0, bounding");
+      requiredStart = boundedStart = requestedStart = 0;
+      // throw ArgumentError.value(
+      //     pageIndexRangeToLoad, "pageIndexRangeToLoad.start", "Must be >= 0");
+    }
+
+    if (expand) {
+      if (boundedStart - initialEnd >= 0) {
+        while (
+            boundedPageCount < maxLoadedPages && boundedStart > initialStart) {
+          requiredStart = --boundedStart;
+        }
+      } else if (initialStart - boundedEnd >= 0) {
+        while (boundedPageCount < maxLoadedPages && boundedEnd < initialEnd) {
+          requiredEnd = ++boundedEnd;
+        }
+      }
+    }
+
+    if (boundedPageCount > maxLoadedPages) {
+      final toShave = boundedPageCount - maxLoadedPages;
+      switch (forceRespectStart) {
+        case true:
+          requiredEnd = boundedEnd = boundedEnd - toShave;
+          break;
+        case false:
+          requiredStart = boundedStart = boundedStart + toShave;
+          break;
+        case null:
+          final fromStart = (toShave / 2).floor(),
+              fromEnd = (toShave / 2).ceil();
+          requiredStart = boundedStart = boundedStart + fromStart;
+          requiredEnd = boundedEnd = boundedEnd - fromEnd;
+          break;
+      }
+    }
+    assert(boundedPageCount <= maxLoadedPages);
+    if (boundedStart >= initialStart) {
+      isContiguous = boundedStart <= initialEnd + 1;
+      hasOverlap = boundedStart <= initialEnd;
+      couldHaveOverlap = boundedStart - initialEnd < maxLoadedPages;
+      couldBeContiguous = boundedStart - initialEnd < maxLoadedPages + 1;
+      maxPotentialOverlap = maxLoadedPages - boundedStart - initialEnd;
+      wouldUnloadFromStart = true;
+      resultantEnd = math.max(boundedEnd, initialEnd);
+      requiredStart =
+          unloadAny ? resultantStart += pagesToRemove : resultantStart;
+    } else if (boundedEnd <= initialEnd) {
+      isContiguous = boundedEnd >= initialStart - 1;
+      hasOverlap = boundedEnd >= initialStart;
+      couldHaveOverlap = initialStart - boundedEnd < maxLoadedPages;
+      couldBeContiguous = initialStart - boundedEnd < maxLoadedPages + 1;
+      maxPotentialOverlap = maxLoadedPages - initialStart - boundedEnd;
+      wouldUnloadFromStart = false;
+      resultantStart = math.min(boundedStart, initialStart);
+      requiredEnd = unloadAny ? resultantEnd -= pagesToRemove : resultantEnd;
+    } else {
+      isContiguous = couldBeContiguous = hasOverlap = couldHaveOverlap = true;
+      maxPotentialOverlap = initialPageCount;
+      wouldUnloadFromStart = false;
+      requiredStart = resultantStart = boundedStart;
+      requiredEnd = resultantEnd = boundedEnd;
+    }
+  }
+  _RequestDetails.loadPage({
+    required int pageIndexToLoad,
+    required final int maxLoadedPages,
+    required final int startingPageIndex,
+    required final int lastStoredPageIndex,
+    final bool? forceRespectStart,
+  }) : this(
+          pageIndexRangeToLoad: determineRange(
+            pageIndexToLoad,
+            startingPageIndex,
+            lastStoredPageIndex,
+          ),
+          maxLoadedPages: maxLoadedPages,
+          lastStoredPageIndex: lastStoredPageIndex,
+          startingPageIndex: startingPageIndex,
+          forceRespectStart: forceRespectStart ??
+                  determineRange(
+                        pageIndexToLoad,
+                        startingPageIndex,
+                        lastStoredPageIndex,
+                      ).$1 ==
+                      pageIndexToLoad
+              ? true
+              : false,
+        );
+  bool get wouldUnloadFromEnd => !wouldUnloadFromStart;
+  bool get unloadAny => pagesToRemove > 0;
+  bool get unloadFromEnd => wouldUnloadFromEnd && unloadAny;
+  bool get unloadFromStart => wouldUnloadFromStart && unloadAny;
+  int get requiredPageCount => requiredEnd - requiredStart + 1;
+  int get requestedPageCount => requestedEnd - requestedStart + 1;
+  int get resultantPageCount => resultantEnd - resultantStart + 1;
+  int get initialPageCount => initialEnd - initialStart + 1;
+  int get boundedPageCount => boundedEnd - boundedStart + 1;
+  // int get pagesToRemove => resultantPageCount - maxLoadedPages;
+  // int get pagesToRemove =>
+  //     wouldUnloadFromStart ? pagesToRemoveFromStart : pagesToRemoveFromEnd;
+  int get pagesToRemove => wouldUnloadFromStart
+      ? pagesToRemoveFromStart >= 0
+          ? pagesToRemoveFromStart
+          : pagesToRemoveFromEnd
+      : pagesToRemoveFromEnd >= 0
+          ? pagesToRemoveFromEnd
+          : pagesToRemoveFromStart;
+  int get pagesToRemoveFromEnd =>
+      initialEnd - resultantStart + 1 - maxLoadedPages;
+  int get pagesToRemoveFromStart =>
+      resultantEnd - initialStart + 1 - maxLoadedPages;
+  int get boundedPagesToRemove => wouldUnloadFromStart
+      ? boundedPagesToRemoveFromStart >= 0
+          ? boundedPagesToRemoveFromStart
+          : boundedPagesToRemoveFromEnd
+      : boundedPagesToRemoveFromEnd >= 0
+          ? boundedPagesToRemoveFromEnd
+          : boundedPagesToRemoveFromStart;
+  int get boundedPagesToRemoveFromEnd =>
+      math.min(pagesToRemoveFromEnd, initialPageCount);
+  int get boundedPagesToRemoveFromStart =>
+      math.min(pagesToRemoveFromStart, initialPageCount);
+  // int get initial
+  static (int start, int end) determineRange(
+    int pageIndexToLoad,
+    int startingPageIndex,
+    int lastStoredPageIndex,
+  ) {
+    return startingPageIndex >= pageIndexToLoad
+        ? (pageIndexToLoad, startingPageIndex)
+        : pageIndexToLoad >= lastStoredPageIndex
+            ? (lastStoredPageIndex, pageIndexToLoad)
+            : math.min((startingPageIndex - pageIndexToLoad).abs(),
+                        (lastStoredPageIndex - pageIndexToLoad).abs()) ==
+                    lastStoredPageIndex
+                ? (pageIndexToLoad, lastStoredPageIndex)
+                : (startingPageIndex, lastStoredPageIndex);
+  }
 }

@@ -574,13 +574,57 @@ class _WPostSearchResultsSwiperState extends State<
     );
     return Column(
       children: [
-        Selector<ManagedPostCollectionSync, (int?, int?, int?)>(
-          builder: (context, value, child) => Text(
-              "_currentPageIndex: $_currentPageIndex, # Posts: ${value.$1 ?? "?"}, # Pages: ${value.$2 ?? "?"} (${value.$3 ?? "?"} accessible)"),
+        Selector<ManagedPostCollectionSync, (int?, int?, int?, int)>(
+          builder: (context, value, child) {
+            final entries = LateInstance<List<DropdownMenuEntry<int>>>();
+            var tempVal = value.$4.toDouble();
+            return Row(
+              children: [
+                // DropdownMenu<int>(
+                //   dropdownMenuEntries: entries.isAssigned
+                //       ? entries.$
+                //       : entries.$ = List.generate(
+                //           value.$3 ?? E621.maxPageNumber,
+                //           (index) => DropdownMenuEntry(
+                //               value: index, label: "${index + 1}"),
+                //           growable: false,
+                //         ),
+                //   onSelected: (value) =>
+                //       value != null ? _updateCurrentPageIndex(value) : "",
+                // ),
+                StatefulBuilder(builder: (context, setState) {
+                  return Slider(
+                    value: tempVal,
+                    min: 1,
+                    max: (value.$3 ?? E621.maxPageNumber).toDouble(),
+                    divisions: (value.$3 ?? E621.maxPageNumber) - 1,
+                    onChanged: (value) => setState(() {
+                      tempVal = value.round().toDouble();
+                    }),
+                    onChangeEnd: (value) => value.isFinite
+                        ? _updateCurrentPageIndex(value.round())
+                        : "",
+                    label: tempVal.toString(),
+                  );
+                }),
+                Text(
+                    "Page: ${value.$4}${isDebug ? " ${_currentPageIndex + 1}" : ""}, "
+                    "# Posts: ${value.$1 ?? "?"}, "
+                    "# Pages: ${value.$2 ?? "?"}"
+                    "${value.$3 != value.$2 ? " (${value.$3 ?? "?"} accessible)" : ""}"),
+              ],
+            );
+          },
+          // Text(
+          //     "Page: ${value.$4}${isDebug ? " ${_currentPageIndex + 1}" : ""}, "
+          //     "# Posts: ${value.$1 ?? "?"}, "
+          //     "# Pages: ${value.$2 ?? "?"}"
+          //     "${value.$3 != value.$2 ? " (${value.$3 ?? "?"} accessible)" : ""}"),
           selector: (ctx, v) => (
             v.numPostsInSearch,
             v.numPagesInSearch,
             v.numAccessiblePagesInSearch,
+            v.currentPageNumber,
           ),
         ),
         Expanded(
@@ -617,6 +661,7 @@ class _WPostSearchResultsSwiperState extends State<
                             style: const TextStyle(shadows: [
                               Shadow(color: Colors.black, blurRadius: 1),
                               Shadow(color: Colors.black, blurRadius: 5),
+                              Shadow(color: Colors.black, blurRadius: 10),
                             ]),
                           )),
                         );
@@ -672,6 +717,10 @@ class _WPostSearchResultsSwiperState extends State<
   }
 
   void _handlePageViewChanged(int currentPageIndex) {
+    final mpc = Provider.of<ManagedPostCollectionSync>(context, listen: false);
+    if (mpc.currentPageIndex != currentPageIndex) {
+      // mpc.goToPage(currentPageIndex);
+    }
     _currentPageIndex = currentPageIndex;
     if (!Platform.isDesktop) {
       return;
@@ -684,11 +733,15 @@ class _WPostSearchResultsSwiperState extends State<
 
   void _updateCurrentPageIndex(int index) {
     // if (Platform.isDesktop) _tabController.index = index;
-    _pageViewController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOut,
-    );
+    if ((index - _currentPageIndex).abs() <= 1) {
+      _pageViewController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _pageViewController.jumpToPage(index);
+    }
   }
 
   void _updateCurrentPageIndexWrapper(int index, int old) =>
