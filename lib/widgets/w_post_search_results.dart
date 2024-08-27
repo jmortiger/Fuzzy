@@ -375,18 +375,38 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
 
   @widgetFactory
   Widget constructImageResult(E6PostResponse data, int index) =>
-      Selector<SearchResultsNotifier, bool>(
-        builder: (context, value, child) => WImageResult(
-          disallowSelections: widget.disallowSelections,
-          imageListing: data,
-          index: index,
-          postsCache: widget.disallowSelections ? widget.posts.posts : null,
-          // isSelected: getIsIndexSelected(index),
-          // isSelected: getIsPostIdSelected(data.id),
-          isSelected: value,
-        ),
-        selector: (ctx, v) => v.getIsPostSelected(data.id),
-      );
+      ErrorPage.errorWidgetWrapper(
+        () => !widget.disallowSelections
+            ? Selector<SearchResultsNotifier, bool>(
+                builder: (context, value, child) =>
+                    ErrorPage.errorWidgetWrapper(
+                            () => WImageResult(
+                                  disallowSelections: widget.disallowSelections,
+                                  imageListing: data,
+                                  index: index,
+                                  postsCache: widget.disallowSelections
+                                      ? widget.posts.posts
+                                      : null,
+                                  // isSelected: getIsIndexSelected(index),
+                                  // isSelected: getIsPostIdSelected(data.id),
+                                  isSelected: value,
+                                ),
+                            logger: logger)
+                        .value,
+                selector: (ctx, v) => v.getIsPostSelected(data.id),
+              )
+            : WImageResult(
+                disallowSelections: widget.disallowSelections,
+                imageListing: data,
+                index: index,
+                postsCache:
+                    widget.disallowSelections ? widget.posts.posts : null,
+                // isSelected: getIsIndexSelected(index),
+                // isSelected: getIsPostIdSelected(data.id),
+                isSelected: false,
+              ),
+        logger: logger,
+      ).value;
 }
 
 class WPostSearchResultsSwiper extends StatefulWidget {

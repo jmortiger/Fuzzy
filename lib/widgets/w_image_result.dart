@@ -76,7 +76,10 @@ class WImageResult extends StatelessWidget {
       children: [
         _buildPane(context, imageInfo),
         if (SearchView.i.postInfoBannerItems.isNotEmpty)
-          PostInfoPane(post: imageListing, maxWidth: t.width,),
+          PostInfoPane(
+            post: imageListing,
+            maxWidth: t.width,
+          ),
         if (isSelected ||
             (!disallowSelections &&
                 sr(context).getIsPostSelected(imageListing.id)))
@@ -157,8 +160,9 @@ class WImageResult extends StatelessWidget {
     void viewPost() {
       SavedDataE6.init();
       int? p;
-      final sc = getSc(context, false);
+      ManagedPostCollectionSync? sc;
       if (!disallowSelections) {
+        sc = getSc(context, false);
         // await getSc(context, false).mpcSync.updateCurrentPostIndex(index);
         p = sc.getPageOfGivenPostIndexOnPage(index);
         sc.updateCurrentPostIndex(index);
@@ -168,7 +172,7 @@ class WImageResult extends StatelessWidget {
         try {
           if (v.tagsToAddToSearch is List<String> &&
               (v.tagsToAddToSearch as List<String>).firstOrNull != null) {
-            sc.searchText +=
+            sc?.searchText +=
                 (v.tagsToAddToSearch as List<String>).foldToString();
           }
           if (!disallowSelections) {
@@ -190,37 +194,35 @@ class WImageResult extends StatelessWidget {
                     // initialPageIndex:
                     //     getSc(context, false).mpcSync.currentPageIndex,
                     initialPageIndex: p ??
-                        getSc(context, false)
-                            .getPageOfGivenPostIndexOnPage(index),
-                    posts: getSc(context, false),
+                        sc!.getPageOfGivenPostIndexOnPage(index),
+                    posts: sc!,
                     onAddToSearch: getOnAddToSearch(context),
                     tagsToAdd: [],
-                    selectedPosts: !disallowSelections
-                        ? sc.collection
+                    selectedPosts: sc.collection
                             .where(
                               (element) => sr(context)
                                   .selectedPostIds
                                   .contains(element.$.id),
                             )
                             .map((e) => e.$)
-                            .toList()
-                        : null,
+                            .toList(),
                     // selectedPosts: srl,
                   )
                 : PostSwipePage.postsCollection(
                     initialIndex: index,
-                    posts: postsCache ?? getSc(context, false).posts!.posts,
+                    posts: postsCache ??
+                        (!disallowSelections
+                            ? getSc(context, false).posts!.posts
+                            : []),
                     onAddToSearch: getOnAddToSearch(context),
-                    selectedPosts: !disallowSelections
-                        ? sc.collection
-                            .where(
-                              (element) => sr(context)
-                                  .selectedPostIds
-                                  .contains(element.$.id),
-                            )
-                            .map((e) => e.$)
-                            .toList()
-                        : null,
+                    selectedPosts: sc?.collection
+                        .where(
+                          (element) => sr(context)
+                              .selectedPostIds
+                              .contains(element.$.id),
+                        )
+                        .map((e) => e.$)
+                        .toList(),
                     tagsToAdd: [],
                   ),
           )).then<void>(parseReturnValue);
