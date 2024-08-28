@@ -433,7 +433,6 @@ sealed class E621 extends Site {
             }).toList()));
   }
 
-  static bool maxedOutFaves = false;
   static Future<http.Response> sendAddFavoriteRequest(
     int postId, {
     String? username,

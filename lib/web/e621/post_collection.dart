@@ -57,7 +57,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   // #endregion Logger
   // #region Fields
   bool treatAsNull = true;
-  bool tryValidatingSearches = true;
+  bool tryValidatingSearches = false;
   final PostCollectionSync collection;
   final onPageRetrievalFailure = JEvent<PostCollectionEvent>();
   PostSearchQueryRecord _parameters;
@@ -827,7 +827,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       newSearchText.split(RegExp(RegExpExt.whitespacePattern)).toSet(),
       parameters.tagSet);
 
-  void _launchSearch({
+  /* void _launchSearch({
     BuildContext? context,
     srn.SearchResultsNotifier? searchViewNotifier,
     String tags = "",
@@ -954,7 +954,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       // this.isPageLoaded(pageIndex)
       // TODO: This
     }
-  }
+  } */
 
   Future<void> updateCurrentPostIndex(int newIndex) async {
     _currentPostIndex = newIndex;
