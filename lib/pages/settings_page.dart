@@ -238,25 +238,61 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               //   // divisions: SearchViewData.postsPerRowBounds.max -
               //   //     SearchViewData.postsPerRowBounds.min,
               // ),
-              WIntegerField(
+              // WIntegerField(
+              //   getVal: () => SearchView.i.postsPerRow,
+              //   name: "Posts per row",
+              //   setVal: (int val) => SearchView.i.postsPerRow = val,
+              //   validateVal: (int? val) => (val ?? -1) >= 0,
+              // ),
+              WNumSliderField<int>(
+                min: SearchViewData.postsPerPageBounds.min,
+                max: SearchViewData.postsPerPageBounds.max,
                 getVal: () => SearchView.i.postsPerRow,
-                name: "Posts per row",
-                setVal: (int val) => SearchView.i.postsPerRow = val,
-                validateVal: (int? val) => (val ?? -1) >= 0,
-              ),
-              WIntegerField(
-                getVal: () => SearchView.i.postsPerPage,
                 name: "Posts per page",
-                setVal: (int val) => SearchView.i.postsPerPage = val,
-                validateVal: (int? val) => (val ?? -1) >= 0,
+                setVal: (num val) => SearchView.i.postsPerPage = val.toInt(),
+                validateVal: (num? val) {
+                  final v = (val?.round() ?? -1);
+                  return v >= SearchViewData.postsPerPageBounds.min &&
+                      v <= SearchViewData.postsPerPageBounds.max;
+                },
+                defaultValue: SearchViewData.defaultData.postsPerPage,
+                divisions: SearchViewData.postsPerPageBounds.max -
+                    SearchViewData.postsPerPageBounds.min,
+                useIncrementalButtons: true,
               ),
-              WIntegerField(
-                getVal: () => (SearchView.i.widthToHeightRatio * 100).toInt(),
+              // WIntegerField(
+              //   getVal: () => SearchView.i.postsPerPage,
+              //   name: "Posts per page",
+              //   setVal: (int val) => SearchView.i.postsPerPage = val,
+              //   validateVal: (int? val) => (val ?? -1) >= 0,
+              // ),
+              WNumSliderField<double>(
+                min: SearchViewData.widthToHeightRatioBounds.min,
+                max: SearchViewData.widthToHeightRatioBounds.max,
+                getVal: () => SearchView.i.widthToHeightRatio,
                 name: "Width to height ratio",
-                setVal: (int val) =>
-                    SearchView.i.widthToHeightRatio = val / 100,
-                // validateVal: (int? val) => (val ?? -1) >= 0,
+                setVal: (num val) =>
+                    SearchView.i.widthToHeightRatio = val.toDouble(),
+                validateVal: (num? val) {
+                  return (val ??
+                              (SearchViewData.widthToHeightRatioBounds.min -
+                                  1)) >=
+                          SearchViewData.widthToHeightRatioBounds.min &&
+                      (val ?? -1) <=
+                          SearchViewData.widthToHeightRatioBounds.max;
+                },
+                defaultValue: SearchViewData.defaultData.widthToHeightRatio,
+                // divisions: ((SearchViewData.widthToHeightRatioBounds.max -
+                //     SearchViewData.widthToHeightRatioBounds.min)*100).round(),
+                useIncrementalButtons: true,
               ),
+              // WIntegerField(
+              //   getVal: () => (SearchView.i.widthToHeightRatio * 100).toInt(),
+              //   name: "Width to height ratio",
+              //   setVal: (int val) =>
+              //       SearchView.i.widthToHeightRatio = val / 100,
+              //   // validateVal: (int? val) => (val ?? -1) >= 0,
+              // ),
               WEnumListField<PostInfoPaneItem>.getter(
                 name: "Post Info Display",
                 getter: () => SearchView.i.postInfoBannerItems,
@@ -355,6 +391,13 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
             Text(
               "Video Display",
               style: SettingsPage.titleStyle,
+            ),
+            WEnumField(
+              name: "Video Quality",
+              getVal: () => PostView.i.videoQuality,
+              setVal: (/*FilterQuality*/ dynamic v) =>
+                  PostView.i.videoQuality = v,
+              values: FilterQuality.values,
             ),
             WBooleanField(
               name: "Autoplay Video",
@@ -1027,7 +1070,7 @@ class _WNumSliderFieldState<T extends num> extends State<WNumSliderField<T>> {
           ),
         Expanded(
           child: Slider(
-            label: getVal.toString(),
+            label: (T is int ? getVal.round() : getVal).toString(),
             value: getVal.toDouble(),
             onChanged: (v) => (validateVal?.call(v) ?? true)
                 ? setState(() => setVal(tempValue = v))

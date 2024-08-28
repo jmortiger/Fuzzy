@@ -189,6 +189,7 @@ final class E6PostsSync extends E6Posts {
   factory E6PostsSync.fromJson(JsonOut json) => E6PostsSync(
       posts: (json["posts"] as List)
           .mapAsList((e, i, l) => E6PostResponse.fromJson(e)));
+  factory E6PostsSync.fromRawJson(String json) => E6PostsSync.fromJson(jsonDecode(json));
 
   /// Already fully loaded, so does nothing.
   @override

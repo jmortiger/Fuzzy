@@ -332,4 +332,55 @@ void logResponseSmart(
     "\n\t${r.headers}",
   );
 }
+
+extension LogReq on http.BaseRequest {
+  void log(
+    Logger logger, [
+    Level level = Level.FINEST,
+  ]) {
+    logger.log(
+      level,
+      "${switch (runtimeType) {
+        http.Request => "",
+        http.StreamedRequest => "Streamed",
+        http.MultipartRequest => "Multipart",
+        _ => "Base",
+      }}Request:"
+      "\n\t$this"
+      "\n\t$url"
+      "\n\t${url.query}"
+      "${this is http.Request ? "\n\t${(this as http.Request).body}" : ""}"
+      "\n\t$headers",
+    );
+  }
+}
+
+extension LogRes on http.BaseResponse {
+  void log(
+    Logger logger, {
+    Level baseLevel = Level.FINEST,
+    Level nonSuccessLevel = Level.WARNING,
+    Level errorLevel = Level.SEVERE,
+    Level? overrideLevel,
+  }) {
+    logger.log(
+      overrideLevel ??
+          (statusCodeInfo.isError
+              ? errorLevel
+              : statusCodeInfo.isSuccessful
+                  ? baseLevel
+                  : nonSuccessLevel),
+      "${switch (runtimeType) {
+        http.Response => "",
+        http.StreamedResponse => "Streamed",
+        _ => "Base",
+      }}Response:"
+      "\n\t$this"
+      "${this is http.Response ? "\n\t${(this as http.Response).body}" : ""}"
+      "\n\t$statusCode"
+      "\n\t$reasonPhrase"
+      "\n\t$headers",
+    );
+  }
+}
 // #endregion Logging Helpers

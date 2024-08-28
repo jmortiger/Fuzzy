@@ -67,8 +67,8 @@ class UserProfilePage extends StatelessWidget
               ],
             ))
           : FutureBuilder(
-              future: E621.findTotalPostNumber(
-                  tags: "fav:${userL.name} status:deleted"),
+              future: E621.getDeletedFavsAsync()/* E621.findTotalPostNumber(
+                  tags: "fav:${userL.name} status:deleted") */,
               builder: (context, snapshot) => Text.rich(TextSpan(
                     text:
                         "FavCount: ${userL.favoriteCount}/${userL.favoriteLimit} (",
@@ -371,7 +371,7 @@ class _UserProfileLoaderPageState extends State<UserProfileLoaderPage> {
                   title: const Text("User "),
                 ),
                 body: const Column(
-                  children: [exArCpi],
+                  children: [spinnerExpanded],
                 ),
               )
             : Scaffold(

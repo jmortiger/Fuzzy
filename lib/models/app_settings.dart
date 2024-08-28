@@ -4,7 +4,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/util/util.dart';
-import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/e621.dart' show TagCategory;
@@ -173,25 +172,6 @@ class AppSettings implements AppSettingsRecord {
         applyProfileFavTags: _applyProfileFavTags,
         maxSearchesToSave: _maxSearchesToSave,
       );
-  // AppSettings({
-  //   PostView? postView,
-  //   SearchView? searchView,
-  //   Set<String>? favoriteTags,
-  //   Set<String>? blacklistedTags,
-  //   bool? forceSafe,
-  //   bool? autoLoadUserProfile,
-  //   bool? applyProfileBlacklist,
-  //   bool? applyProfileFavTags,
-  //   int? maxSearchesToSave,
-  // })  : _postView = postView ?? defaultSettings.postView,
-  //       _searchView = searchView ?? defaultSettings.searchView,
-  //       _favoriteTags = favoriteTags ?? defaultSettings._favoriteTags,
-  //       _blacklistedTags = blacklistedTags ?? defaultSettings._blacklistedTags,
-  //       _forceSafe = forceSafe ?? defaultSettings._forceSafe,
-  //       _autoLoadUserProfile = autoLoadUserProfile ?? defaultSettings._autoLoadUserProfile,
-  //       _applyProfileBlacklist = applyProfileBlacklist ?? defaultSettings._applyProfileBlacklist,
-  //       _applyProfileFavTags = applyProfileFavTags ?? defaultSettings._applyProfileFavTags,
-  //       _maxSearchesToSave = maxSearchesToSave ?? defaultSettings._maxSearchesToSave;
   void overwriteWithRecord([
     AppSettingsRecord r = AppSettingsRecord.defaultSettings,
   ]) {
@@ -303,6 +283,7 @@ class PostViewData {
     startWithTagsExpanded: true,
     startWithDescriptionExpanded: false,
     imageQuality: FilterQuality.medium,
+    videoQuality: FilterQuality.medium,
     useProgressiveImages: true,
     imageFilterQuality: FilterQuality.none,
   );
@@ -321,6 +302,7 @@ class PostViewData {
   final bool startWithTagsExpanded;
   final bool startWithDescriptionExpanded;
   final FilterQuality imageQuality;
+  final FilterQuality videoQuality;
   final bool useProgressiveImages;
   final FilterQuality imageFilterQuality;
   const PostViewData({
@@ -336,6 +318,7 @@ class PostViewData {
     required this.startWithTagsExpanded,
     required this.startWithDescriptionExpanded,
     required this.imageQuality,
+    required this.videoQuality,
     required this.useProgressiveImages,
     required this.imageFilterQuality,
   });
@@ -360,6 +343,8 @@ class PostViewData {
             defaultData.startWithDescriptionExpanded,
         imageQuality: FilterQuality.values.singleWhere((e) =>
             e.name == (json["imageQuality"] ?? defaultData.imageQuality.name)),
+        videoQuality: FilterQuality.values.singleWhere((e) =>
+            e.name == (json["videoQuality"] ?? defaultData.videoQuality.name)),
         useProgressiveImages:
             json["useProgressiveImages"] ?? defaultData.useProgressiveImages,
         imageFilterQuality: FilterQuality.values.singleWhere((e) =>
@@ -380,6 +365,7 @@ class PostViewData {
         "startWithTagsExpanded": startWithTagsExpanded,
         "startWithDescriptionExpanded": startWithDescriptionExpanded,
         "imageQuality": imageQuality,
+        "videoQuality": videoQuality,
         "useProgressiveImages": useProgressiveImages,
         "imageFilterQuality": imageFilterQuality.name,
       };
@@ -435,6 +421,10 @@ class PostView implements PostViewData {
   @override
   FilterQuality get imageQuality => _imageQuality;
   set imageQuality(FilterQuality v) => _imageQuality = v;
+  FilterQuality _videoQuality;
+  @override
+  FilterQuality get videoQuality => _videoQuality;
+  set videoQuality(FilterQuality v) => _videoQuality = v;
   bool _useProgressiveImages;
   @override
   bool get useProgressiveImages => _useProgressiveImages;
@@ -457,6 +447,7 @@ class PostView implements PostViewData {
     required bool startWithTagsExpanded,
     required bool startWithDescriptionExpanded,
     required FilterQuality imageQuality,
+    required FilterQuality videoQuality,
     required bool useProgressiveImages,
     required FilterQuality imageFilterQuality,
   })  : _tagOrder = tagOrder,
@@ -471,6 +462,7 @@ class PostView implements PostViewData {
         _startWithTagsExpanded = startWithTagsExpanded,
         _startWithDescriptionExpanded = startWithDescriptionExpanded,
         _imageQuality = imageQuality,
+        _videoQuality = videoQuality,
         _useProgressiveImages = useProgressiveImages,
         _imageFilterQuality = imageFilterQuality;
 
@@ -487,6 +479,7 @@ class PostView implements PostViewData {
         startWithTagsExpanded: postView.startWithTagsExpanded,
         startWithDescriptionExpanded: postView.startWithDescriptionExpanded,
         imageQuality: postView.imageQuality,
+        videoQuality: postView.videoQuality,
         useProgressiveImages: postView.useProgressiveImages,
         imageFilterQuality: postView.imageFilterQuality,
       );
@@ -504,6 +497,7 @@ class PostView implements PostViewData {
     startWithTagsExpanded = postView.startWithTagsExpanded;
     startWithDescriptionExpanded = postView.startWithDescriptionExpanded;
     imageQuality = postView.imageQuality;
+    videoQuality = postView.videoQuality;
     useProgressiveImages = postView.useProgressiveImages;
     imageFilterQuality = postView.imageFilterQuality;
   }
@@ -521,6 +515,7 @@ class PostView implements PostViewData {
         startWithTagsExpanded: startWithTagsExpanded,
         startWithDescriptionExpanded: startWithDescriptionExpanded,
         imageQuality: imageQuality,
+        videoQuality: videoQuality,
         useProgressiveImages: useProgressiveImages,
         imageFilterQuality: imageFilterQuality,
       );
@@ -538,8 +533,9 @@ class PostView implements PostViewData {
 }
 
 class SearchViewData {
-  static const postsPerRowBounds = (min: 1, max: 15);
-  static const widthToHeightRatioBounds = (min: .5, max: 2);
+  static const postsPerPageBounds = (min: 1, max: 320);
+  static const postsPerRowBounds = (min: 1, max: 30);
+  static const widthToHeightRatioBounds = (min: .5, max: 2.0);
   static const defaultData = SearchViewData(
     postsPerPage: 50,
     postsPerRow: 3,
@@ -619,8 +615,10 @@ class SearchView implements SearchViewData {
   int _postsPerPage;
   @override
   int get postsPerPage => _postsPerPage;
-  set postsPerPage(int v) =>
-      (v > 0 && v <= E621.maxPostsPerSearch) ? _postsPerPage = v : "";
+  set postsPerPage(int v) => (v >= SearchViewData.postsPerPageBounds.min &&
+          v <= SearchViewData.postsPerPageBounds.max)
+      ? _postsPerPage = v
+      : "";
   int _postsPerRow;
   @override
   int get postsPerRow => _postsPerRow;

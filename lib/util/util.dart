@@ -159,9 +159,9 @@ Size calculateTextSize({
 }
 
 const fullPageSpinner = Scaffold(
-  body: SafeArea(child: Column(children: [exArCpi])),
+  body: SafeArea(child: Column(children: [spinnerExpanded])),
 );
-const exArCpi = Expanded(
+const spinnerExpanded = Expanded(
   child: AspectRatio(
     aspectRatio: 1,
     child: CircularProgressIndicator(),

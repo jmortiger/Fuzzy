@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:fuzzy/background.dart' as bg;
 import 'package:fuzzy/intent.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_favorites.dart';
@@ -38,6 +39,7 @@ Map<String, String> tryParsePathToQuery(Uri u) => u.pathSegments.length > 1
 /// TODO: https://pub.dev/packages/args
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  bg.init();
   storable.Storable.beSilent = true;
   await lm.init().then((v) {
     lRecord = lm.generateLogger("main");
@@ -211,36 +213,13 @@ Widget buildHomePageWithProviders({
   int? limit,
   String? page,
 }) =>
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(
-          create: (context) => SearchViewModel(),
-        ),
-        ChangeNotifierProvider(
-            create: (context) => ManagedPostCollectionSync(
-                parameters: searchText?.isNotEmpty ?? false
-                    ? PostSearchQueryRecord(tags: searchText!)
-                    : null)),
-        ChangeNotifierProvider(create: (context) => SearchResultsNotifier()),
-        ChangeNotifierProvider(
-            create: (context) => CachedFavorites.loadFromStorageSync()),
-        // ChangeNotifierProvider(create: (context) => SavedDataE6.$),
-      ],
+    buildWithProviders(
+      searchText: searchText,
+      limit: limit,
+      page: page,
       child: searchText == null
           ? const HomePage()
           : HomePage(initialTags: searchText),
-      // ? Selector<ManagedPostCollectionSync, Future?>(
-      //     builder: (context, value, child) =>
-      //         HomePage(initialTags: searchText),
-      //     selector: (cxt, p) => p.pr,
-      //     shouldRebuild: (previous, next) => previous != next,
-      //   )
-      // : Selector<ManagedPostCollectionSync, Future?>(
-      //     builder: (context, value, child) =>
-      //         HomePage(initialTags: searchText),
-      //     selector: (cxt, p) => p.pr,
-      //     shouldRebuild: (previous, next) => previous != next,
-      //   ),
     );
 Widget buildWithProviders({
   // PostSearchQueryRecord? parameters,
@@ -257,11 +236,11 @@ Widget buildWithProviders({
           create: (context) => SearchViewModel(),
         ),
         mpcProvider ??
-        ChangeNotifierProvider(
-            create: (context) => ManagedPostCollectionSync(
-                parameters: searchText?.isNotEmpty ?? false
-                    ? PostSearchQueryRecord(tags: searchText!)
-                    : null)),
+            ChangeNotifierProvider(
+                create: (context) => ManagedPostCollectionSync(
+                    parameters: searchText?.isNotEmpty ?? false
+                        ? PostSearchQueryRecord(tags: searchText!)
+                        : null)),
         ChangeNotifierProvider(create: (context) => SearchResultsNotifier()),
         ChangeNotifierProvider(
             create: (context) => CachedFavorites.loadFromStorageSync()),

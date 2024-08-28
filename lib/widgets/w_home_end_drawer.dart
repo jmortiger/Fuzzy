@@ -4,6 +4,7 @@ import 'package:fuzzy/intent.dart';
 import 'package:fuzzy/main.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_view_model.dart';
+import 'package:fuzzy/models/tag_subscription.dart';
 import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/pages/user_profile_page.dart';
 import 'package:fuzzy/web/e621/e621.dart';
@@ -371,18 +372,18 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                             )));
               },
             ),
-          // ListTile(
-          //   title: const Text("Get deleted fav count"),
-          //   leading: const Icon(Icons.search),
-          //   onTap: () {
-          //     Navigator.pop(context);
-          //     Navigator.push(
-          //         context,
-          //         MaterialPageRoute(
-          //           builder: (context) => buildHomePageWithProviders(),
-          //         ));
-          //   },
-          // ),
+          ListTile(
+            title: const Text("View Subscriptions"),
+            leading: const Icon(Icons.search),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SubscriptionPage(),
+                  ));
+            },
+          ),
           ListTile(
             title: const Text("Linking test"),
             leading: const Icon(Icons.question_mark),

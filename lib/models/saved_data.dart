@@ -10,7 +10,6 @@ import 'package:j_util/j_util_full.dart';
 import 'package:j_util/serialization.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
-import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Stuff like searches and sets
@@ -328,17 +327,20 @@ class SavedDataE6 extends ChangeNotifier {
     if (!Platform.isWeb) {
       file.$Safe
           ?.writeAsString(jsonEncode(toJson()))
-          .catchError((e, s) => print(e, Level.WARNING, e, s))
+          .catchError((e, s) {
+            print(e, lm.LogLevel.WARNING, e, s);
+            return e;
+          })
           .then(
             (value) => print("Write successful"),
           )
-          .catchError((e, s) => print(e, Level.WARNING, e, s));
+          .catchError((e, s) => print(e, lm.LogLevel.WARNING, e, s));
     } else {
       writeToPref().then((v) => v
           ? print("SavedDataE6 stored successfully: ${jsonEncode(toJson())}",
-              Level.FINE)
+              lm.LogLevel.FINE)
           : print("SavedDataE6 failed to store: ${jsonEncode(toJson())}",
-              Level.SEVERE));
+              lm.LogLevel.SEVERE));
     }
   }
 

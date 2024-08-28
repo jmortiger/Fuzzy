@@ -96,6 +96,39 @@ sealed class E621 extends Site {
       loggedInUser.isAssigned ? loggedInUser.$.apiRegenMultiplier : 1;
   static int get remainingApiLimit =>
       loggedInUser.isAssigned ? loggedInUser.$.remainingApiLimit : 60;
+  static LazyInitializer<int> _deletedFavs = LazyInitializer(() =>
+      E621.findTotalPostNumber(
+          tags:
+              "fav:${E621AccessData.fallbackForced?.username} status:deleted"));
+  static int? getDeletedFavsSync() {
+    if (_deletedFavs.isAssigned) {
+      return _deletedFavs.$;
+    } else {
+      _deletedFavs.getItemAsync().catchError((e, s) {
+        _logger.severe(e, e, s);
+        _deletedFavs = LazyInitializer(() => E621.findTotalPostNumber(
+            tags:
+                "fav:${E621AccessData.fallbackForced?.username} status:deleted"));
+        return e;
+      });
+    }
+    return _deletedFavs.$Safe;
+  }
+
+  static Future<int?> getDeletedFavsAsync() async {
+    if (_deletedFavs.isAssigned) {
+      return _deletedFavs.$;
+    } else {
+      try {
+        return await _deletedFavs.getItemAsync();
+      } catch (e, s) {
+        _deletedFavs = LazyInitializer(() => E621.findTotalPostNumber(
+            tags:
+                "fav:${E621AccessData.fallbackForced?.username} status:deleted"));
+        return null;
+      }
+    }
+  }
 
   static FutureOr<e621.User?> retrieveUserNonDetailed(
       {e621.User? user, E621AccessData? data, String? username}) {

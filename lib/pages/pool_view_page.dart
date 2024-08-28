@@ -98,7 +98,7 @@ class _PoolViewPageState extends State<PoolViewPage> {
                   fireRebuild: rebuild,
                 ),
               ),
-            if (loadingPosts != null) exArCpi,
+            if (loadingPosts != null) spinnerExpanded,
             Center(
               child: Text(
                 "Loaded ${posts.length}/${widget.pool.postCount} posts",
@@ -195,7 +195,7 @@ class PoolViewPageBuilder extends StatelessWidget
             ),
             body: const Column(
               children: [
-                exArCpi,
+                spinnerExpanded,
               ],
             ),
           );
