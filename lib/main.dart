@@ -39,7 +39,7 @@ Map<String, String> tryParsePathToQuery(Uri u) => u.pathSegments.length > 1
 /// TODO: https://pub.dev/packages/args
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
-  bg.init();
+  if (Platform.isAndroid) bg.init();
   storable.Storable.beSilent = true;
   await lm.init().then((v) {
     lRecord = lm.generateLogger("main");
@@ -81,15 +81,22 @@ void main(List<String> args) async {
                             .queryParameters["tags"]) /* const HomePage() */);
               case PoolViewPageBuilder.routeNameString:
                 try {
-                  if ((settings.arguments as PoolViewParameters?)?.pool !=
-                      null) {
+                  // if ((settings.arguments as PoolViewParameters?)?.pool !=
+                  //     null) {
+                  //   return MaterialPageRoute(
+                  //     settings: settings,
+                  //     builder: (cxt) => PoolViewPage(
+                  //       pool: (settings.arguments as PoolViewParameters).pool!,
+                  //     ),
+                  //   );
+                  // }
+                  try {
+                    final v = (settings.arguments as dynamic).pool!;
                     return MaterialPageRoute(
                       settings: settings,
-                      builder: (cxt) => PoolViewPage(
-                        pool: (settings.arguments as PoolViewParameters).pool!,
-                      ),
+                      builder: (cxt) => PoolViewPage(pool: v),
                     );
-                  }
+                  } catch (e) {}
                   id ??= (settings.arguments as PostViewParameters?)?.id;
                   if (id != null) {
                     return MaterialPageRoute(
@@ -114,18 +121,23 @@ void main(List<String> args) async {
                 }
               case PostViewPageLoader.routeNameString:
                 try {
-                  if ((settings.arguments as PostViewParameters?)?.post !=
-                      null) {
+                  // if ((settings.arguments as PostViewParameters?)?.post !=
+                  //     null) {
+                  //   return MaterialPageRoute(
+                  //     settings: settings,
+                  //     builder: (cxt) => PostViewPage(
+                  //       postListing:
+                  //           (settings.arguments as PostViewParameters).post!,
+                  //     ),
+                  //   );
+                  // }
+                  try {
+                    final v = (settings.arguments as dynamic).post!;
                     return MaterialPageRoute(
                       settings: settings,
-                      builder: (cxt) => PostViewPage(
-                        postListing:
-                            (settings.arguments as PostViewParameters).post!,
-
-                        // srn: null,//Provider.of(context),
-                      ),
+                      builder: (cxt) => PostViewPage(postListing: v),
                     );
-                  }
+                  } catch (e) {}
                   id ??= (settings.arguments as PostViewParameters?)?.id ??
                       int.tryParse(parameters["postId"] ?? "");
                   if (id != null) {
@@ -152,18 +164,26 @@ void main(List<String> args) async {
               // editPostPage:
               case EditPostPageLoader.routeNameString:
                 try {
-                  if ((settings.arguments as PostViewParameters?)?.post !=
-                          null &&
-                      (settings.arguments as PostViewParameters).post
-                          is E6PostResponse) {
+                  try {
+                    final v =
+                        (settings.arguments as dynamic)!.post as E6PostResponse;
                     return MaterialPageRoute(
                       settings: settings,
-                      builder: (cxt) => EditPostPage(
-                        post: (settings.arguments as PostViewParameters).post
-                            as E6PostResponse,
-                      ),
+                      builder: (cxt) => EditPostPage(post: v),
                     );
-                  }
+                  } catch (e) {}
+                  // if ((settings.arguments as PostViewParameters?)?.post !=
+                  //         null &&
+                  //     (settings.arguments as PostViewParameters).post
+                  //         is E6PostResponse) {
+                  //   return MaterialPageRoute(
+                  //     settings: settings,
+                  //     builder: (cxt) => EditPostPage(
+                  //       post: (settings.arguments as PostViewParameters).post
+                  //           as E6PostResponse,
+                  //     ),
+                  //   );
+                  // }
                   id ??= (settings.arguments as PostViewParameters?)?.id ??
                       int.tryParse(parameters["postId"] ?? "");
                   if (id != null) {

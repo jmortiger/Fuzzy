@@ -6,6 +6,7 @@ import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_searches.dart';
+import 'package:fuzzy/models/tag_subscription.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/e621.dart' as e621;
@@ -154,6 +155,36 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               subtitle: null,
               name: "Blacklisted Tags",
               setVal: (Set<String> v) => AppSettings.i!.blacklistedTags = v,
+            ),
+            WSetStringField.method(
+              getValMethod: () => (SubscriptionManager.isInit
+                      ? SubscriptionManager.subscriptions
+                      : SubscriptionManager.storageSync ?? [])
+                  .map((e) => e.tag)
+                  .toSet(),
+              subtitle: null,
+              name: "Subscribed Tags",
+              setVal: (Set<String> v) {
+                final toRemove = (SubscriptionManager.isInit
+                        ? SubscriptionManager.subscriptions
+                        : SubscriptionManager.loadFromStorageSync() ?? [])
+                    .map((e) => e.tag)
+                    .toSet()
+                    .difference(v);
+                for (var e in toRemove) {
+                  SubscriptionManager.subscriptions
+                      .removeWhere((element) => element.tag == e);
+                }
+                final toAdd = v.difference((SubscriptionManager.isInit
+                        ? SubscriptionManager.subscriptions
+                        : SubscriptionManager.loadFromStorageSync() ?? [])
+                    .map((e) => e.tag)
+                    .toSet());
+                SubscriptionManager.subscriptions.addAll(toAdd.map(
+                  (e) => TagSubscription(tag: e),
+                ));
+                SubscriptionManager.writeToStorage();
+              },
             ),
             ListTile(
               title: const Text("Clear Cached Searches"),
@@ -566,7 +597,9 @@ class WSetStringField extends StatefulWidget {
   /// Defaults to empty string
   final String? subtitle;
 
-  final Set<String> getVal;
+  Set<String> get val => getVal ?? getValMethod!();
+  final Set<String>? getVal;
+  final Set<String> Function()? getValMethod;
 
   final void Function(Set<String> p1) setVal;
 
@@ -575,17 +608,25 @@ class WSetStringField extends StatefulWidget {
     super.key,
     required this.name,
     this.subtitle = "",
-    required this.getVal,
+    required Set<String> this.getVal,
     required this.setVal,
     this.validateVal,
-  });
+  }) : getValMethod = null;
+  const WSetStringField.method({
+    super.key,
+    required this.name,
+    this.subtitle = "",
+    required Set<String> Function() this.getValMethod,
+    required this.setVal,
+    this.validateVal,
+  }) : getVal = null;
 
   @override
   State<WSetStringField> createState() => _WSetStringFieldState();
 }
 
 class _WSetStringFieldState extends State<WSetStringField> {
-  Set<String> get getVal => widget.getVal;
+  Set<String> get getVal => widget.val;
 
   void Function(Set<String> p1) get setVal => widget.setVal;
 

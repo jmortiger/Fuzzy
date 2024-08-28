@@ -145,10 +145,8 @@ class _EditPostPageState extends State<EditPostPage> {
               lm.logRequest(req, logger, lm.LogLevel.INFO);
               if (debugDeactivate) return;
               final res = await e621.Api.sendRequest(req);
-              lm.logResponse(res, logger, lm.LogLevel.INFO);
-              Navigator.pop(
-                context,
-              );
+              lm.logResponseSmart(res, logger, baseLevel: lm.LogLevel.INFO);
+              Navigator.pop(context);
             } else {
               logger.info("No changes detected");
               final req = e621.Api.initUpdatePostRequest(
@@ -562,7 +560,7 @@ class _WTagItemState extends State<WTagItem> {
 class EditPostPageLoader extends StatelessWidget
     implements IRoute<EditPostPageLoader> {
   static lm.FileLogger get logger => _EditPostPageState.logger;
-  static const routeNameString = "/post/edit";
+  static const routeNameString = "/post_edit";
   @override
   String get routeName => routeNameString;
   final int? postId;

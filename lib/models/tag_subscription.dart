@@ -105,11 +105,9 @@ class SubscriptionManager {
     }
   }
 
-  static final file = LazyInitializer<File?>(() async {
-    return !Platform.isWeb
-        ? Storable.getStorageAsync(await fileFullPath.getItem())
-        : null;
-  });
+  static final file = LazyInitializer<File?>(() async => !Platform.isWeb
+      ? Storable.getStorageAsync(await fileFullPath.getItem())
+      : null);
   static const localStoragePrefix = 'tsm';
   static const localStorageLengthKey = '$localStoragePrefix.length';
 
@@ -184,6 +182,22 @@ class SubscriptionManager {
     }
   }
 
+  static List<TagSubscription>? loadFromStorageSync({bool store = true}) {
+    var str = Storable.tryLoadStringSync(fileFullPath.$);
+    if (str == null) {
+      try {
+        final t = SubscriptionManager.fromJson({"subscriptions": []});
+        return store ? _subscriptions = t : t;
+      } catch (e) {
+        final t = <TagSubscription>[];
+        return store ? _subscriptions = t : t;
+      }
+    } else {
+      final t = SubscriptionManager.fromJson(jsonDecode(str));
+      return store ? _subscriptions = t : t;
+    }
+  }
+
   static List<TagSubscription> fromJson(Map<String, dynamic> json) =>
       List.of((json["subscriptions"] as List).mapAsList(
         (e, index, list) => TagSubscription.fromJson(e),
@@ -225,6 +239,7 @@ class SubscriptionManager {
       return false;
     }
   }
+
   static Duration frequency = const Duration(hours: 12);
   static void initAndCheckSubscriptions({
     lm.FileLogger? logger,
@@ -275,68 +290,76 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
   Widget build(BuildContext context) {
     return ErrorPage.errorWidgetWrapper(
       logger: SubscriptionManager.logger,
-      () => FutureBuilder(
-        future: SubscriptionManager.storageAsync,
-        builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            return Scaffold(
-              appBar: AppBar(title: Text(title)),
-              body: PageView(
-                  onPageChanged: (value) => setState(() {
-                        title =
-                            snapshot.data!.elementAtOrNull(value)?.tag ?? "";
-                      }),
-                  children: snapshot.data!.map((e) {
-                    return Column(
-                      children: [
-                        Text(e.tag),
-                        if (e.cachedPosts.isEmpty)
-                          const Text("No Results")
-                        else
-                          FutureBuilder(
-                            future: e621.Api.sendRequest(
-                                e621.Api.initSearchPostsRequest(
-                                    tags: e.cachedPosts.fold(
-                                        "", (prior, t) => "~id:$t $prior"),
-                                    credentials:
-                                        E621AccessData.fallbackForced?.cred,
-                                    limit: e621.Api.maxPostsPerSearch)
-                                  ..log(SubscriptionManager.logger))
-                              ..then((v) => v.log(SubscriptionManager.logger))
-                                  .ignore(),
-                            builder: (context, snapshot) {
-                              if (snapshot.hasData) {
-                                return ErrorPage.errorWidgetWrapper(
-                                    logger: SubscriptionManager.logger, () {
-                                  final ps = E6PostsSync.fromRawJson(
-                                      snapshot.data!.body);
-                                  return WPostSearchResults.sync(
-                                    posts: ps,
-                                    expectedCount: ps.length,
-                                    stripToGridView: true,
-                                    disallowSelections: true,
-                                  );
-                                }).value;
-                              } else if (snapshot.hasError) {
-                                return ErrorPage.logError(
-                                    error: snapshot.error,
-                                    stackTrace: snapshot.stackTrace,
-                                    logger: SubscriptionManager.logger);
-                              } else {
-                                return util.spinnerExpanded;
-                              }
-                            },
-                          ),
-                      ],
-                    );
-                  }).toList()),
-            );
-          } else {
-            return util.fullPageSpinner;
-          }
-        },
-      ),
+      () => !SubscriptionManager.isInit
+          ? FutureBuilder(
+              future: SubscriptionManager.storageAsync,
+              builder: buildFutureFromStorage,
+            )
+          : buildRoot(SubscriptionManager.subscriptions),
     ).value;
+  }
+
+  Widget buildFutureFromStorage(
+    BuildContext context,
+    AsyncSnapshot<List<TagSubscription>> snapshot,
+  ) {
+    return snapshot.hasData ? buildRoot(snapshot.data!) : util.fullPageSpinner;
+  }
+
+  Scaffold buildRoot(List<TagSubscription> data) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: PageView(
+          onPageChanged: (value) => setState(() {
+                title = data.elementAtOrNull(value)?.tag ?? "";
+              }),
+          children: data.map(buildPostResultViewFromTagSubscription).toList()),
+    );
+  }
+
+  Column buildPostResultViewFromTagSubscription(TagSubscription e) {
+    return Column(
+      children: [
+        Text(e.tag),
+        if (e.cachedPosts.isEmpty)
+          const Text("No Results")
+        else
+          FutureBuilder(
+            future: e621.Api.sendRequest(
+                e621.Api.initSearchPostsRequest(
+                    tags: e.cachedPosts.length > e621.Api.maxTagsPerSearch
+                        ? e.cachedPosts.fold("", (prior, t) => "~id:$t $prior")
+                        : e.tag,
+                    credentials: E621AccessData.fallbackForced?.cred,
+                    limit: e621.Api.maxPostsPerSearch)
+                  ..log(SubscriptionManager.logger))
+              ..then((v) => v.log(SubscriptionManager.logger)).ignore(),
+            builder: buildFutureFromSearchResults,
+          ),
+      ],
+    );
+  }
+
+  Widget buildFutureFromSearchResults(context, snapshot) {
+    if (snapshot.hasData) {
+      return ErrorPage.errorWidgetWrapper(logger: SubscriptionManager.logger,
+          () {
+        final ps = E6PostsSync.fromRawJson(snapshot.data!.body);
+        return WPostSearchResults.sync(
+          posts: ps,
+          expectedCount: ps.length,
+          stripToGridView: true,
+          disallowSelections: true,
+        );
+      }).value;
+    } else if (snapshot.hasError) {
+      return ErrorPage.logError(
+          error: snapshot.error,
+          stackTrace: snapshot.stackTrace,
+          logger: SubscriptionManager.logger);
+    } else {
+      return util.spinnerExpanded;
+    }
   }
 }
 
