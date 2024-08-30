@@ -12,7 +12,7 @@ import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/edit_post_page.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/pages/post_view_page.dart';
-import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
@@ -26,10 +26,9 @@ import 'web/e621/e621_access_data.dart';
 
 // #region Logger
 late final ({lm.FileLogger logger, lm.Printer print}) lRecord;
-lm.Printer get print => lRecord.print;
-lm.FileLogger get logger => lRecord.logger;
+lm.Printer get _print => lRecord.print;
+lm.FileLogger get _logger => lRecord.logger;
 late final ({lm.FileLogger logger, lm.Printer print}) lRRecord;
-lm.Printer get routePrint => lRRecord.print;
 lm.FileLogger get routeLogger => lRRecord.logger;
 // #endregion Logger
 Map<String, String> tryParsePathToQuery(Uri u) => u.pathSegments.length > 1
@@ -48,183 +47,162 @@ void main(List<String> args) async {
   initIntentHandling();
   if (Platform.isWeb) registerImgElement();
   pathSoundOff();
-  await appDataPath.getItem() /* .ignore() */;
+  await util.appDataPath.getItem();
   await AppSettings.instance.then(
-    (value) => print("Can Use AppSettings singleton"),
+    (value) => _print("Can Use AppSettings singleton"),
   );
-  //.ignore();
   final searchText =
       (await CachedSearches.loadFromStorageAsync()).lastOrNull?.searchString;
-  await E621AccessData.tryLoad(); //.ignore();
+  await E621AccessData.tryLoad();
   CachedFavorites.fileFullPath.getItemAsync().ignore();
   SavedDataE6.init();
   try {
     runApp(
       MaterialApp(
-        // navigatorKey: _navigatorKey,
-        onGenerateRoute: (settings) {
-          if (settings.name != null) {
-            final url = Uri.parse(settings.name!);
-            final parameters = tryParsePathToQuery(url);
-            int? id;
-            try {
-              id = (settings.arguments as dynamic)?.id ??
-                  int.tryParse(parameters["poolId"] ?? parameters["id"] ?? "");
-            } catch (e) {
-              id = int.tryParse(parameters["poolId"] ?? parameters["id"] ?? "");
-            }
-            switch ("/${url.pathSegments.firstOrNull}") {
-              case HomePage.routeNameString when url.pathSegments.length == 1:
-                return MaterialPageRoute(
-                    builder: (ctx) => buildHomePageWithProviders(
-                        searchText: url
-                            .queryParameters["tags"]) /* const HomePage() */);
-              case PoolViewPageBuilder.routeNameString:
-                try {
-                  // if ((settings.arguments as PoolViewParameters?)?.pool !=
-                  //     null) {
-                  //   return MaterialPageRoute(
-                  //     settings: settings,
-                  //     builder: (cxt) => PoolViewPage(
-                  //       pool: (settings.arguments as PoolViewParameters).pool!,
-                  //     ),
-                  //   );
-                  // }
-                  try {
-                    final v = (settings.arguments as dynamic).pool!;
-                    return MaterialPageRoute(
-                      settings: settings,
-                      builder: (cxt) => PoolViewPage(pool: v),
-                    );
-                  } catch (e) {}
-                  id ??= (settings.arguments as PostViewParameters?)?.id;
-                  if (id != null) {
-                    return MaterialPageRoute(
-                      settings: settings,
-                      builder: (cxt) => PoolViewPageBuilder(
-                        poolId: id!,
-                      ),
-                    );
-                  } else {
-                    routeLogger.severe(
-                      "routing failure\nRoute: ${settings.name} Id: $id Args: ${settings.arguments}",
-                    );
-                    return null;
-                  }
-                } catch (e, s) {
-                  routeLogger.severe(
-                    "routing failure\nRoute: ${settings.name} Id: $id Args: ${settings.arguments}",
-                    e,
-                    s,
-                  );
-                  return null;
-                }
-              case PostViewPageLoader.routeNameString:
-                try {
-                  // if ((settings.arguments as PostViewParameters?)?.post !=
-                  //     null) {
-                  //   return MaterialPageRoute(
-                  //     settings: settings,
-                  //     builder: (cxt) => PostViewPage(
-                  //       postListing:
-                  //           (settings.arguments as PostViewParameters).post!,
-                  //     ),
-                  //   );
-                  // }
-                  try {
-                    final v = (settings.arguments as dynamic).post!;
-                    return MaterialPageRoute(
-                      settings: settings,
-                      builder: (cxt) => PostViewPage(postListing: v),
-                    );
-                  } catch (e) {}
-                  id ??= (settings.arguments as PostViewParameters?)?.id ??
-                      int.tryParse(parameters["postId"] ?? "");
-                  if (id != null) {
-                    return MaterialPageRoute(
-                      settings: settings,
-                      builder: (cxt) => PostViewPageLoader(
-                        postId: id!,
-                      ),
-                    );
-                  } else {
-                    routeLogger.severe(
-                      "routing failure\nRoute: ${settings.name} Id: $id Args: ${settings.arguments}",
-                    );
-                    return null;
-                  }
-                } catch (e, s) {
-                  routeLogger.severe(
-                    "routing failure\nRoute: ${settings.name} Id: $id Args: ${settings.arguments}",
-                    e,
-                    s,
-                  );
-                  return null;
-                }
-              // editPostPage:
-              case EditPostPageLoader.routeNameString:
-                try {
-                  try {
-                    final v =
-                        (settings.arguments as dynamic)!.post as E6PostResponse;
-                    return MaterialPageRoute(
-                      settings: settings,
-                      builder: (cxt) => EditPostPage(post: v),
-                    );
-                  } catch (e) {}
-                  // if ((settings.arguments as PostViewParameters?)?.post !=
-                  //         null &&
-                  //     (settings.arguments as PostViewParameters).post
-                  //         is E6PostResponse) {
-                  //   return MaterialPageRoute(
-                  //     settings: settings,
-                  //     builder: (cxt) => EditPostPage(
-                  //       post: (settings.arguments as PostViewParameters).post
-                  //           as E6PostResponse,
-                  //     ),
-                  //   );
-                  // }
-                  id ??= (settings.arguments as PostViewParameters?)?.id ??
-                      int.tryParse(parameters["postId"] ?? "");
-                  if (id != null) {
-                    return MaterialPageRoute(
-                      settings: settings,
-                      builder: (cxt) => EditPostPageLoader(
-                        postId: id!,
-                      ),
-                    );
-                  } else {
-                    routeLogger.severe(
-                      "routing failure\nRoute: ${settings.name} Id: $id Args: ${settings.arguments}",
-                    );
-                    return null;
-                  }
-                } catch (e, s) {
-                  routeLogger.severe(
-                    "routing failure\nRoute: ${settings.name} Id: $id Args: ${settings.arguments}",
-                    e,
-                    s,
-                  );
-                  return null;
-                }
-              default:
-                routeLogger.severe('No Route found for "${settings.name}"');
-                return null;
-            }
-          }
-          routeLogger.info("no settings.name found, defaulting to HomePage");
-          return MaterialPageRoute(
-              builder: (ctx) =>
-                  buildHomePageWithProviders() /* const HomePage() */);
-        },
+        onGenerateRoute: generateRoute,
         theme: ThemeData.dark(),
         home: buildHomePageWithProviders(
             searchText: args.firstOrNull ?? searchText),
       ),
     );
   } catch (e, s) {
-    logger.severe("FATAL ERROR", e, s);
+    _logger.severe("FATAL ERROR", e, s);
   }
+}
+
+Route<dynamic>? generateRoute(RouteSettings settings) {
+  if (settings.name != null) {
+    final url = Uri.parse(settings.name!);
+    final parameters = tryParsePathToQuery(url);
+    int? id;
+    try {
+      id = (settings.arguments as dynamic)?.id ??
+          int.tryParse(parameters["poolId"] ?? parameters["id"] ?? "");
+    } catch (e) {
+      id = int.tryParse(parameters["poolId"] ?? parameters["id"] ?? "");
+    }
+    switch ("/${url.pathSegments.firstOrNull}") {
+      case HomePage.routeNameString when url.pathSegments.length == 1:
+        return MaterialPageRoute(
+            builder: (ctx) => buildHomePageWithProviders(
+                searchText: url.queryParameters["tags"]));
+      case PoolViewPageBuilder.routeNameString:
+        try {
+          try {
+            final v = (settings.arguments as dynamic).pool!;
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (cxt) => PoolViewPage(pool: v),
+            );
+          } catch (e) {}
+          id ??= (settings.arguments as PostViewParameters?)?.id;
+          if (id != null) {
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (cxt) => PoolViewPageBuilder(poolId: id!),
+            );
+          } else {
+            routeLogger.severe(
+              "Routing failure\n"
+              "\tRoute: ${settings.name}\n"
+              "\tId: $id\n"
+              "\tArgs: ${settings.arguments}",
+            );
+            return null;
+          }
+        } catch (e, s) {
+          routeLogger.severe(
+            "Routing failure\n"
+            "\tRoute: ${settings.name}\n"
+            "\tId: $id\n"
+            "\tArgs: ${settings.arguments}",
+            e,
+            s,
+          );
+          return null;
+        }
+      case PostViewPageLoader.routeNameString:
+        try {
+          try {
+            final v = (settings.arguments as dynamic).post!;
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (cxt) => PostViewPage(postListing: v),
+            );
+          } catch (e) {}
+          id ??= (settings.arguments as PostViewParameters?)?.id ??
+              int.tryParse(parameters["postId"] ?? "");
+          if (id != null) {
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (cxt) => PostViewPageLoader(postId: id!),
+            );
+          } else {
+            routeLogger.severe(
+              "Routing failure\n"
+              "\tRoute: ${settings.name}\n"
+              "\tId: $id\n"
+              "\tArgs: ${settings.arguments}",
+            );
+            return null;
+          }
+        } catch (e, s) {
+          routeLogger.severe(
+            "Routing failure\n"
+            "\tRoute: ${settings.name}\n"
+            "\tId: $id\n"
+            "\tArgs: ${settings.arguments}",
+            e,
+            s,
+          );
+          return null;
+        }
+      // editPostPage:
+      case EditPostPageLoader.routeNameString:
+        try {
+          try {
+            final v = (settings.arguments as dynamic)!.post as E6PostResponse;
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (cxt) => EditPostPage(post: v),
+            );
+          } catch (e) {}
+          id ??= (settings.arguments as PostViewParameters?)?.id ??
+              int.tryParse(parameters["postId"] ?? "");
+          if (id != null) {
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (cxt) => EditPostPageLoader(postId: id!),
+            );
+          } else {
+            routeLogger.severe(
+              "Routing failure\n"
+              "\tRoute: ${settings.name}\n"
+              "\tId: $id\n"
+              "\tArgs: ${settings.arguments}",
+            );
+            return null;
+          }
+        } catch (e, s) {
+          routeLogger.severe(
+            "Routing failure\n"
+            "\tRoute: ${settings.name}\n"
+            "\tId: $id\n"
+            "\tArgs: ${settings.arguments}",
+            e,
+            s,
+          );
+          return null;
+        }
+      default:
+        routeLogger.severe('No Route found for "${settings.name}"');
+        return null;
+    }
+  }
+  routeLogger.info("no settings.name found, defaulting to HomePage");
+  return MaterialPageRoute(
+    builder: (ctx) => buildHomePageWithProviders(),
+  );
 }
 
 Widget buildHomePageWithProviders({
@@ -271,36 +249,36 @@ Widget buildWithProviders({
 void pathSoundOff() {
   path
       .getApplicationCacheDirectory()
-      .then((v) => print("getApplicationCacheDirectory: ${v.absolute.path}"))
+      .then((v) => _print("getApplicationCacheDirectory: ${v.absolute.path}"))
       .catchError((e, s) {});
   path
       .getApplicationDocumentsDirectory()
       .then(
-          (v) => print("getApplicationDocumentsDirectory: ${v.absolute.path}"))
+          (v) => _print("getApplicationDocumentsDirectory: ${v.absolute.path}"))
       .catchError((e, s) {});
   path
       .getApplicationSupportDirectory()
-      .then((v) => print("getApplicationSupportDirectory: ${v.absolute.path}"))
+      .then((v) => _print("getApplicationSupportDirectory: ${v.absolute.path}"))
       .catchError((e, s) {});
   path
       .getDownloadsDirectory()
-      .then((v) => print("getDownloadsDirectory: ${v?.absolute.path}"))
+      .then((v) => _print("getDownloadsDirectory: ${v?.absolute.path}"))
       .catchError((e, s) {});
   path
       .getExternalCacheDirectories()
-      .then((v) => print(
+      .then((v) => _print(
           "getExternalCacheDirectories: ${v?.fold("", (previousValue, element) => "$previousValue${element.absolute.path}")}"))
       .catchError((e, s) {});
   path
       .getTemporaryDirectory()
-      .then((v) => print("getTemporaryDirectory: ${v.absolute.path}"))
+      .then((v) => _print("getTemporaryDirectory: ${v.absolute.path}"))
       .catchError((e, s) {});
   path
       .getApplicationCacheDirectory()
-      .then((v) => print("getApplicationCacheDirectory: ${v.absolute.path}"))
+      .then((v) => _print("getApplicationCacheDirectory: ${v.absolute.path}"))
       .catchError((e, s) {});
   path
       .getApplicationCacheDirectory()
-      .then((v) => print("getApplicationCacheDirectory: ${v.absolute.path}"))
+      .then((v) => _print("getApplicationCacheDirectory: ${v.absolute.path}"))
       .catchError((e, s) {});
 }
