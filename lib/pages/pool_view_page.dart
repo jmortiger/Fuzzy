@@ -6,7 +6,7 @@ import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
-import 'package:j_util/e621.dart';
+import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
 class PoolViewPage extends StatefulWidget implements IRoute<PoolViewPage> {
@@ -164,8 +164,8 @@ class PoolViewPageBuilder extends StatelessWidget
     return FutureBuilder(
       future: E621
           .sendRequest(
-              // Api.initSearchPoolsRequest(searchId: [poolId]))
-              Api.initGetPoolRequest(poolId))
+              // e621.initSearchPoolsRequest(searchId: [poolId]))
+              e621.initGetPoolRequest(poolId))
           .toResponse()
           // .then((v) => jsonDecode(v.body))
           .then((v) => PoolViewPage(

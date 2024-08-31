@@ -258,16 +258,75 @@ enum Modifier {
         Modifier.remove => "-",
         Modifier.or => "~",
       };
-  static const dropdownItems = [
+  static const dropdownItems = <DropdownMenuItem<Modifier>>[
     DropdownMenuItem(value: Modifier.add, child: Text("+")),
     DropdownMenuItem(value: Modifier.remove, child: Text("-")),
     DropdownMenuItem(value: Modifier.or, child: Text("~")),
   ];
-  static const dropdownItemsFull = [
+  static const dropdownItemsFull = <DropdownMenuItem<Modifier?>>[
     DropdownMenuItem(value: Modifier.add, child: Text("+")),
     DropdownMenuItem(value: Modifier.remove, child: Text("-")),
     DropdownMenuItem(value: Modifier.or, child: Text("~")),
     DropdownMenuItem(value: null, child: Icon(Icons.close)),
+  ];
+  static const dropdownEntries = <DropdownMenuEntry<Modifier>>[
+    DropdownMenuEntry(value: Modifier.add, label: "+"),
+    DropdownMenuEntry(value: Modifier.remove, label: "-"),
+    DropdownMenuEntry(value: Modifier.or, label: "~"),
+  ];
+  static const dropdownEntriesFull = <DropdownMenuEntry<Modifier?>>[
+    DropdownMenuEntry(
+      value: Modifier.add,
+      label: "+",
+      labelWidget: SizedBox(
+        width: 12,
+        child: Text(
+          "+",
+          textWidthBasis: TextWidthBasis.parent,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    ),
+    DropdownMenuEntry(
+      value: Modifier.remove,
+      label: "-",
+      labelWidget: SizedBox(
+        width: 12,
+        child: Text(
+          "-",
+          textWidthBasis: TextWidthBasis.parent,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    ),
+    DropdownMenuEntry(
+      value: Modifier.or,
+      label: "~",
+      labelWidget: SizedBox(
+        width: 12,
+        child: Text(
+          "~",
+          textWidthBasis: TextWidthBasis.parent,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    ),
+    DropdownMenuEntry(
+      value: null,
+      label: "X",
+      labelWidget: SizedBox(
+        width: 12,
+        child: Text(
+          "X",
+          textWidthBasis: TextWidthBasis.parent,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    ),
   ];
 }
 
@@ -278,8 +337,19 @@ enum FileType with SearchableEnum {
   swf,
   webm;
 
+  static const matcherNonStrictStr =
+      "($prefixModifierMatcher)($prefix)([^${RegExpExt.whitespaceCharacters}]+)";
+  static final matcherNonStrict = RegExp(matcherNonStrictStr);
+  static RegExp get matcherNonStrictGenerated => RegExp(matcherNonStrictStr);
+  static const matcherStr = "($prefixModifierMatcher)"
+      "($prefix)"
+      "(jpg|png|gif|swf|webm)";
+  static final matcher = RegExp(matcherStr);
+  static RegExp get matcherGenerated => RegExp(matcherStr);
+  static const prefix = "type:";
   @override
-  String get searchString => "rating:$name";
+  String get searchString => "$prefix$name";
+  String get suffix => name;
 }
 
 enum BooleanSearchTag {
@@ -294,6 +364,9 @@ enum BooleanSearchTag {
 
   final String tagPrefix;
   const BooleanSearchTag(this.tagPrefix);
+  String toSearchTagNullable(bool? value) =>
+      value == null ? "" : "$tagPrefix:$value";
+  String toSearchTag(bool value) => "$tagPrefix:$value";
 }
 
 enum Status with SearchableEnum {
@@ -310,52 +383,179 @@ enum Status with SearchableEnum {
   String get searchString => "$prefix$name";
 }
 
-class MetaTagSearchData {
+class MetaTagSearchData extends ChangeNotifier {
   /// Tristate; true for additive (""/"+"), false for subtractive ("-"), null to exclude;
-  bool? addRating;
-  Rating rating;
-  Order? order;
-  Map<FileType, Modifier> types;
-  Map<Status, Modifier> status;
-  bool? isChild;
-  bool? isParent;
-  bool? pendingReplacements;
-  bool? hasSource;
-  bool? hasDescription;
-  bool? ratingLocked;
-  bool? noteLocked;
-  bool? inPool;
+  bool? _addRating;
+
+  /// Tristate; true for additive (""/"+"), false for subtractive ("-"), null to exclude;
+  bool? get addRating => _addRating;
+
+  /// Tristate; true for additive (""/"+"), false for subtractive ("-"), null to exclude;
+  set addRating(bool? value) {
+    _addRating = value;
+    notifyListeners();
+  }
+
+  Rating _rating;
+
+  Rating get rating => _rating;
+
+  set rating(Rating value) {
+    _rating = value;
+    notifyListeners();
+  }
+
+  Order? _order;
+
+  Order? get order => _order;
+
+  set order(Order? value) {
+    _order = value;
+    notifyListeners();
+  }
+
+  Map<FileType, Modifier> _types;
+
+  Map<FileType, Modifier> get types => _types;
+
+  set types(Map<FileType, Modifier> value) {
+    _types = value;
+    notifyListeners();
+  }
+
+  Map<Status, Modifier> _status;
+
+  Map<Status, Modifier> get status => _status;
+
+  set status(Map<Status, Modifier> value) {
+    _status = value;
+    notifyListeners();
+  }
+
+  bool? _isChild;
+
+  bool? get isChild => _isChild;
+
+  set isChild(bool? value) {
+    _isChild = value;
+    notifyListeners();
+  }
+
+  bool? _isParent;
+
+  bool? get isParent => _isParent;
+
+  set isParent(bool? value) {
+    _isParent = value;
+    notifyListeners();
+  }
+
+  bool? _pendingReplacements;
+
+  bool? get pendingReplacements => _pendingReplacements;
+
+  set pendingReplacements(bool? value) {
+    _pendingReplacements = value;
+    notifyListeners();
+  }
+
+  bool? _hasSource;
+
+  bool? get hasSource => _hasSource;
+
+  set hasSource(bool? value) {
+    _hasSource = value;
+    notifyListeners();
+  }
+
+  bool? _hasDescription;
+
+  bool? get hasDescription => _hasDescription;
+
+  set hasDescription(bool? value) {
+    _hasDescription = value;
+    notifyListeners();
+  }
+
+  bool? _ratingLocked;
+
+  bool? get ratingLocked => _ratingLocked;
+
+  set ratingLocked(bool? value) {
+    _ratingLocked = value;
+    notifyListeners();
+  }
+
+  bool? _noteLocked;
+
+  bool? get noteLocked => _noteLocked;
+
+  set noteLocked(bool? value) {
+    _noteLocked = value;
+    notifyListeners();
+  }
+
+  bool? _inPool;
+  bool? get inPool => _inPool;
+  set inPool(bool? value) {
+    _inPool = value;
+    notifyListeners();
+  }
+
   MetaTagSearchData({
-    this.order,
-    this.addRating,
-    this.rating = Rating.safe,
-    this.isChild,
-    this.isParent,
-    this.pendingReplacements,
-    this.hasSource,
-    this.hasDescription,
-    this.ratingLocked,
-    this.noteLocked,
-    this.inPool,
+    Order? order,
+    bool? addRating,
+    Rating rating = Rating.safe,
+    bool? isChild,
+    bool? isParent,
+    bool? pendingReplacements,
+    bool? hasSource,
+    bool? hasDescription,
+    bool? ratingLocked,
+    bool? noteLocked,
+    bool? inPool,
     Map<FileType, Modifier>? types,
     Map<Status, Modifier>? status,
-  })  : status = status ?? {},
-        types = types ?? {};
+  })  : _addRating = addRating,
+        _rating = rating,
+        _order = order,
+        _isChild = isChild,
+        _isParent = isParent,
+        _pendingReplacements = pendingReplacements,
+        _hasSource = hasSource,
+        _hasDescription = hasDescription,
+        _ratingLocked = ratingLocked,
+        _noteLocked = noteLocked,
+        _inPool = inPool,
+        _status = status ?? {},
+        _types = types ?? {};
   MetaTagSearchData.req({
-    required this.order,
-    required this.addRating,
-    required this.rating,
-    required this.isChild,
-    required this.isParent,
-    required this.pendingReplacements,
-    required this.hasSource,
-    required this.hasDescription,
-    required this.ratingLocked,
-    required this.noteLocked,
-    required this.inPool,
-    required this.types,
-    required this.status,
-  });
+    required Order? order,
+    required bool? addRating,
+    required Rating rating,
+    required bool? isChild,
+    required bool? isParent,
+    required bool? pendingReplacements,
+    required bool? hasSource,
+    required bool? hasDescription,
+    required bool? ratingLocked,
+    required bool? noteLocked,
+    required bool? inPool,
+    required Map<FileType, Modifier> types,
+    required Map<Status, Modifier> status,
+  })  : _addRating = addRating,
+        _rating = rating,
+        _order = order,
+        _types = types,
+        _status = status,
+        _isChild = isChild,
+        _isParent = isParent,
+        _pendingReplacements = pendingReplacements,
+        _hasSource = hasSource,
+        _hasDescription = hasDescription,
+        _ratingLocked = ratingLocked,
+        _noteLocked = noteLocked,
+        _inPool = inPool;
   static Order? retrieveOrderFromSearchString(String str) {
     try {
       return Order.fromTagText(
@@ -395,6 +595,44 @@ class MetaTagSearchData {
       "",
       (p, e) =>
           "$p ${(status[e] ?? Modifier.add).symbolSlim}${e.searchString}");
+  bool? getBooleanParameter(BooleanSearchTag t) => switch (t) {
+        BooleanSearchTag.isChild => isChild,
+        BooleanSearchTag.isParent => isParent,
+        BooleanSearchTag.hasSource => hasSource,
+        BooleanSearchTag.hasDescription => hasDescription,
+        BooleanSearchTag.ratingLocked => ratingLocked,
+        BooleanSearchTag.noteLocked => noteLocked,
+        BooleanSearchTag.inPool => inPool,
+        BooleanSearchTag.pendingReplacements => pendingReplacements,
+      };
+  void setBooleanParameter(BooleanSearchTag t, bool? value) {
+    switch (t) {
+      case BooleanSearchTag.isChild:
+        isChild = value;
+        break;
+      case BooleanSearchTag.isParent:
+        isParent = value;
+        break;
+      case BooleanSearchTag.hasSource:
+        hasSource = value;
+        break;
+      case BooleanSearchTag.hasDescription:
+        hasDescription = value;
+        break;
+      case BooleanSearchTag.ratingLocked:
+        ratingLocked = value;
+        break;
+      case BooleanSearchTag.noteLocked:
+        noteLocked = value;
+        break;
+      case BooleanSearchTag.inPool:
+        inPool = value;
+        break;
+      case BooleanSearchTag.pendingReplacements:
+        pendingReplacements = value;
+        break;
+    }
+  }
 
   @override
   String toString() {
@@ -408,29 +646,29 @@ class MetaTagSearchData {
     if (types.isNotEmpty) v += generateTypeString();
     if (status.isNotEmpty) v += generateStatusString();
     if (isChild != null) {
-      v += " ${BooleanSearchTag.isChild.tagPrefix}$isChild";
+      v += " ${BooleanSearchTag.isChild.toSearchTag(isChild!)}";
     }
     if (isParent != null) {
-      v += " ${BooleanSearchTag.isParent.tagPrefix}$isParent";
+      v += " ${BooleanSearchTag.isParent.toSearchTag(isParent!)}";
     }
     if (pendingReplacements != null) {
       v +=
-          " ${BooleanSearchTag.pendingReplacements.tagPrefix}$pendingReplacements";
+          " ${BooleanSearchTag.pendingReplacements.toSearchTag(pendingReplacements!)}";
     }
     if (hasSource != null) {
-      v += " ${BooleanSearchTag.hasSource.tagPrefix}$hasSource";
+      v += " ${BooleanSearchTag.hasSource.toSearchTag(hasSource!)}";
     }
     if (hasDescription != null) {
-      v += " ${BooleanSearchTag.hasDescription.tagPrefix}$hasDescription";
+      v += " ${BooleanSearchTag.hasDescription.toSearchTag(hasDescription!)}";
     }
     if (ratingLocked != null) {
-      v += " ${BooleanSearchTag.ratingLocked.tagPrefix}$ratingLocked";
+      v += " ${BooleanSearchTag.ratingLocked.toSearchTag(ratingLocked!)}";
     }
     if (noteLocked != null) {
-      v += " ${BooleanSearchTag.noteLocked.tagPrefix}$noteLocked";
+      v += " ${BooleanSearchTag.noteLocked.toSearchTag(noteLocked!)}";
     }
     if (inPool != null) {
-      v += " ${BooleanSearchTag.inPool.tagPrefix}$inPool";
+      v += " ${BooleanSearchTag.inPool.toSearchTag(inPool!)}";
     }
     return v;
   }

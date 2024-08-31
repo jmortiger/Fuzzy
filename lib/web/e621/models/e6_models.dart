@@ -1098,14 +1098,14 @@ class E6PostTags extends e621.PostTags implements ITagData {
         _ => null,
       };
   static const error = E6PostTags(
-    general: [],
-    species: [],
-    character: [],
-    artist: [],
-    invalid: [],
-    lore: [],
-    meta: [],
-    copyright: [],
+    general: ["ERROR"],
+    species: ["ERROR"],
+    character: ["ERROR"],
+    artist: ["ERROR"],
+    invalid: ["ERROR"],
+    lore: ["ERROR"],
+    meta: ["ERROR"],
+    copyright: ["ERROR"],
   );
   const E6PostTags({
     required super.general,
@@ -1130,22 +1130,43 @@ class E6PostTags extends e621.PostTags implements ITagData {
 
   @override
   Map<String, dynamic> toJson() => {
-        "general": List<dynamic>.from(general.map((x) => x)),
-        "species": List<dynamic>.from(species.map((x) => x)),
-        "character": List<dynamic>.from(character.map((x) => x)),
-        "artist": List<dynamic>.from(artist.map((x) => x)),
-        "invalid": List<dynamic>.from(invalid.map((x) => x)),
-        "lore": List<dynamic>.from(lore.map((x) => x)),
-        "meta": List<dynamic>.from(meta.map((x) => x)),
-        "copyright": List<dynamic>.from(copyright.map((x) => x)),
+        "general": general,
+        "species": species,
+        "character": character,
+        "artist": artist,
+        "invalid": invalid,
+        "lore": lore,
+        "meta": meta,
+        "copyright": copyright,
       };
   static const specialTags = [
-    "third-party_edit",
+    "anonymous_artist",
+    "avoid_posting",
     "conditional_dnp",
+    "epilepsy_warning",
+    "jumpscare_warning",
+    "sound_warning",
+    "third-party_edit",
+    "unknown_artist",
+    "unknown_artist_signature",
+  ];
+  static const metaTagsUnderArtistCategory = [
+    "epilepsy_warning",
+    "jumpscare_warning",
+    "sound_warning",
+    "third-party_edit",
+    "unknown_artist_signature",
   ];
   static const specialArtistTags = [
-    "third-party_edit",
+    "anonymous_artist",
+    "avoid_posting",
     "conditional_dnp",
+    "epilepsy_warning",
+    "jumpscare_warning",
+    "sound_warning",
+    "third-party_edit",
+    "unknown_artist",
+    "unknown_artist_signature",
   ];
 
   /// Has a listed artist (i.e. contains something other than special artist tags like "third-party_edit")
@@ -1545,14 +1566,14 @@ class PoolModel extends e621.Pool {
   }) async {
     if (page <= 0) page = 1;
     postsPerPage ??= SearchView.i.postsPerPage;
-    if (postIds.length > e621.Api.maxPostsPerSearch) {
+    if (postIds.length > e621.maxPostsPerSearch) {
       logger.warning("Too many posts in pool for a single search request");
     } else if (postIds.length > postsPerPage) {
       logger.warning("Too many posts in pool for 1 page");
     } else if (poolId == null &&
-        postIds.length > e621.Api.maxTagsPerSearch - 1) {
+        postIds.length > e621.maxTagsPerSearch - 1) {
       logger.warning("Too many posts in pool for 1 search (use the pool id)");
-      postsPerPage = e621.Api.maxTagsPerSearch - 1;
+      postsPerPage = e621.maxTagsPerSearch - 1;
     }
     try {
       final searchString =

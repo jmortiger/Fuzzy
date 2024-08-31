@@ -131,7 +131,7 @@ class _WSearchSetState extends State<WSearchSet> {
   void launchSearch([bool collapse = true]) {
     setState(() {
       sets = null;
-      loadingSets = e621.Api.initSearchSetsRequest(
+      loadingSets = e621.initSearchSetsRequest(
         searchName: searchName,
         searchShortname: searchShortname,
         searchCreatorName: searchCreatorName,

@@ -3,16 +3,12 @@ import 'dart:collection';
 import 'dart:convert' as dc;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_cache.dart';
-import 'package:fuzzy/models/search_results.dart' as srn;
 import 'package:fuzzy/web/e621/e621.dart';
-import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:j_util/j_util_full.dart';
-import 'package:provider/provider.dart';
 
 import 'post_search_parameters.dart';
 

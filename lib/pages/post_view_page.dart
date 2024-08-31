@@ -16,7 +16,7 @@ import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
-import 'package:j_util/e621.dart';
+import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 import 'package:progressive_image/progressive_image.dart' show ProgressiveImage;
 import 'package:url_launcher/url_launcher.dart';
@@ -38,7 +38,6 @@ const headerStyle = TextStyle(
   decoration: TextDecoration.underline,
 );
 
-/// TODO: Expansion State Preservation on scroll
 class PostViewPage extends StatefulWidget
     implements IReturnsTags, IRoute<PostViewPage> {
   // #region Logger
@@ -141,17 +140,17 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
         }
       } else {
         if ((e6Post.sample.alternates!
-                    .alternates[AlternateResolution.$480p.toString()]?.width ??
+                    .alternates[e621.AlternateResolution.$480p.toString()]?.width ??
                 (screenWidth + 1)) >=
             screenWidth) {
           i = e6Post.sample.alternates!
-              .alternates[AlternateResolution.$480p.toString()]!;
+              .alternates[e621.AlternateResolution.$480p.toString()]!;
         } else if ((e6Post.sample.alternates!
-                    .alternates[AlternateResolution.$720p.toString()]?.width ??
+                    .alternates[e621.AlternateResolution.$720p.toString()]?.width ??
                 (screenWidth + 1)) >=
             screenWidth) {
           i = e6Post.sample.alternates!
-              .alternates[AlternateResolution.$720p.toString()]!;
+              .alternates[e621.AlternateResolution.$720p.toString()]!;
         }
       }
     }
@@ -226,70 +225,10 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                   ? widget.onPop ?? () => Navigator.pop(context, this)
                   : toggleFullscreen,
             ),
-            Positioned.fill(
-              bottom: 0,
-              child: Opacity(
-                opacity: .75,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    if (e6Post.voteState != null)
-                      if (!e6Post.voteState!)
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: WFabBuilder.getSinglePostUpvoteAction(
-                            context,
-                            e6Post,
-                          ),
-                        )
-                      else
-                        Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: WFabBuilder.getSinglePostDownvoteAction(
-                              context,
-                              e6Post,
-                            ))
-                    else ...[
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: WFabBuilder.getSinglePostUpvoteAction(
-                          context,
-                          e6Post,
-                        ),
-                      ),
-                      Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: WFabBuilder.getSinglePostDownvoteAction(
-                            context,
-                            e6Post,
-                          )),
-                    ],
-                    WPullTab(
-                      anchorAlignment: AnchorAlignment.bottom,
-                      openIcon: const Icon(Icons.edit),
-                      distance: 200,
-                      color:
-                          Theme.of(context).buttonTheme.colorScheme?.onPrimary,
-                      children: [
-                        WFabBuilder.getSinglePostAddToSetAction(
-                            context, e6Post),
-                        WFabBuilder.getSinglePostRemoveFromSetAction(
-                            context, e6Post),
-                      ],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: e6Post.isFavorited
-                          ? WFabBuilder.getSinglePostRemoveFavAction(
-                              context, e6Post)
-                          : WFabBuilder.getSinglePostAddFavAction(
-                              context, e6Post),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // Positioned.fill(
+            //   bottom: 0,
+            //   child: _buildBottomRow(context),
+            // ),
           ],
         ),
       ),
@@ -299,7 +238,72 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
         selectedPosts: widget.selectedPosts,
         onClearSelections: () => widget.selectedPosts?.clear(),
       ),
+      bottomNavigationBar: _buildBottomRow(context),
     );
+  }
+
+  Opacity _buildBottomRow(BuildContext context) {
+    return Opacity(
+              opacity: .75,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  if (e6Post.voteState != null)
+                    if (!e6Post.voteState!)
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: WFabBuilder.getSinglePostUpvoteAction(
+                          context,
+                          e6Post,
+                        ),
+                      )
+                    else
+                      Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: WFabBuilder.getSinglePostDownvoteAction(
+                            context,
+                            e6Post,
+                          ))
+                  else ...[
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: WFabBuilder.getSinglePostUpvoteAction(
+                        context,
+                        e6Post,
+                      ),
+                    ),
+                    Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: WFabBuilder.getSinglePostDownvoteAction(
+                          context,
+                          e6Post,
+                        )),
+                  ],
+                  WPullTab(
+                    anchorAlignment: AnchorAlignment.bottom,
+                    openIcon: const Icon(Icons.edit),
+                    distance: 200,
+                    color:
+                        Theme.of(context).buttonTheme.colorScheme?.onPrimary,
+                    children: [
+                      WFabBuilder.getSinglePostAddToSetAction(
+                          context, e6Post),
+                      WFabBuilder.getSinglePostRemoveFromSetAction(
+                          context, e6Post),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: e6Post.isFavorited
+                        ? WFabBuilder.getSinglePostRemoveFavAction(
+                            context, e6Post)
+                        : WFabBuilder.getSinglePostAddFavAction(
+                            context, e6Post),
+                  ),
+                ],
+              ),
+            );
   }
 
   Widget _buildBody({
@@ -405,7 +409,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
               MaterialPageRoute(
                 builder: (context) => FutureBuilder(
                   future: E621
-                      .sendRequest(Api.initSearchPostRequest(e))
+                      .sendRequest(e621.initSearchPostRequest(e))
                       .toResponse()
                       .then((v) => jsonDecode(v.body)),
                   builder: (context, snapshot) {
@@ -673,14 +677,14 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
     ];
   }
 
-  bool _willTagDisplayBeNonNull(TagCategory? category) =>
+  bool _willTagDisplayBeNonNull(e621.TagCategory? category) =>
       category != null && e6Post.tags.getByCategory(category).isNotEmpty;
 
   @widgetFactory
   Widget? _buildTagDisplayFoldout(
     BuildContext context,
     TextStyle headerStyle,
-    TagCategory? category,
+    e621.TagCategory? category,
   ) {
     return _willTagDisplayBeNonNull(category)
         ? ExpansionTile(
@@ -703,7 +707,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
   Widget _buildTagDisplayHeader(
     BuildContext context,
     TextStyle headerStyle,
-    TagCategory category,
+    e621.TagCategory category,
   ) {
     if (!pvs.colorTagHeaders) headerStyle.copyWith(color: null);
     return Text(
@@ -716,7 +720,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
   Iterable<Widget> _buildTagDisplayList(
     BuildContext context,
     TextStyle headerStyle,
-    TagCategory category,
+    e621.TagCategory category,
   ) {
     if (!pvs.colorTags) headerStyle.copyWith(color: null);
     return e6Post.tags.getByCategory(category).map((e) => Align(
@@ -731,7 +735,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
 
   void showTagDialog({
     required String tag,
-    required TagCategory category,
+    required e621.TagCategory category,
   }) {
     SavedDataE6.init();
     showDialog(
@@ -1009,7 +1013,7 @@ class PostViewPageLoader extends StatelessWidget
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: Api.sendRequest(Api.initSearchPostRequest(
+      future: e621.sendRequest(e621.initSearchPostRequest(
         postId,
         credentials: E621AccessData.fallback?.cred,
       )),

@@ -17,11 +17,11 @@ import 'package:provider/provider.dart';
 import '../util/string_comparator.dart' as str_util;
 
 class WSearchBar extends StatefulWidget {
+  // #region Logger
+  static lm.FileLogger get logger => lRecord.logger;
+  static lm.Printer get print => lRecord.print;
   // ignore: unnecessary_late
   static late final lRecord = lm.generateLogger("WSearchBar");
-  static lm.FileLogger get logger => lRecord.logger;
-  // #region Logger
-  static lm.Printer get print => lRecord.print;
   // #endregion Logger
   final String? initialValue;
   final VoidFunction? onSelected;
@@ -42,6 +42,10 @@ class _WSearchBarState extends State<WSearchBar> {
   static const tagModifiers = ['+', '~', '-'];
   static const tagModifiersString = '+~-';
   static const tagModifiersRegexString = r'\+\~\-';
+  static const noOutputStyle = TextStyle(
+    // decoration: TextDecoration.lineThrough,
+    color: Colors.white38,
+  );
 
   static lm.FileLogger get logger => WSearchBar.logger;
   // #endregion Static Members
@@ -56,10 +60,20 @@ class _WSearchBarState extends State<WSearchBar> {
   set searchRating(sh.Rating value) => mts.rating = value;
   bool? get doAddRating => mts.addRating;
   set doAddRating(bool? v) => mts.addRating = v;
-  bool? doAddRatingForCheckbox(bool? value) => switch (value) {
+  bool? convertTristateForCheckbox(bool? value) => switch (value) {
         true => true,
         null => false,
         false => null,
+      };
+  bool? cycleTristateConverted(bool? value) => switch (value) {
+        true => false,
+        false => null,
+        null => true,
+      };
+  bool? cycleTristateDirect(bool? value) => switch (value) {
+        true => null,
+        null => false,
+        false => true,
       };
   String currentText = "";
   late SearchController searchController;
@@ -126,192 +140,7 @@ class _WSearchBarState extends State<WSearchBar> {
       //   currentText = value;
       // }),
       viewTrailing: [
-        StatefulBuilder(
-          builder: (context, setState) => MenuBar(
-            children: [
-              SubmenuButton(
-                menuChildren: [
-                  SubmenuButton(
-                    leadingIcon: Checkbox(
-                      value: doAddRatingForCheckbox(doAddRating),
-                      onChanged: (bool? v) => setState(() {
-                        doAddRating = doAddRatingForCheckbox(v);
-                      }),
-                      tristate: true,
-                    ),
-                    menuChildren: [
-                      MenuItemButton(
-                        onPressed: () => setState(() {
-                          searchRating = sh.Rating.safe;
-                        }),
-                        child: const Text("Safe"),
-                      ),
-                      MenuItemButton(
-                        onPressed: () => setState(() {
-                          searchRating = sh.Rating.questionable;
-                        }),
-                        child: const Text("Questionable"),
-                      ),
-                      MenuItemButton(
-                        onPressed: () => setState(() {
-                          searchRating = sh.Rating.explicit;
-                        }),
-                        child: const Text("Explicit"),
-                      ),
-                    ],
-                    child: Text(
-                      "${doAddRating == false ? "-" : ""}${searchRating.searchStringShort}",
-                      style: doAddRating == null
-                          ? const TextStyle(
-                              decoration: TextDecoration.lineThrough,
-                              color: Colors.white38,
-                            )
-                          : null,
-                    ),
-                  ),
-                  // TODO: FIX SETSTATE ERROR
-                  SubmenuButton(
-                    menuChildren: [
-                      MenuItemButton(
-                        leadingIcon: DropdownButton(
-                          items: sh.Modifier.dropdownItemsFull,
-                          onChanged: (value) => setState(() => value != null
-                              ? mts.status[sh.Status.deleted] = value
-                              : mts.status.remove(sh.Status.deleted)),
-                          value: mts.status[sh.Status.deleted],
-                        ),
-                        child: Text(sh.Status.deleted.searchString),
-                      ),
-                      MenuItemButton(
-                        leadingIcon: DropdownButton(
-                          items: sh.Modifier.dropdownItemsFull,
-                          onChanged: (value) => setState(() => value != null
-                              ? mts.status[sh.Status.pending] = value
-                              : mts.status.remove(sh.Status.pending)),
-                          value: mts.status[sh.Status.pending],
-                        ),
-                        child: Text(sh.Status.pending.searchString),
-                      ),
-                      MenuItemButton(
-                        leadingIcon: DropdownButton(
-                          items: sh.Modifier.dropdownItemsFull,
-                          onChanged: (value) => setState(() => value != null
-                              ? mts.status[sh.Status.active] = value
-                              : mts.status.remove(sh.Status.active)),
-                          value: mts.status[sh.Status.active],
-                        ),
-                        child: Text(sh.Status.active.searchString),
-                      ),
-                      MenuItemButton(
-                        leadingIcon: DropdownButton(
-                          items: sh.Modifier.dropdownItemsFull,
-                          onChanged: (value) => setState(() => value != null
-                              ? mts.status[sh.Status.flagged] = value
-                              : mts.status.remove(sh.Status.flagged)),
-                          value: mts.status[sh.Status.flagged],
-                        ),
-                        child: Text(sh.Status.flagged.searchString),
-                      ),
-                      MenuItemButton(
-                        leadingIcon: DropdownButton(
-                          items: sh.Modifier.dropdownItemsFull,
-                          onChanged: (value) => setState(() => value != null
-                              ? mts.status[sh.Status.modqueue] = value
-                              : mts.status.remove(sh.Status.modqueue)),
-                          value: mts.status[sh.Status.modqueue],
-                        ),
-                        child: Text(sh.Status.modqueue.searchString),
-                      ),
-                      MenuItemButton(
-                        leadingIcon: DropdownButton(
-                          items: sh.Modifier.dropdownItemsFull,
-                          onChanged: (value) => setState(() => value != null
-                              ? mts.status[sh.Status.any] = value
-                              : mts.status.remove(sh.Status.any)),
-                          value: mts.status[sh.Status.any],
-                        ),
-                        child: Text(sh.Status.any.searchString),
-                      ),
-                    ],
-                    child: Text(
-                      "status:",
-                      style: mts.generateStatusString().isEmpty
-                          ? const TextStyle(
-                              decoration: TextDecoration.lineThrough,
-                              color: Colors.white38,
-                            )
-                          : null,
-                    ),
-                  ),
-                  SubmenuButton(
-                    menuChildren: [
-                      MenuItemButton(
-                        leadingIcon: DropdownButton(
-                          items: sh.Modifier.dropdownItemsFull,
-                          onChanged: (value) => setState(() => value != null
-                              ? mts.types[sh.FileType.webm] = value
-                              : mts.types.remove(sh.FileType.webm)),
-                          value: mts.types[sh.FileType.webm],
-                        ),
-                        child: Text(sh.FileType.webm.searchString),
-                      ),
-                      MenuItemButton(
-                        leadingIcon: DropdownButton(
-                          items: sh.Modifier.dropdownItemsFull,
-                          onChanged: (value) => setState(() => value != null
-                              ? mts.types[sh.FileType.gif] = value
-                              : mts.types.remove(sh.FileType.gif)),
-                          value: mts.types[sh.FileType.gif],
-                        ),
-                        child: Text(sh.FileType.gif.searchString),
-                      ),
-                      MenuItemButton(
-                        leadingIcon: DropdownButton(
-                          items: sh.Modifier.dropdownItemsFull,
-                          onChanged: (value) => setState(() => value != null
-                              ? mts.types[sh.FileType.swf] = value
-                              : mts.types.remove(sh.FileType.swf)),
-                          value: mts.types[sh.FileType.swf],
-                        ),
-                        child: Text(sh.FileType.swf.searchString),
-                      ),
-                      MenuItemButton(
-                        leadingIcon: DropdownButton(
-                          items: sh.Modifier.dropdownItemsFull,
-                          onChanged: (value) => setState(() => value != null
-                              ? mts.types[sh.FileType.png] = value
-                              : mts.types.remove(sh.FileType.png)),
-                          value: mts.types[sh.FileType.png],
-                        ),
-                        child: Text(sh.FileType.png.searchString),
-                      ),
-                      MenuItemButton(
-                        leadingIcon: DropdownButton(
-                          items: sh.Modifier.dropdownItemsFull,
-                          onChanged: (value) => setState(() => value != null
-                              ? mts.types[sh.FileType.jpg] = value
-                              : mts.types.remove(sh.FileType.jpg)),
-                          value: mts.types[sh.FileType.jpg],
-                        ),
-                        child: Text(sh.FileType.jpg.searchString),
-                      ),
-                    ],
-                    child: Text(
-                      "type:",
-                      style: mts.generateTypeString().isEmpty
-                          ? const TextStyle(
-                              decoration: TextDecoration.lineThrough,
-                              color: Colors.white38,
-                            )
-                          : null,
-                    ),
-                  ),
-                ],
-                child: const Text("Advanced..."),
-              ),
-            ],
-          ),
-        ),
+        buildAdvancedSearchMenuBar(),
         StatefulBuilder(
             builder: (context, setState) => MenuBar(
                   children: [
@@ -378,11 +207,218 @@ class _WSearchBarState extends State<WSearchBar> {
                     ),
                   ],
                 )),
-        // IconButton(
-        //   icon: const Icon(Icons.manage_search),
-        //   onPressed: () {},
-        // ),
       ],
+    );
+  }
+
+  static const _previewLength = 15;
+  Widget buildAdvancedSearchMenuBar() {
+    return StatefulBuilder(
+      builder: (context, setState) => MenuBar(
+        children: [
+          SelectorNotifier(
+            builder: (context, v, child) {
+              final r = Text(
+                v,
+                softWrap: true,
+                style: const TextStyle(color: Colors.white70),
+              );
+              return v.isEmpty
+                  ? const SizedBox(width: 0, height: 0)
+                  : v.length > _previewLength
+                      ? SubmenuButton(
+                          menuChildren: [
+                              MenuItemButton(
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth:
+                                        MediaQuery.sizeOf(context).width / 2,
+                                  ),
+                                  child: r,
+                                ),
+                              ),
+                            ],
+                          child: Text(
+                            // "...${v.substring(v.length - _previewLength - 3)}",
+                            "${v.substring(0, _previewLength - 3)}...",
+                            softWrap: true,
+                          ))
+                      : MenuItemButton(child: r);
+            },
+            selector: (context, value) => value.toString(),
+            value: mts,
+          ),
+          SubmenuButton(
+            menuChildren: [
+              SubmenuButton(
+                leadingIcon: Checkbox(
+                  value: convertTristateForCheckbox(doAddRating),
+                  onChanged: (bool? v) => setState(() {
+                    doAddRating = convertTristateForCheckbox(v);
+                  }),
+                  tristate: true,
+                ),
+                menuChildren: [
+                  MenuItemButton(
+                    onPressed: () => setState(() {
+                      searchRating = sh.Rating.safe;
+                    }),
+                    child: const Text("Safe"),
+                  ),
+                  MenuItemButton(
+                    onPressed: () => setState(() {
+                      searchRating = sh.Rating.questionable;
+                    }),
+                    child: const Text("Questionable"),
+                  ),
+                  MenuItemButton(
+                    onPressed: () => setState(() {
+                      searchRating = sh.Rating.explicit;
+                    }),
+                    child: const Text("Explicit"),
+                  ),
+                ],
+                child: Text(
+                  "${doAddRating == false ? "-" : ""}${searchRating.searchStringShort}",
+                  style: doAddRating == null ? noOutputStyle : null,
+                ),
+              ),
+              SubmenuButton(
+                menuChildren: [
+                  buildDropdown(
+                    sh.Status.deleted,
+                    mts.status,
+                    setState,
+                  ),
+                  buildDropdown(
+                    sh.Status.pending,
+                    mts.status,
+                    setState,
+                  ),
+                  buildDropdown(
+                    sh.Status.active,
+                    mts.status,
+                    setState,
+                  ),
+                  buildDropdown(
+                    sh.Status.flagged,
+                    mts.status,
+                    setState,
+                  ),
+                  buildDropdown(
+                    sh.Status.modqueue,
+                    mts.status,
+                    setState,
+                  ),
+                  buildDropdown(
+                    sh.Status.any,
+                    mts.status,
+                    setState,
+                  ),
+                ],
+                child: Text(
+                  "status:",
+                  style:
+                      mts.generateStatusString().isEmpty ? noOutputStyle : null,
+                ),
+              ),
+              SubmenuButton(
+                menuChildren: [
+                  buildDropdown(
+                    sh.FileType.webm,
+                    mts.types,
+                    setState,
+                  ),
+                  buildDropdown(
+                    sh.FileType.gif,
+                    mts.types,
+                    setState,
+                  ),
+                  buildDropdown(
+                    sh.FileType.swf,
+                    mts.types,
+                    setState,
+                  ),
+                  buildDropdown(
+                    sh.FileType.png,
+                    mts.types,
+                    setState,
+                  ),
+                  buildDropdown(
+                    sh.FileType.jpg,
+                    mts.types,
+                    setState,
+                  ),
+                ],
+                child: Text(
+                  "type:",
+                  style:
+                      mts.generateTypeString().isEmpty ? noOutputStyle : null,
+                ),
+              ),
+              ...sh.BooleanSearchTag.values.map(
+                (e) => buildTristateBool(e),
+              ),
+            ],
+            child: const Text("Advanced..."),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildTristateBool(sh.BooleanSearchTag tag) {
+    return StatefulBuilder(
+      builder: (context, setState) => MenuItemButton(
+        closeOnActivate: false,
+        leadingIcon: Checkbox(
+          value: convertTristateForCheckbox(mts.getBooleanParameter(tag)),
+          onChanged: (bool? v) => setState(() {
+            mts.setBooleanParameter(tag, convertTristateForCheckbox(v));
+          }),
+          tristate: true,
+        ),
+        onPressed: () => setState(() {
+          mts.setBooleanParameter(
+            tag,
+            cycleTristateConverted(
+              mts.getBooleanParameter(tag),
+            ),
+          );
+        }),
+        child: Text(
+          tag.toSearchTag((mts.getBooleanParameter(tag) ?? true)),
+          style: mts.getBooleanParameter(tag) == null ? noOutputStyle : null,
+        ),
+      ),
+    );
+  }
+
+  MenuItemButton buildDropdown<E extends sh.SearchableEnum>(
+      E enumValue, Map<E, sh.Modifier> map, StateSetter setState) {
+    // logger.info(
+    //     "X: ${util.calculateTextSize(text: "X", style: DefaultTextStyle.of(context).style).width}\n~: ${util.calculateTextSize(text: "~", style: DefaultTextStyle.of(context).style).width}\n+: ${util.calculateTextSize(text: "+", style: DefaultTextStyle.of(context).style).width}\n-: ${util.calculateTextSize(text: "-", style: DefaultTextStyle.of(context).style).width}");
+    const double padding = 12 + 12 + /* 4+4+ */ 40;
+    const double allegedWidth = 9.8;
+    return MenuItemButton(
+      leadingIcon: DropdownMenu(
+        dropdownMenuEntries: sh.Modifier.dropdownEntriesFull,
+        onSelected: (value) => setState(() =>
+            value != null ? map[enumValue] = value : map.remove(enumValue)),
+        initialSelection: map[enumValue],
+        inputDecorationTheme: const InputDecorationTheme(
+            isDense: true,
+            border: InputBorder.none,
+            isCollapsed: true,
+            constraints: BoxConstraints.tightFor(width: 12 + padding)),
+        // width: 10 + padding,
+      ),
+      child: Text(
+        enumValue.searchString,
+        style: map[enumValue] == null
+            ? noOutputStyle
+            : const TextStyle(color: Colors.white),
+      ),
     );
   }
 

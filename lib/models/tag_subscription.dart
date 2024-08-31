@@ -250,11 +250,11 @@ class SubscriptionManager {
     bool hasChanges = false;
     final l = await SubscriptionManager.loadFromStorageAsync();
     for (int i = 0; i < l.length; ++i) {
-      final res = (await e621.Api.sendRequest(
-          e621.Api.initSearchPostsRequest(
+      final res = (await e621.sendRequest(
+          e621.initSearchPostsRequest(
               credentials: accessData?.cred,
               tags: l[i].tag,
-              limit: e621.Api.maxPostsPerSearch)
+              limit: e621.maxPostsPerSearch)
             ..log(logger)))
         ..log(logger);
       if (res.statusCodeInfo.isSuccessful) {
@@ -325,13 +325,13 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           const Text("No Results")
         else
           FutureBuilder(
-            future: e621.Api.sendRequest(
-                e621.Api.initSearchPostsRequest(
-                    tags: e.cachedPosts.length > e621.Api.maxTagsPerSearch
+            future: e621.sendRequest(
+                e621.initSearchPostsRequest(
+                    tags: e.cachedPosts.length > e621.maxTagsPerSearch
                         ? e.cachedPosts.fold("", (prior, t) => "~id:$t $prior")
                         : e.tag,
                     credentials: E621AccessData.fallbackForced?.cred,
-                    limit: e621.Api.maxPostsPerSearch)
+                    limit: e621.maxPostsPerSearch)
                   ..log(SubscriptionManager.logger))
               ..then((v) => v.log(SubscriptionManager.logger)).ignore(),
             builder: buildFutureFromSearchResults,

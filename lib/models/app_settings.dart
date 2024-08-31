@@ -7,7 +7,7 @@ import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/e621.dart' show TagCategory;
-import 'package:j_util/e621.dart' as e621 show Api;
+import 'package:j_util/e621.dart' as e621;
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:j_util/j_util_full.dart';
 
@@ -107,7 +107,7 @@ class AppSettings implements AppSettingsRecord {
   }
 
   static Future<AppSettings> loadInstanceFromFile() => loadSettingsFromFile()
-    ..then((value) => e621.Api.useNsfw = !value.forceSafe);
+    ..then((value) => e621.useNsfw = !value.forceSafe);
 
   Future<AppSettings> loadFromFile() async {
     return switch (Platform.getPlatform()) {
@@ -225,8 +225,8 @@ class AppSettings implements AppSettingsRecord {
   @override
   bool get forceSafe => _forceSafe;
   set forceSafe(bool value) {
-    if (this == i && e621.Api.useNsfw != !value) {
-      e621.Api.useNsfw = !value;
+    if (this == i && e621.useNsfw != !value) {
+      e621.useNsfw = !value;
     }
     _forceSafe = value;
   }

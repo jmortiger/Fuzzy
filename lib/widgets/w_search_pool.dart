@@ -119,7 +119,7 @@ class _WSearchPoolState extends State<WSearchPool> {
   void launchSearch([bool collapse = true]) {
     setState(() {
       pools = null;
-      loadingPools = e621.Api.initSearchPoolsRequest(
+      loadingPools = e621.initSearchPoolsRequest(
         searchNameMatches: searchNameMatches,
         searchId: searchId,
         searchDescriptionMatches: searchDescriptionMatches,
@@ -317,7 +317,7 @@ class _WSearchPoolState extends State<WSearchPool> {
   }
 
   Future<List<e621.Pool>> sendSearch() =>
-      loadingPools = e621.Api.initSearchPoolsRequest(
+      loadingPools = e621.initSearchPoolsRequest(
         searchNameMatches: searchNameMatches,
         searchId: searchId,
         searchDescriptionMatches: searchDescriptionMatches,

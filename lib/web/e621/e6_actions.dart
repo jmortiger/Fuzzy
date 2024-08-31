@@ -671,8 +671,8 @@ Stream<E6BatchActionEvent> removeFavoritesWithPosts({
 
   final results = <Future<E6BatchActionEvent<dynamic>>>[];
   for (var i = 0; i < pIds.length; i++) {
-    results.add(e621.Api.sendRequest(
-      e621.Api.initDeleteFavoriteRequest(
+    results.add(e621.sendRequest(
+      e621.initDeleteFavoriteRequest(
         postId: pIds[i],
         credentials: E621AccessData.fallback?.cred,
       ),
@@ -896,7 +896,7 @@ Future<e621.PostSet?> removeFromSetWithPosts({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.Api.initRemoveFromSetRequest(
+        .sendRequest(e621.initRemoveFromSetRequest(
           v.id,
           posts.map((e) => e.id).toList(),
           credentials: E621AccessData.fallback?.cred,
@@ -1036,7 +1036,7 @@ Future<e621.PostSet?> addToSetWithPosts({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.Api.initAddToSetRequest(
+        .sendRequest(e621.initAddToSetRequest(
           v.id,
           posts.map((e) => e.id).toList(),
           credentials: E621AccessData.fallback?.cred,
@@ -1176,7 +1176,7 @@ Future<e621.PostSet?> removeFromSetWithIds({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.Api.initRemoveFromSetRequest(
+        .sendRequest(e621.initRemoveFromSetRequest(
           v.id,
           postIds,
           credentials: E621AccessData.fallback?.cred,
@@ -1317,7 +1317,7 @@ Future<e621.PostSet?> addToSetWithIds({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.Api.initAddToSetRequest(
+        .sendRequest(e621.initAddToSetRequest(
           v.id,
           postIds,
           credentials: E621AccessData.fallback?.cred,
@@ -1447,7 +1447,7 @@ Future<e621.PostSet?> removeFromSetWithPost({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.Api.initRemoveFromSetRequest(
+        .sendRequest(e621.initRemoveFromSetRequest(
           v.id,
           [post.id],
           credentials: E621AccessData.fallback?.cred,
@@ -1575,7 +1575,7 @@ Future<e621.PostSet?> addToSetWithPost({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.Api.initAddToSetRequest(
+        .sendRequest(e621.initAddToSetRequest(
           v.id,
           [post.id],
           credentials: E621AccessData.fallback?.cred,
@@ -1703,7 +1703,7 @@ Future<e621.PostSet?> removeFromSetWithId({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.Api.initRemoveFromSetRequest(
+        .sendRequest(e621.initRemoveFromSetRequest(
           v.id,
           [postId],
           credentials: E621AccessData.fallback?.cred,
@@ -1832,7 +1832,7 @@ Future<e621.PostSet?> addToSetWithId({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.Api.initAddToSetRequest(
+        .sendRequest(e621.initAddToSetRequest(
           v.id,
           [postId],
           credentials: E621AccessData.fallback?.cred,
@@ -1933,7 +1933,7 @@ List<Future<E6PostResponse>> voteOnPostsWithPosts({
   }
   return posts.map((post) {
     lm.logRequest(
-        e621.Api.initVotePostRequest(
+        e621.initVotePostRequest(
           postId: post.id,
           score: isUpvote ? 1 : -1,
           noUnvote: noUnvote,
@@ -1941,8 +1941,8 @@ List<Future<E6PostResponse>> voteOnPostsWithPosts({
         ),
         _logger,
         lm.LogLevel.INFO);
-    return e621.Api.sendRequest(
-      e621.Api.initVotePostRequest(
+    return e621.sendRequest(
+      e621.initVotePostRequest(
         postId: post.id,
         score: isUpvote ? 1 : -1,
         noUnvote: noUnvote,
@@ -2002,8 +2002,8 @@ List<Future<e621.UpdatedScore?>> voteOnPostsWithPostIds({
     util.showUserMessage(context: context!, content: Text(message));
   }
   return postIds
-      .map((postId) => e621.Api.sendRequest(
-            e621.Api.initVotePostRequest(
+      .map((postId) => e621.sendRequest(
+            e621.initVotePostRequest(
               postId: postId,
               score: isUpvote ? 1 : -1,
               noUnvote: noUnvote,
@@ -2066,8 +2066,8 @@ Future<E6PostResponse> voteOnPostWithPost({
   if (context?.mounted ?? false) {
     util.showUserMessage(context: context!, content: Text(message));
   }
-  return e621.Api.sendRequest(
-    e621.Api.initVotePostRequest(
+  return e621.sendRequest(
+    e621.initVotePostRequest(
       postId: post.id,
       score: isUpvote ? 1 : -1,
       noUnvote: noUnvote,
@@ -2121,8 +2121,8 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
                 Text("${isUpvote ? "Upvoting" : "Downvoting"} $postId...")),
       );
   }
-  return e621.Api.sendRequest(
-    e621.Api.initVotePostRequest(
+  return e621.sendRequest(
+    e621.initVotePostRequest(
       postId: postId,
       score: isUpvote ? 1 : -1,
       noUnvote: noUnvote,

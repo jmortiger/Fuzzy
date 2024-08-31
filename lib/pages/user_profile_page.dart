@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
-import 'package:j_util/e621.dart';
+import 'package:j_util/e621.dart' show User, UserDetailed, UserLoggedIn, UserLoggedInDetail;
 
 import 'package:fuzzy/log_management.dart' as lm;
 
@@ -176,13 +176,13 @@ class UserProfileLoaderPage extends StatefulWidget
   //     logger.warning("No user info available: cannot find user");
   //     return null;
   //   }
-  //   var r = Api.initSearchUsersRequest(
+  //   var r = e621.initSearchUsersRequest(
   //     searchNameMatches: username,
   //     credentials: d,
   //     limit: 1,
   //   );
   //   logRequest(r, logger);
-  //   return Api.sendRequest(r).then((v) {
+  //   return e621.sendRequest(r).then((v) {
   //     if (v.statusCodeInfo.isError) {
   //       logResponse(v, logger, lm.LogLevel.SEVERE);
   //       return null;
@@ -226,12 +226,12 @@ class UserProfileLoaderPage extends StatefulWidget
   //     if (d == null) {
   //       logger.info("No credential data, can't get logged in data.");
   //     }
-  //     var r = Api.initGetUserRequest(
+  //     var r = e621.initGetUserRequest(
   //       id,
   //       credentials: d,
   //     );
   //     logRequest(r, logger);
-  //     return Api.sendRequest(r).then(E621.resolveGetUserFuture);
+  //     return e621.sendRequest(r).then(E621.resolveGetUserFuture);
   //   }
   //   logger.finest("No id, trying access data");
   //   var username = this.username ?? d?.username;
@@ -242,13 +242,13 @@ class UserProfileLoaderPage extends StatefulWidget
   //     logger.warning("No user info available: cannot find user");
   //     return null;
   //   }
-  //   var r = Api.initSearchUsersRequest(
+  //   var r = e621.initSearchUsersRequest(
   //     searchNameMatches: username,
   //     credentials: d,
   //     limit: 1,
   //   );
   //   logRequest(r, logger);
-  //   return Api.sendRequest(r).then((v) {
+  //   return e621.sendRequest(r).then((v) {
   //     if (v.statusCodeInfo.isError) {
   //       logResponse(v, logger, lm.LogLevel.SEVERE);
   //       return null;
@@ -264,12 +264,12 @@ class UserProfileLoaderPage extends StatefulWidget
   //         t = User.fromRawJson(v.body);
   //       }
   //       logger.info("Launching request for User ${t.id} (${t.name})");
-  //       var r = Api.initGetUserRequest(
+  //       var r = e621.initGetUserRequest(
   //         t.id,
   //         credentials: d,
   //       );
   //       logRequest(r, logger);
-  //       return Api.sendRequest(r).then(E621.resolveGetUserFuture);
+  //       return e621.sendRequest(r).then(E621.resolveGetUserFuture);
   //     }
   //   });
   // }

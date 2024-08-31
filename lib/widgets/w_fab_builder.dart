@@ -12,7 +12,6 @@ import 'package:flutter/material.dart'
         Text,
         Widget,
         widgetFactory;
-import 'package:flutter/src/widgets/basic.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/pages/edit_post_page.dart';

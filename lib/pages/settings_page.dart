@@ -196,7 +196,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               getVal: () => AppSettings.i!.forceSafe,
               name: "Disable non-safe posts",
               subtitleBuilder: () =>
-                  "Current site: ${e621.Api.baseUri.toString()}",
+                  "Current site: ${e621.baseUri.toString()}",
               setVal: (bool val) => AppSettings.i!.forceSafe = val,
             ),
             WBooleanField(
@@ -223,7 +223,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
             //   WBooleanField(
             //     getVal: () => AppSettings.i!.autoLoadUserProfile,
             //     name: "Load user profile ",
-            //     subtitle: "Current site: ${e621.Api.baseUri.toString()}",
+            //     subtitle: "Current site: ${e621.baseUri.toString()}",
             //     setVal: (bool val) => SearchView.i.lazyBuilding = val,
             //   ),
             WNumSliderField<int>(

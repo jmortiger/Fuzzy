@@ -169,7 +169,7 @@ class _WUpdateSetState extends State<WUpdateSet> {
                             postSetShortnameErrorText == null
                         ? () async {
                             final r = widget.set == null
-                                ? e621.Api.initCreateSetRequest(
+                                ? e621.initCreateSetRequest(
                                     postSetName: postSetName,
                                     postSetShortname: postSetShortname,
                                     postSetDescription: postSetDescription,
@@ -179,7 +179,7 @@ class _WUpdateSetState extends State<WUpdateSet> {
                                     credentials:
                                         E621AccessData.fallbackForced?.cred,
                                   )
-                                : e621.Api.initUpdateSetRequest(
+                                : e621.initUpdateSetRequest(
                                     widget.set!.id,
                                     postSetName: postSetName,
                                     postSetShortname: postSetShortname,
@@ -202,7 +202,7 @@ class _WUpdateSetState extends State<WUpdateSet> {
                                 )));
                               return;
                             }
-                            final res = await e621.Api.sendRequest(r);
+                            final res = await e621.sendRequest(r);
                             lm.logResponse(res, logger, lm.LogLevel.INFO);
                             if (res.statusCodeInfo.isSuccessful) {
                               if (mounted) {

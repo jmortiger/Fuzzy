@@ -9,7 +9,6 @@ import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:fuzzy/log_management.dart' as lm;
-import 'package:j_util/j_util.dart';
 import 'package:j_util/j_util_full.dart';
 
 /// TODO: separate tags by category
@@ -117,7 +116,7 @@ class _EditPostPageState extends State<EditPostPage> {
             //             postSourceDiff) !=
             //         null ||
             //     postParentId != postOldParentId) {
-            if (e621.Api.doesPostUpdateHaveChanges(
+            if (e621.doesPostUpdateHaveChanges(
               postTagStringDiff: postTagStringDiff,
               postSourceDiff: postSourceDiff,
               postParentId: postParentId,
@@ -127,7 +126,7 @@ class _EditPostPageState extends State<EditPostPage> {
               postRating: postRating,
               postOldRating: post.rating,
             )) {
-              final req = e621.Api.initUpdatePostRequest(
+              final req = e621.initUpdatePostRequest(
                 postId: post.id,
                 postTagStringDiff: postTagStringDiff,
                 postSourceDiff: postSourceDiff,
@@ -144,12 +143,12 @@ class _EditPostPageState extends State<EditPostPage> {
               );
               lm.logRequest(req, logger, lm.LogLevel.INFO);
               if (debugDeactivate) return;
-              final res = await e621.Api.sendRequest(req);
+              final res = await e621.sendRequest(req);
               lm.logResponseSmart(res, logger, baseLevel: lm.LogLevel.INFO);
               Navigator.pop(context);
             } else {
               logger.info("No changes detected");
-              final req = e621.Api.initUpdatePostRequest(
+              final req = e621.initUpdatePostRequest(
                 postId: post.id,
                 postTagStringDiff: postTagStringDiff,
                 postSourceDiff: postSourceDiff,
@@ -581,7 +580,7 @@ class EditPostPageLoader extends StatelessWidget
     return post != null
         ? EditPostPage(post: post!)
         : FutureBuilder(
-            future: e621.Api.sendRequest(e621.Api.initSearchPostRequest(
+            future: e621.sendRequest(e621.initSearchPostRequest(
               postId!,
               credentials: E621AccessData.fallbackForced?.cred,
             )),

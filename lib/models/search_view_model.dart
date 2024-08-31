@@ -181,13 +181,13 @@ class SearchData {
         .posts
         .first
         .id; */
-    var lastF = e6.Api.sendRequest(E621.initSearchForLastPostRequest(
+    var lastF = e6.sendRequest(E621.initSearchForLastPostRequest(
           tags: tags,
           apiKey: apiKey,
           username: username,
         )).then(
             (v1) => E6PostsSync.fromJson(jsonDecode(v1.body)).posts.last.id),
-        firstF = e6.Api.sendRequest(E621.initSearchRequest(
+        firstF = e6.sendRequest(E621.initSearchRequest(
           limit: 1,
           tags: tags,
           apiKey: apiKey,

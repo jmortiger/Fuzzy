@@ -53,8 +53,8 @@ sealed class E621 extends Site {
   static const int softRateLimit = 2;
   static const int idealRateLimit = 3;
   static final http.Client client = http.Client();
-  static const maxPostsPerSearch = e621.Api.maxPostsPerSearch;
-  static const maxPageNumber = e621.Api.maxPageNumber;
+  static const maxPostsPerSearch = e621.maxPostsPerSearch;
+  static const maxPageNumber = e621.maxPageNumber;
   static DateTime timeOfLastRequest =
       DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   static ListQueue<DateTime> burstTimes = ListQueue(60);
@@ -121,7 +121,7 @@ sealed class E621 extends Site {
     } else {
       try {
         return await _deletedFavs.getItemAsync();
-      } catch (e, s) {
+      } catch (e) {
         _deletedFavs = LazyInitializer(() => E621.findTotalPostNumber(
             tags:
                 "fav:${E621AccessData.fallbackForced?.username} status:deleted"));
@@ -146,13 +146,13 @@ sealed class E621 extends Site {
       _logger.warning("No user info available: cannot find user");
       return null;
     }
-    var r = e621.Api.initSearchUsersRequest(
+    var r = e621.initSearchUsersRequest(
       searchNameMatches: username,
       credentials: d,
       limit: 1,
     );
     lm.logRequest(r, _logger);
-    return e621.Api.sendRequest(r).then((v) {
+    return e621.sendRequest(r).then((v) {
       if (v.statusCodeInfo.isError) {
         lm.logResponse(v, _logger, lm.LogLevel.SEVERE);
         return null;
@@ -202,12 +202,12 @@ sealed class E621 extends Site {
       if (d == null) {
         _logger.info("No credential data, can't get logged in data.");
       }
-      var r = e621.Api.initGetUserRequest(
+      var r = e621.initGetUserRequest(
         id,
         credentials: d,
       );
       lm.logRequest(r, _logger);
-      return e621.Api.sendRequest(r).then(E621.resolveGetUserFuture);
+      return e621.sendRequest(r).then(E621.resolveGetUserFuture);
     }
     _logger.finest("No id, trying access data");
     if (d == null) {
@@ -218,13 +218,13 @@ sealed class E621 extends Site {
       _logger.warning("No user info available: cannot find user");
       return null;
     }
-    var r = e621.Api.initSearchUsersRequest(
+    var r = e621.initSearchUsersRequest(
       searchNameMatches: username,
       credentials: d,
       limit: 1,
     );
     lm.logRequest(r, _logger);
-    return e621.Api.sendRequest(r).then((v) {
+    return e621.sendRequest(r).then((v) {
       if (v.statusCodeInfo.isError) {
         lm.logResponse(v, _logger, lm.LogLevel.SEVERE);
         return null;
@@ -240,12 +240,12 @@ sealed class E621 extends Site {
           t = e621.User.fromRawJson(v.body);
         }
         _logger.info("Launching request for User ${t.id} (${t.name})");
-        var r = e621.Api.initGetUserRequest(
+        var r = e621.initGetUserRequest(
           t.id,
           credentials: d,
         );
         lm.logRequest(r, _logger);
-        return e621.Api.sendRequest(r).then(resolveGetUserFuture);
+        return e621.sendRequest(r).then(resolveGetUserFuture);
       }
     });
   }
@@ -354,9 +354,9 @@ sealed class E621 extends Site {
     bool useBurst = false,
   }) async* {
     for (var request in requests) {
-      yield e621.Api.sendRequest(request, useBurst: useBurst);
+      yield e621.sendRequest(request, useBurst: useBurst);
       if (!useBurst) {
-        await Future.delayed(e621.Api.currentRateLimit);
+        await Future.delayed(e621.currentRateLimit);
       }
     }
   }
@@ -366,10 +366,10 @@ sealed class E621 extends Site {
     bool useBurst = false,
   }) async* {
     for (var request in requests) {
-      yield e621.Api.sendRequest(request.$1, useBurst: useBurst)
+      yield e621.sendRequest(request.$1, useBurst: useBurst)
           .then(request.$2);
       if (!useBurst) {
-        await Future.delayed(e621.Api.currentRateLimit);
+        await Future.delayed(e621.currentRateLimit);
       }
     }
   }
@@ -385,7 +385,7 @@ sealed class E621 extends Site {
           burstTimes.length < (loggedInUser.$Safe?.apiBurstLimit ?? 60)) {
         final ts = DateTime.timestamp();
         burstTimes.add(ts);
-        Future.delayed(e621.Api.softRateLimit, () => burstTimes.remove(ts))
+        Future.delayed(e621.softRateLimit, () => burstTimes.remove(ts))
             .ignore();
         return client.send(request);
       }
@@ -403,7 +403,7 @@ sealed class E621 extends Site {
     String? username,
     String? apiKey,
   }) =>
-      e621.Api.initDeleteFavoriteRequest(
+      e621.initDeleteFavoriteRequest(
         postId: postId,
         credentials: getAuth(username, apiKey),
       );
@@ -518,7 +518,7 @@ sealed class E621 extends Site {
     String? username,
     String? apiKey,
   }) =>
-      e621.Api.initCreateFavoriteRequest(
+      e621.initCreateFavoriteRequest(
         postId: postId,
         credentials: getAuth(username, apiKey),
       );
@@ -567,7 +567,7 @@ sealed class E621 extends Site {
     String? username,
     String? apiKey,
   }) =>
-      e621.Api.initSearchPostsRequest(
+      e621.initSearchPostsRequest(
         credentials: getAuth(username, apiKey),
         tags: fillTagTemplate(tags),
         limit: limit ?? SearchView.i.postsPerPage,
@@ -606,7 +606,7 @@ sealed class E621 extends Site {
 
   static Future<http.Response> logAndSendRequest(http.Request r) {
     lm.logRequest(r, _logger);
-    return e621.Api.sendRequest(r);
+    return e621.sendRequest(r);
   }
 
   // #region User API
@@ -636,12 +636,12 @@ sealed class E621 extends Site {
     if (d == null) {
       _logger.finest("No access data");
     }
-    var r = e621.Api.initGetUserRequest(
+    var r = e621.initGetUserRequest(
       id,
       credentials: d,
     );
     lm.logRequest(r, _logger, lm.LogLevel.FINEST);
-    return e621.Api.sendRequest(r).then(resolveGetUserFuture);
+    return e621.sendRequest(r).then(resolveGetUserFuture);
   }
 
   static Future<http.Response> sendGetUserRequest(
@@ -651,9 +651,9 @@ sealed class E621 extends Site {
   }) =>
       (logRequest
           ? logAndSendRequest(
-              e621.Api.initGetUserRequest(userId, credentials: credentials))
-          : e621.Api.sendRequest(
-              e621.Api.initGetUserRequest(userId, credentials: credentials)))
+              e621.initGetUserRequest(userId, credentials: credentials))
+          : e621.sendRequest(
+              e621.initGetUserRequest(userId, credentials: credentials)))
         ..then((v) {
           final t = resolveGetUserFuture(v);
           if (t is e621.UserLoggedInDetail) loggedInUser.$ = t;
@@ -768,8 +768,8 @@ sealed class E621 extends Site {
     final a = getAuth(username, apiKey);
     if (a == null) throw ArgumentError.value("Null credentials");
     _print("Favs Listing for ${a.username} ($username)");
-    var t = await e621.Api.sendRequest(
-        e621.Api.initListFavoritesWithCredentialsRequest(
+    var t = await e621.sendRequest(
+        e621.initListFavoritesWithCredentialsRequest(
       limit: limit,
       page: page?.page,
       credentials: a,
@@ -814,7 +814,7 @@ sealed class E621 extends Site {
         checkOnNonFullPages: checkOnNonFullPages,
       ).then((v) => (v / (limit ?? SearchView.i.postsPerPage)).ceil());
 
-  /// Including [limit] will stop counting posts past [e621.Api.maxPageNumber] * [limit].
+  /// Including [limit] will stop counting posts past [e621.maxPageNumber] * [limit].
   /// It may not find the full post number.
   ///
   /// Should take at most 12 iterations to find, forcibly ends after 16;
@@ -826,21 +826,21 @@ sealed class E621 extends Site {
     final String? apiKey,
     final bool checkOnNonFullPages = false,
   }) async {
-    const sLimit = e621.Api.maxPostsPerSearch;
+    const sLimit = e621.maxPostsPerSearch;
     tags = fillTagTemplate(tags);
     final cred = getAuth(username, apiKey);
     f({
       int limit = sLimit,
       required int pageNumber,
     }) =>
-        e621.Api.initSearchPostsRequest(
+        e621.initSearchPostsRequest(
           credentials: cred,
           tags: tags,
           limit: limit,
           page: pageNumber.toString(),
         );
     Iterable<E6PostResponse> results =
-        parsePostsResults((await e621.Api.sendRequest(f(
+        parsePostsResults((await e621.sendRequest(f(
       limit: sLimit,
       pageNumber: 1,
     ))));
@@ -852,8 +852,8 @@ sealed class E621 extends Site {
     ))
         .id;
     int finalPage = 1, safety = 1;
-    final maxNumByLimit = (limit ?? sLimit * 2) * e621.Api.maxPageNumber;
-    num delta = e621.Api.maxPageNumber * 2;
+    final maxNumByLimit = (limit ?? sLimit * 2) * e621.maxPageNumber;
+    num delta = e621.maxPageNumber * 2;
     // Should take at most 12 iterations, I'll add the leeway of 3 iterations
     for (int currentPageNumber = 0 /* , safety = 1 */;
         safety < 15 &&
@@ -869,16 +869,16 @@ sealed class E621 extends Site {
         currentPageNumber += (results.isEmpty ? -delta : delta).toInt(),
         // currentPageNumber += results.isEmpty ? -delta : delta,
         finalPage = currentPageNumber,
-        results = parsePostsResults(await e621.Api.sendRequest(
+        results = parsePostsResults(await e621.sendRequest(
             useBurst: true, f(pageNumber: currentPageNumber)))) {
-      if (results.isNotEmpty && currentPageNumber >= e621.Api.maxPageNumber) {
+      if (results.isNotEmpty && currentPageNumber >= e621.maxPageNumber) {
         break;
       }
       if (results.isNotEmpty && results.length < sLimit) {
         // This should only happen when it's at the end.
         if (checkOnNonFullPages) {
           safety++;
-          final temp = parsePostsResults(await e621.Api.sendRequest(f(
+          final temp = parsePostsResults(await e621.sendRequest(f(
             pageNumber: currentPageNumber + 1,
           )));
           if ((temp.lastOrNull?.id ?? -1) == lastId) {
@@ -910,7 +910,7 @@ sealed class E621 extends Site {
     return (((finalPage - 1) * sLimit) + results.length);
   }
 
-  /// Including [limit] will stop counting posts past [e621.Api.maxPageNumber] * [limit].
+  /// Including [limit] will stop counting posts past [e621.maxPageNumber] * [limit].
   /// It may not find the full post number.
   ///
   /// Should take at most 12 iterations to find, forcibly ends after 16;
@@ -966,7 +966,7 @@ sealed class E621 extends Site {
     String? username,
     String? apiKey,
   }) =>
-      e621.Api.sendRequest(initSearchForLastPageRequest(
+      e621.sendRequest(initSearchForLastPageRequest(
         tags: tags,
         limit: limit,
         apiKey: apiKey,
@@ -981,7 +981,7 @@ sealed class E621 extends Site {
     String? apiKey,
   }) async {
     return parsePostsResults(
-        (await e621.Api.sendRequest(initSearchForLastPageRequest(
+        (await e621.sendRequest(initSearchForLastPageRequest(
       tags: tags,
       limit: limit,
       apiKey: apiKey,
@@ -1008,7 +1008,7 @@ sealed class E621 extends Site {
     String? apiKey,
   }) async {
     return E6PostResponse.fromJson(
-        (jsonDecode((await e621.Api.sendRequest(initSearchForLastPostRequest(
+        (jsonDecode((await e621.sendRequest(initSearchForLastPostRequest(
       tags: tags,
       apiKey: apiKey,
       username: username,
@@ -1023,7 +1023,7 @@ sealed class E621 extends Site {
     String? apiKey,
   }) async {
     return E6PostResponse.fromJson(
-        (jsonDecode((await e621.Api.sendRequest(initSearchForFirstPostRequest(
+        (jsonDecode((await e621.sendRequest(initSearchForFirstPostRequest(
       tags: tags,
       apiKey: apiKey,
       username: username,
@@ -1051,7 +1051,7 @@ sealed class E621 extends Site {
     String? apiKey,
   ) =>
       isValidUsername(username) && isValidApiKey(apiKey)
-          ? e621.Api.activeCredentials = e621.E6Credentials(
+          ? e621.activeCredentials = e621.E6Credentials(
               username: username!,
               apiKey: apiKey!,
             )
@@ -1107,7 +1107,7 @@ sealed class E621 extends Site {
     if (v != null) {
       _print("Adding ${postListing.id} to set ${v.id}");
       var res = await E621
-          .sendRequest(e621.Api.initAddToSetRequest(
+          .sendRequest(e621.initAddToSetRequest(
             v.id,
             [postListing.id],
             credentials: cred ?? E621AccessData.fallback?.cred,
@@ -1233,18 +1233,13 @@ class PostActionArgs extends JEventArgs {
   final StatusCode statusCode;
 }
 
-enum PostRating with EnumQueryParameter<PostRating> {
+enum PostRating {
   safe,
   questionable,
   explicit;
 
-  // @override
-  // PostRating get queryValue => this;
-  @override
   String get queryName => "rating";
-  @override
   String get query => queryShort;
-  @override
   String get queryValueString => queryValueStringShort;
   String get queryValueStringShort => name[0];
   String get queryShort => "$queryName:$queryValueStringShort";

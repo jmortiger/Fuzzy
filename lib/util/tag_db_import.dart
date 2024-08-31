@@ -40,7 +40,7 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
     return compute(_webCallback, data);
   } else {
     return E621
-        .sendRequest(e621.Api.initDbExportRequest())
+        .sendRequest(e621.initDbExportRequest())
         .then((value) => compute(_androidCallback, value));
     // E621ApiEndpoints.dbExportTags
     // .getMoreData()

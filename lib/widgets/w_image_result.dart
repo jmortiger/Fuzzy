@@ -582,6 +582,8 @@ enum PostInfoPaneItem {
 /// [fit] is the logic by which the image is rendered to the display dimensions.
 ///
 /// TODO: Test with non-finite [sizeWidth] &/or [sizeHeight].
+/// 
+/// TODO: Look into [applyBoxFit].
 ///
 /// Implementation Notes: Using the smaller of size(Dimension) and
 /// file(Dimension) for the cache(Dimension) causes big scale-ups (e.g.
