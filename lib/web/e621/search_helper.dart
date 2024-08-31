@@ -384,7 +384,6 @@ enum Status with SearchableEnum {
 }
 
 class MetaTagSearchData extends ChangeNotifier {
-  /// Tristate; true for additive (""/"+"), false for subtractive ("-"), null to exclude;
   bool? _addRating;
 
   /// Tristate; true for additive (""/"+"), false for subtractive ("-"), null to exclude;
@@ -397,99 +396,77 @@ class MetaTagSearchData extends ChangeNotifier {
   }
 
   Rating _rating;
-
   Rating get rating => _rating;
-
   set rating(Rating value) {
     _rating = value;
     notifyListeners();
   }
 
   Order? _order;
-
   Order? get order => _order;
-
   set order(Order? value) {
     _order = value;
     notifyListeners();
   }
 
   Map<FileType, Modifier> _types;
-
   Map<FileType, Modifier> get types => _types;
-
   set types(Map<FileType, Modifier> value) {
     _types = value;
     notifyListeners();
   }
 
   Map<Status, Modifier> _status;
-
   Map<Status, Modifier> get status => _status;
-
   set status(Map<Status, Modifier> value) {
     _status = value;
     notifyListeners();
   }
 
   bool? _isChild;
-
   bool? get isChild => _isChild;
-
   set isChild(bool? value) {
     _isChild = value;
     notifyListeners();
   }
 
   bool? _isParent;
-
   bool? get isParent => _isParent;
-
   set isParent(bool? value) {
     _isParent = value;
     notifyListeners();
   }
 
   bool? _pendingReplacements;
-
   bool? get pendingReplacements => _pendingReplacements;
-
   set pendingReplacements(bool? value) {
     _pendingReplacements = value;
     notifyListeners();
   }
 
   bool? _hasSource;
-
   bool? get hasSource => _hasSource;
-
   set hasSource(bool? value) {
     _hasSource = value;
     notifyListeners();
   }
 
   bool? _hasDescription;
-
   bool? get hasDescription => _hasDescription;
-
   set hasDescription(bool? value) {
     _hasDescription = value;
     notifyListeners();
   }
 
   bool? _ratingLocked;
-
   bool? get ratingLocked => _ratingLocked;
-
   set ratingLocked(bool? value) {
     _ratingLocked = value;
     notifyListeners();
   }
 
   bool? _noteLocked;
-
   bool? get noteLocked => _noteLocked;
-
   set noteLocked(bool? value) {
     _noteLocked = value;
     notifyListeners();
@@ -588,13 +565,6 @@ class MetaTagSearchData extends ChangeNotifier {
     //   orStatus: ,
     // );
   }
-  String generateTypeString() => types.keys.fold("",
-      (p, e) => "$p ${(types[e] ?? Modifier.add).symbolSlim}${e.searchString}");
-
-  String generateStatusString() => status.keys.fold(
-      "",
-      (p, e) =>
-          "$p ${(status[e] ?? Modifier.add).symbolSlim}${e.searchString}");
   bool? getBooleanParameter(BooleanSearchTag t) => switch (t) {
         BooleanSearchTag.isChild => isChild,
         BooleanSearchTag.isParent => isParent,
@@ -605,73 +575,72 @@ class MetaTagSearchData extends ChangeNotifier {
         BooleanSearchTag.inPool => inPool,
         BooleanSearchTag.pendingReplacements => pendingReplacements,
       };
-  void setBooleanParameter(BooleanSearchTag t, bool? value) {
-    switch (t) {
-      case BooleanSearchTag.isChild:
-        isChild = value;
-        break;
-      case BooleanSearchTag.isParent:
-        isParent = value;
-        break;
-      case BooleanSearchTag.hasSource:
-        hasSource = value;
-        break;
-      case BooleanSearchTag.hasDescription:
-        hasDescription = value;
-        break;
-      case BooleanSearchTag.ratingLocked:
-        ratingLocked = value;
-        break;
-      case BooleanSearchTag.noteLocked:
-        noteLocked = value;
-        break;
-      case BooleanSearchTag.inPool:
-        inPool = value;
-        break;
-      case BooleanSearchTag.pendingReplacements:
-        pendingReplacements = value;
-        break;
-    }
-  }
+  bool? setBooleanParameter(BooleanSearchTag t, bool? value) => switch (t) {
+        BooleanSearchTag.isChild => isChild = value,
+        BooleanSearchTag.isParent => isParent = value,
+        BooleanSearchTag.hasSource => hasSource = value,
+        BooleanSearchTag.hasDescription => hasDescription = value,
+        BooleanSearchTag.ratingLocked => ratingLocked = value,
+        BooleanSearchTag.noteLocked => noteLocked = value,
+        BooleanSearchTag.inPool => inPool = value,
+        BooleanSearchTag.pendingReplacements => pendingReplacements = value
+      };
 
+  // #region toString Properties
+  String get typeString => types.keys.fold(
+      "",
+      (p, e) => "$p "
+          "${(types[e] ?? Modifier.add).symbolSlim}"
+          "${e.searchString}");
+
+  String get statusString => status.keys.fold(
+      "",
+      (p, e) => "$p "
+          "${(status[e] ?? Modifier.add).symbolSlim}"
+          "${e.searchString}");
+  String get orderString => order != null ? " ${order!.searchString}" : "";
+  String get ratingString => addRating != null
+      ? " ${addRating! ? "" : "-"}${rating.searchString}"
+      : "";
+  String get isChildString => isChild == null
+      ? ""
+      : " ${BooleanSearchTag.isChild.toSearchTag(isChild!)}";
+  String get isParentString => isParent == null
+      ? ""
+      : " ${BooleanSearchTag.isParent.toSearchTag(isParent!)}";
+  String get pendingReplacementsString => pendingReplacements == null
+      ? ""
+      : " ${BooleanSearchTag.pendingReplacements.toSearchTag(pendingReplacements!)}";
+  String get hasSourceString => hasSource == null
+      ? ""
+      : " ${BooleanSearchTag.hasSource.toSearchTag(hasSource!)}";
+  String get hasDescriptionString => hasDescription == null
+      ? ""
+      : " ${BooleanSearchTag.hasDescription.toSearchTag(hasDescription!)}";
+  String get ratingLockedString => ratingLocked == null
+      ? ""
+      : " ${BooleanSearchTag.ratingLocked.toSearchTag(ratingLocked!)}";
+  String get noteLockedString => noteLocked == null
+      ? ""
+      : " ${BooleanSearchTag.noteLocked.toSearchTag(noteLocked!)}";
+  String get inPoolString =>
+      inPool == null ? "" : " ${BooleanSearchTag.inPool.toSearchTag(inPool!)}";
+  // #endregion toString Properties
+  
   @override
-  String toString() {
-    var v = "";
-    if (order != null) {
-      v += " ${order!.searchString}";
-    }
-    if (addRating != null) {
-      v += " ${addRating! ? "" : "-"}${rating.searchString}";
-    }
-    if (types.isNotEmpty) v += generateTypeString();
-    if (status.isNotEmpty) v += generateStatusString();
-    if (isChild != null) {
-      v += " ${BooleanSearchTag.isChild.toSearchTag(isChild!)}";
-    }
-    if (isParent != null) {
-      v += " ${BooleanSearchTag.isParent.toSearchTag(isParent!)}";
-    }
-    if (pendingReplacements != null) {
-      v +=
-          " ${BooleanSearchTag.pendingReplacements.toSearchTag(pendingReplacements!)}";
-    }
-    if (hasSource != null) {
-      v += " ${BooleanSearchTag.hasSource.toSearchTag(hasSource!)}";
-    }
-    if (hasDescription != null) {
-      v += " ${BooleanSearchTag.hasDescription.toSearchTag(hasDescription!)}";
-    }
-    if (ratingLocked != null) {
-      v += " ${BooleanSearchTag.ratingLocked.toSearchTag(ratingLocked!)}";
-    }
-    if (noteLocked != null) {
-      v += " ${BooleanSearchTag.noteLocked.toSearchTag(noteLocked!)}";
-    }
-    if (inPool != null) {
-      v += " ${BooleanSearchTag.inPool.toSearchTag(inPool!)}";
-    }
-    return v;
-  }
+  String toString() =>
+      orderString +
+      ratingString +
+      typeString +
+      statusString +
+      isChildString +
+      isParentString +
+      pendingReplacementsString +
+      hasSourceString +
+      hasDescriptionString +
+      ratingLockedString +
+      noteLockedString +
+      inPoolString;
 }
 
 const modifierTagCompleteListString = [

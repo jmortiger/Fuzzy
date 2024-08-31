@@ -318,8 +318,7 @@ class _WSearchBarState extends State<WSearchBar> {
                 ],
                 child: Text(
                   "status:",
-                  style:
-                      mts.generateStatusString().isEmpty ? noOutputStyle : null,
+                  style: mts.statusString.isEmpty ? noOutputStyle : null,
                 ),
               ),
               SubmenuButton(
@@ -352,8 +351,7 @@ class _WSearchBarState extends State<WSearchBar> {
                 ],
                 child: Text(
                   "type:",
-                  style:
-                      mts.generateTypeString().isEmpty ? noOutputStyle : null,
+                  style: mts.typeString.isEmpty ? noOutputStyle : null,
                 ),
               ),
               ...sh.BooleanSearchTag.values.map(
