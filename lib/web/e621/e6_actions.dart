@@ -166,12 +166,7 @@ Future<E6PostResponse> addPostToFavoritesWithPost({
   )
       .then(
     (v) {
-      lm.logResponse(
-          v,
-          _logger,
-          v.statusCodeInfo.isSuccessful
-              ? lm.LogLevel.FINEST
-              : lm.LogLevel.SEVERE);
+      lm.logResponseSmart(v, _logger);
       E6PostResponse postRet = v.statusCodeInfo.isSuccessful
           ? E6PostResponse.fromRawJson(v.body)
           : post;
@@ -281,12 +276,7 @@ Future<E6PostResponse?> addPostToFavoritesWithId({
   )
       .then(
     (v) {
-      lm.logResponse(
-          v,
-          _logger,
-          v.statusCodeInfo.isSuccessful
-              ? lm.LogLevel.FINEST
-              : lm.LogLevel.SEVERE);
+      lm.logResponseSmart(v, _logger);
       final postRet = v.statusCodeInfo.isSuccessful
           ? E6PostResponse.fromRawJson(v.body)
           : null;
@@ -388,12 +378,7 @@ Future<E6PostResponse?> removePostFromFavorites({
       .toResponse()
       .then(
     (v) {
-      lm.logResponse(
-          v,
-          _logger,
-          v.statusCodeInfo.isSuccessful
-              ? lm.LogLevel.FINEST
-              : lm.LogLevel.SEVERE);
+      lm.logResponseSmart(v, _logger);
       var postRet = v.statusCodeInfo.isSuccessful
           ? E6PostMutable.fromRawJson(v.body)
           : post;
@@ -671,13 +656,15 @@ Stream<E6BatchActionEvent> removeFavoritesWithPosts({
 
   final results = <Future<E6BatchActionEvent<dynamic>>>[];
   for (var i = 0; i < pIds.length; i++) {
-    results.add(e621.sendRequest(
+    results.add(e621
+        .sendRequest(
       e621.initDeleteFavoriteRequest(
         postId: pIds[i],
         credentials: E621AccessData.fallback?.cred,
       ),
       useBurst: true,
-    ).then(
+    )
+        .then(
       (value) {
         ++currentProgressReceive;
         lm.logResponseSmart(value, _logger);
@@ -903,7 +890,7 @@ Future<e621.PostSet?> removeFromSetWithPosts({
         ))
         .toResponse();
 
-    lm.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -1043,7 +1030,7 @@ Future<e621.PostSet?> addToSetWithPosts({
         ))
         .toResponse();
 
-    lm.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -1183,7 +1170,7 @@ Future<e621.PostSet?> removeFromSetWithIds({
         ))
         .toResponse();
 
-    lm.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -1324,7 +1311,7 @@ Future<e621.PostSet?> addToSetWithIds({
         ))
         .toResponse();
 
-    lm.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -1582,7 +1569,7 @@ Future<e621.PostSet?> addToSetWithPost({
         ))
         .toResponse();
 
-    lm.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -1710,7 +1697,7 @@ Future<e621.PostSet?> removeFromSetWithId({
         ))
         .toResponse();
 
-    lm.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -1839,7 +1826,7 @@ Future<e621.PostSet?> addToSetWithId({
         ))
         .toResponse();
 
-    lm.logResponse(res, _logger, lm.LogLevel.INFO);
+    lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
@@ -1941,14 +1928,16 @@ List<Future<E6PostResponse>> voteOnPostsWithPosts({
         ),
         _logger,
         lm.LogLevel.INFO);
-    return e621.sendRequest(
+    return e621
+        .sendRequest(
       e621.initVotePostRequest(
         postId: post.id,
         score: isUpvote ? 1 : -1,
         noUnvote: noUnvote,
         credentials: E621AccessData.fallback?.cred,
       ),
-    ).then(
+    )
+        .then(
       (v) {
         _logger.info("${post.id} vote done");
         lm.logResponseSmart(v, _logger, overrideLevel: lm.LogLevel.INFO);
@@ -1978,13 +1967,6 @@ List<Future<E6PostResponse>> voteOnPostsWithPosts({
       },
     );
   }).toList();
-  /* ..fold<Future?>(
-      null,
-      (previousValue, element) => previousValue != null
-          ? previousValue.then((e) async => await element)
-          : element,
-    ) */
-  ;
 }
 
 List<Future<e621.UpdatedScore?>> voteOnPostsWithPostIds({
@@ -2002,14 +1984,16 @@ List<Future<e621.UpdatedScore?>> voteOnPostsWithPostIds({
     util.showUserMessage(context: context!, content: Text(message));
   }
   return postIds
-      .map((postId) => e621.sendRequest(
+      .map((postId) => e621
+              .sendRequest(
             e621.initVotePostRequest(
               postId: postId,
               score: isUpvote ? 1 : -1,
               noUnvote: noUnvote,
               credentials: E621AccessData.fallback?.cred,
             ),
-          ).then(
+          )
+              .then(
             (v) {
               lm.logResponseSmart(v, _logger);
               // TODO: Response
@@ -2045,13 +2029,6 @@ List<Future<e621.UpdatedScore?>> voteOnPostsWithPostIds({
             },
           ))
       .toList();
-  /* ..fold<Future?>(
-      null,
-      (previousValue, element) => previousValue != null
-          ? previousValue.then((e) async => await element)
-          : element,
-    ) */
-  ;
 }
 
 Future<E6PostResponse> voteOnPostWithPost({
@@ -2066,14 +2043,16 @@ Future<E6PostResponse> voteOnPostWithPost({
   if (context?.mounted ?? false) {
     util.showUserMessage(context: context!, content: Text(message));
   }
-  return e621.sendRequest(
+  return e621
+      .sendRequest(
     e621.initVotePostRequest(
       postId: post.id,
       score: isUpvote ? 1 : -1,
       noUnvote: noUnvote,
       credentials: E621AccessData.fallback?.cred,
     ),
-  ).then(
+  )
+      .then(
     (v) {
       lm.logResponseSmart(v, _logger);
       if (context?.mounted ?? false) {
@@ -2121,14 +2100,16 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
                 Text("${isUpvote ? "Upvoting" : "Downvoting"} $postId...")),
       );
   }
-  return e621.sendRequest(
+  return e621
+      .sendRequest(
     e621.initVotePostRequest(
       postId: postId,
       score: isUpvote ? 1 : -1,
       noUnvote: noUnvote,
       credentials: E621AccessData.fallback?.cred,
     ),
-  ).then(
+  )
+      .then(
     (v) {
       lm.logResponseSmart(v, _logger);
       if (context?.mounted ?? false) {
@@ -2249,6 +2230,7 @@ class _WE6BatchActionState extends State<WE6BatchAction> {
     return Container();
   }
 }
+
 // TODO: IMPLEMENT AND TEST BATCH ACTIONS
 class E6Actions extends ChangeNotifier {
   static final batchActions =

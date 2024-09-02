@@ -139,14 +139,20 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
           i = widget.postListing.sample;
         }
       } else {
-        if ((e6Post.sample.alternates!
-                    .alternates[e621.AlternateResolution.$480p.toString()]?.width ??
+        if ((e6Post
+                    .sample
+                    .alternates!
+                    .alternates[e621.AlternateResolution.$480p.toString()]
+                    ?.width ??
                 (screenWidth + 1)) >=
             screenWidth) {
           i = e6Post.sample.alternates!
               .alternates[e621.AlternateResolution.$480p.toString()]!;
-        } else if ((e6Post.sample.alternates!
-                    .alternates[e621.AlternateResolution.$720p.toString()]?.width ??
+        } else if ((e6Post
+                    .sample
+                    .alternates!
+                    .alternates[e621.AlternateResolution.$720p.toString()]
+                    ?.width ??
                 (screenWidth + 1)) >=
             screenWidth) {
           i = e6Post.sample.alternates!
@@ -237,73 +243,72 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
         customActions: widget.extraActions,
         selectedPosts: widget.selectedPosts,
         onClearSelections: () => widget.selectedPosts?.clear(),
+      ),/* MediaQuery.sizeOf(context).height / 32 */
+      bottomNavigationBar: ConstrainedBox(
+        constraints:
+            const BoxConstraints(maxHeight: 56),
+        child: _buildBottomRow(context),
       ),
-      bottomNavigationBar: _buildBottomRow(context),
     );
   }
 
   Opacity _buildBottomRow(BuildContext context) {
     return Opacity(
-              opacity: .75,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  if (e6Post.voteState != null)
-                    if (!e6Post.voteState!)
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: WFabBuilder.getSinglePostUpvoteAction(
-                          context,
-                          e6Post,
-                        ),
-                      )
-                    else
-                      Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: WFabBuilder.getSinglePostDownvoteAction(
-                            context,
-                            e6Post,
-                          ))
-                  else ...[
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: WFabBuilder.getSinglePostUpvoteAction(
-                        context,
-                        e6Post,
-                      ),
-                    ),
-                    Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: WFabBuilder.getSinglePostDownvoteAction(
-                          context,
-                          e6Post,
-                        )),
-                  ],
-                  WPullTab(
-                    anchorAlignment: AnchorAlignment.bottom,
-                    openIcon: const Icon(Icons.edit),
-                    distance: 200,
-                    color:
-                        Theme.of(context).buttonTheme.colorScheme?.onPrimary,
-                    children: [
-                      WFabBuilder.getSinglePostAddToSetAction(
-                          context, e6Post),
-                      WFabBuilder.getSinglePostRemoveFromSetAction(
-                          context, e6Post),
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: e6Post.isFavorited
-                        ? WFabBuilder.getSinglePostRemoveFavAction(
-                            context, e6Post)
-                        : WFabBuilder.getSinglePostAddFavAction(
-                            context, e6Post),
-                  ),
-                ],
+      opacity: .75,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          if (e6Post.voteState != null)
+            if (!e6Post.voteState!)
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: WFabBuilder.getSinglePostUpvoteAction(
+                  context,
+                  e6Post,
+                ),
+              )
+            else
+              Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: WFabBuilder.getSinglePostDownvoteAction(
+                    context,
+                    e6Post,
+                  ))
+          else ...[
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: WFabBuilder.getSinglePostUpvoteAction(
+                context,
+                e6Post,
               ),
-            );
+            ),
+            Padding(
+                padding: const EdgeInsets.all(8),
+                child: WFabBuilder.getSinglePostDownvoteAction(
+                  context,
+                  e6Post,
+                )),
+          ],
+          WPullTab(
+            anchorAlignment: AnchorAlignment.bottom,
+            openIcon: const Icon(Icons.edit),
+            distance: 200,
+            color: Theme.of(context).buttonTheme.colorScheme?.onPrimary,
+            children: [
+              WFabBuilder.getSinglePostAddToSetAction(context, e6Post),
+              WFabBuilder.getSinglePostRemoveFromSetAction(context, e6Post),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: e6Post.isFavorited
+                ? WFabBuilder.getSinglePostRemoveFavAction(context, e6Post)
+                : WFabBuilder.getSinglePostAddFavAction(context, e6Post),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildBody({

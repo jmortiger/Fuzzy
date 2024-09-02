@@ -203,7 +203,7 @@ class _WUpdateSetState extends State<WUpdateSet> {
                               return;
                             }
                             final res = await e621.sendRequest(r);
-                            lm.logResponse(res, logger, lm.LogLevel.INFO);
+                            lm.logResponseSmart(res, logger);
                             if (res.statusCodeInfo.isSuccessful) {
                               if (mounted) {
                                 Navigator.pop(this.context,

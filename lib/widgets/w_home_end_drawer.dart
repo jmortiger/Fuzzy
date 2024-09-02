@@ -17,6 +17,7 @@ import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:fuzzy/widgets/w_search_pool.dart';
 import 'package:fuzzy/widgets/w_search_set.dart';
 import 'package:j_util/e621.dart' as e621;
+import 'package:j_util/j_util_widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
@@ -419,6 +420,21 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 context,
                 MaterialPageRoute(builder: (context) => const HelpPage()),
               );
+            },
+          ),
+          ListTile(
+            title: const Text("Toggle Use Fab"),
+            leading: SelectorNotifier(
+              value: useFab,
+              selector: (_, v) => v.value,
+              builder: (_, useFabState, __) => useFabState
+                  ? const Icon(Icons.check_box)
+                  : const Icon(Icons.check_box_outline_blank),
+            ),
+            onTap: () {
+              print("Before: ${useFab.value}");
+              () => useFab.value = !useFab.value;
+              print("After: ${useFab.value}");
             },
           ),
         ],
