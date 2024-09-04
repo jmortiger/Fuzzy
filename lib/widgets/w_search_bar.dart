@@ -111,25 +111,10 @@ class _WSearchBarState extends State<WSearchBar> {
         logger.finer("Text: ${controller.text}");
 
         /// USING THE LIBRARY CAUSES THE ERROR.
-        return generateSortedOptions(controller.text).map(
-          (e) {
-            const ws = r'[\u2028\n\r\u000B\f\u2029\u0085 	]';
-            // final wsRe = RegExp(ws);
-            final wsRe = RegExp(RegExpExt.whitespaceCharacters);
-            logger.finest("e = $e Length: ${e.length}");
-            e = e.trim();
-            logger.finest("e.trim() = $e Length: ${e.length}");
-            logger.finest(e.contains(wsRe) ? e.split(wsRe) : [e]);
-            return ListTile(
-              dense: true,
-              title: Text((e.contains(wsRe) ? e.split(wsRe) : [e]).last),
-              subtitle: Text(e),
-              onTap: () {
-                if (controller.isAttached) controller.closeView(e);
-              },
-            );
-          },
-        );
+        /* return generateSortedOptions(controller.text).map(
+          (e) => genTileFromString(e, controller: controller),
+        ); */
+        return generateOptions(controller.value, controller: controller);
       },
       onSubmitted: sbcOnSubmitted,
       onChanged: (value) => setState(() {
@@ -209,6 +194,38 @@ class _WSearchBarState extends State<WSearchBar> {
                 )),
       ],
     );
+  }
+
+  ListTile genTileFromString(
+    String e, {
+    Widget? leading,
+    Widget? trailing,
+    SearchController? controller,
+    void Function()? onTap,
+  }) {
+    final tAndS = genTitleAndSubtitleFromString(e);
+    return ListTile(
+      dense: true,
+      title: Text(tAndS.$1),
+      subtitle: Text(tAndS.$2),
+      onTap: onTap ??
+          () {
+            if (controller?.isAttached ?? false) controller!.closeView(e);
+          },
+      leading: leading,
+      trailing: trailing,
+    );
+  }
+
+  (String title, String subtitle) genTitleAndSubtitleFromString(String e) {
+    // const ws = r'[\u2028\n\r\u000B\f\u2029\u0085 	]';
+    // final wsRe = RegExp(ws);
+    final wsRe = RegExp(RegExpExt.whitespaceCharacters);
+    logger.finest("e = $e Length: ${e.length}");
+    e = e.trim();
+    logger.finest("e.trim() = $e Length: ${e.length}");
+    logger.finest(e.contains(wsRe) ? e.split(wsRe) : [e]);
+    return ((e.contains(wsRe) ? e.split(wsRe) : [e]).last, e);
   }
 
   static const _previewLength = 15;
@@ -420,85 +437,126 @@ class _WSearchBarState extends State<WSearchBar> {
     );
   }
 
-  // Iterable<ListTile> generateOptions(TextEditingValue value) {
-  //   final currentTextValue = value.text;
-  //   final currText = currentTextValue;
-  //   // var lastTermIndex = currText.lastIndexOf(RegExpExt.whitespace);
-  //   var lastTermIndex = currText
-  //       .lastIndexOf(RegExp('[$whitespaceCharacters$tagModifiersRegexString]'));
-  //   lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
-  //   final currSubString = currText.substring(lastTermIndex);
-  //   final currPrefix = currText.substring(0, lastTermIndex);
-  //   logger.finer("currText: $currText");
-  //   logger.finer("lastTermIndex: $lastTermIndex");
-  //   logger.finer("currSubString: $currSubString");
-  //   logger.finer("currPrefix: $currPrefix");
-  //   if (allSuggestionSourcesEmpty /*  || currText.isEmpty */) {
-  //     return const Iterable<ListTile>.empty();
-  //   }
-  //   var db = retrieveTagDB;
-  //   if (db == null) {
-  //     var r = modifierTagsSuggestionsList
-  //         .map((e) => "$currPrefix$e")
-  //         .where((v) => v.contains(currText));
-  //     if ((AppSettings.i?.favoriteTags.isEmpty ?? true) &&
-  //         !SavedDataE6.isInit &&
-  //         CachedSearches.searches.isEmpty) {
-  //       return (r.toList()
-  //             ..sort(
-  //               str_util.getFineInverseSimilarityComparator(currText),
-  //             ))
-  //           .take(50);
-  //     }
-  //     return {
-  //       currText,
-  //       if (CachedSearches.searches.isNotEmpty)
-  //         ...(() {
-  //           var relatedSearches = CachedSearches.searches.where(
-  //             (element) =>
-  //                 !currText.contains(element.searchString) &&
-  //                 element.searchString.contains(currText),
-  //           );
-  //           return relatedSearches.map((e) => e.searchString).toList()
-  //             ..sort(
-  //               str_util.getFineInverseSimilarityComparator(currText),
-  //             )
-  //             ..removeRange(
-  //               relatedSearches.length -
-  //                   min(
-  //                     SearchView.i.numSavedSearchesInSearchBar,
-  //                     relatedSearches.length,
-  //                   ),
-  //               relatedSearches.length,
-  //             );
-  //         })(),
-  //       if (SavedDataE6.isInit && currSubString.contains(E621.delimiter))
-  //         ...SavedDataE6.all
-  //             .where(
-  //               (v) =>
-  //                   v.verifyUniqueness() &&
-  //                   !currText.contains("${E621.delimiter}${v.uniqueId}") &&
-  //                   "${E621.delimiter}${v.uniqueId}".contains(currSubString),
-  //             )
-  //             .map((v) => "$currPrefix ${E621.delimiter}${v.uniqueId}")
-  //             .toList()
-  //           ..sort(
-  //             str_util.getFineInverseSimilarityComparator(currText),
-  //           ),
-  //       if (AppSettings.i?.favoriteTags.isNotEmpty ?? false)
-  //         ...(AppSettings.i!.favoriteTags
-  //                 .where((element) => !currPrefix.contains(element))
-  //                 .map((e) => "$currPrefix$e")
-  //                 .toList()
-  //               ..sort(
-  //                 str_util.getFineInverseSimilarityComparator(currText),
-  //               ))
-  //             .take(5),
-  //       ...r.take(20),
-  //     }.toList()
-  //       ..sort(str_util.getFineInverseSimilarityComparator(currText));
-  //   }
-  // }
+  Iterable<ListTile> generateOptions(
+    TextEditingValue currentTextValue, {
+    SearchController? controller,
+    void Function()? onTap,
+  }) {
+    final currFullText = currentTextValue.text;
+    var lastTermIndex = currFullText
+        .lastIndexOf(RegExp('[$whitespaceCharacters$tagModifiersRegexString]'));
+    lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
+    final currSubString = currFullText.substring(lastTermIndex);
+    final currPrefix = currFullText.substring(0, lastTermIndex);
+    logger.finer("currText: $currFullText");
+    logger.finer("lastTermIndex: $lastTermIndex");
+    logger.finer("currSubString: $currSubString");
+    logger.finer("currPrefix: $currPrefix");
+    if (allSuggestionSourcesEmpty /*  || currText.isEmpty */) {
+      return const Iterable<ListTile>.empty();
+    }
+    final comp = str_util.getFineInverseSimilarityComparator(currFullText);
+    var db = retrieveTagDB;
+    if (db == null) {
+      var r = showMetaTags
+          ? sh.modifierTagsSuggestionsList
+              .map((e) => "$currPrefix$e")
+              .where((v) => v.contains(currFullText))
+          : const Iterable<String>.empty();
+      if (((AppSettings.i?.favoriteTags.isEmpty ?? true) || !showFavTags) &&
+          (!SavedDataE6.isInit || !showSavedSearches) &&
+          (CachedSearches.searches.isEmpty || !showPriorSearches)) {
+        return (r.toList()..sort(comp)).take(50).map((e) => genTileFromString(
+              e,
+              controller: controller,
+              onTap: onTap,
+              leading: const Text("Meta"),
+            ));
+      }
+      return [
+        if (CachedSearches.searches.isNotEmpty && showPriorSearches)
+          ...(() {
+            var relatedSearches = CachedSearches.searches.where(
+              (element) =>
+                  !currFullText.contains(element.searchString) &&
+                  element.searchString.contains(currFullText),
+            );
+            return relatedSearches /* .map((e) => e.searchString) */ .toList()
+              ..sort((e1, e2) => comp(e1.searchString, e2.searchString))
+              ..removeRange(
+                relatedSearches.length -
+                    min(
+                      SearchView.i.numSavedSearchesInSearchBar,
+                      relatedSearches.length,
+                    ),
+                relatedSearches.length,
+              );
+          })()
+              .map(
+            (e) => genTileFromString(
+              e.searchString,
+              controller: controller,
+              onTap: onTap,
+              leading: const Icon(Icons.youtube_searched_for),
+              trailing: IconButton(
+                onPressed: () => CachedSearches.removeSearch(element: e),
+                icon: const Icon(Icons.delete),
+                tooltip: "Delete saved search",
+              ),
+            ),
+          ),
+        if (SavedDataE6.isInit &&
+            currSubString.contains(E621.delimiter) &&
+            showSavedSearches)
+          ...(SavedDataE6.all
+                  .where(
+                    (v) =>
+                        v.verifyUniqueness() &&
+                        !currFullText
+                            .contains("${E621.delimiter}${v.uniqueId}") &&
+                        "${E621.delimiter}${v.uniqueId}"
+                            .contains(currSubString),
+                  )
+                  .map((v) => "$currPrefix ${E621.delimiter}${v.uniqueId}")
+                  .toList()
+                ..sort(comp))
+              .map(
+            (e) => genTileFromString(
+              e,
+              controller: controller,
+              onTap: onTap,
+              leading: const Icon(Icons.save),
+            ),
+          ),
+        if ((AppSettings.i?.favoriteTags.isNotEmpty ?? false) && showFavTags)
+          ...(AppSettings.i!.favoriteTags
+                  .where((element) => !currPrefix.contains(element))
+                  .map((e) => "$currPrefix$e")
+                  .toList()
+                ..sort(comp))
+              .take(5)
+              .map((e) => genTileFromString(
+                    e,
+                    controller: controller,
+                    onTap: onTap,
+                    leading: const Icon(Icons.favorite),
+                  )),
+        ...r.take(20).map((e) => genTileFromString(
+              e,
+              controller: controller,
+              onTap: onTap,
+              leading: const Text("Meta"),
+            )),
+      ]..sort((e1, e2) =>
+          comp((e1.subtitle as Text).data!, (e2.subtitle as Text).data!));
+    }
+    return const Iterable<ListTile>.empty();
+    // return genSearchOptionsFromTagDB(
+    //   db: db,
+    //   currText: currText,
+    //   currPrefix: currPrefix,
+    // );
+  }
 
   Iterable<String> generateSortedOptions(String currentTextValue) {
     final currText = currentTextValue;

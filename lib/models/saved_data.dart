@@ -52,6 +52,24 @@ class SavedDataE6 extends ChangeNotifier {
   static ListNotifier<SavedEntry> get all => searches;
   static int get length => searches.length;
   ListNotifier<ListNotifier<SavedEntry>> get $parented => SavedDataE6.parented;
+  static ListNotifier<ListNotifier<SavedEntry>> makeParented(List<SavedEntry> searches) => searches.fold(
+        ListNotifier<ListNotifier<SavedEntry>>.empty(true),
+        (acc, element) {
+          try {
+            return acc
+              ..singleWhere((e) => e.firstOrNull?.parent == element.parent)
+                  .add(element);
+          } catch (e) {
+            return acc..add(ListNotifier.filled(1, element, true));
+          }
+        },
+      )
+        ..sort(
+          (a, b) => a.first.parent.compareTo(b.first.parent),
+        )
+        ..forEach((e) => e.sort(
+              (a, b) => a.compareTo(b),
+            ));
   static ListNotifier<ListNotifier<SavedEntry>> get parented => searches.fold(
         ListNotifier<ListNotifier<SavedEntry>>.empty(true),
         (acc, element) {

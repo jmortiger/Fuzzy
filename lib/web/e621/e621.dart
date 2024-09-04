@@ -567,7 +567,7 @@ sealed class E621 extends Site {
     String? username,
     String? apiKey,
   }) =>
-      e621.initSearchPostsRequest(
+      e621.initPostSearchRequest(
         credentials: getAuth(username, apiKey),
         tags: fillTagTemplate(tags),
         limit: limit ?? SearchView.i.postsPerPage,
@@ -833,7 +833,7 @@ sealed class E621 extends Site {
       int limit = sLimit,
       required int pageNumber,
     }) =>
-        e621.initSearchPostsRequest(
+        e621.initPostSearchRequest(
           credentials: cred,
           tags: tags,
           limit: limit,

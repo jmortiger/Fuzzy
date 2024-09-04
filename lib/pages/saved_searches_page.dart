@@ -124,7 +124,7 @@ class _SavedSearchesPageSingletonState
           ),
           TextButton.icon(
             onPressed: () {
-              tws.showEnhancedImportElementEditDialogue(context).then((v) {
+              tws.showBestImportElementEditDialogue(context).then((v) {
                 if (v != null) {
                   // for (var e in v) {
                   //   _addSearchDirect(e.toSer());

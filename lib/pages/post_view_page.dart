@@ -144,7 +144,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                     .alternates!
                     .alternates[e621.AlternateResolution.$480p.toString()]
                     ?.width ??
-                (screenWidth + 1)) >=
+                (screenWidth + 1)) <=
             screenWidth) {
           i = e6Post.sample.alternates!
               .alternates[e621.AlternateResolution.$480p.toString()]!;
@@ -153,7 +153,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                     .alternates!
                     .alternates[e621.AlternateResolution.$720p.toString()]
                     ?.width ??
-                (screenWidth + 1)) >=
+                (screenWidth + 1)) <=
             screenWidth) {
           i = e6Post.sample.alternates!
               .alternates[e621.AlternateResolution.$720p.toString()]!;
@@ -243,10 +243,10 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
         customActions: widget.extraActions,
         selectedPosts: widget.selectedPosts,
         onClearSelections: () => widget.selectedPosts?.clear(),
-      ),/* MediaQuery.sizeOf(context).height / 32 */
+      ),
+      /* MediaQuery.sizeOf(context).height / 32 */
       bottomNavigationBar: ConstrainedBox(
-        constraints:
-            const BoxConstraints(maxHeight: 56),
+        constraints: const BoxConstraints(maxHeight: 56),
         child: _buildBottomRow(context),
       ),
     );
@@ -458,8 +458,11 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
   }) {
     context ??= this.context;
     if (widget.postListing.file.isAVideo) {
-      return WVideoPlayerScreen(
-          resourceUri: Uri.tryParse(url) ?? widget.postListing.file.address);
+      return ErrorPage.errorWidgetWrapper(
+        () => WVideoPlayerScreen(
+            resourceUri: Uri.tryParse(url) ?? widget.postListing.file.address),
+        logger: logger,
+      ).value;
     } else {
       return Stack(
         children: [
@@ -494,8 +497,11 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
     double? screenWidth,
   }) {
     if (widget.postListing.file.isAVideo) {
-      return WVideoPlayerScreen(
-          resourceUri: Uri.tryParse(url) ?? widget.postListing.file.address);
+      return ErrorPage.errorWidgetWrapper(
+        () => WVideoPlayerScreen(
+            resourceUri: Uri.tryParse(url) ?? widget.postListing.file.address),
+        logger: logger,
+      ).value;
     } else {
       return Stack(
         children: [

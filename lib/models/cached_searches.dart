@@ -115,15 +115,32 @@ class CachedSearches {
   // static void clear() => searches = const <SearchData>[];
   static void clear() => Changed.invoke(CachedSearchesEvent(
         priorValue: List.unmodifiable(_searches),
-        currentValue: List.unmodifiable(_searches..clear()),
+        currentValue: List.unmodifiable(searches = const []),
       ));
+
+  static void removeSearch({
+    String? searchString,
+    SearchData? element,
+    int? index,
+  }) =>
+      (searchString ?? element ?? index) != null
+          ? Changed.invoke(CachedSearchesEvent(
+              priorValue: List.unmodifiable(_searches),
+              currentValue: List.unmodifiable(searches = element != null
+                  ? (searches.toList()..remove(element))
+                  : searchString != null
+                      ? (searches.toList()
+                        ..removeWhere((e) => e.searchString == searchString))
+                      : (searches.toList()..removeAt(index!))),
+            ))
+          : "";
 
   static void onSearchBegan(SearchArgs a) {
     final t = _searches.toSet()..add(SearchData.fromList(tagList: a.tags));
     Changed.invoke(
       CachedSearchesEvent(
           priorValue: List.unmodifiable(_searches),
-          currentValue: _searches = List.unmodifiable(
+          currentValue: searches = List.unmodifiable(
               t.length > AppSettings.i!.maxSearchesToSave
                   ? (t.toList()..removeAt(0))
                   : t)),
