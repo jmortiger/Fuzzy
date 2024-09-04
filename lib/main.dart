@@ -94,21 +94,22 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
               settings: settings,
               builder: (cxt) => PoolViewPage(pool: v),
             );
-          } catch (e) {}
-          id ??= (settings.arguments as PostViewParameters?)?.id;
-          if (id != null) {
-            return MaterialPageRoute(
-              settings: settings,
-              builder: (cxt) => PoolViewPageBuilder(poolId: id!),
-            );
-          } else {
-            routeLogger.severe(
-              "Routing failure\n"
-              "\tRoute: ${settings.name}\n"
-              "\tId: $id\n"
-              "\tArgs: ${settings.arguments}",
-            );
-            return null;
+          } catch (e) {
+            id ??= (settings.arguments as PostViewParameters?)?.id;
+            if (id != null) {
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (cxt) => PoolViewPageBuilder(poolId: id!),
+              );
+            } else {
+              routeLogger.severe(
+                "Routing failure\n"
+                "\tRoute: ${settings.name}\n"
+                "\tId: $id\n"
+                "\tArgs: ${settings.arguments}",
+              );
+              return null;
+            }
           }
         } catch (e, s) {
           routeLogger.severe(
@@ -129,22 +130,23 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
               settings: settings,
               builder: (cxt) => PostViewPage(postListing: v),
             );
-          } catch (e) {}
-          id ??= (settings.arguments as PostViewParameters?)?.id ??
-              int.tryParse(parameters["postId"] ?? "");
-          if (id != null) {
-            return MaterialPageRoute(
-              settings: settings,
-              builder: (cxt) => PostViewPageLoader(postId: id!),
-            );
-          } else {
-            routeLogger.severe(
-              "Routing failure\n"
-              "\tRoute: ${settings.name}\n"
-              "\tId: $id\n"
-              "\tArgs: ${settings.arguments}",
-            );
-            return null;
+          } catch (e) {
+            id ??= (settings.arguments as PostViewParameters?)?.id ??
+                int.tryParse(parameters["postId"] ?? "");
+            if (id != null) {
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (cxt) => PostViewPageLoader(postId: id!),
+              );
+            } else {
+              routeLogger.severe(
+                "Routing failure\n"
+                "\tRoute: ${settings.name}\n"
+                "\tId: $id\n"
+                "\tArgs: ${settings.arguments}",
+              );
+              return null;
+            }
           }
         } catch (e, s) {
           routeLogger.severe(
@@ -166,22 +168,23 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
               settings: settings,
               builder: (cxt) => EditPostPage(post: v),
             );
-          } catch (e) {}
-          id ??= (settings.arguments as PostViewParameters?)?.id ??
-              int.tryParse(parameters["postId"] ?? "");
-          if (id != null) {
-            return MaterialPageRoute(
-              settings: settings,
-              builder: (cxt) => EditPostPageLoader(postId: id!),
-            );
-          } else {
-            routeLogger.severe(
-              "Routing failure\n"
-              "\tRoute: ${settings.name}\n"
-              "\tId: $id\n"
-              "\tArgs: ${settings.arguments}",
-            );
-            return null;
+          } catch (e) {
+            id ??= (settings.arguments as PostViewParameters?)?.id ??
+                int.tryParse(parameters["postId"] ?? "");
+            if (id != null) {
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (cxt) => EditPostPageLoader(postId: id!),
+              );
+            } else {
+              routeLogger.severe(
+                "Routing failure\n"
+                "\tRoute: ${settings.name}\n"
+                "\tId: $id\n"
+                "\tArgs: ${settings.arguments}",
+              );
+              return null;
+            }
           }
         } catch (e, s) {
           routeLogger.severe(

@@ -15,12 +15,8 @@ import '../../models/image_listing.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
-// #region Logger
-lm.Printer get _print => _lRecord.print;
-lm.FileLogger get _logger => _lRecord.logger;
 // ignore: unnecessary_late
 late final _lRecord = lm.generateLogger("E6Models");
-// #endregion Logger
 
 typedef JsonOut = Map<String, dynamic>;
 
@@ -1500,10 +1496,10 @@ enum PostType {
 
 class PoolModel extends e621.Pool {
   // #region Logger
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
-  // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("PoolModel");
+  static lm.Printer get print => _lRecord.print;
+  static lm.FileLogger get logger => _lRecord.logger;
+  // // ignore: unnecessary_late
+  // static late final lRecord = lm.generateLogger("PoolModel");
   // #endregion Logger
   PoolModel({
     required super.id,
@@ -1533,7 +1529,7 @@ class PoolModel extends e621.Pool {
           creatorId: json["creator_id"],
           description: json["description"],
           isActive: json["is_active"],
-          category: e621.PoolCategory.fromJsonString(json["category"]),
+          category: e621.PoolCategory.fromJson(json["category"]),
           postIds: (json["post_ids"] as List)
               .mapAsList((e, index, list) => e as int),
           creatorName: json["creator_name"],
@@ -1542,7 +1538,6 @@ class PoolModel extends e621.Pool {
   late final LazyInitializer<List<E6PostResponse>> posts;
   String get namePretty => name.replaceAll("_", " ");
 
-  /// TODO: Still not iron-clad in terms of ordering and page offsets.
   Future<List<E6PostResponse>> getPosts({
     int page = 1,
     int? postsPerPage,
@@ -1554,7 +1549,7 @@ class PoolModel extends e621.Pool {
         page: page,
       );
 
-  /// TODO: Still not iron-cladin terms of ordering and page offsets.
+  /// TODO: Still not iron-clad in terms of ordering and page offsets.
   ///
   /// Uses `order:id_asc` to try and grab them in order. If there are too many
   /// posts and a lot are out of order, this could cause failure somewhere.

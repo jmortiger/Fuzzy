@@ -66,8 +66,6 @@ class WSearchPool extends StatefulWidget {
         initialSearchOrder = null,
         initialLimit = null;
 
-  void _defaultOnSelected() {}
-
   @override
   State<WSearchPool> createState() => _WSearchPoolState();
 }
@@ -119,18 +117,21 @@ class _WSearchPoolState extends State<WSearchPool> {
   void launchSearch([bool collapse = true]) {
     setState(() {
       pools = null;
-      loadingPools = e621.initSearchPoolsRequest(
-        searchNameMatches: searchNameMatches,
-        searchId: searchId,
-        searchDescriptionMatches: searchDescriptionMatches,
-        searchCreatorName: searchCreatorName,
-        searchCreatorId: searchCreatorId,
-        searchIsActive: searchIsActive,
-        searchCategory: searchCategory,
-        searchOrder: searchOrder,
-        limit: limit,
-        credentials: E621AccessData.devAccessData.$.cred,
-      ).send().then((v) async {
+      loadingPools = e621
+          .initSearchPoolsRequest(
+            searchNameMatches: searchNameMatches,
+            searchId: searchId,
+            searchDescriptionMatches: searchDescriptionMatches,
+            searchCreatorName: searchCreatorName,
+            searchCreatorId: searchCreatorId,
+            searchIsActive: searchIsActive,
+            searchCategory: searchCategory,
+            searchOrder: searchOrder,
+            limit: limit,
+            credentials: E621AccessData.devAccessData.$.cred,
+          )
+          .send()
+          .then((v) async {
         var t = await ByteStream(v.stream.asBroadcastStream()).bytesToString();
         var step = jsonDecode(t);
         try {
@@ -158,7 +159,6 @@ class _WSearchPoolState extends State<WSearchPool> {
           });
         });
       if (collapse) _control.collapse();
-      // category =
     });
   }
 
@@ -182,7 +182,6 @@ class _WSearchPoolState extends State<WSearchPool> {
         null => null,
       };
   String get categoryText => displayCategory(searchCategory);
-  // String category = "Series";
   bool isExpanded = false;
   @override
   Widget build(BuildContext context) {
@@ -316,18 +315,21 @@ class _WSearchPoolState extends State<WSearchPool> {
     );
   }
 
-  Future<List<e621.Pool>> sendSearch() =>
-      loadingPools = e621.initSearchPoolsRequest(
-        searchNameMatches: searchNameMatches,
-        searchId: searchId,
-        searchDescriptionMatches: searchDescriptionMatches,
-        searchCreatorName: searchCreatorName,
-        searchCreatorId: searchCreatorId,
-        searchIsActive: searchIsActive,
-        searchCategory: searchCategory,
-        searchOrder: searchOrder,
-        limit: limit,
-      ).send().onError(onErrorPrintAndRethrow).then((v) async {
+  Future<List<e621.Pool>> sendSearch() => loadingPools = e621
+          .initSearchPoolsRequest(
+            searchNameMatches: searchNameMatches,
+            searchId: searchId,
+            searchDescriptionMatches: searchDescriptionMatches,
+            searchCreatorName: searchCreatorName,
+            searchCreatorId: searchCreatorId,
+            searchIsActive: searchIsActive,
+            searchCategory: searchCategory,
+            searchOrder: searchOrder,
+            limit: limit,
+          )
+          .send()
+          .onError(onErrorPrintAndRethrow)
+          .then((v) async {
         var t = await ByteStream(v.stream.asBroadcastStream())
             .bytesToString()
             .onError(onErrorPrintAndRethrow);

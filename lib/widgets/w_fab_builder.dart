@@ -118,13 +118,15 @@ class WFabBuilder extends StatelessWidget {
     return ActionButton(
       icon: const Icon(Icons.arrow_upward),
       tooltip: "Upvote",
-      onPressed: actions.makeVoteOnPostWithPost(
-        context: context,
-        post: post,
-        isUpvote: true,
-        noUnvote: noUnvote,
-        updatePost: post is E6PostMutable,
-      ),
+      onPressed: () => actions
+          .voteOnPostWithPost(
+            context: context,
+            post: post,
+            isUpvote: true,
+            noUnvote: noUnvote,
+            updatePost: post is E6PostMutable,
+          )
+          .ignore(),
     );
   }
 
@@ -171,13 +173,15 @@ class WFabBuilder extends StatelessWidget {
     return ActionButton(
       icon: const Icon(Icons.arrow_downward),
       tooltip: "Downvote",
-      onPressed: actions.makeVoteOnPostWithPost(
-        context: context,
-        post: post,
-        isUpvote: false,
-        noUnvote: true,
-        updatePost: post is E6PostMutable,
-      ),
+      onPressed: () => actions
+          .voteOnPostWithPost(
+            context: context,
+            post: post,
+            isUpvote: false,
+            noUnvote: true,
+            updatePost: post is E6PostMutable,
+          )
+          .ignore(),
     );
   }
 
@@ -190,11 +194,13 @@ class WFabBuilder extends StatelessWidget {
       icon: const Icon(Icons.favorite),
       tooltip: "Add to favorites",
       elevation: elevation,
-      onPressed: actions.makeAddPostToFavoritesWithPost(
-        post: post,
-        context: context,
-        updatePost: post is E6PostMutable,
-      ),
+      onPressed: () => actions
+          .addPostToFavoritesWithPost(
+            post: post,
+            context: context,
+            updatePost: post is E6PostMutable,
+          )
+          .ignore(),
     );
   }
 
@@ -205,10 +211,12 @@ class WFabBuilder extends StatelessWidget {
     return ActionButton(
       icon: const Icon(Icons.favorite),
       tooltip: "Add selected to favorites",
-      onPressed: () => actions.addToFavoritesWithPosts(
-        posts: posts,
-        context: context,
-      ),
+      onPressed: () => actions
+          .addToFavoritesWithPosts(
+            posts: posts,
+            context: context,
+          )
+          .ignore(),
     );
   }
 
@@ -219,10 +227,12 @@ class WFabBuilder extends StatelessWidget {
     return ActionButton(
       icon: const Icon(Icons.add),
       tooltip: "Add selected to set",
-      onPressed: () => actions.addToSetWithPosts(
-        context: context,
-        posts: posts,
-      ),
+      onPressed: () => actions
+          .addToSetWithPosts(
+            context: context,
+            posts: posts,
+          )
+          .ignore(),
     );
   }
 
@@ -233,7 +243,8 @@ class WFabBuilder extends StatelessWidget {
     return ActionButton(
       icon: const Icon(Icons.add),
       tooltip: "Add to set",
-      onPressed: () => actions.addToSetWithPost(context: context, post: post),
+      onPressed: () =>
+          actions.addToSetWithPost(context: context, post: post).ignore(),
     );
   }
 
@@ -242,10 +253,12 @@ class WFabBuilder extends StatelessWidget {
     return ActionButton(
       icon: const Icon(Icons.delete),
       tooltip: "Remove selected from set",
-      onPressed: () => actions.removeFromSetWithPosts(
-        context: context,
-        posts: posts,
-      ),
+      onPressed: () => actions
+          .removeFromSetWithPosts(
+            context: context,
+            posts: posts,
+          )
+          .ignore(),
     );
   }
 
@@ -254,10 +267,12 @@ class WFabBuilder extends StatelessWidget {
     return ActionButton(
       icon: const Icon(Icons.delete),
       tooltip: "Remove selected from set",
-      onPressed: () => actions.removeFromSetWithPost(
-        context: context,
-        post: post,
-      ),
+      onPressed: () => actions
+          .removeFromSetWithPost(
+            context: context,
+            post: post,
+          )
+          .ignore(),
     );
   }
 
@@ -266,10 +281,12 @@ class WFabBuilder extends StatelessWidget {
     return ActionButton(
       icon: const Icon(Icons.heart_broken_outlined),
       tooltip: "Remove selected from favorites",
-      onPressed: () => actions.removeFromFavoritesWithPosts(
-        posts: posts,
-        context: context,
-      ),
+      onPressed: () => actions
+          .removeFromFavoritesWithPosts(
+            posts: posts,
+            context: context,
+          )
+          .ignore(),
     );
   }
 
@@ -278,11 +295,13 @@ class WFabBuilder extends StatelessWidget {
     return ActionButton(
       icon: const Icon(Icons.heart_broken_outlined),
       tooltip: "Remove from favorites",
-      onPressed: actions.makeRemovePostFromFavoritesWithPost(
-        post: post,
-        context: context,
-        updatePost: post is E6PostMutable,
-      ),
+      onPressed: () => actions
+          .removePostFromFavoritesWithPost(
+            post: post,
+            context: context,
+            updatePost: post is E6PostMutable,
+          )
+          .ignore(),
     );
   }
 
@@ -291,7 +310,7 @@ class WFabBuilder extends StatelessWidget {
     return ActionButton(
       icon: const Icon(Icons.edit),
       tooltip: "Edit",
-      onPressed: () async {
+      onPressed: () {
         logger.finer("Editing ${post.id}...");
         // ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(
         //   SnackBar(
@@ -305,7 +324,7 @@ class WFabBuilder extends StatelessWidget {
           // MaterialPageRoute(
           //   builder: (context) => EditPostPageLoader(postId: post.id),
           // ),
-        );
+        ).ignore();
       },
     );
   }
@@ -413,7 +432,8 @@ class WFabBuilder extends StatelessWidget {
     return SelectorNotifier(
       value: useFab,
       selector: (_, value) => value.value,
-      builder: (context, useFab, _) => (useFab ? ExpandableFab.new : WPullTab.new)(
+      builder: (context, useFab, _) =>
+          (useFab ? ExpandableFab.new : WPullTab.new)(
         openIcon: isMultiplePosts
             ? IconButton(
                 onPressed: null,
@@ -459,7 +479,8 @@ class WFabBuilder extends StatelessWidget {
             WFabBuilder.getMultiplePostsAddFavAction(context, posts!),
           if (isSinglePost && !post!.isFavorited)
             WFabBuilder.getSinglePostAddFavAction(context, post!),
-          if (!isSinglePost) getMultiplePostsRemoveFromSetAction(context, posts!),
+          if (!isSinglePost)
+            getMultiplePostsRemoveFromSetAction(context, posts!),
           if (isSinglePost) getSinglePostRemoveFromSetAction(context, post!),
           if (!isSinglePost && posts!.indexWhere((p) => p.isFavorited) != -1)
             getMultiplePostsRemoveFavAction(context, posts!),

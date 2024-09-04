@@ -136,71 +136,89 @@ class FileLogger implements Logger {
     String name,
     String? fileName, [
     Level level = Level.FINE,
-  ]) : $ = Logger(name) {
-    $.level = level;
-    logPath.getItemAsync().then(
-          (v) => Platform.isWeb
-              ? null
-              : Storable.handleInitStorageAsync("$v$fileName")
-            ?..then((v2) {
-              file.$ = v2;
-              return v2?.writeAsString(
-                    "\n${DateTime.timestamp().toIso8601String()}",
-                    mode: FileMode.append,
-                  ) ??
-                  Future.sync(() => null);
-            }).onError(
-              (error, stackTrace) => file.$ = null,
-            ),
-        );
-    $.onRecord.listen(
-      (e) {
-        file.$Safe?.writeAsString(
-            "${e.time.toLocal().toIso8601String()} [${e.level.toString().toUpperCase()}]: ${e.message}\n",
-            mode: FileMode.append);
-        // dev.log(
-        //   e.message,
-        //   time: e.time,
-        //   sequenceNumber: e.sequenceNumber,
-        //   error: e.error,
-        //   level: e.level.value,
-        //   name: e.loggerName,
-        //   stackTrace: e.stackTrace,
-        //   zone: e.zone,
-        // );
-      },
-    );
+  ]) : $ = Logger(name) /* ,
+        _levelOverride = level */
+  {
+    $.level = Platform.isAndroid ? Level.ALL : level;
+    _init(name, fileName);
+    $.onRecord.listen(onRecordEvent);
   }
-  FileLogger.detached(String name, String? fileName)
-      : $ = Logger.detached(name) {
-    logPath.getItemAsync().then(
-          (v) => Platform.isWeb
-              ? null
-              : Storable.handleInitStorageAsync("$v$fileName")
-            ?..then((v2) {
-              file.$ = v2;
-              return v2?.writeAsString(
-                    "\n${DateTime.timestamp().toIso8601String()}",
-                    mode: FileMode.append,
-                  ) ??
-                  Future.sync(() => null);
-            }),
-        );
-    $.onRecord.listen(
-      (event) {
-        file.$Safe?.writeAsString(event.message, mode: FileMode.append);
-      },
-    );
+  FileLogger.detached(
+    String name, [
+    String? fileName,
+    Level level = Level.FINE,
+  ]) : $ = Logger.detached(name) /* ,
+        _levelOverride = level */
+  {
+    $.level = Platform.isAndroid ? Level.ALL : level;
+    _init(name, fileName);
+    $.onRecord.listen(onRecordEvent);
   }
+  Future<File?> _init(String name, [String? fileName]) =>
+      logPath.getItemAsync().then((String v) => Platform.isWeb
+          ? null
+          : Storable.handleInitStorageAsync("$v${fileName ?? "$name.txt"}")
+        ?..then((v2) {
+          file.$ = v2;
+          return v2?.writeAsString(
+                "\n${DateTime.timestamp().toIso8601String()}",
+                mode: FileMode.append,
+              ) ??
+              Future.sync(() => null);
+        }).onError((error, stackTrace) => file.$ = null));
+  void onRecordEvent(LogRecord e) {
+    file.$Safe?.writeAsString(
+      "${e.time.toLocal().toIso8601String()} "
+      "[${e.level.toString().toUpperCase()}]: "
+      "${e.message}\n",
+      mode: FileMode.append,
+    );
+    // dev.log(
+    //   e.message,
+    //   time: e.time,
+    //   sequenceNumber: e.sequenceNumber,
+    //   error: e.error,
+    //   level: e.level.value,
+    //   name: e.loggerName,
+    //   stackTrace: e.stackTrace,
+    //   zone: e.zone,
+    // );
+  }
+
+  // Level _levelOverride;
 
   // #region Overrides
   @override
   Level get level => $.level;
+  // Level get level => _levelOverride; //$.level;
   @override
   set level(Level? v) => $.level = v;
+  // set level(Level? v) {
+  //   if (v != null) _levelOverride = v;
+  //   if (!Platform.isAndroid) $.level = v;
+  // }
 
   @override
   Map<String, Logger> get children => $.children;
+
+  @override
+  String get fullName => $.fullName;
+
+  @override
+  String get name => $.name;
+
+  @override
+  Stream<Level?> get onLevelChanged => $.onLevelChanged;
+
+  @override
+  Stream<LogRecord> get onRecord => $.onRecord;
+
+  @override
+  Logger? get parent => $.parent;
+
+  @override
+  bool isLoggable(Level value) => $.isLoggable(value);
+  // bool isLoggable(Level value) => value >= _levelOverride;
 
   @override
   void clearListeners() => $.clearListeners();
@@ -222,31 +240,25 @@ class FileLogger implements Logger {
       $.finest(message, error, stackTrace);
 
   @override
-  String get fullName => $.fullName;
-
-  @override
   void info(Object? message, [Object? error, StackTrace? stackTrace]) =>
       $.info(message, error, stackTrace);
 
   @override
-  bool isLoggable(Level value) => $.isLoggable(value);
-
-  @override
-  void log(Level logLevel, Object? message,
-          [Object? error, StackTrace? stackTrace, Zone? zone]) =>
+  void log(
+    Level logLevel,
+    Object? message, [
+    Object? error,
+    StackTrace? stackTrace,
+    Zone? zone,
+  ]) =>
       $.log(logLevel, message, error, stackTrace, zone);
-
-  @override
-  String get name => $.name;
-
-  @override
-  Stream<Level?> get onLevelChanged => $.onLevelChanged;
-
-  @override
-  Stream<LogRecord> get onRecord => $.onRecord;
-
-  @override
-  Logger? get parent => $.parent;
+  // isLoggable(logLevel)
+  //     ? $.log(logLevel, message, error, stackTrace, zone)
+  //     : onRecordEvent(LogRecord(
+  //         logLevel,
+  //         message?.toString() ?? "",
+  //         name,
+  //       ));
 
   @override
   void severe(Object? message, [Object? error, StackTrace? stackTrace]) =>

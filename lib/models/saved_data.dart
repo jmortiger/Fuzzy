@@ -440,6 +440,10 @@ class SavedDataE6 extends ChangeNotifier {
     searches.add(s);
     _save();
   }
+  void addAndSaveSearches(Iterable<SavedSearchData> s) {
+    searches.addAll(s);
+    _save();
+  }
 
   static void $editAndSave({
     required SavedEntry original,

@@ -99,6 +99,20 @@ class _SavedSearchesPageSingletonState
     });
   }
 
+  void _addSearchesDirect(Iterable<SavedElementRecord> values) {
+    data.$ /* SavedDataE6 */ .addAndSaveSearches(
+      values.map((value) => SavedSearchData.fromTagsString(
+            searchString: value.mainData,
+            title: value.title,
+            uniqueId: value.uniqueId ?? "",
+            parent: value.parent ?? "",
+          )),
+    );
+    setState(() {
+      parentedCollection.$ = data.$.$parented;
+    });
+  }
+
   void _addSearch() => showSavedElementEditDialogue(
         context,
       ).then((value) {
@@ -129,9 +143,10 @@ class _SavedSearchesPageSingletonState
                   // for (var e in v) {
                   //   _addSearchDirect(e.toSer());
                   // }
-                  for (var e in v) {
-                    _addSearchDirect(e);
-                  }
+                  // for (var e in v) {
+                  //   _addSearchDirect(e);
+                  // }
+                  _addSearchesDirect(v);
                 }
               });
             },

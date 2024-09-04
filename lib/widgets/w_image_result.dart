@@ -49,8 +49,6 @@ class WImageResult extends StatelessWidget {
     this.postsCache,
   });
 
-  String get _buildTooltipString => "[$index]: ${imageListing.id.toString()}";
-
   @override
   Widget build(BuildContext context) {
     assert(debugCheckHasMaterial(context));

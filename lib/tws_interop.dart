@@ -89,19 +89,47 @@ class SavedSearch {
         "e": lastUpdatedPostId,
         "f": newPostsSinceLastSearch,
       };
-  SavedElementRecord toSer(
-          [Map<String, String>? patterns, String delimiter = ": "]) =>
-      (
-        mainData: tags.fold(
+  SavedElementRecord toSer({
+    Map<String, String>? patterns,
+    String delimiter = ": ",
+    bool addOrigToTitle = false,
+    bool doNotFormatNonMatchingTitles = true,
+    bool overridePoolParent = false,
+    String? poolParent,
+  }) {
+    final String mainData = tags.fold(
           null,
           (previousValue, element) =>
               "${previousValue != null ? "$previousValue " : ""}$element",
-        )!,
-        title: title.split(delimiter).first,
-        parent:
-            patterns == null ? null : patterns[title.split(delimiter).first],
-        uniqueId: null,
-      );
+        ) ??
+        "";
+    final isPoolSearch = mainData.matchAsPrefix("pool:") != null;
+    final poolFallback = isPoolSearch ? poolParent : null;
+    final titleSegmented = title.split(delimiter);
+    final titleSegmentsFormatted = <String>[];
+    for (var i = 0; i < titleSegmented.length ~/ 2; i++) {
+      titleSegmentsFormatted.add(!doNotFormatNonMatchingTitles ||
+              (patterns?[titleSegmented[i * 2]]?.isNotEmpty ?? false)
+          ? titleSegmented.elementAtOrNull(i * 2 + 1) ?? titleSegmented[i * 2]
+          : title);
+    }
+    if (titleSegmented.length.isOdd) {
+      titleSegmentsFormatted.add(titleSegmented.last);
+    }
+    return (
+      mainData: mainData,
+      title:
+          "${titleSegmentsFormatted.isNotEmpty ? titleSegmentsFormatted.reduce((acc, e) => "$acc$e") : title}"
+          "${(addOrigToTitle ? " <= $title" : "")}",
+      parent: isPoolSearch && (overridePoolParent || patterns == null)
+          ? poolParent
+          : patterns == null
+              ? poolFallback
+              : patterns[titleSegmented.first] ?? poolFallback,
+      uniqueId: null,
+    );
+  }
+
   static Map<String, String>? format(String? pattern) {
     if (pattern == null) return null; //"[${RegExpExt.whitespaceCharacters}]"
     return pattern.split(RegExp("[,\n]")).fold(
@@ -193,8 +221,8 @@ Future<List<SavedElementRecord>?> showEnhancedImportElementEditDialogue(
               context,
               (jsonDecode(data) as List).mapAsList(
                 (e, _, __) => SavedSearch.fromJson(e).toSer(
-                  SavedSearch.format(patterns),
-                  delimiter ?? ": ",
+                  patterns: SavedSearch.format(patterns),
+                  delimiter: delimiter ?? ": ",
                 ),
               ),
             ),
@@ -212,7 +240,13 @@ Future<List<SavedElementRecord>?> showEnhancedImportElementEditDialogue(
 
 Future<List<SavedElementRecord>?> showBestImportElementEditDialogue(
     BuildContext context) {
-  return FilePicker.platform.pickFiles(/* dialogTitle: "Select .tws2 or .tws2.txt file", allowedExtensions: ["tws2", "txt"] */).then((result) {
+  return FilePicker.platform
+      .pickFiles(
+    dialogTitle: "Select .tws2 or .tws2.txt file",
+    allowedExtensions: ["tws2", "txt"],
+    type: FileType.custom,
+  )
+      .then((result) {
     Future<String?> f;
     if (result == null) {
       // User canceled the picker
@@ -245,12 +279,19 @@ Future<List<SavedElementRecord>?> showBestImportElementEditDialogue(
           ? showDialog<List<SavedElementRecord>>(
               context: context,
               builder: (context) {
-                String? patterns, delimiter;
-                var preElems = SavedSearch.fromRawJson(data);
-                Iterable<SavedSearchData> getPostElems() => preElems
+                String? patterns, delimiter, poolParent = "Pools";
+                bool doNotFormatNonMatchingTitles = true;
+                bool overridePoolParent = true;
+                var preElements = SavedSearch.fromRawJson(data);
+                Iterable<SavedSearchData> getPostElements() => preElements
                     .map((e) => e.toSer(
-                          SavedSearch.format(patterns),
-                          delimiter ?? ": ",
+                          patterns: SavedSearch.format(patterns),
+                          delimiter: delimiter ?? ": ",
+                          addOrigToTitle: true,
+                          doNotFormatNonMatchingTitles:
+                              doNotFormatNonMatchingTitles,
+                          poolParent: poolParent,
+                          overridePoolParent: overridePoolParent,
                         ))
                     .map((value) => SavedSearchData.fromTagsString(
                           searchString: value.mainData,
@@ -258,31 +299,89 @@ Future<List<SavedElementRecord>?> showBestImportElementEditDialogue(
                           uniqueId: value.uniqueId ?? "",
                           parent: value.parent ?? "",
                         ));
+                var currElements = getPostElements().toList();
+                var currTiles =
+                    _buildParentedView(SavedDataE6.makeParented(currElements));
                 return AlertDialog(
                   content: SizedBox(
                     width: double.maxFinite,
                     height: double.maxFinite,
                     child: SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          ExpansionTile(
-                            title: const Text("Result"),
-                            children: _buildParentedView(context,
-                                SavedDataE6.makeParented(getPostElems().toList())),
-                          ),
-                          const Text("Enter pattern delimiter"),
-                          TextField(
-                            onChanged: (value) => delimiter = value,
-                          ),
-                          const Text("Enter replacement patterns (delimit w/,)"),
-                          TextField(
-                            onChanged: (value) {
-                              _logger.info("New value = $value");
-                              patterns = value;
-                            },
-                            textInputAction: TextInputAction.none,
-                          ),
-                        ],
+                      child: StatefulBuilder(
+                        builder: (context, setState) => Column(
+                          children: [
+                            ExpansionTile(
+                              maintainState: true,
+                              title: const Text("Preview"),
+                              children: currTiles,
+                            ),
+                            TextField(
+                              decoration: const InputDecoration(
+                                  labelText: "Enter pattern delimiter"),
+                              onChanged: (value) => setState(() {
+                                delimiter = value;
+                                currElements = getPostElements().toList();
+                                currTiles = _buildParentedView(
+                                    SavedDataE6.makeParented(currElements));
+                              }),
+                            ),
+                            TextField(
+                              decoration: const InputDecoration(
+                                  labelText:
+                                      "Enter replacement patterns (delimit w/,)"),
+                              onSubmitted: (value) {
+                                _logger.info("New value = $value");
+                                setState(() {
+                                  patterns = value;
+                                  currElements = getPostElements().toList();
+                                  currTiles = _buildParentedView(
+                                      SavedDataE6.makeParented(currElements));
+                                });
+                              },
+                              // onChanged: (value) {
+                              //   _logger.info("New value = $value");
+                              //   setState(() {
+                              //     patterns = value;
+                              //     currElements = getPostElements().toList();
+                              //     currTiles = _buildParentedView(
+                              //         SavedDataE6.makeParented(currElements));
+                              //   });
+                              // },
+                              textInputAction: TextInputAction.none,
+                            ),
+                            SwitchListTile(
+                              value: doNotFormatNonMatchingTitles,
+                              onChanged: (value) => setState(() {
+                                doNotFormatNonMatchingTitles = value;
+                                currElements = getPostElements().toList();
+                                currTiles = _buildParentedView(
+                                    SavedDataE6.makeParented(currElements));
+                              }),
+                              title: const Text(
+                                  "Do Not Format Non-matching Titles"),
+                            ),
+                            SwitchListTile(
+                              value: overridePoolParent,
+                              onChanged: (value) => setState(() {
+                                overridePoolParent = value;
+                                currElements = getPostElements().toList();
+                                currTiles = _buildParentedView(
+                                    SavedDataE6.makeParented(currElements));
+                              }),
+                              title: const Text("Override Pool Parent"),
+                            ),
+                            TextField(
+                              decoration: const InputDecoration(
+                                  labelText: "Pool Parent"),
+                              onChanged: (value) => setState(() {
+                                poolParent = value;
+                                currElements = getPostElements().toList();
+                                currTiles = _buildParentedView(
+                                    SavedDataE6.makeParented(currElements));
+                              }),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -292,8 +391,12 @@ Future<List<SavedElementRecord>?> showBestImportElementEditDialogue(
                         context,
                         (jsonDecode(data) as List).mapAsList(
                           (e, _, __) => SavedSearch.fromJson(e).toSer(
-                            SavedSearch.format(patterns),
-                            delimiter ?? ": ",
+                            patterns: SavedSearch.format(patterns),
+                            delimiter: delimiter ?? ": ",
+                            doNotFormatNonMatchingTitles:
+                                doNotFormatNonMatchingTitles,
+                            poolParent: poolParent,
+                            overridePoolParent: overridePoolParent,
                           ),
                         ),
                       ),
@@ -310,35 +413,36 @@ Future<List<SavedElementRecord>?> showBestImportElementEditDialogue(
           : null,
     );
   });
-}
+} //a,artist,t,tags,s,species,c,character,Set,set,*Set,set,* Set,set
 
-List< Widget > _buildParentedView(
-    BuildContext context, List<List<SavedEntry>> parentedCollection) {
+List<Widget> _buildParentedView(
+    /* BuildContext context,  */ List<List<SavedEntry>> parentedCollection) {
   return /* ListView(
-    children:  */parentedCollection.mapAsList(
-      (e, index, list) => ExpansionTile(
-        // key: PageStorageKey(e),
-        // maintainState: true,
-        title: Text.rich(
-          TextSpan(
-            text: e.first.parent,
-            children: [
-              TextSpan(
-                  text: " (${e.length} entries)",
-                  style: const DefaultTextStyle.fallback().style.copyWith(
-                        color: const Color.fromARGB(255, 80, 80, 80),
-                      )),
-            ],
-          ),
-        ),
-        dense: true,
-        children: e.mapAsList(
-          (e2, i2, l2) => _buildSavedEntry(
-            entry: e2,
-            // index: (parentIndex: index, childIndex: i2),
-          ),
+    children:  */
+      parentedCollection.mapAsList(
+    (e, index, list) => ExpansionTile(
+      // key: PageStorageKey(e),
+      // maintainState: true,
+      title: Text.rich(
+        TextSpan(
+          text: e.first.parent,
+          children: [
+            TextSpan(
+                text: " (${e.length} entries)",
+                style: const DefaultTextStyle.fallback().style.copyWith(
+                      color: const Color.fromARGB(255, 80, 80, 80),
+                    )),
+          ],
         ),
       ),
+      dense: true,
+      children: e.mapAsList(
+        (e2, i2, l2) => _buildSavedEntry(
+          entry: e2,
+          // index: (parentIndex: index, childIndex: i2),
+        ),
+      ),
+    ),
     // ),
   );
 }

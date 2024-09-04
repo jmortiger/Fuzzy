@@ -107,17 +107,17 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
   /// is the original, no alternates)
   IImageInfo getImageInfo(double screenWidth) {
     var i = widget.postListing.file.isAVideo
-        ? switch (PostView.i.imageQuality) {
-            FilterQuality.low => e6Post.sample.alternates!.alternates["480p"] ??
-                e6Post.sample.alternates!.alternates["720p"] ??
-                e6Post.sample.alternates!.alternates["original"],
+        ? switch (PostView.i.videoQuality) {
+            FilterQuality.low => e6Post.sample.alternates?.alternates["480p"] ??
+                e6Post.sample.alternates?.alternates["720p"] ??
+                e6Post.sample.alternates?.alternates["original"],
             FilterQuality.medium =>
-              e6Post.sample.alternates!.alternates["720p"] ??
-                  e6Post.sample.alternates!.alternates["original"],
+              e6Post.sample.alternates?.alternates["720p"] ??
+                  e6Post.sample.alternates?.alternates["original"],
             FilterQuality.high =>
-              e6Post.sample.alternates!.alternates["original"],
+              e6Post.sample.alternates?.alternates["original"],
             FilterQuality.none =>
-              e6Post.sample.alternates!.alternates["original"],
+              e6Post.sample.alternates?.alternates["original"],
           }
         : e6Post.isAnimatedGif
             ? e6Post.file
@@ -139,28 +139,37 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
           i = widget.postListing.sample;
         }
       } else {
-        if ((e6Post
-                    .sample
-                    .alternates!
-                    .alternates[e621.AlternateResolution.$480p.toString()]
-                    ?.width ??
-                (screenWidth + 1)) <=
-            screenWidth) {
-          i = e6Post.sample.alternates!
-              .alternates[e621.AlternateResolution.$480p.toString()]!;
-        } else if ((e6Post
-                    .sample
-                    .alternates!
-                    .alternates[e621.AlternateResolution.$720p.toString()]
-                    ?.width ??
-                (screenWidth + 1)) <=
-            screenWidth) {
-          i = e6Post.sample.alternates!
-              .alternates[e621.AlternateResolution.$720p.toString()]!;
+        try {
+          if ((e6Post
+                      .sample
+                      .alternates
+                      ?.alternates[e621.AlternateResolution.$480p.toString()]
+                      ?.width ??
+                  (screenWidth - 10)) >=
+              screenWidth) {
+            i = e6Post.sample.alternates!
+                .alternates[e621.AlternateResolution.$480p.toString()]!;
+          } else if ((e6Post
+                      .sample
+                      .alternates
+                      ?.alternates[e621.AlternateResolution.$720p.toString()]
+                      ?.width ??
+                  (screenWidth - 10)) >=
+              screenWidth) {
+            i = e6Post.sample.alternates!
+                .alternates[e621.AlternateResolution.$720p.toString()]!;
+          }
+        } catch (e, s) {
+          logger.severe(
+            "Null somewhere\n\te6Post.sample.alternates: "
+            "${e6Post.sample.alternates?.toJson().toString()}",
+            e,
+            s,
+          );
         }
       }
     }
-    return i;
+    return i!;
   }
 
   bool _isFullScreen = false;
@@ -245,10 +254,10 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
         onClearSelections: () => widget.selectedPosts?.clear(),
       ),
       /* MediaQuery.sizeOf(context).height / 32 */
-      bottomNavigationBar: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 56),
-        child: _buildBottomRow(context),
-      ),
+      // bottomNavigationBar: ConstrainedBox(
+      //   constraints: const BoxConstraints(maxHeight: 56),
+      //   child: _buildBottomRow(context),
+      // ),
     );
   }
 

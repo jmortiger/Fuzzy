@@ -74,8 +74,6 @@ class WSearchSet extends StatefulWidget {
         initialLimit = null,
         initialPage = null;
 
-  void _defaultOnSelected() {}
-
   @override
   State<WSearchSet> createState() => _WSearchSetState();
 
@@ -131,16 +129,19 @@ class _WSearchSetState extends State<WSearchSet> {
   void launchSearch([bool collapse = true]) {
     setState(() {
       sets = null;
-      loadingSets = e621.initSearchSetsRequest(
-        searchName: searchName,
-        searchShortname: searchShortname,
-        searchCreatorName: searchCreatorName,
-        searchCreatorId: searchCreatorId,
-        searchOrder: searchOrder,
-        limit: limit,
-        page: page,
-        credentials: E621AccessData.devAccessData.$.cred,
-      ).send().then((v) async {
+      loadingSets = e621
+          .initSearchSetsRequest(
+            searchName: searchName,
+            searchShortname: searchShortname,
+            searchCreatorName: searchCreatorName,
+            searchCreatorId: searchCreatorId,
+            searchOrder: searchOrder,
+            limit: limit,
+            page: page,
+            credentials: E621AccessData.devAccessData.$.cred,
+          )
+          .send()
+          .then((v) async {
         var t = await ByteStream(v.stream.asBroadcastStream()).bytesToString();
         var step = jsonDecode(t);
         try {
