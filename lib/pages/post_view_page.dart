@@ -12,6 +12,7 @@ import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/util/util.dart' as util;
+import 'package:fuzzy/web/e621/dtext_formatter.dart' as dt;
 import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
@@ -261,64 +262,64 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
     );
   }
 
-  Opacity _buildBottomRow(BuildContext context) {
-    return Opacity(
-      opacity: .75,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          if (e6Post.voteState != null)
-            if (!e6Post.voteState!)
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: WFabBuilder.getSinglePostUpvoteAction(
-                  context,
-                  e6Post,
-                ),
-              )
-            else
-              Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: WFabBuilder.getSinglePostDownvoteAction(
-                    context,
-                    e6Post,
-                  ))
-          else ...[
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: WFabBuilder.getSinglePostUpvoteAction(
-                context,
-                e6Post,
-              ),
-            ),
-            Padding(
-                padding: const EdgeInsets.all(8),
-                child: WFabBuilder.getSinglePostDownvoteAction(
-                  context,
-                  e6Post,
-                )),
-          ],
-          WPullTab(
-            anchorAlignment: AnchorAlignment.bottom,
-            openIcon: const Icon(Icons.edit),
-            distance: 200,
-            color: Theme.of(context).buttonTheme.colorScheme?.onPrimary,
-            children: [
-              WFabBuilder.getSinglePostAddToSetAction(context, e6Post),
-              WFabBuilder.getSinglePostRemoveFromSetAction(context, e6Post),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: e6Post.isFavorited
-                ? WFabBuilder.getSinglePostRemoveFavAction(context, e6Post)
-                : WFabBuilder.getSinglePostAddFavAction(context, e6Post),
-          ),
-        ],
-      ),
-    );
-  }
+  // Opacity _buildBottomRow(BuildContext context) {
+  //   return Opacity(
+  //     opacity: .75,
+  //     child: Row(
+  //       crossAxisAlignment: CrossAxisAlignment.end,
+  //       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  //       children: [
+  //         if (e6Post.voteState != null)
+  //           if (!e6Post.voteState!)
+  //             Padding(
+  //               padding: const EdgeInsets.all(8),
+  //               child: WFabBuilder.getSinglePostUpvoteAction(
+  //                 context,
+  //                 e6Post,
+  //               ),
+  //             )
+  //           else
+  //             Padding(
+  //                 padding: const EdgeInsets.all(8),
+  //                 child: WFabBuilder.getSinglePostDownvoteAction(
+  //                   context,
+  //                   e6Post,
+  //                 ))
+  //         else ...[
+  //           Padding(
+  //             padding: const EdgeInsets.all(8),
+  //             child: WFabBuilder.getSinglePostUpvoteAction(
+  //               context,
+  //               e6Post,
+  //             ),
+  //           ),
+  //           Padding(
+  //               padding: const EdgeInsets.all(8),
+  //               child: WFabBuilder.getSinglePostDownvoteAction(
+  //                 context,
+  //                 e6Post,
+  //               )),
+  //         ],
+  //         WPullTab(
+  //           anchorAlignment: AnchorAlignment.bottom,
+  //           openIcon: const Icon(Icons.edit),
+  //           distance: 200,
+  //           color: Theme.of(context).buttonTheme.colorScheme?.onPrimary,
+  //           children: [
+  //             WFabBuilder.getSinglePostAddToSetAction(context, e6Post),
+  //             WFabBuilder.getSinglePostRemoveFromSetAction(context, e6Post),
+  //           ],
+  //         ),
+  //         Padding(
+  //           padding: const EdgeInsets.all(8),
+  //           child: e6Post.isFavorited
+  //               ? WFabBuilder.getSinglePostRemoveFavAction(context, e6Post)
+  //               : WFabBuilder.getSinglePostAddFavAction(context, e6Post),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildBody({
     required int w,
@@ -406,7 +407,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                 title: Text("Description", style: descriptionTheme),
               ),
               initiallyExpanded: PostView.i.startWithDescriptionExpanded,
-              children: [SelectableText(e6Post.description)],
+              children: [SelectableText.rich(dt.parse(e6Post.description) as TextSpan)],
             ),
           ..._buildTagsDisplay(context),
           _buildSourcesDisplay(),
@@ -907,6 +908,70 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                           content: Text("$tag added to clipboard."));
                       Navigator.pop(context);
                     });
+                  },
+                ),
+                ListTile(
+                  title: const Text("Search Wiki in browser"),
+                  onTap: () {
+                    final url = Uri.parse(
+                        "https://e621.net/wiki_pages/show_or_new?title=$tag");
+                    canLaunchUrl(url).then(
+                      (value) => value
+                          ? launchUrl(url)
+                          : showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                content: const Text("Cannot open in browser"),
+                                actions: [
+                                  TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text("Ok"))
+                                ],
+                              ),
+                            ),
+                    );
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  title: const Text("Get Wiki Page"),
+                  onTap: () {
+                    Navigator.pop(context);
+                    showDialog(
+                      context: this.context,
+                      builder: (context) {
+                        WikiPage? result;
+                        Future<WikiPage>? f;
+                        f = e621
+                            .sendRequest(
+                                E621.initWikiTagSearchRequest(tag: tag))
+                            .then((value) => WikiPage.fromRawJson(value.body));
+                        return AlertDialog(
+                            content: SizedBox(
+                                width: double.maxFinite,
+                                child: StatefulBuilder(
+                                    builder: (context, setState) {
+                                  f?.then((v) {
+                                    setState(() {
+                                      result = v;
+                                      f?.ignore();
+                                      f = null;
+                                    });
+                                  }).ignore();
+                                  return Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (f != null)
+                                        util.spinnerExpanded
+                                      else
+                                        result != null
+                                            ? Text.rich(dt.parse(result!.body))
+                                            : const Text("Failed to load"),
+                                    ],
+                                  );
+                                })));
+                      },
+                    );
                   },
                 ),
               ],

@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
+import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
+import 'package:fuzzy/web/e621/dtext_formatter.dart' as dt;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 
-import 'package:fuzzy/log_management.dart' as lm;
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
 class PoolViewPage extends StatefulWidget implements IRoute<PoolViewPage> {
-  // #region Logger
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
-  // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("PoolViewPage");
-  // #endregion Logger
   static const routeNameString = "/poolView";
   @override
   get routeName => routeNameString;
@@ -29,11 +25,8 @@ class PoolViewPage extends StatefulWidget implements IRoute<PoolViewPage> {
 var forcePostUniqueness = true;
 
 class _PoolViewPageState extends State<PoolViewPage> {
-  // #region Logger
-  static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("_PoolViewPageState");
-  // #endregion Logger
+  static late final logger = lm.generateLogger("PoolViewPage").logger;
   PoolModel get pool => widget.pool;
   List<E6PostResponse> posts = [];
   Future<List<E6PostResponse>>? loadingPosts;
@@ -77,16 +70,17 @@ class _PoolViewPageState extends State<PoolViewPage> {
             "Pool ${widget.pool.id}: ${widget.pool.namePretty} by ${pool.creatorName} (${pool.creatorId})"),
       ),
       body: SafeArea(
-        child: //posts.isNotEmpty ?
-            Column(
-          // mainAxisSize: MainAxisSize.min,
+        child: Column(
           children: [
             if (widget.pool.description.isNotEmpty)
               ExpansionTile(
                 title: const Text("Description"),
                 dense: true,
                 initiallyExpanded: true,
-                children: [SelectableText(widget.pool.description)],
+                children: [
+                  SelectableText.rich(
+                      dt.parse(widget.pool.description) as TextSpan)
+                ],
               ),
             if (posts.isNotEmpty)
               Expanded(
@@ -134,12 +128,6 @@ class _PoolViewPageState extends State<PoolViewPage> {
               ),
           ],
         ),
-        // : const Center(
-        //     child: AspectRatio(
-        //       aspectRatio: 1,
-        //       child: CircularProgressIndicator(),
-        //     ),
-        //   ),
       ),
     );
   }
@@ -163,13 +151,9 @@ class PoolViewPageBuilder extends StatelessWidget
   Widget build(BuildContext context) {
     return FutureBuilder(
       future: E621
-          .sendRequest(
-              // e621.initSearchPoolsRequest(searchId: [poolId]))
-              e621.initGetPoolRequest(poolId))
+          .sendRequest(e621.initGetPoolRequest(poolId))
           .toResponse()
-          // .then((v) => jsonDecode(v.body))
           .then((v) => PoolViewPage(
-                // pool: PoolModel.fromJson(v[0]),
                 pool: PoolModel.fromRawJson(v.body),
               )),
       builder: (context, snapshot) {
@@ -184,20 +168,15 @@ class PoolViewPageBuilder extends StatelessWidget
             );
           }
         } else if (snapshot.hasError) {
-          return Scaffold(
-            appBar: AppBar(),
-            body: Text("${snapshot.error}\n${snapshot.stackTrace}"),
+          return ErrorPage(
+            error: snapshot.error,
+            stackTrace: snapshot.stackTrace,
+            logger: _PoolViewPageState.logger,
           );
         } else {
           return Scaffold(
-            appBar: AppBar(
-              title: Text("Pool $poolId"),
-            ),
-            body: const Column(
-              children: [
-                spinnerExpanded,
-              ],
-            ),
+            appBar: AppBar(title: Text("Pool $poolId")),
+            body: const Column(children: [spinnerExpanded]),
           );
         }
       },

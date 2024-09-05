@@ -454,6 +454,7 @@ enum PostInfoPaneItem {
   isFavorited,
   isInPools,
   firstArtist,
+  firstCharacter,
   ;
 
   String toJson() => name;
@@ -468,6 +469,7 @@ enum PostInfoPaneItem {
         String j when j == isFavorited.name => isFavorited,
         String j when j == isInPools.name => isInPools,
         String j when j == firstArtist.name => firstArtist,
+        String j when j == firstCharacter.name => firstCharacter,
         _ => throw UnsupportedError("type not supported"),
       };
   InlineSpan getMyTextSpan(E6PostResponse e6Post) => switch (this) {
@@ -544,7 +546,15 @@ enum PostInfoPaneItem {
         firstArtist => e6Post.tags.hasArtist
             ? TextSpan(
                 // text: "A: ${e6Post.tags.artistFiltered.first} ",
-                text: e6Post.tags.artistFiltered.first,
+                text: "${e6Post.tags.artistFiltered.first} ",
+                style: const TextStyle(
+                  color: Colors.white,
+                ))
+            : const TextSpan(),
+        firstCharacter => e6Post.tags.hasCharacter
+            ? TextSpan(
+                // text: "A: ${e6Post.tags.characterFiltered.first} ",
+                text: "${e6Post.tags.characterFiltered.first} ",
                 style: const TextStyle(
                   color: Colors.white,
                 ))

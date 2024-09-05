@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:j_util/j_util_full.dart';
@@ -103,7 +104,7 @@ class SavedSearch {
               "${previousValue != null ? "$previousValue " : ""}$element",
         ) ??
         "";
-    final isPoolSearch = mainData.matchAsPrefix("pool:") != null;
+    final isPoolSearch = "pool:".matchAsPrefix(mainData) != null;
     final poolFallback = isPoolSearch ? poolParent : null;
     final titleSegmented = title.split(delimiter);
     final titleSegmentsFormatted = <String>[];
@@ -282,7 +283,7 @@ Future<List<SavedElementRecord>?> showBestImportElementEditDialogue(
                 String? patterns, delimiter, poolParent = "Pools";
                 bool doNotFormatNonMatchingTitles = true;
                 bool overridePoolParent = true;
-                var preElements = SavedSearch.fromRawJson(data);
+                final preElements = SavedSearch.fromRawJson(data);
                 Iterable<SavedSearchData> getPostElements() => preElements
                     .map((e) => e.toSer(
                           patterns: SavedSearch.format(patterns),
@@ -299,9 +300,26 @@ Future<List<SavedElementRecord>?> showBestImportElementEditDialogue(
                           uniqueId: value.uniqueId ?? "",
                           parent: value.parent ?? "",
                         ));
-                var currElements = getPostElements().toList();
-                var currTiles =
-                    _buildParentedView(SavedDataE6.makeParented(currElements));
+                var currElementsCache = getPostElements().toList();
+                var currTilesCache = _buildParentedView(
+                    SavedDataE6.makeParented(currElementsCache));
+                updateCache() {
+                  currElementsCache = getPostElements().toList();
+                  currTilesCache = _buildParentedView(
+                      SavedDataE6.makeParented(currElementsCache));
+                }
+
+                // Future<List<Widget>>? tilesFuture;
+                // Future<List<SavedSearchData>>? elementsFuture;
+                // (Future<List<Widget>>, Future<List<SavedSearchData>>)
+                //     updateCacheAsync(void Function(void Function()) setState) {
+                //   elementsFuture =
+                //       compute((void v) => getPostElements().toList(), null);
+                //   currElementsCache = getPostElements().toList();
+                //   currTilesCache = _buildParentedView(
+                //       SavedDataE6.makeParented(currElementsCache));
+                // }
+
                 return AlertDialog(
                   content: SizedBox(
                     width: double.maxFinite,
@@ -313,16 +331,16 @@ Future<List<SavedElementRecord>?> showBestImportElementEditDialogue(
                             ExpansionTile(
                               maintainState: true,
                               title: const Text("Preview"),
-                              children: currTiles,
+                              subtitle:
+                                  Text("${preElements.length} elements added"),
+                              children: currTilesCache,
                             ),
                             TextField(
                               decoration: const InputDecoration(
                                   labelText: "Enter pattern delimiter"),
                               onChanged: (value) => setState(() {
                                 delimiter = value;
-                                currElements = getPostElements().toList();
-                                currTiles = _buildParentedView(
-                                    SavedDataE6.makeParented(currElements));
+                                updateCache();
                               }),
                             ),
                             TextField(
@@ -333,18 +351,14 @@ Future<List<SavedElementRecord>?> showBestImportElementEditDialogue(
                                 _logger.info("New value = $value");
                                 setState(() {
                                   patterns = value;
-                                  currElements = getPostElements().toList();
-                                  currTiles = _buildParentedView(
-                                      SavedDataE6.makeParented(currElements));
+                                  updateCache();
                                 });
                               },
                               // onChanged: (value) {
                               //   _logger.info("New value = $value");
                               //   setState(() {
                               //     patterns = value;
-                              //     currElements = getPostElements().toList();
-                              //     currTiles = _buildParentedView(
-                              //         SavedDataE6.makeParented(currElements));
+                              //     updateCache();
                               //   });
                               // },
                               textInputAction: TextInputAction.none,
@@ -353,9 +367,7 @@ Future<List<SavedElementRecord>?> showBestImportElementEditDialogue(
                               value: doNotFormatNonMatchingTitles,
                               onChanged: (value) => setState(() {
                                 doNotFormatNonMatchingTitles = value;
-                                currElements = getPostElements().toList();
-                                currTiles = _buildParentedView(
-                                    SavedDataE6.makeParented(currElements));
+                                updateCache();
                               }),
                               title: const Text(
                                   "Do Not Format Non-matching Titles"),
@@ -364,9 +376,7 @@ Future<List<SavedElementRecord>?> showBestImportElementEditDialogue(
                               value: overridePoolParent,
                               onChanged: (value) => setState(() {
                                 overridePoolParent = value;
-                                currElements = getPostElements().toList();
-                                currTiles = _buildParentedView(
-                                    SavedDataE6.makeParented(currElements));
+                                updateCache();
                               }),
                               title: const Text("Override Pool Parent"),
                             ),
@@ -375,9 +385,7 @@ Future<List<SavedElementRecord>?> showBestImportElementEditDialogue(
                                   labelText: "Pool Parent"),
                               onChanged: (value) => setState(() {
                                 poolParent = value;
-                                currElements = getPostElements().toList();
-                                currTiles = _buildParentedView(
-                                    SavedDataE6.makeParented(currElements));
+                                updateCache();
                               }),
                             ),
                           ],

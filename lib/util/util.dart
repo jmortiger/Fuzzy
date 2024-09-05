@@ -4,11 +4,13 @@ import 'dart:convert' as dc;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:url_launcher/url_launcher.dart';
 
 // #region Logger
 lm.Printer get _print => lRecord.print;
@@ -167,6 +169,33 @@ const spinnerExpanded = Expanded(
     child: CircularProgressIndicator(),
   ),
 );
+// https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
+// ignore: unnecessary_late
+late final urlMatcher = RegExp(
+  // urlMatcherStr,
+  r"(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9\@\:\%\.\_\+\~\#\=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)",
+);
+const urlMatcherStr =
+    r"(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)";
+void defaultOnLinkifyOpen(LinkableElement link) {
+  final url = Uri.parse(link.url);
+  canLaunchUrl(url).then(
+    (value) => value
+        ? launchUrl(url)
+        : "" /* showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          content: const Text("Cannot open in browser"),
+                          actions: [
+                            TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text("Ok"))
+                          ],
+                        ),
+                      ) */
+    ,
+  );
+}
 
 const placeholderPath = "assets/snake_loader.webp";
 const placeholder = AssetImage(placeholderPath);

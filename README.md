@@ -16,19 +16,19 @@ An all-in-one mobile frontend for multiple image submission sites.
 * Post Slideshow
 * Import saved searches from [The Wolf’s Stash](https://zepiwolf.se/tws/)
 * Load e621 urls in the app w/ via sharing
+* Multi-upvote/downvote
+* Favorites page (order preserved)
+* DText parsing
 ##### TODO List
 * Comments
   * Viewing
   * Leaving
   * Voting
-* Multi-upvote/downvote
 * Unified blacklist/fav tags
 * Notes
-* DText parsing
 * Improve loading shared urls
 * Downloading
 * Ordering
 * Subscriptions
-* Favorites page (order preserved)
 * Warn about blacklist before loading parent/child w/ blacklisted tag
 * Combining (at least 2) searches (e.g. (a or b) and (c or d))

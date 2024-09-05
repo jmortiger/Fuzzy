@@ -185,7 +185,8 @@ final class E6PostsSync extends E6Posts {
   factory E6PostsSync.fromJson(JsonOut json) => E6PostsSync(
       posts: (json["posts"] as List)
           .mapAsList((e, i, l) => E6PostResponse.fromJson(e)));
-  factory E6PostsSync.fromRawJson(String json) => E6PostsSync.fromJson(jsonDecode(json));
+  factory E6PostsSync.fromRawJson(String json) =>
+      E6PostsSync.fromJson(jsonDecode(json));
 
   /// Already fully loaded, so does nothing.
   @override
@@ -658,6 +659,7 @@ class E6PostMutable implements E6PostResponse {
                 : E6PostMutable.fromJson(t)
           ];
   }
+
   @override
   E6PostMutable copyWith({
     int? id,
@@ -1145,6 +1147,11 @@ class E6PostTags extends e621.PostTags implements ITagData {
     "third-party_edit",
     "unknown_artist",
     "unknown_artist_signature",
+    // Character
+    "unknown_character",
+    "anonymous_character",
+    "background_character",
+    "nameless_character",
   ];
   static const metaTagsUnderArtistCategory = [
     "epilepsy_warning",
@@ -1164,11 +1171,23 @@ class E6PostTags extends e621.PostTags implements ITagData {
     "unknown_artist",
     "unknown_artist_signature",
   ];
+  static const specialCharacterTags = [
+    "unknown_character",
+    "anonymous_character",
+    "background_character",
+    "nameless_character",
+  ];
 
-  /// Has a listed artist (i.e. contains something other than special artist tags like "third-party_edit")
+  /// Has a listed artist (i.e. contains something other than special artist tags like "third-party_edit").
   bool get hasArtist => artist.any((e) => !specialArtistTags.contains(e));
   Iterable<String> get artistFiltered =>
       artist.where((e) => !specialArtistTags.contains(e));
+
+  /// Has a listed character (i.e. contains something other than special artist tags like "unknown_character").
+  bool get hasCharacter =>
+      character.any((e) => !specialCharacterTags.contains(e));
+  Iterable<String> get characterFiltered =>
+      character.where((e) => !specialCharacterTags.contains(e));
 }
 
 class E6Flags extends e621.PostFlags {
@@ -1530,8 +1549,8 @@ class PoolModel extends e621.Pool {
           description: json["description"],
           isActive: json["is_active"],
           category: e621.PoolCategory.fromJson(json["category"]),
-          postIds: (json["post_ids"] as List)
-              .mapAsList((e, index, list) => e as int),
+          postIds: (json["post_ids"] as List).cast<int>(),
+              // .mapAsList((e, index, list) => e as int),
           creatorName: json["creator_name"],
           postCount: json["post_count"],
         );
@@ -1565,8 +1584,7 @@ class PoolModel extends e621.Pool {
       logger.warning("Too many posts in pool for a single search request");
     } else if (postIds.length > postsPerPage) {
       logger.warning("Too many posts in pool for 1 page");
-    } else if (poolId == null &&
-        postIds.length > e621.maxTagsPerSearch - 1) {
+    } else if (poolId == null && postIds.length > e621.maxTagsPerSearch - 1) {
       logger.warning("Too many posts in pool for 1 search (use the pool id)");
       postsPerPage = e621.maxTagsPerSearch - 1;
     }
@@ -1617,4 +1635,100 @@ class PoolModel extends e621.Pool {
       return [];
     }
   }
+}
+
+class WikiPage {
+  static lm.FileLogger get logger => _lRecord.logger;
+  final int id;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final String title;
+  final String body;
+  final int creatorId;
+  final bool isLocked;
+  final int? updaterId;
+  final bool isDeleted;
+  final List<String> otherNames;
+  final int? parent;
+  final String creatorName;
+  final int categoryId;
+
+  WikiPage({
+    required this.id,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.title,
+    required this.body,
+    required this.creatorId,
+    required this.isLocked,
+    required this.updaterId,
+    required this.isDeleted,
+    required this.otherNames,
+    required this.parent,
+    required this.creatorName,
+    required this.categoryId,
+  });
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "created_at": createdAt,
+        "updated_at": updatedAt,
+        "title": title,
+        "body": body,
+        "creator_id": creatorId,
+        "is_locked": isLocked,
+        "updater_id": updaterId,
+        "is_deleted": isDeleted,
+        "other_names": otherNames,
+        "parent": parent,
+        "creator_name": creatorName,
+        "category_id": categoryId,
+      };
+  factory WikiPage.fromJson(Map<String, dynamic> json) {
+    try {
+      return WikiPage(
+        id: json["id"],
+        createdAt: DateTime.parse(json["created_at"]),
+        updatedAt: DateTime.parse(json["updated_at"]),
+        title: json["title"],
+        body: json["body"],
+        creatorId: json["creator_id"],
+        isLocked: json["is_locked"],
+        updaterId: json["updater_id"],
+        isDeleted: json["is_deleted"],
+        otherNames: (json["other_names"] as List).cast<String>(),
+        parent: json["parent"],
+        creatorName: json["creator_name"],
+        categoryId: json["category_id"],
+      );
+    } catch (e, s) {
+      logger.severe("Failed to deserialize ${jsonEncode(json)}", e, s);
+      rethrow;
+    }
+  }
+  factory WikiPage.fromRawJson(String json) {
+    final r = jsonDecode(json);
+    return WikiPage.fromJson(r is List ? r.first : r);
+  }
+  static Iterable<WikiPage> fromRawJsonResults(String json) {
+    final r = jsonDecode(json);
+    return r is List
+        ? r.map((e) => WikiPage.fromJson(e))
+        : [WikiPage.fromJson(r)];
+  }
+
+  Map<String, dynamic> fromJson() => {
+        "id": id,
+        "created_at": createdAt,
+        "updated_at": updatedAt,
+        "title": title,
+        "body": body,
+        "creator_id": creatorId,
+        "is_locked": isLocked,
+        "updater_id": updaterId,
+        "is_deleted": isDeleted,
+        "other_names": otherNames,
+        "parent": parent,
+        "creator_name": creatorName,
+        "category_id": categoryId,
+      };
 }

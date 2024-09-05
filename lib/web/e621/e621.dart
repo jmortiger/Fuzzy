@@ -366,8 +366,7 @@ sealed class E621 extends Site {
     bool useBurst = false,
   }) async* {
     for (var request in requests) {
-      yield e621.sendRequest(request.$1, useBurst: useBurst)
-          .then(request.$2);
+      yield e621.sendRequest(request.$1, useBurst: useBurst).then(request.$2);
       if (!useBurst) {
         await Future.delayed(e621.currentRateLimit);
       }
@@ -557,6 +556,19 @@ sealed class E621 extends Site {
             }).toList()));
   }
 
+  static http.Request initWikiTagSearchRequest({
+    required String tag,
+    // int? limit,
+    // String? pageModifier,
+    // int? postId,
+    // int? pageNumber,
+    // String? username,
+    // String? apiKey,
+  }) =>
+      http.Request("GET",
+          Uri.parse("https://e621.net/wiki_pages.json?search%5Btitle%5D=$tag"));
+  static http.Request initGetWikiPageRequest(int id) =>
+      http.Request("GET", Uri.parse("https://e621.net/wiki_pages/$id.json"));
   static http.Request initSearchRequest({
     String tags = "",
     // int limit = 50,
@@ -768,8 +780,7 @@ sealed class E621 extends Site {
     final a = getAuth(username, apiKey);
     if (a == null) throw ArgumentError.value("Null credentials");
     _print("Favs Listing for ${a.username} ($username)");
-    var t = await e621.sendRequest(
-        e621.initListFavoritesWithCredentialsRequest(
+    var t = await e621.sendRequest(e621.initListFavoritesWithCredentialsRequest(
       limit: limit,
       page: page?.page,
       credentials: a,

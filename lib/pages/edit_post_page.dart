@@ -143,9 +143,17 @@ class _EditPostPageState extends State<EditPostPage> {
               );
               lm.logRequest(req, logger, lm.LogLevel.INFO);
               if (debugDeactivate) return;
-              final res = await e621.sendRequest(req);
+              final res = await e621.sendRequest(req).catchError(
+                (error, stackTrace) {
+                  logger.severe(
+                      "Failed to edit post ${post.id}", error, stackTrace);
+                  return error;
+                },
+              );
               lm.logResponseSmart(res, logger, baseLevel: lm.LogLevel.INFO);
-              Navigator.pop(context);
+              if (mounted) {
+                Navigator.pop(this.context);
+              }
             } else {
               logger.info("No changes detected");
               final req = e621.initUpdatePostRequest(
@@ -166,7 +174,7 @@ class _EditPostPageState extends State<EditPostPage> {
               lm.logRequest(req, logger, lm.LogLevel.INFO);
             }
           },
-          icon: const Icon(Icons.check),
+          icon: const Icon(Icons.check_circle_outline),
         ),
         IconButton(
           onPressed: () {
@@ -291,12 +299,22 @@ class _EditPostPageState extends State<EditPostPage> {
       onSubmitted: (initialValue, value) {
         if (initialValue == value) {
           logger.info("No change from $initialValue to $value");
-          return;
+          return null;
         }
+        // if (editedTags.contains(value)) {
+        //   logger.info("Tag $value already in tags at index ${editedTags.indexOf(value)}");
+        //   return null;
+        // }
         logger.info("Changing $initialValue to $value");
         logger.finest("start: $editedTags");
+        final ind = editedTags.indexOf(initialValue);
+        if (ind < 0) {
+          logger.info(
+              "Initial value $initialValue not found in collection, can't replace with $value");
+          return false;
+        }
         setState(() {
-          editedTags[editedTags.indexOf(initialValue)] = value;
+          editedTags[ind] = value;
         });
         // final temp = editedTags.toSet();
         // temp.remove(initialValue);
@@ -305,6 +323,7 @@ class _EditPostPageState extends State<EditPostPage> {
         //   editedTags = temp.toList();
         // });
         logger.finest("end: $editedTags");
+        return true;
       },
       onDuplicate: (initialValue, value) {
         var i = editedTags.indexOf(initialValue);
@@ -344,12 +363,18 @@ class _EditPostPageState extends State<EditPostPage> {
       onSubmitted: (initialValue, value) {
         if (initialValue == value) {
           logger.info("No change from $initialValue to $value");
-          return;
+          return null;
         }
         logger.info("Changing $initialValue to $value");
         logger.finest("start: $editedSources");
+        final ind = editedSources.indexOf(initialValue);
+        if (ind < 0) {
+          logger.info(
+              "Initial value $initialValue not found in collection, can't replace with $value");
+          return false;
+        }
         setState(() {
-          editedSources[editedSources.indexOf(initialValue)] = value;
+          editedSources[ind] = value;
         });
         // final temp = editedSources.toSet();
         // temp.remove(initialValue);
@@ -358,6 +383,7 @@ class _EditPostPageState extends State<EditPostPage> {
         //   editedSources = temp.toList();
         // });
         logger.finest("end: $editedSources");
+        return true;
       },
       onDuplicate: (initialValue, value) {
         var i = editedSources.indexOf(initialValue);
@@ -482,7 +508,7 @@ class WTagItem extends StatefulWidget {
   // final String? Function(String initialValue, String value)? onChange;
   final String? Function(
       String initialValue, String priorValue, String newValue)? onChange;
-  final void Function(String initialValue, String value)? onSubmitted;
+  final bool? Function(String initialValue, String value)? onSubmitted;
   const WTagItem({
     super.key,
     required this.initialValue,
@@ -499,6 +525,7 @@ class WTagItem extends StatefulWidget {
 /// TODO: Format input so only valid tag characters can be entered
 class _WTagItemState extends State<WTagItem> {
   late String value;
+  bool? wasSubmittedSuccessfully;
   @override
   void initState() {
     super.initState();
@@ -513,7 +540,9 @@ class _WTagItemState extends State<WTagItem> {
         if (!value) {
           this.value.isEmpty
               ? widget.onRemove?.call(widget.initialValue, this.value)
-              : widget.onSubmitted?.call(widget.initialValue, this.value);
+              : !(wasSubmittedSuccessfully ?? true)
+                  ? widget.onSubmitted?.call(widget.initialValue, this.value)
+                  : "";
         }
       },
       title: TextField(
@@ -528,13 +557,20 @@ class _WTagItemState extends State<WTagItem> {
         controller: TextEditingController(
           text: widget.initialValue,
         ),
-        onChanged: (value) => this.value =
-            widget.onChange?.call(widget.initialValue, this.value, value) ??
-                value,
+        onChanged: (value) {
+          final result =
+              widget.onChange?.call(widget.initialValue, this.value, value) ??
+                  value;
+          if (result != this.value) {
+            this.value = result;
+            wasSubmittedSuccessfully = false;
+          }
+        },
         onTapOutside: (event) => value.isEmpty
             ? widget.onRemove?.call(widget.initialValue, value)
-            : widget.onSubmitted?.call(widget.initialValue, value),
-        onSubmitted: (value) =>
+            : wasSubmittedSuccessfully =
+                widget.onSubmitted?.call(widget.initialValue, value),
+        onSubmitted: (value) => wasSubmittedSuccessfully =
             widget.onSubmitted?.call(widget.initialValue, value),
       ),
       trailing: widget.onRemove != null

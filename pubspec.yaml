@@ -1,7 +1,7 @@
 name: fuzzy
 description: "An all-in-one mobile frontend for multiple image submission sites."
 publish_to: 'none'
-version: 0.1.0
+version: 0.2.0
 
 environment:
   sdk: '>=3.2.6 <4.0.0'
