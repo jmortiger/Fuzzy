@@ -74,44 +74,54 @@ class SettingsPage extends StatelessWidget implements IRoute<SettingsPage> {
                 .then((v) {
               print(v);
               util.showUserMessage(
-                  context: context,
-                  content: const Text("Saved!"),
-                  action: (
-                    "See Contents",
-                    () => showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            content: SelectableText(
-                              "Saved: $v\nValue: ${jsonEncode(
-                                settings.toJson(),
-                              )}",
-                            ),
-                          ),
-                        )
-                  ));
+                context: context,
+                content: const Text("Saved!"),
+                action: context.mounted
+                    ? (
+                        "See Contents",
+                        () => context.mounted
+                            ? showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  content: SelectableText(
+                                    "Saved: $v\nValue: ${jsonEncode(
+                                      settings.toJson(),
+                                    )}",
+                                  ),
+                                ),
+                              )
+                            : ""
+                      )
+                    : null,
+              );
             }),
             child: const Text("Save Settings"),
           ),
           TextButton(
             onPressed: () => settings.loadFromFile().then((v) {
               util.showUserMessage(
-                  context: context,
-                  content: const Text("Loaded from file!"),
-                  action: (
-                    "See Contents",
-                    () => showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            content: SelectableText(
-                              "Loaded: ${jsonEncode(
-                                v.toJson(),
-                              )}\nValue: ${jsonEncode(
-                                settings.toJson(),
-                              )}",
-                            ),
-                          ),
-                        )
-                  ));
+                context: context,
+                content: const Text("Loaded from file!"),
+                action: context.mounted
+                    ? (
+                        "See Contents",
+                        () => context.mounted
+                            ? showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  content: SelectableText(
+                                    "Loaded: ${jsonEncode(
+                                      v.toJson(),
+                                    )}\nValue: ${jsonEncode(
+                                      settings.toJson(),
+                                    )}",
+                                  ),
+                                ),
+                              )
+                            : ""
+                      )
+                    : null,
+              );
             }),
             child: const Text("Load Settings"),
           ),
@@ -195,8 +205,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
             WBooleanField.subtitleBuilder(
               getVal: () => AppSettings.i!.forceSafe,
               name: "Disable non-safe posts",
-              subtitleBuilder: () =>
-                  "Current site: ${e621.baseUri.toString()}",
+              subtitleBuilder: () => "Current site: ${e621.baseUri.toString()}",
               setVal: (bool val) => AppSettings.i!.forceSafe = val,
             ),
             WBooleanField(
@@ -278,7 +287,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               WNumSliderField<int>(
                 min: SearchViewData.postsPerPageBounds.min,
                 max: SearchViewData.postsPerPageBounds.max,
-                getVal: () => SearchView.i.postsPerRow,
+                getVal: () => SearchView.i.postsPerPage,
                 name: "Posts per page",
                 setVal: (num val) => SearchView.i.postsPerPage = val.toInt(),
                 validateVal: (num? val) {
