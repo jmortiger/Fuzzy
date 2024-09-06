@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
-import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/post_view_page.dart';
 import 'package:fuzzy/util/util.dart' as util;
@@ -394,7 +393,7 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
                         Row(
                           children: [
                             Slider(
-                              label: duration.toString(),
+                              label: "$duration sec.",
                               onChanged: (value) =>
                                   setState(() => duration = value),
                               value: duration,
@@ -402,7 +401,7 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
                               min: 1,
                               max: 30,
                             ),
-                            Text(duration.toString()),
+                            Text("$duration sec."),
                           ],
                         ),
                         Row(

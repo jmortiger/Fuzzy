@@ -476,19 +476,25 @@ class _WSearchBarState extends State<WSearchBar> {
       return [
         if (CachedSearches.searches.isNotEmpty && showPriorSearches)
           ...(() {
-            var relatedSearches = CachedSearches.searches.where(
-              (element) =>
-                  !currFullText.contains(element.searchString) &&
-                  element.searchString.contains(currFullText),
-            );
-            return relatedSearches /* .map((e) => e.searchString) */ .toList()
-              ..sort((e1, e2) => comp(e1.searchString, e2.searchString))
+            var relatedSearches = CachedSearches.searches
+                .where(
+                  (element) =>
+                      !currFullText.contains(element.searchString) &&
+                      element.searchString.contains(currFullText),
+                )
+                .toList();
+            if (currFullText.isNotEmpty) {
+              relatedSearches
+                  .sort((e1, e2) => comp(e1.searchString, e2.searchString));
+            } else {
+              relatedSearches = relatedSearches.reversed.toList();
+            }
+            return relatedSearches
               ..removeRange(
-                relatedSearches.length -
-                    min(
-                      SearchView.i.numSavedSearchesInSearchBar,
-                      relatedSearches.length,
-                    ),
+                min(
+                  SearchView.i.numSavedSearchesInSearchBar,
+                  relatedSearches.length,
+                ),
                 relatedSearches.length,
               );
           })()
@@ -499,6 +505,7 @@ class _WSearchBarState extends State<WSearchBar> {
               onTap: onTap,
               leading: const Icon(Icons.youtube_searched_for),
               trailing: IconButton(
+                // TODO: Make deleting a search remove it from suggestions
                 onPressed: () => CachedSearches.removeSearch(element: e),
                 icon: const Icon(Icons.delete),
                 tooltip: "Delete saved search",

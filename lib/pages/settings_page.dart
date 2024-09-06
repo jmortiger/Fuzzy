@@ -13,10 +13,10 @@ import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
 // #region Logger
-lm.Printer get print => lRecord.print;
-lm.FileLogger get logger => lRecord.logger;
+lm.Printer get _print => _lRecord.print;
+lm.FileLogger get _logger => _lRecord.logger;
 // ignore: unnecessary_late
-late final lRecord = lm.generateLogger("SettingsPage");
+late final _lRecord = lm.generateLogger("SettingsPage");
 // #endregion Logger
 
 class SettingsPage extends StatelessWidget implements IRoute<SettingsPage> {
@@ -72,7 +72,7 @@ class SettingsPage extends StatelessWidget implements IRoute<SettingsPage> {
                 .writeToFile()
                 .then((val) => val?.readAsString() ?? Future.sync(() => ""))
                 .then((v) {
-              print(v);
+              _print(v);
               util.showUserMessage(
                 context: context,
                 content: const Text("Saved!"),
@@ -343,13 +343,13 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               ListTile(
                 title: const Text("Toggle Image Display Method"),
                 onTap: () {
-                  logger.finest("Before: ${imageFit.name}");
+                  _logger.finest("Before: ${imageFit.name}");
                   setState(() {
                     imageFit = imageFit == BoxFit.contain
                         ? BoxFit.cover
                         : BoxFit.contain;
                   });
-                  logger.finer("After: ${imageFit.name}");
+                  _logger.finer("After: ${imageFit.name}");
                   // Navigator.pop(context);
                 },
                 trailing: Text(imageFit.name),
@@ -696,7 +696,7 @@ class _WSetStringFieldState extends State<WSetStringField> {
         ).then<void>(
           (value) {
             if (value != null) {
-              print("Before: ${getVal.toString()}");
+              _print("Before: ${getVal.toString()}");
               if (getVal.isNotEmpty) {
                 getVal.clear();
               }
@@ -706,10 +706,10 @@ class _WSetStringFieldState extends State<WSetStringField> {
                       .split(RegExpExt.whitespace)
                       .where((s) => s.isNotEmpty)));
               });
-              print("After: ${getVal.toString()}");
+              _print("After: ${getVal.toString()}");
             }
           },
-        ).onError((error, stackTrace) => print(error));
+        ).onError((error, stackTrace) => _print(error));
       },
     );
   }
@@ -851,15 +851,15 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
         ).then<void>(
           (value) {
             if (value != null) {
-              logger.finer("_EnumListFieldState: Before: ${getVal.toString()}");
+              _logger.finer("_EnumListFieldState: Before: ${getVal.toString()}");
               setState(() {
                 setVal(value);
               });
-              logger.fine("_EnumListFieldState: After: ${getVal.toString()}");
+              _logger.fine("_EnumListFieldState: After: ${getVal.toString()}");
             }
           },
         ).onError(
-            (error, stackTrace) => logger.severe(error, error, stackTrace));
+            (error, stackTrace) => _logger.severe(error, error, stackTrace));
       },
     );
   }
@@ -1028,14 +1028,14 @@ class _WIntegerFieldState extends State<WIntegerField> {
           },
         ).then<void>((value) {
           if (validateVal?.call(value) ?? value != null) {
-            print("Before: $getVal");
+            _print("Before: $getVal");
             setState(() {
               setVal(value!);
             });
-            print("After: $getVal");
-            print(jsonEncode(AppSettings.i));
+            _print("After: $getVal");
+            _print(jsonEncode(AppSettings.i));
           }
-        }).onError((error, stackTrace) => print(error));
+        }).onError((error, stackTrace) => _print(error));
       },
     );
   }
@@ -1103,8 +1103,6 @@ class _WNumSliderFieldState<T extends num> extends State<WNumSliderField<T>> {
 
   @override
   Widget build(BuildContext context) {
-    // var t = T;
-    // logger.severe(t);
     return ListTile(
       // key: ValueKey(getVal),
       title: Row(children: [
@@ -1150,59 +1148,6 @@ class _WNumSliderFieldState<T extends num> extends State<WNumSliderField<T>> {
       trailing: Text(getVal.toString()),
       leadingAndTrailingTextStyle:
           SettingsPage.titleStyle.copyWith(fontSize: 20),
-      // onTap: () {
-      //   final before = getVal;
-      //   var t = before.toString();
-      //   validation(String value) {
-      //     (validateVal?.call(num.tryParse(value)) ?? true) ? t = value : null;
-      //   }
-
-      //   showDialog<num>(
-      //     context: context,
-      //     builder: (context) {
-      //       return AlertDialog(
-      //         content: TextField(
-      //           keyboardType: TextInputType.number,
-      //           maxLines: null,
-      //           autofocus: true,
-      //           onChanged: validation,
-      //           onSubmitted: (v) {
-      //             validation(v);
-      //             Navigator.pop(context, int.parse(t));
-      //           },
-      //           controller: TextEditingController.fromValue(
-      //             TextEditingValue(
-      //               text: t,
-      //               selection: TextSelection(
-      //                 baseOffset: 0,
-      //                 extentOffset: t.length - 1,
-      //               ),
-      //             ),
-      //           ),
-      //         ),
-      //         actions: [
-      //           TextButton(
-      //             onPressed: () => Navigator.pop(context, int.parse(t)),
-      //             child: const Text("Accept"),
-      //           ),
-      //           TextButton(
-      //             onPressed: () => Navigator.pop(context, null),
-      //             child: const Text("Cancel"),
-      //           ),
-      //         ],
-      //       );
-      //     },
-      //   ).then<void>((value) {
-      //     if (validateVal?.call(value) ?? value != null) {
-      //       print("Before: ${getVal}");
-      //       setState(() {
-      //         setVal(value!);
-      //       });
-      //       print("After: ${getVal}");
-      //       print(jsonEncode(AppSettings.i));
-      //     }
-      //   }).onError((error, stackTrace) => print(error));
-      // },
     );
   }
 }

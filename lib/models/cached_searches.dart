@@ -155,7 +155,6 @@ class CachedSearches {
         .then<async_lib.FutureOr<Object?>>(
           (v) =>
               v?.writeAsString(jsonEncode(CachedSearches.toJson())) ??
-              // Future.sync(() => null)
               writeToPref().then((v1) => v1 ? v1 : null),
         )
         .then(

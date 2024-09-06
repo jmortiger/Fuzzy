@@ -388,16 +388,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                     Navigator.pushNamed(
                       context,
                       "${PoolViewPageBuilder.routeNameString}?poolId=$e",
-                      // MaterialPageRoute(
-                      //   builder: (context) => PoolViewPageBuilder(poolId: e),
-                      // ),
                     );
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //     builder: (context) => PoolViewPageBuilder(poolId: e),
-                    //   ),
-                    // );
                   },
                   child: Text(e.toString()))),
             ]),
@@ -407,7 +398,15 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                 title: Text("Description", style: descriptionTheme),
               ),
               initiallyExpanded: PostView.i.startWithDescriptionExpanded,
-              children: [SelectableText.rich(dt.parse(e6Post.description) as TextSpan)],
+              children: [
+                SelectableText.rich(
+                  ErrorPage.errorWrapper(
+                        () => dt.parse(e6Post.description, context) as TextSpan,
+                        logger: logger,
+                      ).value ??
+                      TextSpan(text: e6Post.description),
+                )
+              ],
             ),
           ..._buildTagsDisplay(context),
           _buildSourcesDisplay(),

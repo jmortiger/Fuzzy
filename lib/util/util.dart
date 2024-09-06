@@ -170,13 +170,15 @@ const spinnerExpanded = Expanded(
   ),
 );
 // https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
-// ignore: unnecessary_late
-late final urlMatcher = RegExp(
-  // urlMatcherStr,
-  r"(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9\@\:\%\.\_\+\~\#\=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)",
-);
-const urlMatcherStr =
-    r"(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)";
+RegExp get urlMatcher => RegExp(urlMatcherStr);
+const urlMatcherStr = r"(http(?:s)?:\/\/)?"
+    r"(www\.){0,1}"
+    r"([-a-zA-Z0-9@:%._\+~#=]{1,256})"
+    r"\.([a-z]{2,6})\b"
+    r"([-a-zA-Z0-9@:%_\+.~#?&//=]*)";
+// r"(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)";
+RegExp get urlMatcherStrict => RegExp("^$urlMatcherStr\$");
+const urlMatcherStrictStr = "^$urlMatcherStr\$";
 void defaultOnLinkifyOpen(LinkableElement link) {
   final url = Uri.parse(link.url);
   canLaunchUrl(url).then(
@@ -196,6 +198,12 @@ void defaultOnLinkifyOpen(LinkableElement link) {
     ,
   );
 }
+
+const defaultLinkStyle = TextStyle(
+  fontStyle: FontStyle.italic,
+  color: Colors.amber,
+  decoration: TextDecoration.underline,
+);
 
 const placeholderPath = "assets/snake_loader.webp";
 const placeholder = AssetImage(placeholderPath);
