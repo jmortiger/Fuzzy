@@ -10,6 +10,7 @@ import 'package:fuzzy/pages/user_profile_page.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/widgets/w_back_button.dart';
+import 'package:fuzzy/widgets/w_d_text_preview.dart';
 import 'package:fuzzy/widgets/w_fab_builder.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart' as psr;
 import 'package:fuzzy/widgets/w_update_set.dart';
@@ -420,6 +421,27 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 context,
                 MaterialPageRoute(builder: (context) => const HelpPage()),
               );
+            },
+          ),
+          ListTile(
+            title: const Text("Test DText"),
+            leading: const Icon(Icons.question_mark),
+            onTap: () {
+              Navigator.pop(context);
+              // Navigator.push(
+              //   context,
+              //   MaterialPageRoute(builder: (context) => const HelpPage()),
+              // );
+              showDialog(
+                  context: context,
+                  builder: (context) => const AlertDialog(
+                        content: SizedBox(
+                          width: double.maxFinite,
+                          height: double.maxFinite,
+                          child: WBackButton .doNotBlockChild (
+                              child: WDTextPreviewScrollable(maxLines: 5,)),
+                        ),
+                      ));
             },
           ),
           ListTile(
