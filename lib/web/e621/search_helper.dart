@@ -1,5 +1,6 @@
 // https://e621.net/help/cheatsheet
 import 'package:flutter/material.dart';
+import 'package:fuzzy/map_notifier.dart';
 import 'package:j_util/j_util.dart';
 
 mixin SearchableEnum on Enum {
@@ -170,7 +171,7 @@ enum Order with SearchableEnum {
   }
 }
 
-const prefixModifierMatcher = r"[\-\~\+]|";
+const prefixModifierMatcher = r"[\-\~\+]?";
 
 enum Rating with SearchableEnum {
   safe,
@@ -179,11 +180,9 @@ enum Rating with SearchableEnum {
 
   static const matcherNonStrictStr =
       "($prefixModifierMatcher)($prefix)([^${RegExpExt.whitespaceCharacters}]+)";
-  static final matcherNonStrict = RegExp(matcherNonStrictStr);
   static RegExp get matcherNonStrictGenerated => RegExp(matcherNonStrictStr);
   static const matcherStr =
       "($prefixModifierMatcher)($prefix)(s|q|e|safe|questionable|explicit)";
-  static final matcher = RegExp(matcherStr);
   static RegExp get matcherGenerated => RegExp(matcherStr);
   static const prefix = "rating:";
   @override
@@ -212,12 +211,12 @@ enum Rating with SearchableEnum {
         "$prefix:safe" => safe,
         _ => Rating.fromTagText(str),
       };
-  static Rating? retrieveRatingFromSearchString(String str) {
+  static (Modifier, Rating)? retrieveRatingFromSearchString(String str) {
     if (!Rating.matcherGenerated.hasMatch(str)) {
       return null;
     }
     final ms = Rating.matcherGenerated.allMatches(str);
-    ms.fold(
+    final tags = ms.fold(
       <(Modifier, Rating)>{},
       (previousValue, e) => previousValue
         ..add(
@@ -227,10 +226,74 @@ enum Rating with SearchableEnum {
           ),
         ),
     );
-    // TODO: FINISH
-    throw UnimplementedError("retrieveRatingFromSearchString not implemented");
-    return Rating.fromTagText(
-        Rating.matcherGenerated.firstMatch(str)!.group(3)!);
+    (Modifier, Rating)? r;
+    for (final t in tags) {
+      if (r == null) {
+        r = t;
+      } else {
+        if (r.$1 == Modifier.add) {
+          if (t.$1 == Modifier.remove && t.$2 == r.$2) {
+            return null;
+          } else if (t.$1 == Modifier.add && t.$2 != r.$2) {
+            return null;
+          } else if (t.$1 == Modifier.or) {
+            continue;
+            //return null;
+          } /*  else if (t.$1 == Modifier.remove && t.$2 != r.$2) {
+            continue;
+          } */
+        } else if (r.$1 == Modifier.remove) {
+          if (t.$1 == Modifier.add && t.$2 == r.$2) {
+            return null;
+          } else if (t.$1 == Modifier.remove && t.$2 != r.$2) {
+            r = (
+              Modifier.add,
+              switch ((r.$2, t.$2)) {
+                (safe, questionable) => explicit,
+                (questionable, safe) => explicit,
+                (safe, explicit) => questionable,
+                (explicit, safe) => questionable,
+                (questionable, explicit) => safe,
+                (explicit, questionable) => safe,
+                (safe, safe) => throw StateError("Should be impossible"),
+                (questionable, questionable) =>
+                  throw StateError("Should be impossible"),
+                (explicit, explicit) =>
+                  throw StateError("Should be impossible"),
+              }
+            );
+          } else if (t.$1 == Modifier.or && t.$2 == r.$2) {
+            return null;
+          }
+        } else if (r.$1 == Modifier.or) {
+          if (t.$1 == Modifier.add && t.$2 != r.$2) {
+            return null;
+          } else if (t.$1 == Modifier.or && t.$2 != r.$2) {
+            r = (
+              Modifier.remove,
+              switch ((r.$2, t.$2)) {
+                (safe, questionable) => explicit,
+                (questionable, safe) => explicit,
+                (safe, explicit) => questionable,
+                (explicit, safe) => questionable,
+                (questionable, explicit) => safe,
+                (explicit, questionable) => safe,
+                (safe, safe) => throw StateError("Should be impossible"),
+                (questionable, questionable) =>
+                  throw StateError("Should be impossible"),
+                (explicit, explicit) =>
+                  throw StateError("Should be impossible"),
+              }
+            );
+          } else if (t.$1 == Modifier.remove && t.$2 != r.$2) {
+            r = t;
+          } else if (t.$1 == Modifier.remove && t.$2 == r.$2) {
+            r = (Modifier.remove, r.$2);
+          }
+        }
+      }
+    }
+    return r;
   }
 }
 
@@ -338,18 +401,55 @@ enum FileType with SearchableEnum {
   webm;
 
   static const matcherNonStrictStr =
-      "($prefixModifierMatcher)($prefix)([^${RegExpExt.whitespaceCharacters}]+)";
+      "($prefixModifierMatcher)($prefixFull)([^${RegExpExt.whitespaceCharacters}]+)";
   static final matcherNonStrict = RegExp(matcherNonStrictStr);
   static RegExp get matcherNonStrictGenerated => RegExp(matcherNonStrictStr);
   static const matcherStr = "($prefixModifierMatcher)"
-      "($prefix)"
+      "($prefixFull)"
       "(jpg|png|gif|swf|webm)";
   static final matcher = RegExp(matcherStr);
   static RegExp get matcherGenerated => RegExp(matcherStr);
-  static const prefix = "type:";
+  static const prefixFull = "type:";
+  static const prefix = "type";
   @override
-  String get searchString => "$prefix$name";
+  String get searchString => "$prefixFull$name";
   String get suffix => name;
+  factory FileType.fromTagText(String str) => switch (str) {
+        "jpeg" => jpg,
+        "jpg" => jpg,
+        "png" => png,
+        "gif" => gif,
+        "swf" => swf,
+        "webm" => webm,
+        _ => throw UnsupportedError("type not supported"),
+      };
+  factory FileType.fromText(String str) => switch (str) {
+        "${prefixFull}jpeg" => jpg,
+        "${prefixFull}jpg" => jpg,
+        "${prefixFull}png" => png,
+        "${prefixFull}gif" => gif,
+        "${prefixFull}swf" => swf,
+        "${prefixFull}webm" => webm,
+        _ => FileType.fromTagText(str),
+      };
+
+  static List<(Modifier, FileType)>? retrieveFromSearchString(String str) {
+    if (!FileType.matcherGenerated.hasMatch(str)) {
+      return null;
+    }
+    final ms = FileType.matcherGenerated.allMatches(str);
+    final tags = ms.fold(
+      <(Modifier, FileType)>{},
+      (previousValue, e) => previousValue
+        ..add(
+          (
+            Modifier.fromString(e.group(1) ?? ""),
+            FileType.fromTagText(e.group(2)!)
+          ),
+        ),
+    );
+    return tags.toList();
+  }
 }
 
 enum BooleanSearchTag {
@@ -364,9 +464,64 @@ enum BooleanSearchTag {
 
   final String tagPrefix;
   const BooleanSearchTag(this.tagPrefix);
+  factory BooleanSearchTag.fromTagText(String str) => switch (str) {
+        "ischild" => isChild,
+        "isparent" => isParent,
+        "hassource" => hasSource,
+        "hasdescription" => hasDescription,
+        "ratinglocked" => ratingLocked,
+        "notelocked" => noteLocked,
+        "inpool" => inPool,
+        "pending_replacements" => pendingReplacements,
+        _ => throw UnsupportedError("type not supported"),
+      };
+  factory BooleanSearchTag.fromText(String str) => switch (str) {
+        "ischild:true" => isChild,
+        "ischild:false" => isChild,
+        "isparent:true" => isParent,
+        "isparent:false" => isParent,
+        "hassource:true" => hasSource,
+        "hassource:false" => hasSource,
+        "hasdescription:true" => hasDescription,
+        "hasdescription:false" => hasDescription,
+        "ratinglocked:true" => ratingLocked,
+        "ratinglocked:false" => ratingLocked,
+        "notelocked:true" => noteLocked,
+        "notelocked:false" => noteLocked,
+        "inpool:true" => inPool,
+        "inpool:false" => inPool,
+        "pending_replacements:true" => pendingReplacements,
+        "pending_replacements:false" => pendingReplacements,
+        _ => BooleanSearchTag.fromTagText(str),
+      };
   String toSearchTagNullable(bool? value) =>
       value == null ? "" : "$tagPrefix:$value";
   String toSearchTag(bool value) => "$tagPrefix:$value";
+  static const String matcherStr =
+      "($prefixModifierMatcher)(ischild|isparent|hassource|hasdescription|ratinglocked|notelocked|inpool|pending_replacements):(true|false)";
+  static RegExp get matcher => RegExp(matcherStr);
+  static List<(BooleanSearchTag, bool)>? retrieveFromSearchString(String str) {
+    if (!BooleanSearchTag.matcher.hasMatch(str)) {
+      return null;
+    }
+    final ms = BooleanSearchTag.matcher.allMatches(str);
+    final tags = ms.fold(
+      <(BooleanSearchTag, bool)>{},
+      (previousValue, e) =>
+          previousValue..add(parseSearchFragment(e.group(0)!)),
+    );
+    return tags.toList();
+  }
+
+  static (BooleanSearchTag, bool)? tryParseSearchFragment(String str) {
+    final m = BooleanSearchTag.matcher.firstMatch(str);
+    return m == null
+        ? null
+        : (BooleanSearchTag.fromTagText(m.group(1)!), m.group(2)! == "true");
+  }
+
+  static (BooleanSearchTag, bool) parseSearchFragment(String str) =>
+      tryParseSearchFragment(str)!;
 }
 
 enum Status with SearchableEnum {
@@ -377,13 +532,54 @@ enum Status with SearchableEnum {
   modqueue,
   any;
 
-  static const prefix = "status:";
+  static const prefix = "status";
+  static const prefixFull = "status:";
+  static const String matcherStr =
+      "($prefixModifierMatcher)$prefixFull(pending|active|deleted|flagged|modqueue|any)";
+  static RegExp get matcher => RegExp(matcherStr);
 
   @override
-  String get searchString => "$prefix$name";
+  String get searchString => "$prefixFull$name";
+  factory Status.fromTagText(String str) => switch (str) {
+        "pending" => pending,
+        "active" => active,
+        "deleted" => deleted,
+        "flagged" => flagged,
+        "modqueue" => modqueue,
+        "any" => any,
+        _ => throw UnsupportedError("type not supported"),
+      };
+  factory Status.fromText(String str) => switch (str) {
+        "${prefixFull}pending" => pending,
+        "${prefixFull}active" => active,
+        "${prefixFull}deleted" => deleted,
+        "${prefixFull}flagged" => flagged,
+        "${prefixFull}modqueue" => modqueue,
+        "${prefixFull}any" => any,
+        _ => Status.fromTagText(str),
+      };
+
+  static List<(Modifier, Status)>? retrieveFromSearchString(String str) {
+    if (!Status.matcher.hasMatch(str)) {
+      return null;
+    }
+    final ms = Status.matcher.allMatches(str);
+    final tags = ms.fold(
+      <(Modifier, Status)>{},
+      (previousValue, e) => previousValue
+        ..add(
+          (
+            Modifier.fromString(e.group(1) ?? ""),
+            Status.fromTagText(e.group(2)!)
+          ),
+        ),
+    );
+    return tags.toList();
+  }
 }
 
 class MetaTagSearchData extends ChangeNotifier {
+  static const defaultRating = Rating.safe;
   bool? _addRating;
 
   /// Tristate; true for additive (""/"+"), false for subtractive ("-"), null to exclude;
@@ -409,17 +605,21 @@ class MetaTagSearchData extends ChangeNotifier {
     notifyListeners();
   }
 
-  Map<FileType, Modifier> _types;
+  MapNotifier<FileType, Modifier> _types;
   Map<FileType, Modifier> get types => _types;
   set types(Map<FileType, Modifier> value) {
-    _types = value;
+    // _types..removeListener(_listener)..dispose();
+    _types.removeListener(_listener);
+    _types = MapNotifier.of(value)..addListener(_listener);
     notifyListeners();
   }
 
-  Map<Status, Modifier> _status;
+  MapNotifier<Status, Modifier> _status;
   Map<Status, Modifier> get status => _status;
   set status(Map<Status, Modifier> value) {
-    _status = value;
+    // _status..removeListener(_listener)..dispose();
+    _status.removeListener(_listener);
+    _status = MapNotifier.of(value)..addListener(_listener);
     notifyListeners();
   }
 
@@ -482,7 +682,7 @@ class MetaTagSearchData extends ChangeNotifier {
   MetaTagSearchData({
     Order? order,
     bool? addRating,
-    Rating rating = Rating.safe,
+    Rating rating = defaultRating,
     bool? isChild,
     bool? isParent,
     bool? pendingReplacements,
@@ -504,8 +704,15 @@ class MetaTagSearchData extends ChangeNotifier {
         _ratingLocked = ratingLocked,
         _noteLocked = noteLocked,
         _inPool = inPool,
-        _status = status ?? {},
-        _types = types ?? {};
+        _types = types is MapNotifier<FileType, Modifier>
+            ? types
+            : MapNotifier<FileType, Modifier>.of(types ?? {}),
+        _status = status is MapNotifier<Status, Modifier>
+            ? status
+            : MapNotifier<Status, Modifier>.of(status ?? {}) {
+    _types.addListener(_listener);
+    _status.addListener(_listener);
+  }
   MetaTagSearchData.req({
     required Order? order,
     required bool? addRating,
@@ -523,8 +730,12 @@ class MetaTagSearchData extends ChangeNotifier {
   })  : _addRating = addRating,
         _rating = rating,
         _order = order,
-        _types = types,
-        _status = status,
+        _types = types is MapNotifier<FileType, Modifier>
+            ? types
+            : MapNotifier<FileType, Modifier>.from(types),
+        _status = status is MapNotifier<Status, Modifier>
+            ? status
+            : MapNotifier<Status, Modifier>.from(status),
         _isChild = isChild,
         _isParent = isParent,
         _pendingReplacements = pendingReplacements,
@@ -532,7 +743,11 @@ class MetaTagSearchData extends ChangeNotifier {
         _hasDescription = hasDescription,
         _ratingLocked = ratingLocked,
         _noteLocked = noteLocked,
-        _inPool = inPool;
+        _inPool = inPool {
+    _types.addListener(_listener);
+    _status.addListener(_listener);
+  }
+  void _listener() => notifyListeners();
   static Order? retrieveOrderFromSearchString(String str) {
     try {
       return Order.fromTagText(
@@ -543,27 +758,75 @@ class MetaTagSearchData extends ChangeNotifier {
   }
 
   factory MetaTagSearchData.fromSearchString(String str) {
-    throw UnimplementedError(
-        "MetaTagSearchData.fromSearchString not implemented");
-    // return MetaTagSearchData.req(
-    //   order: Order.retrieveOrderFromSearchString(str),
-    //   addRating: ,
-    //   rating: ,
-    //   isChild: ,
-    //   isParent: ,
-    //   pendingReplacements: ,
-    //   hasSource: ,
-    //   hasDescription: ,
-    //   ratingLocked: ,
-    //   noteLocked: ,
-    //   inPool: ,
-    //   addedTypes: ,
-    //   removedTypes: ,
-    //   orTypes: ,
-    //   addedStatus: ,
-    //   removedStatus: ,
-    //   orStatus: ,
-    // );
+    // throw UnimplementedError(
+    //     "MetaTagSearchData.fromSearchString not implemented");
+    final r = Rating.retrieveRatingFromSearchString(str);
+    final b = BooleanSearchTag.retrieveFromSearchString(str);
+    bool? isChild,
+        isParent,
+        pendingReplacements,
+        hasSource,
+        hasDescription,
+        ratingLocked,
+        noteLocked,
+        inPool;
+    for (final e in b ?? const <(BooleanSearchTag, bool)>[]) {
+      switch (e.$1) {
+        case BooleanSearchTag.isChild:
+          isChild = e.$2;
+          break;
+        case BooleanSearchTag.isParent:
+          isParent = e.$2;
+          break;
+        case BooleanSearchTag.inPool:
+          inPool = e.$2;
+          break;
+        case BooleanSearchTag.hasDescription:
+          hasDescription = e.$2;
+          break;
+        case BooleanSearchTag.hasSource:
+          hasSource = e.$2;
+          break;
+        case BooleanSearchTag.noteLocked:
+          noteLocked = e.$2;
+          break;
+        case BooleanSearchTag.pendingReplacements:
+          pendingReplacements = e.$2;
+          break;
+        case BooleanSearchTag.ratingLocked:
+          ratingLocked = e.$2;
+          break;
+      }
+    }
+    return MetaTagSearchData.req(
+      order: Order.retrieveOrderFromSearchString(str),
+      addRating: r?.$1 == Modifier.add
+          ? true
+          : r?.$1 == Modifier.remove
+              ? false
+              : null,
+      rating: Rating.retrieveRatingFromSearchString(str)?.$2 ?? defaultRating,
+      isChild: isChild,
+      isParent: isParent,
+      pendingReplacements: pendingReplacements,
+      hasSource: hasSource,
+      hasDescription: hasDescription,
+      ratingLocked: ratingLocked,
+      noteLocked: noteLocked,
+      inPool: inPool,
+      status: Status.retrieveFromSearchString(str)
+              ?.fold<Map<Status, Modifier>>({}, (prior, e) {
+            prior[e.$2] = e.$1;
+            return prior;
+          }) ??
+          {},
+      types: FileType.retrieveFromSearchString(str)
+              ?.fold<Map<FileType, Modifier>>({}, (prior, e) {
+            prior[e.$2] = e.$1;
+            return prior;
+          }) ??
+          {},
+    );
   }
   bool? getBooleanParameter(BooleanSearchTag t) => switch (t) {
         BooleanSearchTag.isChild => isChild,
@@ -585,6 +848,35 @@ class MetaTagSearchData extends ChangeNotifier {
         BooleanSearchTag.inPool => inPool = value,
         BooleanSearchTag.pendingReplacements => pendingReplacements = value
       };
+
+  void clear() {
+    _addRating = null;
+    _order = null;
+    _types
+      ..removeListener(_listener)
+      ..clear()
+      ..addListener(_listener);
+    _status
+      ..removeListener(_listener)
+      ..clear()
+      ..addListener(_listener);
+    _isChild = null;
+    _isParent = null;
+    _pendingReplacements = null;
+    _hasSource = null;
+    _hasDescription = null;
+    _ratingLocked = null;
+    _noteLocked = null;
+    _inPool = null;
+
+    notifyListeners();
+  }
+
+  /// The same as [clear] but also resetting [ratings] to [defaultRating].
+  void reset() {
+    _rating = defaultRating;
+    clear();
+  }
 
   // #region toString Properties
   String get typeString => types.keys.fold(
@@ -626,7 +918,7 @@ class MetaTagSearchData extends ChangeNotifier {
   String get inPoolString =>
       inPool == null ? "" : " ${BooleanSearchTag.inPool.toSearchTag(inPool!)}";
   // #endregion toString Properties
-  
+
   @override
   String toString() =>
       orderString +

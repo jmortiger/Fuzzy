@@ -12,11 +12,8 @@ import 'package:fuzzy/log_management.dart' as lm;
 
 import '../web/e621/e621_access_data.dart';
 
-// #region Logger
-lm.FileLogger get logger => lRecord.logger;
 // ignore: unnecessary_late
-late final lRecord = lm.generateLogger("SearchViewModel");
-// #endregion Logger
+late final _logger = lm.generateLogger("SearchViewModel").logger;
 
 class SearchViewModel extends ChangeNotifier {
   bool toggleSendAuthHeaders() {
@@ -24,7 +21,7 @@ class SearchViewModel extends ChangeNotifier {
     notifyListeners();
     if (E621AccessData.useLoginData && E621AccessData.fallback == null) {
       E621AccessData.devAccessData.getItemAsync().then(
-            (v) => logger.fine("Dev e621 Auth Loaded"),
+            (v) => _logger.fine("Dev e621 Auth Loaded"),
           );
     }
     return E621AccessData.useLoginData;
@@ -181,19 +178,23 @@ class SearchData {
         .posts
         .first
         .id; */
-    var lastF = e6.sendRequest(E621.initSearchForLastPostRequest(
-          tags: tags,
-          apiKey: apiKey,
-          username: username,
-        )).then(
-            (v1) => E6PostsSync.fromJson(jsonDecode(v1.body)).posts.last.id),
-        firstF = e6.sendRequest(E621.initSearchRequest(
-          limit: 1,
-          tags: tags,
-          apiKey: apiKey,
-          username: username,
-        )).then(
-            (v1) => E6PostsSync.fromJson(jsonDecode(v1.body)).posts.first.id);
+    var lastF = e6
+            .sendRequest(E621.initSearchForLastPostRequest(
+              tags: tags,
+              apiKey: apiKey,
+              username: username,
+            ))
+            .then((v1) =>
+                E6PostsSync.fromJson(jsonDecode(v1.body)).posts.last.id),
+        firstF = e6
+            .sendRequest(E621.initSearchRequest(
+              limit: 1,
+              tags: tags,
+              apiKey: apiKey,
+              username: username,
+            ))
+            .then((v1) =>
+                E6PostsSync.fromJson(jsonDecode(v1.body)).posts.first.id);
     return SearchData(
         idRange: (largest: await firstF, smallest: await lastF),
         term: tags,

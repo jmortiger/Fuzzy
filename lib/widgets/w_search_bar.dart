@@ -132,6 +132,20 @@ class _WSearchBarState extends State<WSearchBar> {
                     SubmenuButton(
                       menuChildren: [
                         MenuItemButton(
+                          leadingIcon: const Icon(Icons.close),
+                          onPressed: () => /* this. */setState(() {
+                            searchController.text = currentText = "";
+                          }),
+                          child: const Text("Clear text"),
+                        ),
+                        MenuItemButton(
+                          leadingIcon: const Icon(Icons.close),
+                          onPressed: () => setState(() {
+                            mts.clear();
+                          }),
+                          child: const Text("Clear metatags"),
+                        ),
+                        MenuItemButton(
                           leadingIcon: Checkbox(
                             value: showMetaTags,
                             onChanged: (value) => value != null
@@ -230,8 +244,19 @@ class _WSearchBarState extends State<WSearchBar> {
 
   static const _previewLength = 15;
   Widget buildAdvancedSearchMenuBar() {
+    final ms = WidgetStatePropertyAll<Size?>(Size(
+        0,
+        Theme.of(context)
+                .menuBarTheme
+                .style
+                ?.minimumSize
+                ?.resolve({})?.height ??
+            0));
     return StatefulBuilder(
       builder: (context, setState) => MenuBar(
+        style:
+            Theme.of(context).menuBarTheme.style?.copyWith(minimumSize: ms) ??
+                MenuStyle(minimumSize: ms),
         children: [
           SelectorNotifier(
             builder: (context, v, child) {
@@ -375,7 +400,7 @@ class _WSearchBarState extends State<WSearchBar> {
                 (e) => buildTristateBool(e),
               ),
             ],
-            child: const Text("Advanced..."),
+            child: const Text("..."),
           ),
         ],
       ),
