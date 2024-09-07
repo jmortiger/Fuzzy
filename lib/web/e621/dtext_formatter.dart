@@ -111,6 +111,8 @@ enum DTextMatchers {
   italics(r"\[i\](.*?)\[/i\]", TextStyle(fontStyle: FontStyle.italic)),
   strikeThrough(
       r"\[s\](.*?)\[/s\]", TextStyle(decoration: TextDecoration.lineThrough)),
+  underline(
+      r"\[u\](.*?)\[/u\]", TextStyle(decoration: TextDecoration.underline)),
   spoiler(r"\[spoiler\](.*?)\[/spoiler\]", TextStyle(color: Colors.grey)),
   // superscript(r"\[sup\](.*?)\[/sup\]", TextStyle()),
   // subscript(r"\[sub\](.*?)\[/sub\]", TextStyle()),
@@ -123,6 +125,12 @@ enum DTextMatchers {
       )),
   code(
       r"\[code\](.*?)\[/code\]",
+      TextStyle(
+        fontFamily: "Consolas",
+        fontFamilyFallback: ["Courier New", "monospace"],
+      )),
+  codeInline(
+      r"`(.*?)`",
       TextStyle(
         fontFamily: "Consolas",
         fontFamilyFallback: ["Courier New", "monospace"],

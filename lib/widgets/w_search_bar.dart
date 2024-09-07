@@ -1,11 +1,11 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/util/tag_db_import.dart' as dbi;
+import 'package:fuzzy/util/string_comparator.dart' as str_util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
@@ -13,8 +13,6 @@ import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/web/e621/search_helper.dart' as sh;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
-
-import '../util/string_comparator.dart' as str_util;
 
 class WSearchBar extends StatefulWidget {
   // #region Logger
@@ -39,14 +37,11 @@ class WSearchBar extends StatefulWidget {
 class _WSearchBarState extends State<WSearchBar> {
   // #region Static Members
   static const whitespaceCharacters = r'\u2028\n\r\u000B\f\u2029\u0085 	';
-  static const tagModifiers = ['+', '~', '-'];
-  static const tagModifiersString = '+~-';
   static const tagModifiersRegexString = r'\+\~\-';
   static const noOutputStyle = TextStyle(
-    // decoration: TextDecoration.lineThrough,
     color: Colors.white38,
+    // decoration: TextDecoration.lineThrough,
   );
-
   static lm.FileLogger get logger => WSearchBar.logger;
   // #endregion Static Members
 
@@ -56,10 +51,21 @@ class _WSearchBarState extends State<WSearchBar> {
   bool showPriorSearches = true;
   bool showFavTags = true;
   sh.MetaTagSearchData mts = sh.MetaTagSearchData(status: {});
-  sh.Rating get searchRating => mts.rating;
-  set searchRating(sh.Rating value) => mts.rating = value;
-  bool? get doAddRating => mts.addRating;
-  set doAddRating(bool? v) => mts.addRating = v;
+  String currentText = "";
+  late SearchController searchController;
+  // #endregion Instance Fields
+
+  // #region Properties
+  bool get allSuggestionSourcesEmpty =>
+      (dbi.DO_NOT_USE_TAG_DB || dbi.tagDbLazy.$Safe == null) &&
+      (AppSettings.i?.favoriteTags.isEmpty ?? true) &&
+      !SavedDataE6.isInit &&
+      CachedSearches.searches.isEmpty;
+  TagDB? get retrieveTagDB =>
+      !dbi.DO_NOT_USE_TAG_DB ? dbi.tagDbLazy.$Safe : null;
+  // #endregion Properties
+
+  // #region Tristate management
   bool? convertTristateForCheckbox(bool? value) => switch (value) {
         true => true,
         null => false,
@@ -75,24 +81,7 @@ class _WSearchBarState extends State<WSearchBar> {
         null => false,
         false => true,
       };
-  String currentText = "";
-  late SearchController searchController;
-  // #endregion Instance Fields
-
-  // #region Properties
-  bool get allSuggestionSourcesEmpty =>
-      (dbi.DO_NOT_USE_TAG_DB || dbi.tagDbLazy.$Safe == null) &&
-      (AppSettings.i?.favoriteTags.isEmpty ?? true) &&
-      !SavedDataE6.isInit &&
-      CachedSearches.searches.isEmpty;
-  TagDB? get retrieveTagDB =>
-      !dbi.DO_NOT_USE_TAG_DB ? dbi.tagDbLazy.$Safe : null;
-  ManagedPostCollectionSync get sc =>
-      Provider.of<ManagedPostCollectionSync>(context, listen: false);
-  ManagedPostCollectionSync get scWatch =>
-      Provider.of<ManagedPostCollectionSync>(context, listen: true);
-
-  // #endregion Properties
+  // #endregion Tristate management
 
   // TODO: Just launch tag search requests for autocomplete, wrap in a class
   @override
@@ -133,7 +122,7 @@ class _WSearchBarState extends State<WSearchBar> {
                       menuChildren: [
                         MenuItemButton(
                           leadingIcon: const Icon(Icons.close),
-                          onPressed: () => /* this. */setState(() {
+                          onPressed: () => /* this. */ setState(() {
                             searchController.text = currentText = "";
                           }),
                           child: const Text("Clear text"),
@@ -232,8 +221,6 @@ class _WSearchBarState extends State<WSearchBar> {
   }
 
   (String title, String subtitle) genTitleAndSubtitleFromString(String e) {
-    // const ws = r'[\u2028\n\r\u000B\f\u2029\u0085 	]';
-    // final wsRe = RegExp(ws);
     final wsRe = RegExp(RegExpExt.whitespaceCharacters);
     logger.finest("e = $e Length: ${e.length}");
     e = e.trim();
@@ -294,35 +281,35 @@ class _WSearchBarState extends State<WSearchBar> {
             menuChildren: [
               SubmenuButton(
                 leadingIcon: Checkbox(
-                  value: convertTristateForCheckbox(doAddRating),
+                  value: convertTristateForCheckbox(mts.addRating),
                   onChanged: (bool? v) => setState(() {
-                    doAddRating = convertTristateForCheckbox(v);
+                    mts.addRating = convertTristateForCheckbox(v);
                   }),
                   tristate: true,
                 ),
                 menuChildren: [
                   MenuItemButton(
                     onPressed: () => setState(() {
-                      searchRating = sh.Rating.safe;
+                      mts.rating = sh.Rating.safe;
                     }),
                     child: const Text("Safe"),
                   ),
                   MenuItemButton(
                     onPressed: () => setState(() {
-                      searchRating = sh.Rating.questionable;
+                      mts.rating = sh.Rating.questionable;
                     }),
                     child: const Text("Questionable"),
                   ),
                   MenuItemButton(
                     onPressed: () => setState(() {
-                      searchRating = sh.Rating.explicit;
+                      mts.rating = sh.Rating.explicit;
                     }),
                     child: const Text("Explicit"),
                   ),
                 ],
                 child: Text(
-                  "${doAddRating == false ? "-" : ""}${searchRating.searchStringShort}",
-                  style: doAddRating == null ? noOutputStyle : null,
+                  "${mts.addRating == false ? "-" : ""}${mts.rating.searchStringShort}",
+                  style: mts.addRating == null ? noOutputStyle : null,
                 ),
               ),
               SubmenuButton(
@@ -421,9 +408,7 @@ class _WSearchBarState extends State<WSearchBar> {
         onPressed: () => setState(() {
           mts.setBooleanParameter(
             tag,
-            cycleTristateConverted(
-              mts.getBooleanParameter(tag),
-            ),
+            cycleTristateConverted(mts.getBooleanParameter(tag)),
           );
         }),
         child: Text(
@@ -439,7 +424,7 @@ class _WSearchBarState extends State<WSearchBar> {
     // logger.info(
     //     "X: ${util.calculateTextSize(text: "X", style: DefaultTextStyle.of(context).style).width}\n~: ${util.calculateTextSize(text: "~", style: DefaultTextStyle.of(context).style).width}\n+: ${util.calculateTextSize(text: "+", style: DefaultTextStyle.of(context).style).width}\n-: ${util.calculateTextSize(text: "-", style: DefaultTextStyle.of(context).style).width}");
     const double padding = 12 + 12 + /* 4+4+ */ 40;
-    const double allegedWidth = 9.8;
+    // const double allegedWidth = 9.8;
     return MenuItemButton(
       leadingIcon: DropdownMenu(
         dropdownMenuEntries: sh.Modifier.dropdownEntriesFull,
@@ -477,9 +462,7 @@ class _WSearchBarState extends State<WSearchBar> {
     logger.finer("lastTermIndex: $lastTermIndex");
     logger.finer("currSubString: $currSubString");
     logger.finer("currPrefix: $currPrefix");
-    if (allSuggestionSourcesEmpty /*  || currText.isEmpty */) {
-      return const Iterable<ListTile>.empty();
-    }
+    if (allSuggestionSourcesEmpty) return const Iterable<ListTile>.empty();
     final comp = str_util.getFineInverseSimilarityComparator(currFullText);
     var db = retrieveTagDB;
     if (db == null) {
@@ -502,11 +485,9 @@ class _WSearchBarState extends State<WSearchBar> {
         if (CachedSearches.searches.isNotEmpty && showPriorSearches)
           ...(() {
             var relatedSearches = CachedSearches.searches
-                .where(
-                  (element) =>
-                      !currFullText.contains(element.searchString) &&
-                      element.searchString.contains(currFullText),
-                )
+                .where((e) =>
+                    !currFullText.contains(e.searchString) &&
+                    e.searchString.contains(currFullText))
                 .toList();
             if (currFullText.isNotEmpty) {
               relatedSearches
@@ -592,9 +573,9 @@ class _WSearchBarState extends State<WSearchBar> {
 
   Iterable<String> generateSortedOptions(String currentTextValue) {
     final currText = currentTextValue;
-    // var lastTermIndex = currText.lastIndexOf(RegExpExt.whitespace);
-    var lastTermIndex = currText
-        .lastIndexOf(RegExp('[$whitespaceCharacters$tagModifiersRegexString]'));
+    var lastTermIndex = currText.lastIndexOf(
+      RegExp('[$whitespaceCharacters$tagModifiersRegexString]'),
+    );
     lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
     final currSubString = currText.substring(lastTermIndex);
     final currPrefix = currText.substring(0, lastTermIndex);
@@ -756,44 +737,13 @@ class _WSearchBarState extends State<WSearchBar> {
       currentText = s;
     });
     sbcCloseAndUnfocus();
-    _sendSearchAndUpdateState(
+    Provider.of<ManagedPostCollectionSync>(context, listen: false).parameters =
+        PostSearchQueryRecord(
       limit: SearchView.i.postsPerPage,
-      pageNumber: 1,
+      page: "1",
       tags: "$s${mts.toString()}",
     );
     widget.onSelected?.call();
-    // sc.parameters = PostSearchQueryRecord.withIndex(
-    //   limit: SearchView.i.postsPerPage,
-    //   tags: s,
-    //   pageIndex: 0,
-    // );
   }
   // #endregion Search Bar Callbacks
-
-  /// Call inside of setState
-  void _sendSearchAndUpdateState({
-    String tags = "",
-    int? limit,
-    String? pageModifier,
-    int? postId,
-    int? pageNumber,
-  }) =>
-      Provider.of<ManagedPostCollectionSync>(context, listen: false)
-          .parameters = PostSearchQueryRecord(
-        tags: tags,
-        limit: limit ?? -1,
-        page: encodePageParameterFromOptions(
-              pageModifier: pageModifier,
-              id: postId,
-              pageNumber: pageNumber,
-            ) ??
-            "1",
-      );
-}
-
-enum SuggestionType {
-  favoriteTag,
-  metaTag,
-  savedSearch,
-  cachedSearch,
 }
