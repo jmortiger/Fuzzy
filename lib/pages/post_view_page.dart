@@ -16,6 +16,7 @@ import 'package:fuzzy/web/e621/dtext_formatter.dart' as dt;
 import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
+import 'package:fuzzy/widgets/w_back_button.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
@@ -421,36 +422,39 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => FutureBuilder(
+                builder: (_) => FutureBuilder(
                   future: E621
                       .sendRequest(e621.initSearchPostRequest(e))
                       .toResponse()
                       .then((v) => jsonDecode(v.body)),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      return ErrorPage.errorWidgetWrapper(() {
-                        final accessor =
-                            snapshot.data["post"] != null ? "post" : "posts";
-                        return PostViewPage(
-                          postListing: E6PostResponse.fromJson(
-                            snapshot.data[accessor],
-                          ),
-                          onPop: widget.onPop,
-                          selectedPosts: widget.selectedPosts,
-                          onAddToSearch: widget.onAddToSearch,
-                        );
-                      }, logger: PostViewPage.logger)
-                          .value;
-                    } else if (snapshot.hasError) {
-                      return ErrorPage.logError(
-                        error: snapshot.error,
-                        stackTrace: snapshot.stackTrace,
-                        logger: PostViewPage.logger,
-                        message: "Failed: ${snapshot.data}",
-                      );
-                    } else {
-                      return util.fullPageSpinner;
-                    }
+                  builder: (_, snapshot) {
+                    return snapshot.hasData
+                        ? ErrorPage.errorWidgetWrapper(() {
+                            final accessor = snapshot.data["post"] != null
+                                ? "post"
+                                : "posts";
+                            return WarnPage.withChild(
+                                p: E6PostResponse.fromJson(
+                                  snapshot.data[accessor],
+                                ),
+                                child: PostViewPage(
+                                  postListing: E6PostResponse.fromJson(
+                                    snapshot.data[accessor],
+                                  ),
+                                  onPop: widget.onPop,
+                                  selectedPosts: widget.selectedPosts,
+                                  onAddToSearch: widget.onAddToSearch,
+                                ));
+                          }, logger: PostViewPage.logger)
+                            .value
+                        : snapshot.hasError
+                            ? ErrorPage.logError(
+                                error: snapshot.error,
+                                stackTrace: snapshot.stackTrace,
+                                logger: PostViewPage.logger,
+                                message: "Failed: ${snapshot.data}",
+                              )
+                            : util.fullPageSpinner;
                   },
                 ),
               ),
@@ -495,64 +499,6 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
         child: InkWell(onTap: toggleFullscreen),
       ),
     );
-  }
-
-  @widgetFactory
-  Widget _buildMainContentLegacy(
-    final String url,
-    final int w,
-    final int h,
-    final BuildContext ctx, {
-    double? screenWidth,
-  }) {
-    if (widget.postListing.file.isAVideo) {
-      return ErrorPage.errorWidgetWrapper(
-        () => WVideoPlayerScreen(
-            resourceUri: Uri.tryParse(url) ?? widget.postListing.file.address),
-        logger: logger,
-      ).value;
-    } else {
-      return Stack(
-        children: [
-          Positioned.fill(
-              child: _buildImageContent(
-            url: url,
-            w: w,
-            h: h,
-            screenWidth: screenWidth,
-          )),
-          Positioned.fill(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                  builder: (context) {
-                    return Scaffold(
-                      body: Stack(
-                        children: [
-                          Positioned.fill(
-                            child: InteractiveViewer(
-                              child: _buildImageContent(
-                                url: url,
-                                w: w,
-                                h: h,
-                                fit: BoxFit.contain,
-                                screenWidth: screenWidth,
-                              ),
-                            ),
-                          ),
-                          const WPostViewBackButton(),
-                        ],
-                      ),
-                    );
-                  },
-                )),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
   }
 
   static const progressiveImageBlur = 10.0;
@@ -957,16 +903,19 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                                       f = null;
                                     });
                                   }).ignore();
-                                  return Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (f != null)
-                                        util.spinnerExpanded
-                                      else
-                                        result != null
-                                            ? Text.rich(dt.parse(result!.body))
-                                            : const Text("Failed to load"),
-                                    ],
+                                  return SingleChildScrollView(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (f != null)
+                                          // util.spinnerExpanded
+                                          const CircularProgressIndicator()
+                                        else
+                                          result != null
+                                              ? Text.rich(dt.parse(result!.body))
+                                              : const Text("Failed to load"),
+                                      ],
+                                    ),
                                   );
                                 })));
                       },
@@ -1116,5 +1065,148 @@ class PostViewPageLoader extends StatelessWidget
         }
       },
     );
+  }
+}
+
+void warnIfBlacklistedWithPage({
+  required E6PostResponse p,
+  required VoidFunction onSuccess,
+  VoidFunction? onCancel,
+  required BuildContext context,
+}) {
+  final intersect =
+      p.tagList.toSet().intersection(AppSettings.i!.blacklistedTagsAll);
+  if (intersect.isNotEmpty) {
+    showDialog(
+      context: context,
+      useSafeArea: true,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: SizedBox.shrink(
+          child: Text(
+              "This post has the following blacklisted tags:${intersect.fold("", (p, e) => "$p\n\t$e")}\nDo you want to proceed?"),
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            label: const Text("Yes"),
+            icon: const Icon(Icons.close),
+          ),
+          TextButton.icon(
+            onPressed: () => Navigator.pop(context, false),
+            label: const Text("Yes"),
+            icon: const Icon(Icons.close),
+          )
+        ],
+      ),
+    ).then((v) => v == true ? onSuccess() : onCancel?.call());
+  } else {
+    onSuccess();
+  }
+}
+
+class WarnPage extends StatefulWidget {
+  final E6PostResponse p;
+  final Widget? child;
+  final void Function(BuildContext)? onSuccess;
+  final void Function(BuildContext) onCancel;
+  const WarnPage.withChild({
+    super.key,
+    required this.p,
+    required Widget this.child,
+    this.onSuccess,
+    this.onCancel = _defaultOnCancel,
+  });
+  const WarnPage.callback({
+    super.key,
+    required this.p,
+    this.child,
+    required void Function(BuildContext) this.onSuccess,
+    this.onCancel = _defaultOnCancel,
+  });
+  static _defaultOnCancel(BuildContext context) => Navigator.pop(context);
+
+  @override
+  State<WarnPage> createState() => _WarnPageState();
+}
+
+class _WarnPageState extends State<WarnPage> {
+  bool continued = false;
+  bool launchedDialog = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final intersect = widget.p.tagList
+        .toSet()
+        .intersection(AppSettings.i!.blacklistedTagsAll);
+    if (intersect.isEmpty) {
+      continued = true;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((Duration d) {
+      if (continued) {
+        if (!launchedDialog) {
+          launchedDialog = true;
+          widget.onSuccess?.call(context);
+        }
+      }
+      if (!launchedDialog) {
+        final intersect = widget.p.tagList
+            .toSet()
+            .intersection(AppSettings.i!.blacklistedTagsAll);
+        if (intersect.isNotEmpty) {
+          showDialog(
+            context: context,
+            useSafeArea: true,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              content: /* SizedBox.shrink(
+                child:  */
+                  Text(
+                      "This post has the following blacklisted tags:${intersect.fold("", (p, e) => "$p\n\t$e")}\nDo you want to proceed?"),
+              // ),
+              actions: [
+                TextButton.icon(
+                  onPressed: () => Navigator.pop(context, true),
+                  label: const Text("Yes"),
+                  icon: const Icon(Icons.check),
+                ),
+                TextButton.icon(
+                  onPressed: () => Navigator.pop(context, false),
+                  label: const Text("No"),
+                  icon: const Icon(Icons.close),
+                )
+              ],
+            ),
+          ).then((v) {
+            if (v != null) {
+              setState(() {
+                continued = v;
+              });
+            }
+            v == true
+                ? widget.onSuccess?.call(context)
+                : widget.onCancel.call(context);
+          });
+          // setState(() {
+          launchedDialog = true;
+          // });
+        } else {
+          setState(() {
+            continued = launchedDialog = true;
+          });
+          widget.onSuccess?.call(context);
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return continued
+        ? widget.child != null
+            ? widget.child!
+            : const WBackButton()
+        : const SizedBox.expand();
   }
 }

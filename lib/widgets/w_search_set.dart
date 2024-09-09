@@ -246,7 +246,7 @@ class _WSearchSetState extends State<WSearchSet> {
                     WIntegerField(
                       name: "Page Number",
                       getVal: () => p.pageNumber ?? 50,
-                      setVal: (v) => p.page = v.toString(),
+                      setVal: (v) => p.pageNumber = v,
                       validateVal: (p1) => p1 != null && p1 > 0,
                     ),
                     TextButton(
@@ -581,6 +581,13 @@ class SetSearchParameterModel with PageSearchParameterNullable {
 
   @override
   String? page;
+
+  set pageNumber(int? value) {
+    // if (isValidPage(value?.toString() ?? "1")) {
+    //   page = value?.toString();
+    // }
+    page = value?.toString();
+  }
 }
 
 class SetSearchParameterNotifier extends ChangeNotifier
@@ -662,6 +669,15 @@ class SetSearchParameterNotifier extends ChangeNotifier
   @override
   set page(String? value) {
     _page = value;
+    notifyListeners();
+  }
+
+  set pageNumber(int? value) {
+    // if (isValidPage(value?.toString() ?? "1")) {
+    //   _page = value?.toString();
+    //   notifyListeners();
+    // }
+    _page = value?.toString();
     notifyListeners();
   }
 }

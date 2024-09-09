@@ -560,20 +560,6 @@ enum PostInfoPaneItem {
                 ))
             : const TextSpan(),
       };
-  // static Iterable<InlineSpan> getMyTextSpans(
-  //     E6PostResponse e6Post, Iterable<PostInfoPaneItem> items) {
-  //   var children = <InlineSpan>[];
-  //   // var ret = TextSpan(text: " ", child);
-  //   var length = 0;
-  //   for (var e in items.map((e) => e.getMyTextSpan(e6Post))) {
-  //     length += e.toPlainText().length;
-  //     children.add(e);
-  //     if (length >= SearchView.i.maxCharsInPostInfo) {
-  //       return children..add(const TextSpan(text: "..."));
-  //     }
-  //   }
-  //   return children;
-  // }
 }
 
 /// Determines the appropriate rendered dimensions, cached true resolution

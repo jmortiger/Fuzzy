@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:j_util/e621.dart' show TagCategory;
@@ -42,8 +43,8 @@ class AppSettingsRecord {
     },
     forceSafe: false,
     autoLoadUserProfile: false,
-    applyProfileBlacklist: false,
-    applyProfileFavTags: false,
+    applyProfileBlacklist: true,
+    applyProfileFavTags: true,
     maxSearchesToSave: 200,
   );
   factory AppSettingsRecord.fromJson(JsonOut json) => AppSettingsRecord(
@@ -67,8 +68,8 @@ class AppSettingsRecord {
             json["maxSearchesToSave"] ?? defaultSettings.maxSearchesToSave,
       );
   JsonOut toJson() => {
-        "postView": postView,
-        "searchView": searchView,
+        "postView": postView.toJson(),
+        "searchView": searchView.toJson(),
         "favoriteTags": favoriteTags.toList(),
         "blacklistedTags": blacklistedTags.toList(),
         "forceSafe": forceSafe,
@@ -106,8 +107,8 @@ class AppSettings implements AppSettingsRecord {
           );
   }
 
-  static Future<AppSettings> loadInstanceFromFile() => loadSettingsFromFile()
-    ..then((value) => e621.useNsfw = !value.forceSafe);
+  static Future<AppSettings> loadInstanceFromFile() =>
+      loadSettingsFromFile()..then((value) => e621.useNsfw = !value.forceSafe);
 
   Future<AppSettings> loadFromFile() async {
     return switch (Platform.getPlatform()) {
@@ -217,10 +218,22 @@ class AppSettings implements AppSettingsRecord {
   @override
   Set<String> get favoriteTags => _favoriteTags;
   set favoriteTags(Set<String> value) => _favoriteTags = value;
+  Set<String> get favoriteTagsAll => applyProfileFavTags &&
+          E621.loggedInUser.isAssigned &&
+          E621.loggedInUser.$.favoriteTags.isNotEmpty
+      ? (_favoriteTags
+        ..addAll(E621.loggedInUser.$.favoriteTags.split(RegExp(r"\s"))))
+      : _favoriteTags;
   Set<String> _blacklistedTags;
   @override
   Set<String> get blacklistedTags => _blacklistedTags;
   set blacklistedTags(Set<String> value) => _blacklistedTags = value;
+  Set<String> get blacklistedTagsAll => applyProfileBlacklist &&
+          E621.loggedInUser.isAssigned &&
+          E621.loggedInUser.$.blacklistedTags.isNotEmpty
+      ? (_blacklistedTags
+        ..addAll(E621.loggedInUser.$.blacklistedTags.split(RegExp(r"\s"))))
+      : _blacklistedTags;
   bool _forceSafe;
   @override
   bool get forceSafe => _forceSafe;
@@ -364,8 +377,8 @@ class PostViewData {
         "showTimeLeft": showTimeLeft,
         "startWithTagsExpanded": startWithTagsExpanded,
         "startWithDescriptionExpanded": startWithDescriptionExpanded,
-        "imageQuality": imageQuality,
-        "videoQuality": videoQuality,
+        "imageQuality": imageQuality.name,
+        "videoQuality": videoQuality.name,
         "useProgressiveImages": useProgressiveImages,
         "imageFilterQuality": imageFilterQuality.name,
       };

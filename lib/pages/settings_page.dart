@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
@@ -245,15 +246,13 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               validateVal: (num? val) => (val?.toInt() ?? -1) >= 0,
               defaultValue: AppSettingsRecord.defaultSettings.maxSearchesToSave,
               // divisions: 500,
-              useIncrementalButtons: true,
+              increment: 1,
+              incrementMultiplier: 10,
             ),
           ],
         ),
         ExpansionTile(
-            title: Text(
-              "Search View Settings",
-              style: SettingsPage.titleStyle,
-            ),
+            title: Text("Search View Settings", style: SettingsPage.titleStyle),
             children: [
               WNumSliderField<int>(
                 min: SearchViewData.postsPerRowBounds.min,
@@ -265,7 +264,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                 defaultValue: SearchViewData.defaultData.postsPerRow,
                 divisions: SearchViewData.postsPerRowBounds.max -
                     SearchViewData.postsPerRowBounds.min,
-                useIncrementalButtons: true,
+                increment: 1,
               ),
               // WIntegerSliderField(
               //   min: SearchViewData.postsPerRowBounds.min,
@@ -289,7 +288,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                 max: SearchViewData.postsPerPageBounds.max,
                 getVal: () => SearchView.i.postsPerPage,
                 name: "Posts per page",
-                setVal: (num val) => SearchView.i.postsPerPage = val.toInt(),
+                setVal: (num val) => SearchView.i.postsPerPage = val.round(),
                 validateVal: (num? val) {
                   final v = (val?.round() ?? -1);
                   return v >= SearchViewData.postsPerPageBounds.min &&
@@ -298,7 +297,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                 defaultValue: SearchViewData.defaultData.postsPerPage,
                 divisions: SearchViewData.postsPerPageBounds.max -
                     SearchViewData.postsPerPageBounds.min,
-                useIncrementalButtons: true,
+                increment: 1,
               ),
               // WIntegerField(
               //   getVal: () => SearchView.i.postsPerPage,
@@ -324,7 +323,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                 defaultValue: SearchViewData.defaultData.widthToHeightRatio,
                 // divisions: ((SearchViewData.widthToHeightRatioBounds.max -
                 //     SearchViewData.widthToHeightRatioBounds.min)*100).round(),
-                useIncrementalButtons: true,
+                increment: .01,
               ),
               // WIntegerField(
               //   getVal: () => (SearchView.i.widthToHeightRatio * 100).toInt(),
@@ -361,14 +360,30 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                     "Load a low-quality preview before loading the main image?",
                 setVal: (bool val) => SearchView.i.useProgressiveImages = val,
               ),
-              WIntegerField(
+              // WIntegerField(
+              //   getVal: () => SearchView.i.numSavedSearchesInSearchBar,
+              //   name: "# of prior searches in search bar",
+              //   subtitle: "Limits the # of prior searches in the search "
+              //       "bar's suggestions to prevent it from clogging results",
+              //   setVal: (int val) =>
+              //       SearchView.i.numSavedSearchesInSearchBar = val,
+              //   validateVal: (int? val) => (val ?? -1) >= 0,
+              // ),
+              WNumSliderField<int>(
+                min: 0,
+                max: 20,
                 getVal: () => SearchView.i.numSavedSearchesInSearchBar,
                 name: "# of prior searches in search bar",
                 subtitle: "Limits the # of prior searches in the search "
                     "bar's suggestions to prevent it from clogging results",
-                setVal: (int val) =>
-                    SearchView.i.numSavedSearchesInSearchBar = val,
-                validateVal: (int? val) => (val ?? -1) >= 0,
+                setVal: (num val) =>
+                    SearchView.i.numSavedSearchesInSearchBar = val.toInt(),
+                validateVal: (num? val) => (val?.round() ?? -1) >= 0,
+                defaultValue:
+                    SearchViewData.defaultData.numSavedSearchesInSearchBar,
+                divisions: 20,
+                // useIncrementalButtons: true,
+                increment: 1,
               ),
               WBooleanField(
                 getVal: () => SearchView.i.lazyLoad,
@@ -851,7 +866,8 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
         ).then<void>(
           (value) {
             if (value != null) {
-              _logger.finer("_EnumListFieldState: Before: ${getVal.toString()}");
+              _logger
+                  .finer("_EnumListFieldState: Before: ${getVal.toString()}");
               setState(() {
                 setVal(value);
               });
@@ -950,7 +966,7 @@ class WIntegerField extends StatefulWidget {
 
   final int Function() getVal;
 
-  final void Function(int p1) setVal;
+  final int Function(int p1) setVal;
 
   final bool Function(int? p1)? validateVal;
   const WIntegerField({
@@ -972,7 +988,7 @@ class _WIntegerFieldState extends State<WIntegerField> {
 
   int get getVal => widget.getVal();
 
-  void Function(int p1) get setVal => widget.setVal;
+  int Function(int p1) get setVal => widget.setVal;
 
   bool Function(int? p1)? get validateVal => widget.validateVal;
   @override
@@ -984,59 +1000,74 @@ class _WIntegerFieldState extends State<WIntegerField> {
       trailing: Text(getVal.toString()),
       leadingAndTrailingTextStyle:
           SettingsPage.titleStyle.copyWith(fontSize: 20),
-      onTap: () {
-        final before = getVal;
-        var t = before.toString();
-        validation(String value) {
-          (validateVal?.call(int.tryParse(value)) ?? true) ? t = value : null;
-        }
+      onTap: buildNumericalEntryDialog(
+        context: context,
+        getVal: getVal,
+        parse: int.parse,
+        tryParse: int.tryParse,
+        validateVal: validateVal,
+        onSetVal: (value) {
+          _print("Before: $getVal");
+          setState(() => setVal(value!));
+          _print("After: $getVal");
+          _print(jsonEncode(AppSettings.i));
+        },
+      ),
+      // onTap: () {
+      //   var t = getVal.toString();
+      //   validation(String value) {
+      //     (validateVal?.call(int.tryParse(value)) ?? true) ? t = value : null;
+      //   }
 
-        showDialog<int>(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              content: TextField(
-                keyboardType: TextInputType.number,
-                maxLines: null,
-                autofocus: true,
-                onChanged: validation,
-                onSubmitted: (v) {
-                  validation(v);
-                  Navigator.pop(context, int.parse(t));
-                },
-                controller: TextEditingController.fromValue(
-                  TextEditingValue(
-                    text: t,
-                    selection: TextSelection(
-                      baseOffset: 0,
-                      extentOffset: t.length,
-                    ),
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, int.parse(t)),
-                  child: const Text("Accept"),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, null),
-                  child: const Text("Cancel"),
-                ),
-              ],
-            );
-          },
-        ).then<void>((value) {
-          if (validateVal?.call(value) ?? value != null) {
-            _print("Before: $getVal");
-            setState(() {
-              setVal(value!);
-            });
-            _print("After: $getVal");
-            _print(jsonEncode(AppSettings.i));
-          }
-        }).onError((error, stackTrace) => _print(error));
-      },
+      //   showDialog<int>(
+      //     context: context,
+      //     builder: (context) {
+      //       return AlertDialog(
+      //         content: TextField(
+      //           keyboardType: TextInputType.number,
+      //           maxLines: null,
+      //           autofocus: true,
+      //           onChanged: validation,
+      //           onSubmitted: (v) {
+      //             validation(v);
+      //             Navigator.pop(context, int.parse(t));
+      //           },
+      //           controller: TextEditingController.fromValue(
+      //             TextEditingValue(
+      //               text: t,
+      //               selection: TextSelection(
+      //                 baseOffset: 0,
+      //                 extentOffset: t.length,
+      //               ),
+      //             ),
+      //           ),
+      //         ),
+      //         actions: [
+      //           TextButton(
+      //             onPressed: () => Navigator.pop(context, int.parse(t)),
+      //             child: const Text("Accept"),
+      //           ),
+      //           TextButton(
+      //             onPressed: () => Navigator.pop(context, null),
+      //             child: const Text("Cancel"),
+      //           ),
+      //         ],
+      //       );
+      //     },
+      //   )
+      //       .then<void>((value) {
+      //         if (validateVal?.call(value) ?? value != null) {
+      //           _print("Before: $getVal");
+      //           setState(() => setVal(value!));
+      //           _print("After: $getVal");
+      //           _print(jsonEncode(AppSettings.i));
+      //         }
+      //       })
+      //       .onError(
+      //         (error, stackTrace) => _logger.severe(error, error, stackTrace),
+      //       )
+      //       .ignore();
+      // },
     );
   }
 }
@@ -1048,7 +1079,7 @@ class WNumSliderField<T extends num> extends StatefulWidget {
 
   final T Function() getVal;
 
-  final void Function(num p1) setVal;
+  final T Function(num p1) setVal;
 
   final bool Function(num? p1)? validateVal;
 
@@ -1059,7 +1090,9 @@ class WNumSliderField<T extends num> extends StatefulWidget {
   final T? defaultValue;
 
   final int? divisions;
-  final bool useIncrementalButtons;
+  // final bool useIncrementalButtons;
+  final T? increment;
+  final T? incrementMultiplier;
   const WNumSliderField({
     super.key,
     required this.name,
@@ -1071,11 +1104,12 @@ class WNumSliderField<T extends num> extends StatefulWidget {
     this.divisions,
     this.defaultValue,
     this.validateVal,
-    this.useIncrementalButtons = false,
+    this.increment,
+    this.incrementMultiplier,
   });
 
   @override
-  State<WNumSliderField> createState() => _WNumSliderFieldState();
+  State<WNumSliderField<T>> createState() => _WNumSliderFieldState<T>();
 }
 
 class _WNumSliderFieldState<T extends num> extends State<WNumSliderField<T>> {
@@ -1083,9 +1117,18 @@ class _WNumSliderFieldState<T extends num> extends State<WNumSliderField<T>> {
 
   T get getVal => widget.getVal();
 
-  void Function(num p1) get setVal => widget.setVal;
+  T Function(num p1) get setVal => widget.setVal;
 
   bool Function(num? p1)? get validateVal => widget.validateVal;
+
+  num Function(String) get parse => (T is int ? int.parse : double.parse);
+  // T Function(String) get parse => switch (T) {
+  //   int => int.parse as T Function(String),
+  //   double => double.parse as T Function(String),
+  //   Type() => throw UnimplementedError(),
+  // };
+  num? Function(String) get tryParse =>
+      (T is int ? int.tryParse : double.tryParse);
 
   double tempValue = 0;
 
@@ -1101,56 +1144,163 @@ class _WNumSliderFieldState<T extends num> extends State<WNumSliderField<T>> {
     tempValue = getVal.toDouble();
   }
 
+  String makeLabel(num n) {
+    final s = n.toString();
+    return s.substring(0, math.min(5, s.length));
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      // key: ValueKey(getVal),
-      title: Row(children: [
-        Text(name),
-        if (widget.useIncrementalButtons)
-          IconButton(
-            onPressed: validateVal?.call(getVal - 1) ?? true
-                ? () => setState(() {
-                      setVal(tempValue = getVal - 1);
-                    })
-                : null,
-            icon: const Icon(Icons.arrow_left),
-          ),
-        Expanded(
-          child: Slider(
-            label: (T is int ? getVal.round() : getVal).toString(),
-            value: getVal.toDouble(),
-            onChanged: (v) => (validateVal?.call(v) ?? true)
-                ? setState(() => setVal(tempValue = v))
-                : setState(() {
-                    tempValue = v;
-                  }),
-            min: widget.min.toDouble(),
-            max: widget.max.toDouble(),
-            // secondaryTrackValue: widget.defaultValue?.toDouble(),
-            divisions: divisions,
-            // onChangeStart: (value) => ,
-            // onChangeEnd: (v) => ,
-            // allowedInteraction: SliderInteraction.tapAndSlide,
-          ),
-        ),
-        if (widget.useIncrementalButtons)
-          IconButton(
-            onPressed: validateVal?.call(getVal + 1) ?? true
-                ? () => setState(() {
-                      setVal(tempValue = getVal + 1);
-                    })
-                : null,
-            icon: const Icon(Icons.arrow_right),
-          ),
-      ]),
-      subtitle: widget.subtitle != null ? Text(widget.subtitle!) : null,
-      trailing: Text(getVal.toString()),
       leadingAndTrailingTextStyle:
           SettingsPage.titleStyle.copyWith(fontSize: 20),
+      title: Row(
+        children: [
+          Text(name),
+          if (widget.increment != null && (widget.incrementMultiplier ?? 0) > 1)
+            IconButton(
+              onPressed: validateVal?.call(getVal -
+                          (widget.increment! * widget.incrementMultiplier!)) ??
+                      true
+                  ? () => setState(() {
+                        tempValue = setVal(getVal -
+                            (widget.increment! *
+                                widget.incrementMultiplier!)) as double;
+                      })
+                  : null,
+              icon: const Icon(Icons.keyboard_double_arrow_left),
+            ),
+          if (widget.increment != null)
+            IconButton(
+              onPressed: validateVal?.call(getVal - widget.increment!) ?? true
+                  ? () => setState(() {
+                        tempValue =
+                            setVal(getVal - widget.increment!) as double;
+                      })
+                  : null,
+              icon: const Icon(Icons.arrow_left),
+            ),
+          Expanded(
+            child: Slider(
+              label: /* (T is int ? getVal.toInt() : getVal) */
+                  makeLabel(getVal),
+              value: tempValue, //getVal.toDouble(),
+              onChanged: (v) => (validateVal?.call(v) ?? true)
+                  ? setState(() => tempValue = setVal(v).toDouble())
+                  : setState(() => tempValue = v),
+              min: widget.min.toDouble(),
+              max: widget.max.toDouble(),
+              secondaryTrackValue: widget.defaultValue?.toDouble(),
+              divisions: divisions,
+            ),
+          ),
+          if (widget.increment != null)
+            IconButton(
+              onPressed: validateVal?.call(getVal + widget.increment!) ?? true
+                  ? () => setState(() {
+                        tempValue =
+                            setVal(getVal + widget.increment!) as double;
+                      })
+                  : null,
+              icon: const Icon(Icons.arrow_right),
+            ),
+          if (widget.increment != null && (widget.incrementMultiplier ?? 0) > 1)
+            IconButton(
+              onPressed: validateVal?.call(getVal +
+                          widget.increment! * widget.incrementMultiplier!) ??
+                      true
+                  ? () => setState(() {
+                        tempValue = setVal(getVal +
+                                widget.increment! * widget.incrementMultiplier!)
+                            as double;
+                      })
+                  : null,
+              icon: const Icon(Icons.keyboard_double_arrow_right),
+            ),
+        ],
+      ),
+      subtitle: widget.subtitle != null ? Text(widget.subtitle!) : null,
+      trailing: TextButton(
+        onPressed: buildNumericalEntryDialog(
+          context: context,
+          getVal: getVal,
+          onSetVal: (num value) {
+            _logger.finer("Before: $getVal");
+            setState(() {
+              tempValue = setVal(value).toDouble();
+            });
+            _logger.fine("After: $getVal");
+            _logger.fine(jsonEncode(AppSettings.i));
+          },
+          parse: parse,
+          tryParse: tryParse,
+          validateVal: validateVal,
+        ),
+        child: Text(makeLabel(tempValue)),
+      ),
     );
   }
 }
+
+VoidFunction buildNumericalEntryDialog<T extends num>({
+  required BuildContext context,
+  required T getVal,
+  bool Function(T?)? validateVal,
+  required T? Function(String) tryParse,
+  required T Function(String) parse,
+  required void Function(T) onSetVal,
+}) =>
+    () {
+      var t = getVal.toString();
+      void validation(String value) {
+        (validateVal?.call(tryParse(value)) ?? true) ? t = value : null;
+      }
+
+      showDialog<T>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            content: TextField(
+              keyboardType: TextInputType.number,
+              maxLines: null,
+              autofocus: true,
+              onChanged: validation,
+              onSubmitted: (v) {
+                validation(v);
+                Navigator.pop(context, parse(t));
+              },
+              controller: TextEditingController.fromValue(
+                TextEditingValue(
+                  text: t,
+                  selection: TextSelection(
+                    baseOffset: 0,
+                    extentOffset: t.length,
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, parse(t)),
+                child: const Text("Accept"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, null),
+                child: const Text("Cancel"),
+              ),
+            ],
+          );
+        },
+      )
+          .then<void>((value) {
+            if (validateVal?.call(value) ?? value != null) {
+              onSetVal(value!);
+            }
+          })
+          .onError(
+              (error, stackTrace) => _logger.severe(error, error, stackTrace))
+          .ignore();
+    };
 
 class WIntegerSliderField extends StatefulWidget {
   final String name;

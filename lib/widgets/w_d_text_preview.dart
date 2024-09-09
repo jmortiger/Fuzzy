@@ -64,18 +64,14 @@ class _WDTextPreviewState extends State<WDTextPreview> {
               SelectorNotifier(
                   value: ctr,
                   selector: (context, value) => value.text,
-                  builder: (context, currText, _) {
-                    return Text.rich(dtext.tryParse(currText, ctx: context));
-                  }),
+                  builder: (context, currText, _) => makePreview(currText)),
             ],
           )
         else
           SelectorNotifier(
               value: ctr,
               selector: (context, value) => value.text,
-              builder: (context, currText, _) {
-                return Text.rich(dtext.tryParse(currText, ctx: context));
-              }),
+              builder: (context, currText, _) => makePreview(currText)),
         TextField(
           controller: ctr,
           maxLines: widget.maxLines,
@@ -95,6 +91,9 @@ class _WDTextPreviewState extends State<WDTextPreview> {
       ],
     );
   }
+
+  Widget makePreview(String currText) =>
+      SelectableText.rich(dtext.tryParse(currText, ctx: context) as TextSpan);
 }
 
 class WDTextPreviewScrollable extends StatefulWidget {
@@ -186,7 +185,7 @@ class _WDTextPreviewScrollableState extends State<WDTextPreviewScrollable> {
         value: ctr,
         selector: (context, value) => value.text,
         builder: (context, currText, _) {
-          return Text.rich(dtext.tryParse(currText, ctx: context));
+          return SelectableText.rich(dtext.tryParse(currText, ctx: context) as TextSpan);
         });
   }
 }

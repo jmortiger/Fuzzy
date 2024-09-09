@@ -565,10 +565,13 @@ sealed class E621 extends Site {
     // String? username,
     // String? apiKey,
   }) =>
-      http.Request("GET",
-          Uri.parse("https://e621.net/wiki_pages.json?search%5Btitle%5D=$tag"));
+      e621.initWikiSearchRequest(searchTitle: tag);
+  // http.Request("GET",
+  //     Uri.parse("https://e621.net/wiki_pages.json?search%5Btitle%5D=$tag"));
   static http.Request initGetWikiPageRequest(int id) =>
-      http.Request("GET", Uri.parse("https://e621.net/wiki_pages/$id.json"));
+      e621.initWikiGetPageRequest(id);
+  // static http.Request initGetWikiPageRequest(int id) =>
+  //     http.Request("GET", Uri.parse("https://e621.net/wiki_pages/$id.json"));
   static http.Request initSearchRequest({
     String tags = "",
     // int limit = 50,

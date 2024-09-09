@@ -6,6 +6,7 @@ import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/models/tag_subscription.dart';
 import 'package:fuzzy/pages/settings_page.dart';
+import 'package:fuzzy/pages/tag_db_editor.dart';
 import 'package:fuzzy/pages/user_profile_page.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
@@ -162,36 +163,6 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 });
               },
             ),
-          // ListTile(
-          //   title: const Text("Toggle Lazy Loading"),
-          //   leading:
-          //       Provider.of<SearchViewModel>(context, listen: false).lazyLoad
-          //           ? const Icon(Icons.check_box)
-          //           : const Icon(Icons.check_box_outline_blank),
-          //   onTap: () {
-          //     print(
-          //         "Before: ${Provider.of<SearchViewModel>(context, listen: false).lazyLoad}");
-          //     setState(() =>
-          //         Provider.of<SearchViewModel>(context, listen: false)
-          //             .toggleLazyLoad());
-          //     print(
-          //         "After: ${Provider.of<SearchViewModel>(context, listen: false).lazyLoad}");
-          //     // Navigator.pop(context);
-          //   },
-          // ),
-          // ListTile(
-          //   title: const Text("Toggle Lazy Building"),
-          //   leading: SearchView.i.lazyBuilding
-          //       ? const Icon(Icons.check_box)
-          //       : const Icon(Icons.check_box_outline_blank),
-          //   onTap: () {
-          //     print("Before: ${SearchView.i.lazyBuilding}");
-          //     setState(
-          //         () => SearchView.i.lazyBuilding = !SearchView.i.lazyBuilding);
-          //     print("After: ${SearchView.i.lazyBuilding}");
-          //     // Navigator.pop(context);
-          //   },
-          // ),
           ListTile(
             title: const Text("Toggle Auth headers"),
             leading: E621AccessData.useLoginData
@@ -209,32 +180,15 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
               // Navigator.pop(context);
             },
           ),
-          // ListTile(
-          //   title: const Text("Toggle Force Safe"),
-          //   leading:
-          //       Provider.of<SearchViewModel>(context, listen: false).forceSafe
-          //           ? const Icon(Icons.check_box)
-          //           : const Icon(Icons.check_box_outline_blank),
-          //   onTap: () {
-          //     print(
-          //         "Before: ${Provider.of<SearchViewModel>(context, listen: false).forceSafe}");
-          //     setState(() =>
-          //         Provider.of<SearchViewModel>(context, listen: false)
-          //             .toggleForceSafe());
-          //     print(
-          //         "After: ${Provider.of<SearchViewModel>(context, listen: false).forceSafe}");
-          //     // Navigator.pop(context);
-          //   },
-          // ),
           ListTile(
             title: const Text("Toggle Image Display Method"),
             onTap: () {
-              print("Before: ${imageFit.name}");
+              logger.fine("Before: ${imageFit.name}");
               setState(() {
                 imageFit =
                     imageFit == BoxFit.contain ? BoxFit.cover : BoxFit.contain;
               });
-              print("After: ${imageFit.name}");
+              logger.fine("After: ${imageFit.name}");
               // Navigator.pop(context);
             },
             trailing: Text(imageFit.name),
@@ -243,7 +197,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             title: const Text("Search sets"),
             leading: const Icon(Icons.search),
             onTap: () {
-              print("Search Set activated");
+              logger.finer("Search Set activated");
               Navigator.pop(context);
               showDialog<e621.PostSet>(
                 context: context,
@@ -304,10 +258,10 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
               Navigator.pop(context);
               showDialog<e621.PostSet>(
                 context: context,
-                builder: (context) {
+                builder: (_) {
                   return const AlertDialog(
                     content:
-                        WBackButton.doNotBlockChild(child: WUpdateSet.create()),
+                        WBackButton.noOverlay(child: WUpdateSet.create()),
                     // scrollable: true,
                   );
                 },
@@ -329,7 +283,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => buildHomePageWithProviders(
+                      builder: (_) => buildHomePageWithProviders(
                           searchText:
                               "fav:${E621.loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username} status:deleted"),
                     ));
@@ -344,11 +298,11 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => buildWithProviders(
+                        builder: (_) => buildWithProviders(
                               mpcProvider: ChangeNotifierProvider(
-                                  create: (context) =>
+                                  create: (_) =>
                                       FavoritesCollectionLoader()),
-                              builder: (context, child) => Scaffold(
+                              builder: (context, _) => Scaffold(
                                 appBar: AppBar(
                                   title: Text(
                                       "${E621.loggedInUser.$Safe?.name}'s Favorites"),
@@ -356,7 +310,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                                 body: Column(
                                   children: [
                                     Selector<ManagedPostCollectionSync, String>(
-                                      builder: (context, value, child) =>
+                                      builder: (_, value, __) =>
                                           Expanded(
                                               key: ObjectKey(value),
                                               child:
@@ -382,7 +336,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const SubscriptionPage(),
+                    builder: (_) => const SubscriptionPage(),
                   ));
             },
           ),
@@ -394,7 +348,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const DomainVerificationPage(),
+                    builder: (_) => const DomainVerificationPage(),
                   ));
             },
           ),
@@ -419,7 +373,19 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const HelpPage()),
+                MaterialPageRoute(builder: (_) => const HelpPage()),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text("Tag DB Editing"),
+            leading: const Icon(Icons.question_mark),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const TagDbEditorPage()),
               );
             },
           ),
@@ -428,18 +394,16 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             leading: const Icon(Icons.question_mark),
             onTap: () {
               Navigator.pop(context);
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(builder: (context) => const HelpPage()),
-              // );
               showDialog(
                   context: context,
-                  builder: (context) => const AlertDialog(
+                  builder: (_) => const AlertDialog(
                         content: SizedBox(
                           width: double.maxFinite,
                           height: double.maxFinite,
-                          child: WBackButton .doNotBlockChild (
-                              child: WDTextPreviewScrollable(maxLines: 5,)),
+                          child: WBackButton.noOverlay(
+                              child: WDTextPreviewScrollable(
+                            maxLines: 5,
+                          )),
                         ),
                       ));
             },

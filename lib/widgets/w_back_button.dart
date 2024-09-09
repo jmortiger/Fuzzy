@@ -9,7 +9,7 @@ class WBackButton extends StatelessWidget {
   }) : hover = true;
 
   /// Don't have the button hover over [child] (if non-null).
-  const WBackButton.doNotBlockChild({
+  const WBackButton.noOverlay({
     super.key,
     this.onPop,
     this.child,

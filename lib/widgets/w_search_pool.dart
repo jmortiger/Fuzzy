@@ -208,6 +208,7 @@ class _WSearchPoolState extends State<WSearchPool> {
                       : null,
                 ),
               ),
+              // TODO: Pool ids?
               // WIntegerField(
               //   name: "Pool Ids",
               //   getVal: () => searchId ?? -1,
@@ -260,12 +261,6 @@ class _WSearchPoolState extends State<WSearchPool> {
                         : null */
                 ,
               ),
-              // WEnumField<e621.PoolCategory>(
-              //   name: "Pool Category",
-              //   getVal: () => searchCategory ?? e621.PoolCategory.c,
-              //   setVal: (Enum v) => searchCategory = v as e621.PoolCategory,
-              //   values: e621.PoolCategory.values,
-              // ),
               WBooleanTristateField(
                 name: "Pool Category",
                 subtitle: categoryText,
@@ -281,13 +276,13 @@ class _WSearchPoolState extends State<WSearchPool> {
               WIntegerField(
                 name: "Limit",
                 getVal: () => limit ?? 50,
-                setVal: (v) => limit,
+                setVal: (v) => limit = v,
                 validateVal: (p1) => p1 != null && p1 > 0 && p1 <= 320,
               ),
               WIntegerField(
                 name: "Page Number",
                 getVal: () => p.pageNumber ?? 50,
-                setVal: (v) => p.pageNumber,
+                setVal: (v) => p.pageNumber = v,
                 validateVal: (p1) => p1 != null && p1 > 0,
               ),
               TextButton(
@@ -441,6 +436,15 @@ class PoolSearchParameterModel extends ChangeNotifier
   String? get page => _page;
   set page(String? value) {
     _page = value;
+    notifyListeners();
+  }
+
+  set pageNumber(int? value) {
+    // if (isValidPage(value?.toString() ?? "1")) {
+    //   _page = value?.toString();
+    //   notifyListeners();
+    // }
+    _page = value?.toString();
     notifyListeners();
   }
 

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
+import 'package:fuzzy/util/html_colors.dart';
 import 'package:fuzzy/util/util.dart' as util;
-// import 'package:fuzzy/log_management.dart' as lm;
+import 'package:j_util/e621_models.dart';
+import 'package:fuzzy/log_management.dart' as lm;
 
-// // ignore: unnecessary_late
-// late final _logger = lm.generateLogger("DTextFormatter").logger;
+// ignore: unnecessary_late
+late final _logger = lm.generateLogger("DTextFormatter").logger;
 
 // https://e621.net/help/dtext
 
@@ -13,7 +15,7 @@ const tagLinkStyle = TextStyle(
     color: Colors.amber,
     decoration: TextDecoration.underline);
 
-const safety = 100;
+const safety = 1000;
 
 // #region Linkifiers
 class TagJsonLinkifier extends UrlLinkifier {
@@ -31,15 +33,10 @@ class TagJsonLinkifier extends UrlLinkifier {
                     "$root${convertToLink(e.text)}",
                     e.text,
                   )
-                : m.group(2) == null
-                    ? UrlElement(
-                        "$root${convertToLink(m.group(1)!)}",
-                        m.group(1)!,
-                      )
-                    : UrlElement(
-                        "$root${convertToLink(m.group(2)!)}",
-                        m.group(2)!,
-                      );
+                : UrlElement(
+                    "$root${convertToLink(m.namedGroup("tag") ?? m.namedGroup("main")!)}",
+                    m.namedGroup("main") ?? m.namedGroup("tag"),
+                  );
           },
         ).toList(),
         options);
@@ -62,8 +59,8 @@ class TagLinkifier extends UrlLinkifier {
                     e.text,
                   )
                 : UrlElement(
-                    "$root${convertToLink(m.group(1)!)}",
-                    m.group(2) == null ? m.group(1)! : m.group(2)!,
+                    "$root${convertToLink(m.namedGroup("tag") ?? m.namedGroup("main")!)}",
+                    m.namedGroup("main") ?? m.namedGroup("tag"),
                   );
           },
         ).toList(),
@@ -97,46 +94,70 @@ class NamedLinkifier extends UrlLinkifier {
         options);
   }
 }
+
 // #endregion Linkifiers
+const hexMatcher = "#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}";
+const hexParseMatcher =
+    "#(?=[0-9a-fA-F])(?<r>[0-9a-fA-F]{1,2})(?<g>[0-9a-fA-F]{1,2})(?<b>[0-9a-fA-F]{1,2})";
 
 enum DTextMatchers {
-  h1(r"h1\.(.*)$", TextStyle()),
-  h2(r"h2\.(.*)$", TextStyle()),
-  h3(r"h3\.(.*)$", TextStyle()),
-  h4(r"h4\.(.*)$", TextStyle()),
-  h5(r"h5\.(.*)$", TextStyle()),
-  h6(r"h6\.(.*)$", TextStyle()),
-  // header(r"h([1-6])\.(.*)$", TextStyle()),
-  bold(r"\[b\](.*?)\[/b\]", TextStyle(fontWeight: FontWeight.bold)),
-  italics(r"\[i\](.*?)\[/i\]", TextStyle(fontStyle: FontStyle.italic)),
-  strikeThrough(
-      r"\[s\](.*?)\[/s\]", TextStyle(decoration: TextDecoration.lineThrough)),
-  underline(
-      r"\[u\](.*?)\[/u\]", TextStyle(decoration: TextDecoration.underline)),
-  spoiler(r"\[spoiler\](.*?)\[/spoiler\]", TextStyle(color: Colors.grey)),
-  // superscript(r"\[sup\](.*?)\[/sup\]", TextStyle()),
-  // subscript(r"\[sub\](.*?)\[/sub\]", TextStyle()),
+  // h1(r"h1\.(?<main>.*)$", TextStyle()),
+  // h2(r"h2\.(?<main>.*)$", TextStyle()),
+  // h3(r"h3\.(?<main>.*)$", TextStyle()),
+  // h4(r"h4\.(?<main>.*)$", TextStyle()),
+  // h5(r"h5\.(?<main>.*)$", TextStyle()),
+  // h6(r"h6\.(?<main>.*)$", TextStyle()),
+  header(r"h(?<param>[1-6])\.(?<main>.*)$", TextStyle()),
+  section(
+    r"\[section(?<data>(?<expanded>,expanded)?(?:=(?<title>.*?)))\](?<main>.*?)\[\/section\]",
+    TextStyle(/* fontWeight: FontWeight.bold */),
+  ),
+  bold(r"\[b\](?<main>.*?)\[\/b\]", TextStyle(fontWeight: FontWeight.bold)),
+  italics(r"\[i\](?<main>.*?)\[\/i\]", TextStyle(fontStyle: FontStyle.italic)),
+  strikeThrough(r"\[s\](?<main>.*?)\[\/s\]",
+      TextStyle(decoration: TextDecoration.lineThrough)),
+  underline(r"\[u\](?<main>.*?)\[\/u\]",
+      TextStyle(decoration: TextDecoration.underline)),
+  spoiler(
+      r"\[spoiler\](?<main>.*?)\[\/spoiler\]", TextStyle(color: Colors.grey)),
+  // superscript(r"\[sup\](?<main>.*?)\[\/sup\]", TextStyle()),
+  // subscript(r"\[sub\](?<main>.*?)\[\/sub\]", TextStyle()),
   tagLink(
-      r"\[\[(.*?)(?:\|(.+?)){0,1}\]\]",
+      // r"\[\[(.*?)(?:\|(.+?)){0,1}\]\]",
+      r"\[\[(?:(?<tag>.*?)\|){0,1}(?<main>.+?)\]\]",
       TextStyle(
         fontStyle: FontStyle.italic,
         color: Colors.amber,
         decoration: TextDecoration.underline,
       )),
+  // color(r"\[color(?:=(?<color>.+?){0,1})\](?<main>.*?)\[\/color\]",
+  color(
+    r"\[color(?:=(?<param>(?<tagCategory>"
+    "${TagCategory.categoryNameRegExpStr}"
+    r")|(?<colorName>"
+    "$htmlColorsFullMatcher"
+    r")|(?<hex>"
+    "$hexMatcher"
+    r")|.*?){0,1})\](?<main>.*?)\[\/color\]",
+    TextStyle(
+      decoration: TextDecoration.underline,
+      decorationStyle: TextDecorationStyle.wavy,
+    ),
+  ),
   code(
-      r"\[code\](.*?)\[/code\]",
+      r"\[code\](?<main>.*?)\[\/code\]",
       TextStyle(
         fontFamily: "Consolas",
         fontFamilyFallback: ["Courier New", "monospace"],
       )),
   codeInline(
-      r"`(.*?)`",
+      r"`(?<main>.*?)`",
       TextStyle(
         fontFamily: "Consolas",
         fontFamilyFallback: ["Courier New", "monospace"],
       )),
   namedLink(
-      '"(.*?)":(${util.urlMatcherStr}){1}',
+      '"(?<main>.+?)":(?<url>${util.urlMatcherStr}){1}',
       TextStyle(
         fontStyle: FontStyle.italic,
         decoration: TextDecoration.underline,
@@ -146,19 +167,56 @@ enum DTextMatchers {
   final String patternStr;
   final TextStyle style;
   RegExp get pattern => RegExp(patternStr, multiLine: true);
-  TextStyle styleFromCtx(BuildContext context) => switch (this) {
-        h1 =>
-          Theme.of(context).textTheme.displayLarge /* headlineLarge */ ?? style,
-        h2 => Theme.of(context).textTheme.displayMedium /* headlineMedium */ ??
-            style,
-        h3 =>
-          Theme.of(context).textTheme.displaySmall /* headlineSmall */ ?? style,
-        h4 =>
-          Theme.of(context).textTheme.headlineLarge /* labelLarge */ ?? style,
-        h5 =>
-          Theme.of(context).textTheme.headlineMedium /* labelMedium */ ?? style,
-        h6 =>
-          Theme.of(context).textTheme.headlineSmall /* labelSmall */ ?? style,
+  // TextStyle styleFromCtx(BuildContext context) => switch (this) {
+  //       h1 =>
+  //         Theme.of(context).textTheme.displayLarge /* headlineLarge */ ?? style,
+  //       h2 => Theme.of(context).textTheme.displayMedium /* headlineMedium */ ??
+  //           style,
+  //       h3 =>
+  //         Theme.of(context).textTheme.displaySmall /* headlineSmall */ ?? style,
+  //       h4 =>
+  //         Theme.of(context).textTheme.headlineLarge /* labelLarge */ ?? style,
+  //       h5 =>
+  //         Theme.of(context).textTheme.headlineMedium /* labelMedium */ ?? style,
+  //       h6 =>
+  //         Theme.of(context).textTheme.headlineSmall /* labelSmall */ ?? style,
+  //       _ => style,
+  //     };
+  static Color? makeColorFromHexString(String? s) {
+    if (s?.isEmpty ?? true) return null;
+    if (s![0] == "#") s = s.substring(1);
+    if (s.length == 3) s = "${s[0]}${s[0]}${s[1]}${s[1]}${s[2]}${s[2]}";
+    final i = int.tryParse("ff$s", radix: 16);
+    return (i == null) ? null : Color(i);
+  }
+
+  TextStyle styleFromCtxAndMatch(BuildContext context, RegExpMatch m) =>
+      switch (this) {
+        header => switch (m.namedGroup("param")) {
+            "1" =>
+              Theme.of(context).textTheme.displayLarge /* headlineLarge */ ??
+                  style,
+            "2" =>
+              Theme.of(context).textTheme.displayMedium /* headlineMedium */ ??
+                  style,
+            "3" =>
+              Theme.of(context).textTheme.displaySmall /* headlineSmall */ ??
+                  style,
+            "4" => Theme.of(context).textTheme.headlineLarge /* labelLarge */ ??
+                style,
+            "5" =>
+              Theme.of(context).textTheme.headlineMedium /* labelMedium */ ??
+                  style,
+            "6" => Theme.of(context).textTheme.headlineSmall /* labelSmall */ ??
+                style,
+            _ => throw UnsupportedError("Header value not supported"),
+          },
+        color => TextStyle(
+            color: m.namedGroup("tagCategory") != null
+                ? TagCategory.fromName(m.namedGroup("tagCategory")!).color
+                : htmlColorsFull[m.namedGroup("colorName")] ??
+                    makeColorFromHexString(m.namedGroup("hex"))!),
+        section => Theme.of(context).textTheme.bodyMedium ?? style,
         _ => style,
       };
   const DTextMatchers(this.patternStr, this.style);
@@ -167,108 +225,77 @@ enum DTextMatchers {
     return m == null ? null : (m, this);
   }
 
-  // (RegExpMatch, DTextMatchers, bool couldHaveSubMatches)? firstMatchCheck(String dText) {
-  //   final m = pattern.firstMatch(dText);
-  //   return m == null ? null : (m, this);
-  // }
-
   (RegExpMatch, String subPattern, DTextMatchers)? firstMatchWithString(
       String dText) {
     final m = pattern.firstMatch(dText);
-    return m == null ? null : (m, m.group(1)!, this);
-  }
-
-  /* InlineSpan build(
-      {String? text, List<InlineSpan>? children, BuildContext? ctx}) {
-    final style = ctx != null ? styleFromCtx(ctx) : this.style;
-    _logger.info(util.urlMatcherStrict.hasMatch(text ?? ""));
-    return this != DTextMatchers.tagLink
-        ? util.urlMatcherStrict.hasMatch(text ?? "")
-            ? LinkifySpan(
-                text: text!,
-                linkStyle: style,
-                onOpen: util.defaultOnLinkifyOpen,
-              )
-            : TextSpan(text: text, children: children, style: style)
-        : WidgetSpan(
-            child: Linkify(
-            linkifiers: const [TagLinkifier()],
-            text: text!,
-            linkStyle: style,
-            onOpen: util.defaultOnLinkifyOpen,
-          ));
-  } */
-
-  InlineSpan _buildFromMatch({
-    RegExpMatch? m,
-    List<InlineSpan>? children,
-    BuildContext? ctx,
-  }) {
-    final style = ctx != null ? styleFromCtx(ctx) : this.style;
-    String? text = getSubPatternFromPotentialMatch(m);
-    return this != DTextMatchers.tagLink
-        ? this != DTextMatchers.namedLink
-            ? RegExp(util.urlMatcherStr).hasMatch(text ?? "")
-                ? LinkifySpan(
-                    text: text!,
-                    linkStyle: style,
-                    onOpen: util.defaultOnLinkifyOpen,
-                  )
-                : TextSpan(text: text, children: children, style: style)
-            : LinkifySpan(
-                text: m!.group(0)!,
-                linkifiers: const [NamedLinkifier()],
-                linkStyle: style,
-                onOpen: util.defaultOnLinkifyOpen,
-              )
-        : WidgetSpan(
-            child: Linkify(
-            linkifiers: const [TagLinkifier()],
-            text: text!,
-            linkStyle: style,
-            onOpen: util.defaultOnLinkifyOpen,
-          ));
+    return m == null ? null : (m, m.namedGroup("main")!, this);
   }
 
   InlineSpan buildFromMatchRecursive({
     required RegExpMatch m,
     BuildContext? ctx,
   }) {
-    final style = ctx != null ? styleFromCtx(ctx) : this.style;
-    String? text = getSubPatternFromPotentialMatch(m);
-    bool isChildless = firstMatches(text ?? "") == null;
+    final style = ctx != null ? styleFromCtxAndMatch(ctx, m) : this.style;
+    String? text = m.namedGroup("main"); //getSubPatternFromPotentialMatch(m);
+    bool isChildless = this == DTextMatchers.tagLink ||
+        this == DTextMatchers.namedLink ||
+        firstMatches(text ?? "") == null;
     return this != DTextMatchers.tagLink
         ? this != DTextMatchers.namedLink
-            ? RegExp(util.urlMatcherStr).hasMatch(text ?? "")
-                ? LinkifySpan(
-                    text: text!,
-                    linkStyle: style,
-                    onOpen: util.defaultOnLinkifyOpen,
-                  )
-                : TextSpan(
-                    text: isChildless ? text : null,
-                    children: isChildless ? null : buildChildrenFromMatch(m: m),
-                    style: style,
-                  )
+            ? this != DTextMatchers.section
+                ? RegExp(util.urlMatcherStr).hasMatch(text ?? "")
+                    ? LinkifySpan(
+                        text: text!,
+                        linkStyle: style,
+                        onOpen: util.defaultOnLinkifyOpen,
+                      )
+                    : TextSpan(
+                        text: isChildless ? text : null,
+                        children:
+                            isChildless ? null : buildChildrenFromMatch(m: m),
+                        style: style,
+                      )
+                : WidgetSpan(
+                    child: ExpansionTile(
+                    visualDensity: VisualDensity.compact,
+                    dense: true,
+                    // controlAffinity: ListTileControlAffinity.leading,
+                    tilePadding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    childrenPadding: EdgeInsets.zero,
+                    title: IgnorePointer(
+                      child: SelectableText(
+                        m.namedGroup("title") ?? "",
+                        style: style,
+                      ),
+                    ),
+                    initiallyExpanded: m.namedGroup("expanded") != null,
+                    children: [
+                      Text.rich(TextSpan(
+                        text: isChildless ? text : null,
+                        children:
+                            isChildless ? null : buildChildrenFromMatch(m: m),
+                        style: style,
+                      ))
+                    ],
+                  ))
             : LinkifySpan(
                 text: m.group(0)!,
                 linkifiers: const [NamedLinkifier()],
                 linkStyle: style,
                 onOpen: util.defaultOnLinkifyOpen,
               )
-        : WidgetSpan(
-            child: Linkify(
+        : LinkifySpan(
             linkifiers: const [TagLinkifier()],
             text: /* text! */ m.group(0)!,
             linkStyle: style,
             onOpen: util.defaultOnLinkifyOpen,
-          ));
+          );
   }
 
   String? getSubPatternFromPotentialMatch(RegExpMatch? m) =>
-      this != tagLink || (m?.group(2)?.isEmpty ?? true)
-          ? m?.group(1)
-          : m?.group(2);
+      this != tagLink || this != namedLink // || (m?.group(2)?.isEmpty ?? true)
+          ? m?.namedGroup("main")
+          : m?.namedGroup("main");
   String getSubPatternFromMatch(RegExpMatch m) =>
       getSubPatternFromPotentialMatch(m)!;
 
@@ -291,15 +318,6 @@ enum DTextMatchers {
 
   return m;
 }
-// (RegExpMatch, DTextMatchers)? firstMatches(String dText) {
-//   (RegExpMatch, DTextMatchers)? m;
-//   for (var i = 0;
-//       i < DTextMatchers.values.length &&
-//           (m = DTextMatchers.values[i].firstMatch(dText)) == null;
-//       i++) {}
-
-//   return m;
-// }
 
 List<InlineSpan> rawParse(String dText, [BuildContext? ctx]) {
   List<InlineSpan> parsed = [TextSpan(text: dText)];
@@ -364,7 +382,8 @@ InlineSpan tryParse(
 }) {
   try {
     return parse(dText, ctx);
-  } catch (e) {
+  } catch (e, s) {
+    _logger.warning("Failed to parse DText $dText", e, s);
     return TextSpan(text: dText, style: errorStyle);
   }
 }
@@ -378,36 +397,23 @@ String convertToLink(String link) => link
       RegExp(r"([A-Z])"),
       (match) => match.group(1)!.toLowerCase(),
     );
-Map<String, Color> htmlColors = {
-  "white": const Color(0xFFFFFFFF),
-  "silver": const Color(0xFFC0C0C0),
-  "gray": const Color(0xFF808080),
-  "black": const Color(0xFF000000),
-  "red": const Color(0xFFFF0000),
-  "maroon": const Color(0xFF800000),
-  "yellow": const Color(0xFFFFFF00),
-  "olive": const Color(0xFF808000),
-  "lime": const Color(0xFF00FF00),
-  "green": const Color(0xFF008000),
-  "aqua": const Color(0xFF00FFFF),
-  "teal": const Color(0xFF008080),
-  "blue": const Color(0xFF0000FF),
-  "navy": const Color(0xFF000080),
-  "fuchsia": const Color(0xFFFF00FF),
-  "purple": const Color(0xFF800080),
-};
 /* 
 TEST TEXT
 h4.Hank Howell
-Felt inspired to draw some Hank Howell. 
---
-🎨 Early access, hi-res & exclusive content like comics on Patreon.
+[color=pink]I'm pink![/color]
+[color=#ff0000]I'm red![/color]
+[color=#f00]I'm red![/color]
+[color=artist]I'm an artist![/color]
+[section]Pretend this is a really large block of text.[/section]
+
+[section=Some Title]This one has a title.[/section]
+
+[section,expanded=Title]This is expanded by default.[/section]
 patreon.com/MariArt
 MariArt.info
 [[American Dragon: Jake Long|Wiki Link]][[American Dragon: Jake Long]]
 [b][COM] Helpful Personal Coach[/b]
 Thank you "@/fluorinatedfur":https://x.com/fluorinatedfur for commissioning! ^^
-------------
 
 Posted earlier on "Patreon":https://www.patreon.com/thekbear
 Follow me on "Twitter":https://www.twitter.com/TheKinkBear */
