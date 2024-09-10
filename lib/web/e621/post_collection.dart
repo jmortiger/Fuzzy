@@ -202,7 +202,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         "\n\t\ttags:${value.tags}"
         "\n\t\tlimit:${value.limit}"
         "\n\t\tpageNumber:${value.pageNumber}");
-    if (/* !setEquals(_parameters.tagSet, value.tagSet) */true) {
+    if (/* !setEquals(_parameters.tagSet, value.tagSet) */ true) {
       logger.info("Tag Parameter changed from ${_parameters.tagSet} "
           "to ${value.tagSet}, clearing collection and notifying listeners");
       _parameters = value;
@@ -912,11 +912,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           print("Response failed: $json");
           if (json["reason"].contains("Access Denied")) {
             if (context != null) {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(const SnackBar(
-                  content: Text("Access Denied. Did you mean to login?"),
-                ));
+              showUserMessage(content: Text("Access Denied. Did you mean to login?"));
             }
           }
           posts = E6PostsSync(posts: []);

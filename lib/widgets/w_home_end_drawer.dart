@@ -8,6 +8,7 @@ import 'package:fuzzy/models/tag_subscription.dart';
 import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/pages/tag_db_editor.dart';
 import 'package:fuzzy/pages/user_profile_page.dart';
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/widgets/w_back_button.dart';
@@ -143,14 +144,17 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 ).then((v) {
                   switch (v) {
                     case true:
-                      E621AccessData.userData.$Safe?.tryClearAsync().then(
-                          (success) => this.context.mounted
-                              ? (ScaffoldMessenger.of(this.context)
-                                ..hideCurrentSnackBar()
-                                ..showSnackBar(SnackBar(
-                                    content: Text(success
+                      E621AccessData.userData.$Safe
+                          ?.tryClearAsync()
+                          .then((success) => this.context.mounted
+                              ? util.showUserMessage(
+                                  context: context,
+                                  content: Text(
+                                    success
                                         ? "Successfully cleared login data"
-                                        : "Failed to clear login data"))))
+                                        : "Failed to clear login data",
+                                  ),
+                                )
                               : "");
                       continue falseC;
                     falseC:
@@ -260,8 +264,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 context: context,
                 builder: (_) {
                   return const AlertDialog(
-                    content:
-                        WBackButton.noOverlay(child: WUpdateSet.create()),
+                    content: WBackButton.noOverlay(child: WUpdateSet.create()),
                     // scrollable: true,
                   );
                 },
@@ -300,8 +303,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                     MaterialPageRoute(
                         builder: (_) => buildWithProviders(
                               mpcProvider: ChangeNotifierProvider(
-                                  create: (_) =>
-                                      FavoritesCollectionLoader()),
+                                  create: (_) => FavoritesCollectionLoader()),
                               builder: (context, _) => Scaffold(
                                 appBar: AppBar(
                                   title: Text(
@@ -310,14 +312,12 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                                 body: Column(
                                   children: [
                                     Selector<ManagedPostCollectionSync, String>(
-                                      builder: (_, value, __) =>
-                                          Expanded(
-                                              key: ObjectKey(value),
-                                              child:
-                                                  psr.WPostSearchResultsSwiper(
-                                                useLazyBuilding:
-                                                    SearchView.i.lazyBuilding,
-                                              )),
+                                      builder: (_, value, __) => Expanded(
+                                          key: ObjectKey(value),
+                                          child: psr.WPostSearchResultsSwiper(
+                                            useLazyBuilding:
+                                                SearchView.i.lazyBuilding,
+                                          )),
                                       selector: (ctx, p1) => p1.parameters.tags,
                                     ),
                                   ],
@@ -358,11 +358,10 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             onTap: () {
               Navigator.pop(context);
               if (!checkAndLaunch(context)) {
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    const SnackBar(content: Text("No page to load")),
-                  );
+                util.showUserMessage(
+                  context: context,
+                  content: const Text("No page to load"),
+                );
               }
             },
           ),
@@ -384,8 +383,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (_) => const TagDbEditorPage()),
+                MaterialPageRoute(builder: (_) => const TagDbEditorPage()),
               );
             },
           ),

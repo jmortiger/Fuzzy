@@ -1120,8 +1120,10 @@ class _WNumSliderFieldState<T extends num> extends State<WNumSliderField<T>> {
   T Function(num p1) get setVal => widget.setVal;
 
   bool Function(num? p1)? get validateVal => widget.validateVal;
-
-  num Function(String) get parse => (T is int ? int.parse : double.parse);
+  // Build fails on android w/o unnecessary cast.
+  num Function(String) get parse =>
+      // ignore: unnecessary_cast
+      (T is int ? int.parse : double.parse) as num Function(String);
   // T Function(String) get parse => switch (T) {
   //   int => int.parse as T Function(String),
   //   double => double.parse as T Function(String),
@@ -1182,8 +1184,7 @@ class _WNumSliderFieldState<T extends num> extends State<WNumSliderField<T>> {
             ),
           Expanded(
             child: Slider(
-              label: /* (T is int ? getVal.toInt() : getVal) */
-                  makeLabel(getVal),
+              label: makeLabel(getVal),
               value: tempValue, //getVal.toDouble(),
               onChanged: (v) => (validateVal?.call(v) ?? true)
                   ? setState(() => tempValue = setVal(v).toDouble())

@@ -849,8 +849,9 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: tag)).then((v) {
                       util.showUserMessage(
-                          context: context,
-                          content: Text("$tag added to clipboard."));
+                        context: context,
+                        content: Text("$tag added to clipboard."),
+                      );
                       Navigator.pop(context);
                     });
                   },
@@ -869,8 +870,9 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                                 content: const Text("Cannot open in browser"),
                                 actions: [
                                   TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text("Ok"))
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text("Ok"),
+                                  )
                                 ],
                               ),
                             ),
@@ -885,39 +887,43 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                     showDialog(
                       context: this.context,
                       builder: (context) {
-                        WikiPage? result;
-                        Future<WikiPage>? f;
+                        e621.WikiPage? result;
+                        Future<e621.WikiPage>? f;
                         f = e621
                             .sendRequest(
                                 E621.initWikiTagSearchRequest(tag: tag))
-                            .then((value) => WikiPage.fromRawJson(value.body));
+                            .then((value) =>
+                                e621.WikiPage.fromRawJson(value.body));
                         return AlertDialog(
-                            content: SizedBox(
-                                width: double.maxFinite,
-                                child: StatefulBuilder(
-                                    builder: (context, setState) {
-                                  f?.then((v) {
-                                    setState(() {
-                                      result = v;
-                                      f?.ignore();
-                                      f = null;
-                                    });
-                                  }).ignore();
-                                  return SingleChildScrollView(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (f != null)
-                                          // util.spinnerExpanded
-                                          const CircularProgressIndicator()
-                                        else
-                                          result != null
-                                              ? Text.rich(dt.parse(result!.body))
-                                              : const Text("Failed to load"),
-                                      ],
-                                    ),
-                                  );
-                                })));
+                          content: SizedBox(
+                            width: double.maxFinite,
+                            child: StatefulBuilder(
+                              builder: (context, setState) {
+                                f
+                                    ?.then((v) => setState(() {
+                                          result = v;
+                                          f?.ignore();
+                                          f = null;
+                                        }))
+                                    .ignore();
+                                return SingleChildScrollView(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (f != null)
+                                        // util.spinnerExpanded
+                                        const CircularProgressIndicator()
+                                      else
+                                        result != null
+                                            ? Text.rich(dt.parse(result!.body))
+                                            : const Text("Failed to load"),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
                       },
                     );
                   },

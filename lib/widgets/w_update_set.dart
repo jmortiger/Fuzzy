@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:fuzzy/log_management.dart' as lm;
@@ -194,12 +195,12 @@ class _WUpdateSetState extends State<WUpdateSet> {
                                     determineShortnameErrorText(
                                         postSetShortname)) !=
                                 null) {
-                              ScaffoldMessenger.of(context)
-                                ..hideCurrentSnackBar()
-                                ..showSnackBar(const SnackBar(
-                                    content: Text(
+                              util.showUserMessage(
+                                context: context,
+                                content: const Text(
                                   "Resolve Errors with Name and/or shortname",
-                                )));
+                                ),
+                              );
                               return;
                             }
                             final res = await e621.sendRequest(r);

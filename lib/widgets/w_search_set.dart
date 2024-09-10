@@ -6,6 +6,7 @@ import 'package:fuzzy/main.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/pages/settings_page.dart';
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/widgets/w_update_set.dart';
 import 'package:http/http.dart';
@@ -529,11 +530,9 @@ class WSetTile extends StatelessWidget {
                                 : set.searchById;
                             Clipboard.setData(ClipboardData(text: text))
                                 .then((v) {
-                              ScaffoldMessenger.of(context)
-                                ..hideCurrentSnackBar()
-                                ..showSnackBar(SnackBar(
-                                  content: Text("$text added to clipboard."),
-                                ));
+                              util.showUserMessage(
+                                  context: context,
+                                  content: Text("$text added to clipboard."));
                               Navigator.pop(context);
                             });
                           },

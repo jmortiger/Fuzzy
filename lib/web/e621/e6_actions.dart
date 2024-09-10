@@ -419,11 +419,7 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithPosts({
   var str = "Adding ${posts.length} posts to favorites...";
   _logger.finer(str);
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(str)),
-      );
+    util.showUserMessage(context: context!, content: Text(str));
   }
   final pIds = posts.map((e) => e.id);
   return E621.sendAddFavoriteRequestBatch(
@@ -447,37 +443,31 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithPosts({
         }
       });
       if (context?.mounted ?? false) {
-        ScaffoldMessenger.of(context!)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(sbs),
-              action: SnackBarAction(
-                label: "Undo",
-                onPressed: () async {
-                  E621.sendDeleteFavoriteRequestBatch(
-                    pIds,
-                    username: E621AccessData.fallback?.username,
-                    apiKey: E621AccessData.fallback?.apiKey,
-                    onComplete: (rs) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context)
-                          ..hideCurrentSnackBar()
-                          ..showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
-                                "/${rs.length} posts removed from favorites!",
-                              ),
-                            ),
-                          );
-                      }
-                    },
-                  );
+        util.showUserMessage(
+          context: context!,
+          content: Text(sbs),
+          action: (
+            "Undo",
+            () async {
+              E621.sendDeleteFavoriteRequestBatch(
+                pIds,
+                username: E621AccessData.fallback?.username,
+                apiKey: E621AccessData.fallback?.apiKey,
+                onComplete: (rs) {
+                  if (context.mounted) {
+                    util.showUserMessage(
+                      context: context,
+                      content: Text(
+                        "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
+                        "/${rs.length} posts removed from favorites!",
+                      ),
+                    );
+                  }
                 },
-              ),
-            ),
-          );
+              );
+            },
+          ),
+        );
       }
     },
   );
@@ -490,11 +480,7 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithIds({
   var str = "Adding ${postIds.length} posts to favorites...";
   _logger.finer(str);
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(str)),
-      );
+    util.showUserMessage(context: context!, content: Text(str));
   }
   return E621.sendAddFavoriteRequestBatch(
     postIds,
@@ -517,37 +503,31 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithIds({
         }
       });
       if (context?.mounted ?? false) {
-        ScaffoldMessenger.of(context!)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(sbs),
-              action: SnackBarAction(
-                label: "Undo",
-                onPressed: () async {
-                  E621.sendDeleteFavoriteRequestBatch(
-                    postIds,
-                    username: E621AccessData.fallback?.username,
-                    apiKey: E621AccessData.fallback?.apiKey,
-                    onComplete: (rs) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context)
-                          ..hideCurrentSnackBar()
-                          ..showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
-                                "/${rs.length} posts removed from favorites!",
-                              ),
-                            ),
-                          );
-                      }
-                    },
-                  );
+        util.showUserMessage(
+          context: context!,
+          content: Text(sbs),
+          action: (
+            "Undo",
+            () async {
+              E621.sendDeleteFavoriteRequestBatch(
+                postIds,
+                username: E621AccessData.fallback?.username,
+                apiKey: E621AccessData.fallback?.apiKey,
+                onComplete: (rs) {
+                  if (context.mounted) {
+                    util.showUserMessage(
+                      context: context,
+                      content: Text(
+                        "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
+                        "/${rs.length} posts removed from favorites!",
+                      ),
+                    );
+                  }
                 },
-              ),
-            ),
-          );
+              );
+            },
+          ),
+        );
       }
     },
   );
@@ -561,11 +541,7 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithPosts({
   var str = "Removing ${posts.length} posts from favorites...";
   _logger.finer(str);
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(str)),
-      );
+    util.showUserMessage(context: context!, content: Text(str));
   }
   final pIds = posts.map((e) => e.id);
   return E621.sendDeleteFavoriteRequestBatch(
@@ -589,37 +565,31 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithPosts({
       //   }
       // });
       if (context?.mounted ?? false) {
-        ScaffoldMessenger.of(context!)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(sbs),
-              action: SnackBarAction(
-                label: "Undo",
-                onPressed: () async {
-                  E621.sendAddFavoriteRequestBatch(
-                    pIds,
-                    username: E621AccessData.fallback?.username,
-                    apiKey: E621AccessData.fallback?.apiKey,
-                    onComplete: (rs) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context)
-                          ..hideCurrentSnackBar()
-                          ..showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
-                                "/${rs.length} posts added to favorites!",
-                              ),
-                            ),
-                          );
-                      }
-                    },
-                  );
+        util.showUserMessage(
+          context: context!,
+          content: Text(sbs),
+          action: (
+            "Undo",
+            () async {
+              E621.sendAddFavoriteRequestBatch(
+                pIds,
+                username: E621AccessData.fallback?.username,
+                apiKey: E621AccessData.fallback?.apiKey,
+                onComplete: (rs) {
+                  if (context.mounted) {
+                    util.showUserMessage(
+                      context: context,
+                      content: Text(
+                        "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
+                        "/${rs.length} posts added to favorites!",
+                      ),
+                    );
+                  }
                 },
-              ),
-            ),
-          );
+              );
+            },
+          ),
+        );
       }
     },
   );
@@ -633,11 +603,7 @@ Stream<E6BatchActionEvent> removeFavoritesWithPosts({
   var str = "Removing ${posts.length} posts from favorites...";
   _logger.finer(str);
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(str)),
-      );
+    util.showUserMessage(context: context!, content: Text(str));
   }
   final pIds = posts.map((e) => e.id).toList();
   final totalProgressSend = pIds.length;
@@ -763,11 +729,7 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithIds({
   var str = "Removing ${postIds.length} posts from favorites...";
   _logger.finer(str);
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(str)),
-      );
+    util.showUserMessage(context: context!, content: Text(str));
   }
   return E621.sendDeleteFavoriteRequestBatch(
     postIds,
@@ -790,37 +752,31 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithIds({
         }
       });
       if (context?.mounted ?? false) {
-        ScaffoldMessenger.of(context!)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(sbs),
-              action: SnackBarAction(
-                label: "Undo",
-                onPressed: () async {
-                  E621.sendAddFavoriteRequestBatch(
-                    postIds,
-                    username: E621AccessData.fallback?.username,
-                    apiKey: E621AccessData.fallback?.apiKey,
-                    onComplete: (rs) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context)
-                          ..hideCurrentSnackBar()
-                          ..showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
-                                "/${rs.length} posts added to favorites!",
-                              ),
-                            ),
-                          );
-                      }
-                    },
-                  );
+        util.showUserMessage(
+          context: context!,
+          content: Text(sbs),
+          action: (
+            "Undo",
+            () async {
+              E621.sendAddFavoriteRequestBatch(
+                postIds,
+                username: E621AccessData.fallback?.username,
+                apiKey: E621AccessData.fallback?.apiKey,
+                onComplete: (rs) {
+                  if (context.mounted) {
+                    util.showUserMessage(
+                      context: context,
+                      content: Text(
+                        "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
+                        "/${rs.length} posts added to favorites!",
+                      ),
+                    );
+                  }
                 },
-              ),
-            ),
-          );
+              );
+            },
+          ),
+        );
       }
     },
   );
@@ -835,14 +791,11 @@ Future<e621.PostSet?> removeFromSetWithPosts({
   _logger.finer("Removing ${posts.length}"
       " posts from a set, selecting set");
   if (context.mounted) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text("Removing ${posts.length}"
-              " posts from a set, selecting set"),
-        ),
-      );
+    util.showUserMessage(
+      context: context,
+      content: Text("Removing ${posts.length}"
+          " posts from a set, selecting set"),
+    );
   }
   var v = await showDialog<e621.PostSet>(
     context: context,
@@ -871,14 +824,14 @@ Future<e621.PostSet?> removeFromSetWithPosts({
     _logger.finer("Removing ${posts.length}"
         " posts from set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})");
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text("Removing ${posts.length}"
-                " posts from set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})"),
-          ),
-        );
+      util.showUserMessage(
+        context: context,
+        content: Text(
+          "Removing ${posts.length}"
+          " posts from set ${v.id} (${v.shortname}, "
+          "length ${v.postCount}, length ${v.postCount})",
+        ),
+      );
     }
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
@@ -900,14 +853,12 @@ Future<e621.PostSet?> removeFromSetWithPosts({
           "${formerLength - v.postCount}/${posts.length} posts successfully removed from set ${v.id} (${v.shortname}, length $formerLength => ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -920,23 +871,20 @@ Future<e621.PostSet?> removeFromSetWithPosts({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
       }
     } else {
       final out =
           "${res.statusCode}: Failed to remove posts from set ${v.id} (${v.shortname}, length ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -947,9 +895,8 @@ Future<e621.PostSet?> removeFromSetWithPosts({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
         return null;
       }
     }
@@ -957,11 +904,7 @@ Future<e621.PostSet?> removeFromSetWithPosts({
     const out = "No Set Selected, canceling.";
     _logger.finer(out);
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text(out)),
-        );
+      util.showUserMessage(context: context, content: const Text(out));
     }
   }
   return v;
@@ -974,14 +917,11 @@ Future<e621.PostSet?> addToSetWithPosts({
   _logger.finer("Adding ${posts.length}"
       " posts to a set, selecting set");
   if (context.mounted) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text("Adding ${posts.length}"
-              " posts to a set, selecting set"),
-        ),
-      );
+    util.showUserMessage(
+      context: context,
+      content: Text("Adding ${posts.length}"
+          " posts to a set, selecting set"),
+    );
   }
   var v = await showDialog<e621.PostSet>(
     context: context,
@@ -1009,16 +949,14 @@ Future<e621.PostSet?> addToSetWithPosts({
   );
   if (v != null) {
     _logger.finer("Adding ${posts.length}"
-        " posts to set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})");
+        " posts to set ${v.id} (${v.shortname}, length ${v.postCount})");
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text("Adding ${posts.length}"
-                " posts to set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})"),
-          ),
-        );
+      util.showUserMessage(
+        context: context,
+        content: Text("Adding ${posts.length}"
+            " posts to set ${v.id} (${v.shortname}, "
+            "length ${v.postCount})"),
+      );
     }
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
@@ -1040,14 +978,12 @@ Future<e621.PostSet?> addToSetWithPosts({
           "${v.postCount - formerLength} ${posts.length} posts successfully added to set ${v.id} (${v.shortname}, length $formerLength => ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1060,9 +996,8 @@ Future<e621.PostSet?> addToSetWithPosts({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
       }
       return v;
     } else {
@@ -1070,14 +1005,12 @@ Future<e621.PostSet?> addToSetWithPosts({
           "${res.statusCode}: Failed to add posts to set ${v.id} (${v.shortname}, length ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1088,9 +1021,8 @@ Future<e621.PostSet?> addToSetWithPosts({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
         return null;
       }
     }
@@ -1098,11 +1030,7 @@ Future<e621.PostSet?> addToSetWithPosts({
     const out = "No Set Selected, canceling.";
     _logger.finer(out);
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text(out)),
-        );
+      util.showUserMessage(context: context, content: const Text(out));
     }
   }
   return v;
@@ -1115,14 +1043,11 @@ Future<e621.PostSet?> removeFromSetWithIds({
   _logger.finer("Removing ${postIds.length}"
       " posts from a set, selecting set");
   if (context.mounted) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text("Removing ${postIds.length}"
-              " posts from a set, selecting set"),
-        ),
-      );
+    util.showUserMessage(
+      context: context,
+      content: Text("Removing ${postIds.length}"
+          " posts from a set, selecting set"),
+    );
   }
   var v = await showDialog<e621.PostSet>(
     context: context,
@@ -1149,16 +1074,14 @@ Future<e621.PostSet?> removeFromSetWithIds({
   );
   if (v != null) {
     _logger.finer("Removing ${postIds.length}"
-        " posts from set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})");
+        " posts from set ${v.id} (${v.shortname}, length ${v.postCount})");
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text("Removing ${postIds.length}"
-                " posts from set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})"),
-          ),
-        );
+      util.showUserMessage(
+        context: context,
+        content: Text("Removing ${postIds.length}"
+            " posts from set ${v.id} (${v.shortname}, "
+            "length ${v.postCount})"),
+      );
     }
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
@@ -1180,14 +1103,12 @@ Future<e621.PostSet?> removeFromSetWithIds({
           "${formerLength - v.postCount}/${postIds.length} posts successfully removed from set ${v.id} (${v.shortname}, length $formerLength => ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1200,9 +1121,8 @@ Future<e621.PostSet?> removeFromSetWithIds({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
       }
       return v;
     } else {
@@ -1210,14 +1130,12 @@ Future<e621.PostSet?> removeFromSetWithIds({
           "${res.statusCode}: Failed to remove posts from set ${v.id} (${v.shortname}, length ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1228,9 +1146,8 @@ Future<e621.PostSet?> removeFromSetWithIds({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
         return null;
       }
     }
@@ -1238,11 +1155,7 @@ Future<e621.PostSet?> removeFromSetWithIds({
     const out = "No Set Selected, canceling.";
     _logger.finer(out);
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text(out)),
-        );
+      util.showUserMessage(context: context, content: const Text(out));
     }
   }
   return v;
@@ -1255,14 +1168,11 @@ Future<e621.PostSet?> addToSetWithIds({
   _logger.finer("Adding ${postIds.length}"
       " posts to a set, selecting set");
   if (context.mounted) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text("Adding ${postIds.length}"
-              " posts to a set, selecting set"),
-        ),
-      );
+    util.showUserMessage(
+      context: context,
+      content: Text("Adding ${postIds.length}"
+          " posts to a set, selecting set"),
+    );
   }
   var v = await showDialog<e621.PostSet>(
     context: context,
@@ -1290,16 +1200,14 @@ Future<e621.PostSet?> addToSetWithIds({
   );
   if (v != null) {
     _logger.finer("Adding ${postIds.length}"
-        " posts to set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})");
+        " posts to set ${v.id} (${v.shortname}, "
+        "length ${v.postCount})");
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text("Adding ${postIds.length}"
-                " posts to set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})"),
-          ),
-        );
+      util.showUserMessage(
+          context: context,
+          content: Text("Adding ${postIds.length}"
+              " posts to set ${v.id} (${v.shortname}, "
+              "length ${v.postCount})"));
     }
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
@@ -1312,7 +1220,6 @@ Future<e621.PostSet?> addToSetWithIds({
         .toResponse();
 
     lm.logResponseSmart(res, _logger);
-    // if (res.statusCode == 201) {
     if (res.statusCodeInfo.isSuccessful) {
       final formerLength = v.postCount;
       v = e621.PostSet.fromRawJson(res.body);
@@ -1321,14 +1228,12 @@ Future<e621.PostSet?> addToSetWithIds({
           "${v.postCount - formerLength} ${postIds.length} posts successfully added to set ${v.id} (${v.shortname}, length $formerLength => ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1341,9 +1246,8 @@ Future<e621.PostSet?> addToSetWithIds({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
       }
       return v;
     } else {
@@ -1351,14 +1255,12 @@ Future<e621.PostSet?> addToSetWithIds({
           "${res.statusCode}: Failed to add posts to set ${v.id} (${v.shortname}, length ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1369,9 +1271,8 @@ Future<e621.PostSet?> addToSetWithIds({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
         return null;
       }
     }
@@ -1379,11 +1280,7 @@ Future<e621.PostSet?> addToSetWithIds({
     const out = "No Set Selected, canceling.";
     _logger.finer(out);
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text(out)),
-        );
+      util.showUserMessage(context: context, content: const Text(out));
     }
   }
   return v;
@@ -1399,9 +1296,7 @@ Future<e621.PostSet?> removeFromSetWithPost({
       " from a set, selecting set";
   _logger.finer(logString);
   if (context.mounted) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(logString)));
+    util.showUserMessage(context: context, content: Text(logString));
   }
   var v = await showDialog<e621.PostSet>(
     context: context,
@@ -1427,9 +1322,7 @@ Future<e621.PostSet?> removeFromSetWithPost({
         " from set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})";
     _logger.finer(logString);
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(logString)));
+      util.showUserMessage(context: context, content: Text(logString));
     }
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
@@ -1451,14 +1344,12 @@ Future<e621.PostSet?> removeFromSetWithPost({
           "(${v.shortname}, length $formerLength => ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1471,23 +1362,20 @@ Future<e621.PostSet?> removeFromSetWithPost({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
       }
     } else {
       final out =
           "${res.statusCode}: Failed to remove post ${post.id} from set ${v.id} (${v.shortname}, length ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1498,9 +1386,8 @@ Future<e621.PostSet?> removeFromSetWithPost({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
         return null;
       }
     }
@@ -1508,11 +1395,7 @@ Future<e621.PostSet?> removeFromSetWithPost({
     const out = "No Set Selected, canceling.";
     _logger.finer(out);
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text(out)),
-        );
+      util.showUserMessage(context: context, content: const Text(out));
     }
   }
   return v;
@@ -1526,9 +1409,7 @@ Future<e621.PostSet?> addToSetWithPost({
       " posts to a set, selecting set";
   _logger.finer(logString);
   if (context.mounted) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(logString)));
+    util.showUserMessage(context: context, content: Text(logString));
   }
   var v = await showDialog<e621.PostSet>(
     context: context,
@@ -1555,9 +1436,7 @@ Future<e621.PostSet?> addToSetWithPost({
         " posts to set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})";
     _logger.finer(logString);
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(logString)));
+      util.showUserMessage(context: context, content: Text(logString));
     }
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
@@ -1579,14 +1458,12 @@ Future<e621.PostSet?> addToSetWithPost({
           "${post.id} successfully added to set ${v.id} (${v.shortname}, length $formerLength => ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1599,9 +1476,8 @@ Future<e621.PostSet?> addToSetWithPost({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
       }
       return v;
     } else {
@@ -1609,14 +1485,12 @@ Future<e621.PostSet?> addToSetWithPost({
           "${res.statusCode}: Failed to add posts to set ${v.id} (${v.shortname}, length ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1627,9 +1501,8 @@ Future<e621.PostSet?> addToSetWithPost({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
         return null;
       }
     }
@@ -1637,11 +1510,7 @@ Future<e621.PostSet?> addToSetWithPost({
     const out = "No Set Selected, canceling.";
     _logger.finer(out);
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text(out)),
-        );
+      util.showUserMessage(context: context, content: const Text(out));
     }
   }
   return v;
@@ -1655,9 +1524,7 @@ Future<e621.PostSet?> removeFromSetWithId({
       " from a set, selecting set";
   _logger.finer(logString);
   if (context.mounted) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(logString)));
+    util.showUserMessage(context: context, content: Text(logString));
   }
   var v = await showDialog<e621.PostSet>(
     context: context,
@@ -1683,9 +1550,7 @@ Future<e621.PostSet?> removeFromSetWithId({
         " from set ${v.id} (${v.shortname}, length ${v.postCount}, length ${v.postCount})";
     _logger.finer(logString);
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(logString)));
+      util.showUserMessage(context: context, content: Text(logString));
     }
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
@@ -1707,14 +1572,12 @@ Future<e621.PostSet?> removeFromSetWithId({
           "(${v.shortname}, length $formerLength => ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1727,9 +1590,8 @@ Future<e621.PostSet?> removeFromSetWithId({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
       }
       return v;
     } else {
@@ -1737,14 +1599,12 @@ Future<e621.PostSet?> removeFromSetWithId({
           "${res.statusCode}: Failed to remove posts from set ${v.id} (${v.shortname}, length ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1755,9 +1615,8 @@ Future<e621.PostSet?> removeFromSetWithId({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
         return null;
       }
     }
@@ -1765,11 +1624,7 @@ Future<e621.PostSet?> removeFromSetWithId({
     const out = "No Set Selected, canceling.";
     _logger.finer(out);
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text(out)),
-        );
+      util.showUserMessage(context: context, content: const Text(out));
     }
   }
   return v;
@@ -1783,9 +1638,7 @@ Future<e621.PostSet?> addToSetWithId({
       " posts to a set, selecting set";
   _logger.finer(logString);
   if (context.mounted) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(logString)));
+    util.showUserMessage(context: context, content: Text(logString));
   }
   var v = await showDialog<e621.PostSet>(
     context: context,
@@ -1812,9 +1665,7 @@ Future<e621.PostSet?> addToSetWithId({
         "(${v.shortname}, length ${v.postCount}, length ${v.postCount})";
     _logger.finer(logString);
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(logString)));
+      util.showUserMessage(context: context, content: Text(logString));
     }
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
@@ -1836,14 +1687,12 @@ Future<e621.PostSet?> addToSetWithId({
           "(${v.shortname}, length $formerLength => ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1856,9 +1705,8 @@ Future<e621.PostSet?> addToSetWithId({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
       }
       return v;
     } else {
@@ -1866,14 +1714,12 @@ Future<e621.PostSet?> addToSetWithId({
           "${res.statusCode}: Failed to add posts to set ${v.id} (${v.shortname}, length ${v.postCount})";
       _logger.finer(out);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(out),
-              action: SnackBarAction(
-                label: "See Set",
-                onPressed: () => Navigator.push(
+        util.showUserMessage(
+          context: context,
+          content: Text(out),
+          action: (
+            "See Set",
+            () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1884,9 +1730,8 @@ Future<e621.PostSet?> addToSetWithId({
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+          ),
+        );
         return null;
       }
     }
@@ -1894,11 +1739,7 @@ Future<e621.PostSet?> addToSetWithId({
     const out = "No Set Selected, canceling.";
     _logger.finer(out);
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text(out)),
-        );
+      util.showUserMessage(context: context, content: const Text(out));
     }
   }
   return v;
@@ -2092,13 +1933,10 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
 }) {
   _print("${isUpvote ? "Upvoting" : "Downvoting"} $postId...");
   if (context?.mounted ?? false) {
-    ScaffoldMessenger.of(context!)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-            content:
-                Text("${isUpvote ? "Upvoting" : "Downvoting"} $postId...")),
-      );
+    util.showUserMessage(
+      context: context!,
+      content: Text("${isUpvote ? "Upvoting" : "Downvoting"} $postId..."),
+    );
   }
   return e621
       .sendRequest(
@@ -2114,29 +1952,23 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
       lm.logResponseSmart(v, _logger);
       if (context?.mounted ?? false) {
         if (!v.statusCodeInfo.isSuccessful) {
-          ScaffoldMessenger.of(context!)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(
-                content: Text("${v.statusCode}: ${v.reasonPhrase}"),
-              ),
-            );
+          util.showUserMessage(
+            context: context!,
+            content: Text("${v.statusCode}: ${v.reasonPhrase}"),
+          );
           return null;
         } else {
           final update = e621.UpdatedScore.fromJsonRaw(v.body);
-          ScaffoldMessenger.of(context!)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(
-                content: Text(createPostVoteStringStrict(
-                  postId: postId,
-                  score: update,
-                  oldScore: oldScore,
-                  noUnvote: noUnvote,
-                  castVote: isUpvote ? 1 : -1,
-                )),
-              ),
-            );
+          util.showUserMessage(
+            context: context!,
+            content: Text(createPostVoteStringStrict(
+              postId: postId,
+              score: update,
+              oldScore: oldScore,
+              noUnvote: noUnvote,
+              castVote: isUpvote ? 1 : -1,
+            )),
+          );
           return update;
         }
       }

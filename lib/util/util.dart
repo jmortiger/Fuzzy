@@ -60,9 +60,28 @@ ScaffoldFeatureController showUserMessage({
   Duration? duration = const Duration(seconds: 2),
   (String label, VoidCallback onTap)? action,
   List<(String label, VoidCallback onTap)>? actions,
+}) =>
+    // _showUserMessageSnackbar(
+    _showUserMessageBanner(
+      context: context,
+      content: content,
+      action: action,
+      actions: actions,
+      autoHidePrior: autoHidePrior,
+      duration: duration,
+    );
+
+ScaffoldFeatureController _showUserMessageSnackbar({
+  required BuildContext context,
+  required Widget content,
+  bool autoHidePrior = true,
+  Duration? duration = const Duration(seconds: 2),
+  (String label, VoidCallback onTap)? action,
+  List<(String label, VoidCallback onTap)>? actions,
 }) {
   final message = SnackBar(
         content: content,
+        duration: duration ?? const Duration(seconds: 4),
         action: _makeSnackBarAction(action, actions),
       ),
       sm = ScaffoldMessenger.of(context);
@@ -77,6 +96,40 @@ SnackBarAction? _makeSnackBarAction((String label, VoidCallback onTap)? action,
           label: action?.$1 ?? actions!.first.$1,
           onPressed: action?.$2 ?? actions!.first.$2)
       : null;
+}
+
+ScaffoldFeatureController _showUserMessageBanner({
+  required BuildContext context,
+  required Widget content,
+  bool autoHidePrior = true,
+  Duration? duration = const Duration(seconds: 2),
+  (String label, VoidCallback onTap)? action,
+  List<(String label, VoidCallback onTap)>? actions,
+}) {
+  final message = MaterialBanner(
+        content: content,
+        actions: _makeBannerAction(action, actions),
+      ),
+      sm = ScaffoldMessenger.of(context);
+  if (autoHidePrior) sm.hideCurrentMaterialBanner();
+  if (duration == null) return sm.showMaterialBanner(message);
+  final ret = sm.showMaterialBanner(message);
+  Future.delayed(duration, () => ret.close()).ignore();
+  return ret;
+}
+
+List<Widget> _makeBannerAction((String label, VoidCallback onTap)? action,
+    List<(String label, VoidCallback onTap)>? actions) {
+  Widget make((String label, VoidCallback onTap) action) => TextButton.icon(
+        label: Text(action.$1),
+        onPressed: action.$2,
+      );
+  return [
+    if ((action ?? actions) == null || (action == null && actions!.isEmpty))
+      TextButton.icon(label: const Text("Ok"), onPressed: () {}),
+    if (action != null) make(action),
+    if (actions != null) ...actions.map(make)
+  ];
 }
 
 VoidCallback generateAlertDialog<DialogOutput>(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/pages/edit_post_page.dart';
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e6_actions.dart' as actions;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart'
@@ -312,11 +313,10 @@ class WFabBuilder extends StatelessWidget {
       tooltip: "Edit",
       onPressed: () {
         logger.finer("Editing ${post.id}...");
-        // ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(
-        //   SnackBar(
-        //     content: Text("Editing ${post.id}..."),
-        //   ),
-        // );
+        util.showUserMessage(
+          context: context,
+          content: Text("Editing ${post.id}..."),
+        );
         Navigator.pushNamed(
           context,
           "${EditPostPageLoader.routeNameString}?postId=${post.id}",
@@ -349,13 +349,7 @@ class WFabBuilder extends StatelessWidget {
       onPressed: () {
         final p = "${post.id}: $tooltip";
         logger.finer(p);
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(p),
-            ),
-          );
+        util.showUserMessage(context: context, content: Text(p));
         // context.watch<SearchResultsNotifier>().togglePostSelection(
         (selected == null)
             ? toggleSelection?.call(post.id) ??
@@ -388,22 +382,14 @@ class WFabBuilder extends StatelessWidget {
           (previousValue, element) => "$previousValue, ${element.id}",
         )}";
         logger.finer(s);
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(s),
-            ),
-          );
+        util.showUserMessage(context: context, content: Text(s));
         s = "post: ${post?.id}";
         logger.finer(s);
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(s),
-            ),
-          );
+        util.showUserMessage(
+          context: context,
+          content: Text(s),
+          autoHidePrior: false,
+        );
       },
     );
   }
