@@ -18,6 +18,7 @@ class WVideoPlayerScreen extends StatefulWidget {
   State<WVideoPlayerScreen> createState() => _WVideoPlayerScreenState();
 }
 
+/// TODO: Remove FutureBuilder, handle directly
 class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
     with TickerProviderStateMixin {
   // #region Logger
@@ -26,9 +27,11 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
   static late final lRecord = lm.generateLogger("WVideoPlayerScreen");
   // #endregion Logger
   static const fadeInTime = Duration(milliseconds: 750);
+  static const waitTime = Duration(seconds: 2);
   late AnimationController _fadeInController;
   late VideoPlayerController _controller;
   late Future<void> _initializeVideoPlayerFuture;
+  bool _cancelFadeOut = true;
 
   double volumeLastNonZeroValue = 1;
   bool showControlsRequest = false;
@@ -71,6 +74,7 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
       vsync: this,
       duration: fadeInTime,
     );
+    // _fadeInController.addStatusListener(_fadeBackOutListener);
     // var colorTween = ColorTween(
     //     begin: const Color.fromRGBO(0, 0, 0, 0),
     //     end: const Color.fromRGBO(0, 0, 0, 1));
@@ -93,6 +97,17 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
     _controller.setVolume(volume);
     _controller.addListener(listener);
   }
+
+  // void _fadeBackOutListener(AnimationStatus s) {
+  //   if (s == AnimationStatus.completed) {
+  //     // _cancelFadeOut = false;
+  //     Future.delayed(waitTime, () {
+  //       if (_fadeInController.isCompleted && !showControls) {
+  //         _fadeInController.forward();
+  //       }
+  //     }).ignore();
+  //   }
+  // }
 
   void togglePlayState() {
     setState(() {
@@ -129,7 +144,12 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
       switch (_fadeInController.status) {
         case AnimationStatus.dismissed:
         case AnimationStatus.reverse:
-          _fadeInController.forward();
+          _fadeInController
+              .forward()
+              // .orCancel
+              // .then((_) => Future.delayed(waitTime))
+              // .then((_) => !showControls ? _fadeInController.reverse() : "")
+              .ignore();
           break;
         default:
           break;
@@ -137,9 +157,18 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
     } else {
       switch (_fadeInController.status) {
         case AnimationStatus.completed:
-        case AnimationStatus.forward:
-          _fadeInController.reverse();
+          _cancelFadeOut = false;
+          Future.delayed(waitTime, () {
+            if (_fadeInController.isCompleted && !showControls) {
+              // setState(() {
+              _fadeInController.reverse();
+              // });
+            }
+          }) /* .ignore() */;
           break;
+        // case AnimationStatus.forward:
+        //   _fadeInController.reverse();
+        //   break;
         default:
           break;
       }
@@ -170,13 +199,22 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
                       }),
                     ),
                   ),
-                  if (_fadeInController.status != AnimationStatus.dismissed)
-                    _buildBottomRowControls(),
-                  if (_fadeInController.status != AnimationStatus.dismissed)
-                    Positioned.directional(
-                      textDirection: TextDirection.ltr,
-                      top: 0,
-                      end: 0,
+                  // if (_fadeInController.status != AnimationStatus.dismissed)
+                  _buildBottomRowControls(),
+                  // if (_fadeInController.status != AnimationStatus.dismissed)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: AnimatedBuilder(
+                      animation: _fadeInController,
+                      builder: (context, child) {
+                        return IgnorePointer(
+                            ignoring: !_fadeInController.isDismissed,
+                            child: Opacity(
+                              opacity: _fadeInController.value,
+                              child: child,
+                            ));
+                      },
                       child: IconButton(
                         iconSize: 24.0 * 2,
                         tooltip:
@@ -187,6 +225,7 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
                         ),
                       ),
                     ),
+                  ),
                 ],
               ),
             ),
@@ -202,21 +241,25 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
 
   Widget _buildBottomRowControls() {
     // print("showControls");
-    return Positioned.directional(
+    return Positioned(
       bottom: 0,
-      start: 0,
-      end: 0,
-      textDirection: TextDirection.ltr,
-      child: Container(
-        color: const Color.fromRGBO(0, 0, 0, .5), //colorAnim.value,
-        child: InkWell(
-          // hoverColor: colorAnim.value,
-          onHover: (value) => setState(() {
-            isHoveringInControlsInkWell = value;
-            logger.fine("isHoveringInControlsInkWell: $value");
-          }),
-          child: _buildNewControls(),
-        ),
+      left: 0,
+      right: 0,
+      child: AnimatedBuilder(
+        animation: _fadeInController,
+        builder: (context, child) {
+          final root = Opacity(
+            opacity: _fadeInController.value,
+            child: Container(
+              color: const Color.fromRGBO(0, 0, 0, .5), //colorAnim.value,
+              child: child,
+            ),
+          );
+          return _fadeInController.status != AnimationStatus.dismissed
+              ? root
+              : IgnorePointer(child: root);
+        },
+        child: _buildNewControls(),
       ),
     );
   }
@@ -280,16 +323,25 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
                 ),
                 iconSize: iconSize,
               ),
-              WVideoTimeCodeUnit(
-                controller: _controller,
-              ),
+              WVideoTimeCodeUnit(controller: _controller),
               WVideoSpeed(height: iconSize, controller: _controller),
               // WVideoSpeedOld(height: iconSize, controller: _controller),
             ],
           ),
         ),
-        WTimeline(
-          controller: _controller,
+        // WTimeline(
+        //   controller: _controller,
+        // ),
+        // Flexible(
+        //   fit: FlexFit.loose,
+        //   child: VideoScrubber(
+        //     controller: _controller,
+        //     child: WVisualTimeline(controller: _controller),
+        //   ),
+        // ),
+        VideoProgressIndicator(
+          _controller,
+          allowScrubbing: true,
         ),
       ],
     );
@@ -556,6 +608,104 @@ class _WTimelineState extends State<WTimeline> {
         //   value: value,
         // ),
       ),
+    );
+  }
+}
+
+class WVisualTimeline extends StatefulWidget {
+  const WVisualTimeline({
+    super.key,
+    required VideoPlayerController controller,
+  }) : _controller = controller;
+
+  final VideoPlayerController _controller;
+
+  @override
+  State<WVisualTimeline> createState() => _WVisualTimelineState();
+}
+
+class _WVisualTimelineState extends State<WVisualTimeline> {
+  set position(Duration value) => widget._controller.seekTo(value);
+  Duration get position => widget._controller.value.position;
+  Duration get duration => widget._controller.value.duration;
+  double value = 0;
+  @override
+  void initState() {
+    super.initState();
+    value = widget._controller.value.position.inMilliseconds /
+        widget._controller.value.duration.inMilliseconds;
+    widget._controller.addListener(onValueChanged);
+  }
+
+  @override
+  void dispose() {
+    widget._controller.removeListener(onValueChanged);
+    super.dispose();
+  }
+
+  void onValueChanged() {
+    double t;
+    if ((t = widget._controller.value.position.inMilliseconds /
+            widget._controller.value.duration.inMilliseconds) !=
+        value) {
+      setState(() {
+        value = t;
+      });
+    }
+  }
+
+  bool? cachedPlayState;
+  // bool? seeking;
+  Future<void>? seekFuture;
+  @override
+  Widget build(BuildContext context) {
+    // final t = Theme.of(context);
+    // final inactiveColor =
+    //     t.sliderTheme.activeTrackColor ?? t.colorScheme.primary;
+    // final thumbColor =
+    //     t.sliderTheme.thumbColor ?? t.colorScheme.primary;
+    // final secondaryActiveColor =
+    //     t.sliderTheme.secondaryActiveTrackColor ?? t.colorScheme.primary.withAlpha((255*.54).round());
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Slider(
+        // onChangeStart: (value) {
+        //   widget._controller.removeListener(onValueChanged);
+        //   setState(() {
+        //     cachedPlayState = widget._controller.value.isPlaying;
+        //   });
+        // },
+        // onChanged: (value) {
+        //   // setState(() {
+        //   //   seeking = true;
+        //   // });
+        //   setState(() {
+        //     seekFuture = widget._controller.seekTo(duration * value)
+        //       ..then((d) => setState(() {
+        //             //seeking = false;
+        //             seekFuture = null;
+        //           }));
+        //   });
+        // },
+        // onChangeEnd: (value) {
+        //   if (cachedPlayState ?? false) {
+        //     if (seekFuture == null) {
+        //       widget._controller.play();
+        //     } else {
+        //       seekFuture!.then((v) => widget._controller.play());
+        //     }
+        //   }
+        //   setState(() {
+        //     cachedPlayState = null;
+        //   });
+        //   widget._controller.addListener(onValueChanged);
+        // },
+        onChanged: (v) {}, //null,
+        value: value,
+      ),
+      // child: LinearProgressIndicator(
+      //   value: value,
+      // ),
     );
   }
 }
