@@ -117,14 +117,14 @@ List<String> _rootParse(String e) {
   String name,
   TagCategory category,
   int postCount,
-}) */TagDBEntryFull parseTagEntryFullCsvString(String e) {
+}) */
+TagDBEntryFull parseTagEntryFullCsvString(String e) {
   final t = _rootParse(e);
   return TagDBEntryFull(
-    id: int.parse(t[0]),
-    name: t[1],
-    category: TagCategory.values[int.parse(t[2])],
-    postCount: int.parse(t[3])
-  );
+      id: int.parse(t[0]),
+      name: t[1],
+      category: TagCategory.values[int.parse(t[2])],
+      postCount: int.parse(t[3]));
 }
 
 ({
@@ -148,7 +148,8 @@ Future<String> makeEncodedCsvStringFull(List<TagDBEntryFull> entries) async =>
 List<TagDBEntryFull> fromCsvStringFull(String csv) => (csv.split("\n")
       ..removeAt(0)
       ..removeLast())
-    .map((e) => /* TagDBEntryFull._fromRecord( */parseTagEntryFullCsvString(e))//)
+    .map((e) => /* TagDBEntryFull._fromRecord( */
+        parseTagEntryFullCsvString(e)) //)
     .toList();
 Future<List<TagDBEntryFull>> makeFromCsvStringFull(String csv) async =>
     compute((String csv) => fromCsvStringFull(csv), csv,

@@ -21,8 +21,7 @@ final class PostSearchParametersSlim implements IPostSearchParameters {
   @override
   final String? tags;
   @override
-  Set<String>? get tagSet =>
-      tags?.split(RegExp(r"\s")).toSet();
+  Set<String>? get tagSet => tags?.split(RegExp(r"\s")).toSet();
   @override
   final int? limit;
 
@@ -48,8 +47,7 @@ final class PostSearchParameters
   @override
   final String? tags;
   @override
-  Set<String>? get tagSet =>
-      tags?.split(RegExp(r"\s")).toSet();
+  Set<String>? get tagSet => tags?.split(RegExp(r"\s")).toSet();
   @override
   final int? limit;
   @override
@@ -80,8 +78,7 @@ final class PostSearchParametersStrict
   @override
   final String tags;
   @override
-  Set<String>? get tagSet =>
-      tags.split(RegExp(r"\s")).toSet();
+  Set<String>? get tagSet => tags.split(RegExp(r"\s")).toSet();
   @override
   final int limit;
   @override
@@ -140,8 +137,7 @@ final class PageNumSearchParameters
   @override
   final int? pageNumber;
   @override
-  Set<String>? get tagSet =>
-      tags?.split(RegExp(r"\s")).toSet();
+  Set<String>? get tagSet => tags?.split(RegExp(r"\s")).toSet();
 
   const PageNumSearchParameters.blank({
     this.limit,
@@ -233,8 +229,7 @@ final class PageNumSearchParametersStrict extends PageNumSearchParameters {
   @override
   int get pageIndex => super.pageIndex!;
   @override
-  Set<String> get tagSet =>
-      tags.split(RegExp(r"\s")).toSet();
+  Set<String> get tagSet => tags.split(RegExp(r"\s")).toSet();
 
   const PageNumSearchParametersStrict.blank({
     int super.limit = 50,
@@ -377,8 +372,7 @@ final class PostSearchParametersFull extends IPostSearchParameters
   @override
   final String? apiKey;
   @override
-  Set<String>? get tagSet =>
-      tags?.split(RegExp(r"\s")).toSet();
+  Set<String>? get tagSet => tags?.split(RegExp(r"\s")).toSet();
 
   @override
   final int? limit;
@@ -415,8 +409,9 @@ mixin LimitSearchParameterNullable {
   /// Exclusive. This should be a redirect to a static member. On post searches, should be 321.
   int get upperBound;
   int? get limit;
-  /// Retrieves [limit] when [limit] is valid; otherwise returns a valid 
-  /// fallback value. This value must pass the same validation as 
+
+  /// Retrieves [limit] when [limit] is valid; otherwise returns a valid
+  /// fallback value. This value must pass the same validation as
   /// [hasValidLimit].
   int get validLimit;
   bool get hasValidLimit => (limit ?? -1) > 0 && limit! < upperBound;
@@ -617,8 +612,7 @@ mixin SearchParameters on PageSearchParameter, LimitSearchParameter {}
 class PostSearchQueryRecordSlimNullable
     implements ComparableRecord<PostSearchQueryRecordSlimNullable> {
   final String? tags;
-  Set<String>? get tagSet =>
-      tags?.split(RegExp(r"\s")).toSet();
+  Set<String>? get tagSet => tags?.split(RegExp(r"\s")).toSet();
   const PostSearchQueryRecordSlimNullable(this.tags);
 
   @override
@@ -638,8 +632,7 @@ class PostSearchQueryRecordSlim implements PostSearchQueryRecordSlimNullable {
   @override
   final String tags;
   @override
-  Set<String> get tagSet =>
-      tags.split(RegExp(r"\s")).toSet();
+  Set<String> get tagSet => tags.split(RegExp(r"\s")).toSet();
   const PostSearchQueryRecordSlim(this.tags);
 
   @override
@@ -665,8 +658,7 @@ class PostSearchQueryRecordNullable
   @override
   final String? tags;
   @override
-  Set<String>? get tagSet =>
-      tags?.split(RegExp(r"\s")).toSet();
+  Set<String>? get tagSet => tags?.split(RegExp(r"\s")).toSet();
   @override
   final int? limit;
 

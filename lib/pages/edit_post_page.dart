@@ -549,9 +549,7 @@ class _WTagItemState extends State<WTagItem> {
         inputFormatters: [
           TextInputFormatter.withFunction(
             (oldValue, newValue) =>
-                newValue.text.contains(RegExp(r"\s"))
-                    ? oldValue
-                    : newValue,
+                newValue.text.contains(RegExp(r"\s")) ? oldValue : newValue,
           )
         ],
         controller: TextEditingController(

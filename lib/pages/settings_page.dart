@@ -717,9 +717,8 @@ class _WSetStringFieldState extends State<WSetStringField> {
               }
               setState(() {
                 setVal(getVal
-                  ..addAll(value
-                      .split(RegExp(r"\s"))
-                      .where((s) => s.isNotEmpty)));
+                  ..addAll(
+                      value.split(RegExp(r"\s")).where((s) => s.isNotEmpty)));
               });
               _print("After: ${getVal.toString()}");
             }
@@ -800,10 +799,7 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
   bool Function(List<T>? p1)? get validateVal => widget.validateVal;
 
   List<T> convertInputToValue(String input) {
-    return input
-        .split(RegExp(r"\s"))
-        .where((s) => s.isNotEmpty)
-        .mapAsList(
+    return input.split(RegExp(r"\s")).where((s) => s.isNotEmpty).mapAsList(
           (e, index, list) => convertInputToEnumValue(e),
         );
   }

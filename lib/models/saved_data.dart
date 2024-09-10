@@ -1,4 +1,4 @@
-import 'dart:async' as async_lib;
+import 'dart:async' as asl show FutureOr;
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:j_util/e621.dart' as e6;
 import 'package:j_util/j_util_full.dart';
-import 'package:j_util/serialization.dart';
+import 'package:j_util/serialization.dart' show Storable;
 
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,30 +23,23 @@ class SavedDataE6 extends ChangeNotifier {
   static late final lRecord = lm.generateLogger("SavedData");
   // #endregion Logger
   static const fileName = "savedSearches.json";
-  static final fileFullPath = LazyInitializer.immediate(fileFullPathInit);
-
-  static Future<String> fileFullPathInit() async {
-    print("fileFullPathInit called");
+  static final fileFullPath = LazyInitializer.immediate(() async {
+    logger.finest("fileFullPathInit called");
     try {
       return (Platform.isWeb ? "" : "${await appDataPath.getItem()}/$fileName")
-        ..printMe();
-    } catch (e) {
-      print("Error in SavedDataE6.fileFullPathInit():\n$e");
+        ..printMe(level: lm.LogLevel.FINEST);
+    } catch (e, s) {
+      logger.severe("Error in SavedDataE6.fileFullPathInit():\n$e", e, s);
       return "";
     }
-  }
-
-  static final file = LazyInitializer<File?>(() async {
-    return !Platform.isWeb
-        ? Storable.getStorageAsync(await fileFullPath.getItem())
-        : null;
   });
-  static async_lib.FutureOr<T> doOnInit<T>(T Function() callback) {
-    return isInit
-        ? callback()
-        : SavedDataE6.storageAsync.then<T>((v) => callback())
-            as async_lib.FutureOr<T>;
-  }
+
+  static final file = LazyInitializer<File?>(() async => !Platform.isWeb
+      ? Storable.getStorageAsync(await fileFullPath.getItem())
+      : null);
+  static asl.FutureOr<T> doOnInit<T>(T Function() cb) => isInit
+      ? cb()
+      : SavedDataE6.storageAsync.then<T>((v) => cb()) as asl.FutureOr<T>;
 
   static late ListNotifier<SavedSearchData> searches;
   ListNotifier<SavedSearchData> get $searches => SavedDataE6.searches;
@@ -56,46 +49,37 @@ class SavedDataE6 extends ChangeNotifier {
   static ListNotifier<ListNotifier<SavedEntry>> makeParented(
           List<SavedEntry> searches) =>
       searches.fold(
-        ListNotifier<ListNotifier<SavedEntry>>.empty(true),
-        (acc, element) {
+        ListNotifier.empty(true),
+        (acc, el) {
           try {
             return acc
-              ..singleWhere((e) => e.firstOrNull?.parent == element.parent)
-                  .add(element);
+              ..singleWhere((e) => e.firstOrNull?.parent == el.parent).add(el);
           } catch (e) {
-            return acc..add(ListNotifier.filled(1, element, true));
+            return acc..add(ListNotifier.filled(1, el, true));
           }
         },
       )
-        ..sort(
-          (a, b) => a.first.parent.compareTo(b.first.parent),
-        )
-        ..forEach((e) => e.sort(
-              (a, b) => a.compareTo(b),
-            ));
+        ..sort((a, b) => a.first.parent.compareTo(b.first.parent))
+        ..forEach((e) => e.sort());
   static ListNotifier<ListNotifier<SavedEntry>> get parented =>
       makeParented(searches);
   Set<String> get $parents => SavedDataE6.parents;
-  static Set<String> get parents => searches.fold(
-        <String>{},
-        (acc, element) => acc..add(element.parent),
-      );
+  static Set<String> get parents =>
+      _parentCount.$Safe?.keys.toSet() ??
+      searches.fold(<String>{}, (acc, e) => acc..add(e.parent));
 
   /// {@template parentCount}
   /// The # of [SavedEntry]s with a given [SavedEntry.parent].
   /// {@endtemplate}
   Map<String, int> get $parentCount => SavedDataE6.parentCount;
+  static final _parentCount = LateInstance<Map<String, int>>();
 
   /// {@macro parentCount}
-  static Map<String, int> get parentCount => searches.fold(
-        <String, int>{},
-        (acc, element) {
-          acc[element] == null
-              ? acc[element.parent] = 1
-              : acc[element.parent] = acc[element.parent]! + 1;
-          return acc;
-        },
-      );
+  static Map<String, int> get parentCount => _parentCount.$Safe ??=
+          searches.fold<Map<String, int>>(<String, int>{}, (acc, e) {
+        acc[e] == null ? acc[e.parent] = 1 : acc[e.parent] = acc[e.parent]! + 1;
+        return acc;
+      });
 
   // #region Initialization and Serialization
   static bool get isInit {
@@ -138,13 +122,9 @@ class SavedDataE6 extends ChangeNotifier {
       });
     }
   }
-  static async_lib.FutureOr<SavedDataE6> loadOrRecycle() {
-    if (isInit) {
-      return SavedDataE6.recycle();
-    } else {
-      return storageAsync.then((v) => SavedDataE6.defaultInit(searches: v));
-    }
-  }
+  static asl.FutureOr<SavedDataE6> loadOrRecycle() => isInit
+      ? SavedDataE6.recycle() as asl.FutureOr<SavedDataE6>
+      : storageAsync.then((v) => SavedDataE6.defaultInit(searches: v));
 
   static Future<ListNotifier<SavedSearchData>> get storageAsync async =>
       await ((await file.getItemAsync())
@@ -157,37 +137,12 @@ class SavedDataE6 extends ChangeNotifier {
   //       ? loadFromPrefTrySync()
   //       : SavedDataE6.fromJson(jsonDecode(t));
   // }
-
-  @override
-  void dispose() {
-    searches.removeListener(notifyListeners);
-    $searches.removeListener(notifyListeners);
-    super.dispose();
-  }
-
-  SavedDataE6.init() {
-    if (isInit) {
-      searches.addListener(notifyListeners);
-      return;
-    }
-    file.getItemAsync().then((value) {
-      (value?.readAsString().then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
-              loadFromPref())
-          .then((v) {
-        searches = v..addListener(notifyListeners);
-        if (!validateUniqueness(searches: v)) {
-          _save();
-        }
-      });
-    });
-  }
   // void _rootInit(ListNotifier<SavedSearchData> v) {
   //   searches = v..addListener(notifyListeners);
   //   if (!validateUniqueness(searches: v)) {
   //     _save();
   //   }
   // }
-
   // SavedDataE6.initTrySync() {
   //   if (isInit) {
   //     searches.addListener(notifyListeners);
@@ -220,16 +175,47 @@ class SavedDataE6 extends ChangeNotifier {
   // factory SavedDataE6.fromStorageSync() => Platform.isWeb
   //     ? SavedDataE6()
   //     : Storable.tryLoadToInstanceSync(fileFullPath.$) ?? SavedDataE6();
-  /* SavedDataE6 copyWith({
-    List<SavedPoolData>? pools,
-    List<SavedSetData>? sets,
-    ListNotifier<SavedSearchData>? searches,
-  }) =>
-      SavedDataE6(
-        // pools: pools ?? this.pools.toList(),
-        // sets: sets ?? this.sets.toList(),
-        searches: searches ?? this.searches.toList(),
-      ); */
+  // static async_lib.FutureOr<ListNotifier<SavedSearchData>>
+  //     loadFromStorageAsync() async {
+  //   var str = await Storable.tryLoadStringAsync(
+  //     await fileFullPath.getItem(),
+  //   );
+  //   if (str == null) {
+  //     try {
+  //       return SavedDataE6.fromJson(
+  //           (await devData.getItem())["e621"]["savedData"]);
+  //     } catch (e) {
+  //       return ListNotifier<SavedSearchData>();
+  //     }
+  //   } else {
+  //     return SavedDataE6.fromJson(jsonDecode(str));
+  //   }
+  // }
+
+  @override
+  void dispose() {
+    searches.removeListener(notifyListeners);
+    $searches.removeListener(notifyListeners);
+    super.dispose();
+  }
+
+  SavedDataE6.init() {
+    if (isInit) {
+      searches.addListener(notifyListeners);
+      return;
+    }
+    file.getItemAsync().then((value) {
+      (value?.readAsString().then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
+              loadFromPref())
+          .then((v) {
+        searches = v..addListener(notifyListeners);
+        if (!validateUniqueness(searches: v)) {
+          _save();
+        }
+      });
+    });
+  }
+
   static Future<bool> writeToPref([List<SavedSearchData>? searches]) {
     searches ??= SavedDataE6.searches;
     return pref.getItemAsync().then((v) {
@@ -305,48 +291,28 @@ class SavedDataE6 extends ChangeNotifier {
     return data;
   }
 
-  // static async_lib.FutureOr<ListNotifier<SavedSearchData>>
-  //     loadFromStorageAsync() async {
-  //   var str = await Storable.tryLoadStringAsync(
-  //     await fileFullPath.getItem(),
-  //   );
-  //   if (str == null) {
-  //     try {
-  //       return SavedDataE6.fromJson(
-  //           (await devData.getItem())["e621"]["savedData"]);
-  //     } catch (e) {
-  //       return ListNotifier<SavedSearchData>();
-  //     }
-  //   } else {
-  //     return SavedDataE6.fromJson(jsonDecode(str));
-  //   }
-  // }
-
   static ListNotifier<SavedSearchData> fromJson(Map<String, dynamic> json) =>
-      ListNotifier.of((json["searches"] as List).mapAsList(
-        (e, index, list) => SavedSearchData.fromJson(e),
-      ));
+      ListNotifier.of(
+        (json["searches"] as List).map((e) => SavedSearchData.fromJson(e)),
+      );
   static Map<String, dynamic> toJson() => {
-        "searches": searches,
+        "searches": searches..sort(),
+        "parentCount": parentCount,
       };
   static void _$save() {
     if (!Platform.isWeb) {
       file.$Safe
           ?.writeAsString(jsonEncode(toJson()))
           .catchError((e, s) {
-            print(e, lm.LogLevel.WARNING, e, s);
+            logger.warning(e, e, s);
             return e;
           })
-          .then(
-            (value) => print("Write successful"),
-          )
-          .catchError((e, s) => print(e, lm.LogLevel.WARNING, e, s));
+          .then((value) => logger.info("SavedData write successful"))
+          .catchError((e, s) => logger.warning(e, e, s));
     } else {
       writeToPref().then((v) => v
-          ? print("SavedDataE6 stored successfully: ${jsonEncode(toJson())}",
-              lm.LogLevel.FINE)
-          : print("SavedDataE6 failed to store: ${jsonEncode(toJson())}",
-              lm.LogLevel.SEVERE));
+          ? logger.fine("SavedDataE6 write successful: ${jsonEncode(toJson())}")
+          : logger.severe("SavedDataE6 write Failed: ${jsonEncode(toJson())}"));
     }
   }
   // #endregion Init, Serialization
@@ -484,6 +450,17 @@ class SavedDataE6 extends ChangeNotifier {
     _save();
   }
   // #endregion removeEntries
+
+  /* SavedDataE6 copyWith({
+    List<SavedPoolData>? pools,
+    List<SavedSetData>? sets,
+    ListNotifier<SavedSearchData>? searches,
+  }) =>
+      SavedDataE6(
+        // pools: pools ?? this.pools.toList(),
+        // sets: sets ?? this.sets.toList(),
+        searches: searches ?? this.searches.toList(),
+      ); */
 
   // #region Widget Helpers
   static Widget buildParentedView({

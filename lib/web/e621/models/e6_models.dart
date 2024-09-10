@@ -1550,7 +1550,7 @@ class PoolModel extends e621.Pool {
           isActive: json["is_active"],
           category: e621.PoolCategory.fromJson(json["category"]),
           postIds: (json["post_ids"] as List).cast<int>(),
-              // .mapAsList((e, index, list) => e as int),
+          // .mapAsList((e, index, list) => e as int),
           creatorName: json["creator_name"],
           postCount: json["post_count"],
         );

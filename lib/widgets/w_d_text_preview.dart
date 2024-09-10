@@ -185,7 +185,8 @@ class _WDTextPreviewScrollableState extends State<WDTextPreviewScrollable> {
         value: ctr,
         selector: (context, value) => value.text,
         builder: (context, currText, _) {
-          return SelectableText.rich(dtext.tryParse(currText, ctx: context) as TextSpan);
+          return SelectableText.rich(
+              dtext.tryParse(currText, ctx: context) as TextSpan);
         });
   }
 }

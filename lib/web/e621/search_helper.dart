@@ -90,8 +90,8 @@ enum Order with SearchableEnum {
   String get searchString => "$prefix$tagSuffix";
 
   const Order(this.tagSuffix);
-  factory Order.fromTagText(String tagText) => switch (
-          tagText.replaceAll(("$prefix|${r"\s"}"), "")) {
+  factory Order.fromTagText(String tagText) =>
+      switch (tagText.replaceAll(("$prefix|${r"\s"}"), "")) {
         "id" => id,
         "random" => random,
         "score" => score,

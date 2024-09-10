@@ -819,9 +819,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     }
   }
 
-  bool isNewSearch(String newSearchText) => !setEquals(
-      newSearchText.split(RegExp(r"\s")).toSet(),
-      parameters.tagSet);
+  bool isNewSearch(String newSearchText) =>
+      !setEquals(newSearchText.split(RegExp(r"\s")).toSet(), parameters.tagSet);
 
   /* void _launchSearch({
     BuildContext? context,

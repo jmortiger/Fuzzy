@@ -5,7 +5,8 @@ import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/pages/error_page.dart';
-import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/util/util.dart' as util
+    show defaultOnLinkifyOpen, fullPageSpinner;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
@@ -15,23 +16,18 @@ import 'package:fuzzy/widgets/w_page_indicator.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
+// import 'package:url_launcher/url_launcher.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 
 class WPostSearchResults extends StatefulWidget {
-  // #region Logger
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("WPostSearchResults");
-  // #endregion Logger
+  static late final _logger = lm.generateLogger("WPostSearchResults").logger;
 
   final int pageIndex;
   final int indexOffset;
   final E6Posts posts;
   final int expectedCount;
-  final void Function(Set<int> indices, int newest)? onPostsSelected;
 
   final bool? usesLazyPosts;
 
@@ -48,7 +44,6 @@ class WPostSearchResults extends StatefulWidget {
     required this.expectedCount, // = 50,
     this.pageIndex = 0,
     this.indexOffset = 0,
-    this.onPostsSelected,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
     this.stripToGridView = false,
@@ -61,7 +56,6 @@ class WPostSearchResults extends StatefulWidget {
     required this.expectedCount, // = 50,
     this.pageIndex = 0,
     this.indexOffset = 0,
-    this.onPostsSelected,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
     this.stripToGridView = false,
@@ -74,7 +68,6 @@ class WPostSearchResults extends StatefulWidget {
     required this.expectedCount,
     this.pageIndex = 0,
     this.indexOffset = 0,
-    this.onPostsSelected,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
     this.stripToGridView = false,
@@ -188,56 +181,17 @@ class WPostSearchResults extends StatefulWidget {
             return ErrorPage(
               error: snapshot.error,
               stackTrace: snapshot.stackTrace,
-              logger: logger,
+              logger: _logger,
             );
           } else {
-            return fullPageSpinner;
+            return util.fullPageSpinner;
           }
         },
       );
 }
 
 class _WPostSearchResultsState extends State<WPostSearchResults> {
-  // #region Logger
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
-  // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("WPostSearchResultsState");
-  // #endregion Logger
-  // #region Notifiers
-  Set<int> _selectedIndices = {};
-  Set<int> _selectedPostIds = {};
-
-  ManagedPostCollectionSync get sc =>
-      Provider.of<ManagedPostCollectionSync>(context, listen: false);
-  ManagedPostCollectionSync get scWatch =>
-      Provider.of<ManagedPostCollectionSync>(context, listen: true);
-  SearchResultsNotifier get sr =>
-      Provider.of<SearchResultsNotifier>(context, listen: false);
-  SearchResultsNotifier get srl =>
-      Provider.of<SearchResultsNotifier>(context, listen: true);
-  Set<int> get selectedIndices =>
-      widget.disallowSelections ? _selectedIndices : sr.selectedIndices;
-  Set<int> get selectedPostIds =>
-      widget.disallowSelections ? _selectedPostIds : sr.selectedPostIds;
-
-  set selectedIndices(Set<int> value) => widget.disallowSelections
-      ? setState(() {
-          _selectedIndices = value;
-        })
-      : srl.selectedIndices = SetNotifier.from(value);
-  set selectedPostIds(Set<int> value) => widget.disallowSelections
-      ? setState(() {
-          _selectedPostIds = value;
-        })
-      : srl.selectedPostIds = SetNotifier.from(value);
-  bool getIsIndexSelected(int index) => widget.disallowSelections
-      ? _selectedIndices.contains(index)
-      : sr.getIsSelected(index);
-  bool getIsPostIdSelected(int index) => widget.disallowSelections
-      ? _selectedPostIds.contains(index)
-      : sr.getIsPostSelected(index);
-  // #endregion Notifiers
+  static lm.FileLogger get _logger => WPostSearchResults._logger;
 
   int? trueCount;
 
@@ -247,16 +201,6 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
   E6PostsLazy? get postLazy => (widget.posts.runtimeType == E6PostsLazy)
       ? (widget.posts as E6PostsLazy)
       : null;
-  void _clearSelectionsCallback() {
-    if (mounted) {
-      setState(() {
-        selectedIndices.clear();
-        selectedPostIds.clear();
-      });
-    } else {
-      print("Dismounted?");
-    }
-  }
 
   void _rebuildCallback() => setState(() {});
 
@@ -275,7 +219,6 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
 
   @override
   void dispose() {
-    // widget._onSelectionCleared?.unsubscribe(_clearSelectionsCallback);
     widget._fireRebuild?.unsubscribe(_rebuildCallback);
     super.dispose();
   }
@@ -288,15 +231,15 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
               // TODO: Make this work lazy
               if (widget.posts.restrictedIndices.isNotEmpty)
                 Linkify(
-                  onOpen: (link) async {
-                    if (!await launchUrl(Uri.parse(link.url))) {
-                      throw Exception('Could not launch ${link.url}');
-                    }
-                  },
-                  text:
-                      "${widget.posts.restrictedIndices.length} hidden by global"
-                      " blacklist. https://e621.net/help/global_blacklist",
-                  // style: TextStyle(color: Colors.yellow),
+                  // onOpen: (link) async {
+                  //   if (!await launchUrl(Uri.parse(link.url))) {
+                  //     throw Exception('Could not launch ${link.url}');
+                  //   }
+                  // },
+                  onOpen: util.defaultOnLinkifyOpen,
+                  text: "${widget.posts.restrictedIndices.length} "
+                      "hidden by global blacklist. "
+                      "https://e621.net/help/global_blacklist",
                   linkStyle: const TextStyle(color: Colors.yellow),
                 ),
               Expanded(child: _makeGridView(widget.posts)),
@@ -314,6 +257,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
           : trueCount ?? widget.expectedCount;
   @widgetFactory
   GridView _makeGridView(E6Posts posts) {
+    final sc = Provider.of<ManagedPostCollectionSync>(context, listen: false);
     return widget.useLazyBuilding
         ? GridView.builder(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -378,21 +322,17 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
       ErrorPage.errorWidgetWrapper(
         () => !widget.disallowSelections
             ? Selector<SearchResultsNotifier, bool>(
-                builder: (context, value, child) =>
-                    ErrorPage.errorWidgetWrapper(
-                            () => WImageResult(
-                                  disallowSelections: widget.disallowSelections,
-                                  imageListing: data,
-                                  index: index,
-                                  postsCache: widget.disallowSelections
-                                      ? widget.posts.posts
-                                      : null,
-                                  // isSelected: getIsIndexSelected(index),
-                                  // isSelected: getIsPostIdSelected(data.id),
-                                  isSelected: value,
-                                ),
-                            logger: logger)
-                        .value,
+                builder: (_, value, __) => ErrorPage.errorWidgetWrapper(
+                  () => WImageResult(
+                    disallowSelections: widget.disallowSelections,
+                    imageListing: data,
+                    index: index,
+                    postsCache:
+                        widget.disallowSelections ? widget.posts.posts : null,
+                    isSelected: value,
+                  ),
+                  logger: _logger,
+                ).value,
                 selector: (ctx, v) => v.getIsPostSelected(data.id),
               )
             : WImageResult(
@@ -401,11 +341,9 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
                 index: index,
                 postsCache:
                     widget.disallowSelections ? widget.posts.posts : null,
-                // isSelected: getIsIndexSelected(index),
-                // isSelected: getIsPostIdSelected(data.id),
                 isSelected: false,
               ),
-        logger: logger,
+        logger: _logger,
       ).value;
 }
 
@@ -413,7 +351,6 @@ class WPostSearchResultsSwiper extends StatefulWidget {
   // final int expectedCount;
   // final E6Posts posts;
   // final ManagedPostCollectionSync posts;
-  final void Function(Set<int> indices, int newest)? onPostsSelected;
 
   final bool useLazyBuilding;
 
@@ -426,7 +363,6 @@ class WPostSearchResultsSwiper extends StatefulWidget {
     super.key,
     // required this.posts,
     // this.expectedCount = 50,
-    this.onPostsSelected,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
     this.stripToGridView = false,
@@ -540,7 +476,6 @@ class _WPostSearchResultsSwiperState extends State<
                     fireRebuild: widget._fireRebuild,
                     pageIndex: index,
                     indexOffset: index * SearchView.i.postsPerPage,
-                    onPostsSelected: widget.onPostsSelected,
                     stripToGridView: widget.stripToGridView,
                     useLazyBuilding: widget.useLazyBuilding,
                   );
@@ -576,7 +511,6 @@ class _WPostSearchResultsSwiperState extends State<
             fireRebuild: widget._fireRebuild,
             pageIndex: index,
             indexOffset: index * SearchView.i.postsPerPage,
-            onPostsSelected: widget.onPostsSelected,
             stripToGridView: widget.stripToGridView,
             useLazyBuilding: widget.useLazyBuilding,
           );
@@ -673,7 +607,8 @@ class _WPostSearchResultsSwiperState extends State<
                         //   ),
                         // );
                       },
-                      selector: (ctx, v) => v.numPostsInSearch ?? E621.maxPageNumber,
+                      selector: (ctx, v) =>
+                          v.numPostsInSearch ?? E621.maxPageNumber,
                     ),
                     // PageIndicator(
                     //   tabController: _tabController,

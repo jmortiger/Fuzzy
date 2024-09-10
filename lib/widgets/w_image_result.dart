@@ -191,19 +191,19 @@ class WImageResult extends StatelessWidget {
                     initialIndex: index,
                     // initialPageIndex:
                     //     getSc(context, false).mpcSync.currentPageIndex,
-                    initialPageIndex: p ??
-                        sc!.getPageOfGivenPostIndexOnPage(index),
+                    initialPageIndex:
+                        p ?? sc!.getPageOfGivenPostIndexOnPage(index),
                     posts: sc!,
                     onAddToSearch: getOnAddToSearch(context),
                     tagsToAdd: [],
                     selectedPosts: sc.collection
-                            .where(
-                              (element) => sr(context)
-                                  .selectedPostIds
-                                  .contains(element.$.id),
-                            )
-                            .map((e) => e.$)
-                            .toList(),
+                        .where(
+                          (element) => sr(context)
+                              .selectedPostIds
+                              .contains(element.$.id),
+                        )
+                        .map((e) => e.$)
+                        .toList(),
                     // selectedPosts: srl,
                   )
                 : PostSwipePage.postsCollection(
@@ -576,7 +576,7 @@ enum PostInfoPaneItem {
 /// [fit] is the logic by which the image is rendered to the display dimensions.
 ///
 /// TODO: Test with non-finite [sizeWidth] &/or [sizeHeight].
-/// 
+///
 /// TODO: Look into [applyBoxFit].
 ///
 /// Implementation Notes: Using the smaller of size(Dimension) and

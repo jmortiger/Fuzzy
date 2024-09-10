@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
-import 'package:j_util/e621.dart' show User, UserDetailed, UserLoggedIn, UserLoggedInDetail;
+import 'package:j_util/e621.dart'
+    show User, UserDetailed, UserLoggedIn, UserLoggedInDetail;
 
 import 'package:fuzzy/log_management.dart' as lm;
 
@@ -67,8 +68,10 @@ class UserProfilePage extends StatelessWidget
               ],
             ))
           : FutureBuilder(
-              future: E621.getDeletedFavsAsync()/* E621.findTotalPostNumber(
-                  tags: "fav:${userL.name} status:deleted") */,
+              future: E621
+                  .getDeletedFavsAsync() /* E621.findTotalPostNumber(
+                  tags: "fav:${userL.name} status:deleted") */
+              ,
               builder: (context, snapshot) => Text.rich(TextSpan(
                     text:
                         "FavCount: ${userL.favoriteCount}/${userL.favoriteLimit} (",

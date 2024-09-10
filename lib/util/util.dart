@@ -1,4 +1,4 @@
-import 'dart:async' show FutureOr;
+import 'dart:async' show FutureOr, Zone;
 import 'dart:convert' as dc;
 
 import 'package:flutter/foundation.dart';
@@ -158,8 +158,13 @@ dynamic colorToJson(Color c) => c.value;
 Color colorFromJson(json) => Color(json as int);
 
 extension StringPrint on String {
-  String printMe() {
-    _print(this);
+  String printMe({
+    lm.LogLevel level = lm.LogLevel.FINEST,
+    Object? error,
+    StackTrace? stackTrace,
+    Zone? zone,
+  }) {
+    _print(this, level, error, stackTrace, zone);
     return this;
   }
 }
