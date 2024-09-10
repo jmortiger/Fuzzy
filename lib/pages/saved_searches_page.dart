@@ -174,28 +174,28 @@ class _SavedSearchesPageSingletonState
             openIcon: Text(selected.length.toString()),
             children: selected.isNotEmpty
                 ? [
-                    ActionButton(
-                      icon: true //!Platform.isDesktop && !util.isDebug
-                          ? const Icon(Icons.delete)
-                          : TextButton.icon(
-                              onPressed: _deleteSelected,
-                              icon: const Icon(Icons.delete),
-                              label: const Text("Delete"),
-                            ),
-                      tooltip: "Delete",
-                      onPressed: _deleteSelected,
-                    ),
-                    ActionButton(
-                      icon: true //!Platform.isDesktop && !util.isDebug
-                          ? const Icon(Icons.edit)
-                          : TextButton.icon(
-                              onPressed: _changeParentsOfSelected,
-                              icon: const Icon(Icons.edit),
-                              label: const Text("Change Parent"),
-                            ),
-                      tooltip: "Change Parent",
-                      onPressed: _changeParentsOfSelected,
-                    ),
+                    !Platform.isDesktop && !util.isDebug
+                        ? IconButton(
+                            icon: const Icon(Icons.delete),
+                            onPressed: _deleteSelected,
+                            tooltip: "Delete",
+                          )
+                        : TextButton.icon(
+                            onPressed: _deleteSelected,
+                            icon: const Icon(Icons.delete),
+                            label: const Text("Delete"),
+                          ),
+                    !Platform.isDesktop && !util.isDebug
+                        ? IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: _changeParentsOfSelected,
+                            tooltip: "Change Parent",
+                          )
+                        : TextButton.icon(
+                            onPressed: _changeParentsOfSelected,
+                            icon: const Icon(Icons.edit),
+                            label: const Text("Change Parent"),
+                          ),
                   ]
                 : [],
           );
@@ -295,59 +295,59 @@ class _SavedSearchesPageSingletonState
     );
   }
 
-  Drawer _buildDrawer() {
-    return Drawer(
-      child: ListView(
-        children: [
-          const DrawerHeader(
-            child: Text("TGH"),
-          ),
-          ListTile(
-            title: const Text("Add Saved Search"),
-            onTap: _addSearch,
-          ),
-          // ListTile(
-          //   title: const Text("Add Saved Pool"),
-          //   onTap: () {
-          //     showSavedElementEditDialogue(
-          //       context,
-          //       mainDataName: "Pool Id",
-          //       isNumeric: true,
-          //     ).then((value) {
-          //       if (value != null) {
-          //         data.$.addAndSavePool(
-          //           SavedPoolData(
-          //             id: int.parse(value.mainData),
-          //             title: value.title,
-          //           ),
-          //         );
-          //       }
-          //     });
-          //   },
-          // ),
-          // ListTile(
-          //   title: const Text("Add Saved Set"),
-          //   onTap: () {
-          //     showSavedElementEditDialogue(
-          //       context,
-          //       mainDataName: "Set Id",
-          //       isNumeric: true,
-          //     ).then((value) {
-          //       if (value != null) {
-          //         data.$.addAndSaveSet(
-          //           SavedSetData(
-          //             id: int.parse(value.mainData),
-          //             title: value.title,
-          //           ),
-          //         );
-          //       }
-          //     });
-          //   },
-          // ),
-        ],
-      ),
-    );
-  }
+  // Drawer _buildDrawer() {
+  //   return Drawer(
+  //     child: ListView(
+  //       children: [
+  //         const DrawerHeader(
+  //           child: Text("TGH"),
+  //         ),
+  //         ListTile(
+  //           title: const Text("Add Saved Search"),
+  //           onTap: _addSearch,
+  //         ),
+  //         // ListTile(
+  //         //   title: const Text("Add Saved Pool"),
+  //         //   onTap: () {
+  //         //     showSavedElementEditDialogue(
+  //         //       context,
+  //         //       mainDataName: "Pool Id",
+  //         //       isNumeric: true,
+  //         //     ).then((value) {
+  //         //       if (value != null) {
+  //         //         data.$.addAndSavePool(
+  //         //           SavedPoolData(
+  //         //             id: int.parse(value.mainData),
+  //         //             title: value.title,
+  //         //           ),
+  //         //         );
+  //         //       }
+  //         //     });
+  //         //   },
+  //         // ),
+  //         // ListTile(
+  //         //   title: const Text("Add Saved Set"),
+  //         //   onTap: () {
+  //         //     showSavedElementEditDialogue(
+  //         //       context,
+  //         //       mainDataName: "Set Id",
+  //         //       isNumeric: true,
+  //         //     ).then((value) {
+  //         //       if (value != null) {
+  //         //         data.$.addAndSaveSet(
+  //         //           SavedSetData(
+  //         //             id: int.parse(value.mainData),
+  //         //             title: value.title,
+  //         //           ),
+  //         //         );
+  //         //       }
+  //         //     });
+  //         //   },
+  //         // ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   ListView _buildSingleLevelView() {
     return ListView.builder(

@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Stuff like searches and sets
 /// "searches": searches,
+/// TODO: Sort parents after each modification and rely on that to build [parented].
 class SavedDataE6 extends ChangeNotifier {
   // #region Logger
   static lm.Printer get print => lRecord.print;

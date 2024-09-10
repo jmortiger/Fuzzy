@@ -423,19 +423,24 @@ class WFabBuilder extends StatelessWidget {
         openIcon: isMultiplePosts
             ? IconButton(
                 onPressed: null,
-                color: Theme.of(context).colorScheme.onPrimary,
-                disabledColor: Theme.of(context).colorScheme.onPrimary,
+                disabledColor: Theme.of(context)
+                        .iconButtonTheme
+                        .style
+                        ?.iconColor
+                        ?.resolve(<WidgetState>{}) ??
+                    Theme.of(context).iconTheme.color,
                 icon: Text(posts!.length.toString()),
               )
-            // ? Container(
-            //     width: 48,
-            //     height: 48,
-            //     decoration: ShapeDecoration(
-            //       color: Theme.of(context).colorScheme.onPrimary,
-            //       shape: const CircleBorder(),
-            //     ),
-            //     child: Text(posts!.length.toString()))
-            : const Icon(Icons.create),
+            : IconButton(
+                onPressed: null,
+                disabledColor: Theme.of(context)
+                        .iconButtonTheme
+                        .style
+                        ?.iconColor
+                        ?.resolve(<WidgetState>{}) ??
+                    Theme.of(context).iconTheme.color,
+                icon: const Icon(Icons.create),
+              ),
         useDefaultHeroTag: false,
         distance: useFab
             ? Platform.isDesktop
@@ -472,10 +477,22 @@ class WFabBuilder extends StatelessWidget {
             getMultiplePostsRemoveFavAction(context, posts!),
           if (isSinglePost && post!.isFavorited)
             getSinglePostRemoveFavAction(context, post!),
-          if (isSinglePost) getSinglePostUpvoteAction(context, post!),
-          if (isSinglePost) getSinglePostDownvoteAction(context, post!),
-          if (isMultiplePosts) getMultiplePostsUpvoteAction(context, posts!),
-          if (isMultiplePosts) getMultiplePostsDownvoteAction(context, posts!),
+          if (isSinglePost)
+            useFab
+                ? getSinglePostUpvoteAction(context, post!)
+                : getSinglePostDownvoteAction(context, post!),
+          if (isSinglePost)
+            useFab
+                ? getSinglePostDownvoteAction(context, post!)
+                : getSinglePostUpvoteAction(context, post!),
+          if (isMultiplePosts)
+            useFab
+                ? getMultiplePostsUpvoteAction(context, posts!)
+                : getMultiplePostsDownvoteAction(context, posts!),
+          if (isMultiplePosts)
+            useFab
+                ? getMultiplePostsDownvoteAction(context, posts!)
+                : getMultiplePostsUpvoteAction(context, posts!),
           if (isSinglePost) getSinglePostEditAction(context, post!),
           if (isSinglePost && isSelected != null)
             if (isSelected)
