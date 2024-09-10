@@ -73,24 +73,8 @@ class SavedDataE6 extends ChangeNotifier {
         ..forEach((e) => e.sort(
               (a, b) => a.compareTo(b),
             ));
-  static ListNotifier<ListNotifier<SavedEntry>> get parented => searches.fold(
-        ListNotifier<ListNotifier<SavedEntry>>.empty(true),
-        (acc, element) {
-          try {
-            return acc
-              ..singleWhere((e) => e.firstOrNull?.parent == element.parent)
-                  .add(element);
-          } catch (e) {
-            return acc..add(ListNotifier.filled(1, element, true));
-          }
-        },
-      )
-        ..sort(
-          (a, b) => a.first.parent.compareTo(b.first.parent),
-        )
-        ..forEach((e) => e.sort(
-              (a, b) => a.compareTo(b),
-            ));
+  static ListNotifier<ListNotifier<SavedEntry>> get parented =>
+      makeParented(searches);
   Set<String> get $parents => SavedDataE6.parents;
   static Set<String> get parents => searches.fold(
         <String>{},
@@ -113,6 +97,7 @@ class SavedDataE6 extends ChangeNotifier {
         },
       );
 
+  // #region Initialization and Serialization
   static bool get isInit {
     try {
       searches.isEmpty;
@@ -124,7 +109,7 @@ class SavedDataE6 extends ChangeNotifier {
 
   static const localStoragePrefix = 'ssd';
   static const localStorageLengthKey = '$localStoragePrefix.length';
-  SavedDataE6({
+  SavedDataE6.defaultInit({
     ListNotifier<SavedSearchData>? searches,
   }) {
     if (searches == null) {
@@ -157,7 +142,7 @@ class SavedDataE6 extends ChangeNotifier {
     if (isInit) {
       return SavedDataE6.recycle();
     } else {
-      return storageAsync.then((v) => SavedDataE6(searches: v));
+      return storageAsync.then((v) => SavedDataE6.defaultInit(searches: v));
     }
   }
 
@@ -166,12 +151,12 @@ class SavedDataE6 extends ChangeNotifier {
               ?.readAsString()
               .then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
           loadFromPref());
-  static ListNotifier<SavedSearchData>? get storageSync {
-    String? t = file.$Safe?.readAsStringSync();
-    return (t == null)
-        ? loadFromPrefTrySync()
-        : SavedDataE6.fromJson(jsonDecode(t));
-  }
+  // static ListNotifier<SavedSearchData>? get storageSync {
+  //   String? t = file.$Safe?.readAsStringSync();
+  //   return (t == null)
+  //       ? loadFromPrefTrySync()
+  //       : SavedDataE6.fromJson(jsonDecode(t));
+  // }
 
   @override
   void dispose() {
@@ -196,55 +181,55 @@ class SavedDataE6 extends ChangeNotifier {
       });
     });
   }
-  void _rootInit(ListNotifier<SavedSearchData> v) {
-    searches = v..addListener(notifyListeners);
-    if (!validateUniqueness(searches: v)) {
-      _save();
-    }
-  }
+  // void _rootInit(ListNotifier<SavedSearchData> v) {
+  //   searches = v..addListener(notifyListeners);
+  //   if (!validateUniqueness(searches: v)) {
+  //     _save();
+  //   }
+  // }
 
-  SavedDataE6.initTrySync() {
-    if (isInit) {
-      searches.addListener(notifyListeners);
-      return;
-    }
-    if (file.isAssigned) {
-      final s = file.$?.readAsStringSync();
-      final v = s != null
-          ? SavedDataE6.fromJson(jsonDecode(s))
-          : loadFromPrefTrySync();
-      if (v != null) {
-        _rootInit(v);
-        return;
-      } else {
-        loadFromPref().then((v) {
-          _rootInit(v);
-        });
-        return;
-      }
-    }
-    file.getItemAsync().then((value) {
-      (value?.readAsString().then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
-              loadFromPref())
-          .then((v) {
-        _rootInit(v);
-      });
-    });
-  }
-  // SavedDataE6 copyWith({
-  //   // List<SavedPoolData>? pools,
-  //   // List<SavedSetData>? sets,
-  //   ListNotifier<SavedSearchData>? searches,
-  // }) =>
-  //     SavedDataE6(
-  //       // pools: pools ?? this.pools.toList(),
-  //       // sets: sets ?? this.sets.toList(),
-  //       searches: searches ?? this.searches.toList(),
-  //     );
-  factory SavedDataE6.fromStorageSync() => SavedDataE6.initTrySync();
+  // SavedDataE6.initTrySync() {
+  //   if (isInit) {
+  //     searches.addListener(notifyListeners);
+  //     return;
+  //   }
+  //   if (file.isAssigned) {
+  //     final s = file.$?.readAsStringSync();
+  //     final v = s != null
+  //         ? SavedDataE6.fromJson(jsonDecode(s))
+  //         : loadFromPrefTrySync();
+  //     if (v != null) {
+  //       _rootInit(v);
+  //       return;
+  //     } else {
+  //       loadFromPref().then((v) {
+  //         _rootInit(v);
+  //       });
+  //       return;
+  //     }
+  //   }
+  //   file.getItemAsync().then((value) {
+  //     (value?.readAsString().then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
+  //             loadFromPref())
+  //         .then((v) {
+  //       _rootInit(v);
+  //     });
+  //   });
+  // }
+  // factory SavedDataE6.fromStorageSync() => SavedDataE6.initTrySync();
   // factory SavedDataE6.fromStorageSync() => Platform.isWeb
   //     ? SavedDataE6()
   //     : Storable.tryLoadToInstanceSync(fileFullPath.$) ?? SavedDataE6();
+  /* SavedDataE6 copyWith({
+    List<SavedPoolData>? pools,
+    List<SavedSetData>? sets,
+    ListNotifier<SavedSearchData>? searches,
+  }) =>
+      SavedDataE6(
+        // pools: pools ?? this.pools.toList(),
+        // sets: sets ?? this.sets.toList(),
+        searches: searches ?? this.searches.toList(),
+      ); */
   static Future<bool> writeToPref([List<SavedSearchData>? searches]) {
     searches ??= SavedDataE6.searches;
     return pref.getItemAsync().then((v) {
@@ -320,22 +305,22 @@ class SavedDataE6 extends ChangeNotifier {
     return data;
   }
 
-  static async_lib.FutureOr<ListNotifier<SavedSearchData>>
-      loadFromStorageAsync() async {
-    var str = await Storable.tryLoadStringAsync(
-      await fileFullPath.getItem(),
-    );
-    if (str == null) {
-      try {
-        return SavedDataE6.fromJson(
-            (await devData.getItem())["e621"]["savedData"]);
-      } catch (e) {
-        return ListNotifier<SavedSearchData>();
-      }
-    } else {
-      return SavedDataE6.fromJson(jsonDecode(str));
-    }
-  }
+  // static async_lib.FutureOr<ListNotifier<SavedSearchData>>
+  //     loadFromStorageAsync() async {
+  //   var str = await Storable.tryLoadStringAsync(
+  //     await fileFullPath.getItem(),
+  //   );
+  //   if (str == null) {
+  //     try {
+  //       return SavedDataE6.fromJson(
+  //           (await devData.getItem())["e621"]["savedData"]);
+  //     } catch (e) {
+  //       return ListNotifier<SavedSearchData>();
+  //     }
+  //   } else {
+  //     return SavedDataE6.fromJson(jsonDecode(str));
+  //   }
+  // }
 
   static ListNotifier<SavedSearchData> fromJson(Map<String, dynamic> json) =>
       ListNotifier.of((json["searches"] as List).mapAsList(
@@ -364,6 +349,7 @@ class SavedDataE6 extends ChangeNotifier {
               lm.LogLevel.SEVERE));
     }
   }
+  // #endregion Init, Serialization
 
   void _save() {
     _$save();
@@ -424,16 +410,6 @@ class SavedDataE6 extends ChangeNotifier {
     return null;
   }
 
-  static void _$modify(void Function() modifier) {
-    modifier();
-    _$save();
-  }
-
-  void _modify(void Function() modifier) {
-    modifier();
-    _save();
-  }
-
   static void $addAndSaveSearch(SavedSearchData s) {
     searches.add(s);
     _$save();
@@ -449,6 +425,7 @@ class SavedDataE6 extends ChangeNotifier {
     _save();
   }
 
+  // #region Edit and save
   static void $editAndSave({
     required SavedEntry original,
     required SavedEntry edited,
@@ -478,6 +455,7 @@ class SavedDataE6 extends ChangeNotifier {
     }
     _save();
   }
+  // #endregion Edit and save
 
   // #region removeEntry
   static void $removeEntry(SavedEntry entry) {
@@ -507,6 +485,7 @@ class SavedDataE6 extends ChangeNotifier {
   }
   // #endregion removeEntries
 
+  // #region Widget Helpers
   static Widget buildParentedView({
     required BuildContext context,
     SavedDataE6? data,
@@ -558,6 +537,7 @@ class SavedDataE6 extends ChangeNotifier {
       onTap: generateOnTap?.call(entry),
     );
   }
+  // #endregion Widget Helpers
 }
 
 abstract base class SavedEntry implements Comparable<SavedEntry> {

@@ -5,7 +5,6 @@ import 'package:fuzzy/tws_interop.dart' as tws;
 import 'package:fuzzy/web/e621/e621.dart' as mye6;
 import 'package:j_util/j_util_full.dart';
 import 'package:fuzzy/util/util.dart' as util;
-import 'package:provider/provider.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
 class SavedSearchesPageProvider extends StatelessWidget {
@@ -13,27 +12,13 @@ class SavedSearchesPageProvider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var t = SavedDataE6.loadOrRecycle();
+    final t = SavedDataE6.loadOrRecycle();
     return (t is SavedDataE6)
-        ? ChangeNotifierProvider(
-            create: (context) => SavedDataE6.recycle(),
-            builder: (context, child) => Consumer<SavedDataE6>(
-              builder: (context, value, child) => SavedSearchesPageSingleton(
-                data: value,
-              ),
-            ),
-          )
+        ? SavedSearchesPageSingleton(data: t)
         : FutureBuilder(
             future: t,
             builder: (context, snapshot) => snapshot.hasData
-                ? ChangeNotifierProvider(
-                    create: (context) => SavedDataE6.recycle(),
-                    builder: (context, child) => Consumer<SavedDataE6>(
-                          builder: (context, value, child) =>
-                              SavedSearchesPageSingleton(
-                            data: value,
-                          ),
-                        ))
+                ? SavedSearchesPageSingleton(data: snapshot.data)
                 : util.fullPageSpinner);
   }
 }
