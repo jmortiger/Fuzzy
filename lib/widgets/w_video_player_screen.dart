@@ -21,23 +21,18 @@ class WVideoPlayerScreen extends StatefulWidget {
 /// TODO: Remove FutureBuilder, handle directly
 class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
     with TickerProviderStateMixin {
-  // #region Logger
-  static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("WVideoPlayerScreen");
-  // #endregion Logger
+  static late final logger = lm.generateLogger("WVideoPlayerScreen").logger;
   static const fadeInTime = Duration(milliseconds: 750);
   static const waitTime = Duration(seconds: 2);
   late AnimationController _fadeInController;
   late VideoPlayerController _controller;
   late Future<void> _initializeVideoPlayerFuture;
-  bool _cancelFadeOut = true;
 
   double volumeLastNonZeroValue = 1;
   bool showControlsRequest = false;
   bool isHoveringInRootInkWell = false;
   bool isHoveringInControlsInkWell = false;
-  // late Animation<Color?> colorAnim;
   double get volume => _controller.value.volume;
   set volume(double v) => setState(() {
         _controller.setVolume(v);
@@ -45,7 +40,8 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
 
   bool get isVolumeOn => volume > 0;
   bool get showControls =>
-      showControlsRequest ||
+      // showControlsRequest ||
+      !_controller.value.isPlaying ||
       isHoveringInRootInkWell ||
       isHoveringInControlsInkWell;
   double setVolume([double level = 1]) {
@@ -74,14 +70,11 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
       vsync: this,
       duration: fadeInTime,
     );
-    // _fadeInController.addStatusListener(_fadeBackOutListener);
-    // var colorTween = ColorTween(
-    //     begin: const Color.fromRGBO(0, 0, 0, 0),
-    //     end: const Color.fromRGBO(0, 0, 0, 1));
-    // var middleMan = Tween<double>(begin: 1,end:  0);
-    // colorAnim = colorTween.animate(_fadeInController.drive(middleMan));
     _controller = VideoPlayerController.networkUrl(
       widget.resourceUri,
+      videoPlayerOptions: VideoPlayerOptions(
+        mixWithOthers: PostView.i.startVideoMuted,
+      ),
       // httpHeaders: ,
     );
 
@@ -97,17 +90,6 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
     _controller.setVolume(volume);
     _controller.addListener(listener);
   }
-
-  // void _fadeBackOutListener(AnimationStatus s) {
-  //   if (s == AnimationStatus.completed) {
-  //     // _cancelFadeOut = false;
-  //     Future.delayed(waitTime, () {
-  //       if (_fadeInController.isCompleted && !showControls) {
-  //         _fadeInController.forward();
-  //       }
-  //     }).ignore();
-  //   }
-  // }
 
   void togglePlayState() {
     setState(() {
@@ -144,12 +126,7 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
       switch (_fadeInController.status) {
         case AnimationStatus.dismissed:
         case AnimationStatus.reverse:
-          _fadeInController
-              .forward()
-              // .orCancel
-              // .then((_) => Future.delayed(waitTime))
-              // .then((_) => !showControls ? _fadeInController.reverse() : "")
-              .ignore();
+          _fadeInController.forward().ignore();
           break;
         default:
           break;
@@ -157,18 +134,12 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
     } else {
       switch (_fadeInController.status) {
         case AnimationStatus.completed:
-          _cancelFadeOut = false;
           Future.delayed(waitTime, () {
             if (_fadeInController.isCompleted && !showControls) {
-              // setState(() {
               _fadeInController.reverse();
-              // });
             }
-          }) /* .ignore() */;
+          }).ignore();
           break;
-        // case AnimationStatus.forward:
-        //   _fadeInController.reverse();
-        //   break;
         default:
           break;
       }
@@ -191,7 +162,6 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
                   Positioned.fill(
                     child: InkWell(
                       onTap: () {
-                        logger.fine("LowerInkWell onTap");
                         togglePlayState();
                       },
                       onHover: (value) => setState(() {
@@ -199,9 +169,7 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
                       }),
                     ),
                   ),
-                  // if (_fadeInController.status != AnimationStatus.dismissed)
                   _buildBottomRowControls(),
-                  // if (_fadeInController.status != AnimationStatus.dismissed)
                   Positioned(
                     top: 0,
                     right: 0,
@@ -240,7 +208,6 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
   }
 
   Widget _buildBottomRowControls() {
-    // print("showControls");
     return Positioned(
       bottom: 0,
       left: 0,
@@ -251,7 +218,7 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
           final root = Opacity(
             opacity: _fadeInController.value,
             child: Container(
-              color: const Color.fromRGBO(0, 0, 0, .5), //colorAnim.value,
+              color: const Color.fromRGBO(0, 0, 0, .5),
               child: child,
             ),
           );
@@ -263,47 +230,6 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
       ),
     );
   }
-
-  /* Row _buildOldControls() {
-    return Row(
-      // mainAxisSize: MainAxisSize.max,
-      children: [
-        IconButton(
-          onPressed: togglePlayState,
-          icon: Icon(
-            _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
-          ),
-          iconSize: 24.0 * 2,
-        ),
-        Text(
-          _controller.value.position.toFormattedString(fillZeros: false),
-        ),
-        WTimeline(controller: _controller),
-        Text(
-          (PostView.i.showTimeLeft
-                  ? _controller.value.duration - _controller.value.position
-                  : _controller.value.duration)
-              .toFormattedString(fillZeros: false),
-        ),
-        SizedBox.shrink(
-          child: TextField(
-            keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
-            ),
-            controller: TextEditingController(text: "1.00"),
-            maxLength: 4,
-            maxLines: 1,
-            inputFormatters: [numericFormatter],
-            onChanged: (value) => num.tryParse(value)?.isFinite ?? false
-                ? _controller.setPlaybackSpeed(
-                    num.parse(value).abs().toDouble(),
-                  )
-                : "",
-          ),
-        ),
-      ],
-    );
-  } */
 
   final iconSize = 24.0 * 2;
   Widget _buildNewControls() {
@@ -325,20 +251,9 @@ class _WVideoPlayerScreenState extends State<WVideoPlayerScreen>
               ),
               WVideoTimeCodeUnit(controller: _controller),
               WVideoSpeed(height: iconSize, controller: _controller),
-              // WVideoSpeedOld(height: iconSize, controller: _controller),
             ],
           ),
         ),
-        // WTimeline(
-        //   controller: _controller,
-        // ),
-        // Flexible(
-        //   fit: FlexFit.loose,
-        //   child: VideoScrubber(
-        //     controller: _controller,
-        //     child: WVisualTimeline(controller: _controller),
-        //   ),
-        // ),
         VideoProgressIndicator(
           _controller,
           allowScrubbing: true,
@@ -514,198 +429,6 @@ class _WVideoTimeCodeUnitState extends State<WVideoTimeCodeUnit> {
           fillZeros: false,
           discardMilliseconds: true,
         ) : durationString}",
-    );
-  }
-}
-
-// TODO: Improve scrubbing
-class WTimeline extends StatefulWidget {
-  const WTimeline({
-    super.key,
-    required VideoPlayerController controller,
-  }) : _controller = controller;
-
-  final VideoPlayerController _controller;
-
-  @override
-  State<WTimeline> createState() => _WTimelineState();
-}
-
-class _WTimelineState extends State<WTimeline> {
-  set position(Duration value) => widget._controller.seekTo(value);
-  Duration get position => widget._controller.value.position;
-  Duration get duration => widget._controller.value.duration;
-  double value = 0;
-  @override
-  void initState() {
-    super.initState();
-    value = widget._controller.value.position.inMilliseconds /
-        widget._controller.value.duration.inMilliseconds;
-    widget._controller.addListener(onValueChanged);
-  }
-
-  @override
-  void dispose() {
-    widget._controller.removeListener(onValueChanged);
-    super.dispose();
-  }
-
-  void onValueChanged() {
-    double t;
-    if ((t = widget._controller.value.position.inMilliseconds /
-            widget._controller.value.duration.inMilliseconds) !=
-        value) {
-      setState(() {
-        value = t;
-      });
-    }
-  }
-
-  bool? cachedPlayState;
-  // bool? seeking;
-  Future<void>? seekFuture;
-  @override
-  Widget build(BuildContext context) {
-    return Flexible(
-      fit: FlexFit.loose,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Slider(
-          onChangeStart: (value) {
-            widget._controller.removeListener(onValueChanged);
-            setState(() {
-              cachedPlayState = widget._controller.value.isPlaying;
-            });
-          },
-          onChanged: (value) {
-            // setState(() {
-            //   seeking = true;
-            // });
-            setState(() {
-              seekFuture = widget._controller.seekTo(duration * value)
-                ..then((d) => setState(() {
-                      //seeking = false;
-                      seekFuture = null;
-                    }));
-            });
-          },
-          onChangeEnd: (value) {
-            if (cachedPlayState ?? false) {
-              if (seekFuture == null) {
-                widget._controller.play();
-              } else {
-                seekFuture!.then((v) => widget._controller.play());
-              }
-            }
-            setState(() {
-              cachedPlayState = null;
-            });
-            widget._controller.addListener(onValueChanged);
-          },
-          value: value,
-        ),
-        // child: LinearProgressIndicator(
-        //   value: value,
-        // ),
-      ),
-    );
-  }
-}
-
-class WVisualTimeline extends StatefulWidget {
-  const WVisualTimeline({
-    super.key,
-    required VideoPlayerController controller,
-  }) : _controller = controller;
-
-  final VideoPlayerController _controller;
-
-  @override
-  State<WVisualTimeline> createState() => _WVisualTimelineState();
-}
-
-class _WVisualTimelineState extends State<WVisualTimeline> {
-  set position(Duration value) => widget._controller.seekTo(value);
-  Duration get position => widget._controller.value.position;
-  Duration get duration => widget._controller.value.duration;
-  double value = 0;
-  @override
-  void initState() {
-    super.initState();
-    value = widget._controller.value.position.inMilliseconds /
-        widget._controller.value.duration.inMilliseconds;
-    widget._controller.addListener(onValueChanged);
-  }
-
-  @override
-  void dispose() {
-    widget._controller.removeListener(onValueChanged);
-    super.dispose();
-  }
-
-  void onValueChanged() {
-    double t;
-    if ((t = widget._controller.value.position.inMilliseconds /
-            widget._controller.value.duration.inMilliseconds) !=
-        value) {
-      setState(() {
-        value = t;
-      });
-    }
-  }
-
-  bool? cachedPlayState;
-  // bool? seeking;
-  Future<void>? seekFuture;
-  @override
-  Widget build(BuildContext context) {
-    // final t = Theme.of(context);
-    // final inactiveColor =
-    //     t.sliderTheme.activeTrackColor ?? t.colorScheme.primary;
-    // final thumbColor =
-    //     t.sliderTheme.thumbColor ?? t.colorScheme.primary;
-    // final secondaryActiveColor =
-    //     t.sliderTheme.secondaryActiveTrackColor ?? t.colorScheme.primary.withAlpha((255*.54).round());
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Slider(
-        // onChangeStart: (value) {
-        //   widget._controller.removeListener(onValueChanged);
-        //   setState(() {
-        //     cachedPlayState = widget._controller.value.isPlaying;
-        //   });
-        // },
-        // onChanged: (value) {
-        //   // setState(() {
-        //   //   seeking = true;
-        //   // });
-        //   setState(() {
-        //     seekFuture = widget._controller.seekTo(duration * value)
-        //       ..then((d) => setState(() {
-        //             //seeking = false;
-        //             seekFuture = null;
-        //           }));
-        //   });
-        // },
-        // onChangeEnd: (value) {
-        //   if (cachedPlayState ?? false) {
-        //     if (seekFuture == null) {
-        //       widget._controller.play();
-        //     } else {
-        //       seekFuture!.then((v) => widget._controller.play());
-        //     }
-        //   }
-        //   setState(() {
-        //     cachedPlayState = null;
-        //   });
-        //   widget._controller.addListener(onValueChanged);
-        // },
-        onChanged: (v) {}, //null,
-        value: value,
-      ),
-      // child: LinearProgressIndicator(
-      //   value: value,
-      // ),
     );
   }
 }
