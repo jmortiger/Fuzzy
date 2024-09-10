@@ -671,6 +671,7 @@ class SetSearchParameterNotifier extends ChangeNotifier
     notifyListeners();
   }
 
+  @override
   set pageNumber(int? value) {
     // if (isValidPage(value?.toString() ?? "1")) {
     //   _page = value?.toString();

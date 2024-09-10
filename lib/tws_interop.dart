@@ -131,7 +131,7 @@ class SavedSearch {
   }
 
   static Map<String, String>? format(String? pattern) {
-    if (pattern == null) return null; //"[${RegExpExt.whitespaceCharacters}]"
+    if (pattern == null) return null; //r"\s"
     return pattern.split(RegExp("[,\n]")).fold(
       <List<String>>[],
       (previousValue, element) {

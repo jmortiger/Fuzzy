@@ -12,8 +12,8 @@ class SearchData {
   });
   SearchData.fromString({
     required this.searchString,
-  })  : tagList = searchString.split(RegExpExt.whitespace),
-        tagSet = searchString.split(RegExpExt.whitespace).toSet();
+  })  : tagList = searchString.split(RegExp(r"\s")),
+        tagSet = searchString.split(RegExp(r"\s")).toSet();
   SearchData.fromList({
     required this.tagList,
   })  : searchString = tagList.foldToString(),

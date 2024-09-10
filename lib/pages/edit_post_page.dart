@@ -473,7 +473,7 @@ class _EditPostPageState extends State<EditPostPage> {
 //         inputFormatters: [
 //           TextInputFormatter.withFunction(
 //             (oldValue, newValue) =>
-//                 newValue.text.contains(RegExp(RegExpExt.whitespacePattern))
+//                 newValue.text.contains(RegExp(r"\s"))
 //                     ? oldValue
 //                     : newValue,
 //           )
@@ -549,7 +549,7 @@ class _WTagItemState extends State<WTagItem> {
         inputFormatters: [
           TextInputFormatter.withFunction(
             (oldValue, newValue) =>
-                newValue.text.contains(RegExp(RegExpExt.whitespacePattern))
+                newValue.text.contains(RegExp(r"\s"))
                     ? oldValue
                     : newValue,
           )

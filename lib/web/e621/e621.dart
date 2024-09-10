@@ -30,6 +30,7 @@ late final _lRecord = lm.generateLogger("E621");
 
 // #endregion Logger
 sealed class E621 extends Site {
+  const E621();
   @event
   static final favDeleted = JPureEvent();
   @event
@@ -153,14 +154,10 @@ sealed class E621 extends Site {
     );
     lm.logRequest(r, _logger);
     return e621.sendRequest(r).then((v) {
-      if (v.statusCodeInfo.isError) {
-        lm.logResponse(v, _logger, lm.LogLevel.SEVERE);
-        return null;
-      } else if (!v.statusCodeInfo.isSuccessful) {
-        lm.logResponse(v, _logger, lm.LogLevel.WARNING);
+      lm.logResponseSmart(v, _logger);
+      if (!v.statusCodeInfo.isSuccessful) {
         return null;
       } else {
-        lm.logResponse(v, _logger, lm.LogLevel.INFO);
         try {
           return e621.UserLoggedIn.fromRawJson(v.body);
         } catch (e) {
@@ -225,14 +222,10 @@ sealed class E621 extends Site {
     );
     lm.logRequest(r, _logger);
     return e621.sendRequest(r).then((v) {
-      if (v.statusCodeInfo.isError) {
-        lm.logResponse(v, _logger, lm.LogLevel.SEVERE);
-        return null;
-      } else if (!v.statusCodeInfo.isSuccessful) {
-        lm.logResponse(v, _logger, lm.LogLevel.WARNING);
+      lm.logResponseSmart(v, _logger);
+      if (!v.statusCodeInfo.isSuccessful) {
         return null;
       } else {
-        lm.logResponse(v, _logger, lm.LogLevel.FINER);
         e621.User t;
         try {
           t = e621.UserLoggedIn.fromRawJson(v.body);
@@ -256,8 +249,7 @@ sealed class E621 extends Site {
   static const savedSearchInsertionDelimiter = r"#";
 
   /// Matches either whitespace or the end of input without consuming characters
-  static const savedSearchInsertionEnd =
-      r'(?=' + RegExpExt.whitespacePattern + r'+?|$)';
+  static const savedSearchInsertionEnd = r'(?=' + r"\s" + r'+?|$)';
 
   /// The (escaped) character used to delimit saved search insertion.
   static const delimiter = savedSearchInsertionDelimiter;
@@ -275,12 +267,10 @@ sealed class E621 extends Site {
   static final savedSearchInsertionAlt =
       RegExp("$delimiter([^$delimiter]+?)$savedSearchInsertionEnd");
   // #endregion Saved Search Parsing
-  E621();
-  // RegExp("(?<=^|\\+${RegExpExt.whitespacePattern})fav:${loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username ?? " "}(?=\$|${RegExpExt.whitespacePattern})", caseSensitive: false)
   static RegExp get userFavoriteSearchFinder => RegExp(
-      r"(?<=^|[\u2028\n\r\u000B\f\u2029\u0085 	]|\+)fav:"
+      r"(?<=^|\s|\+)fav:"
       "${loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username ?? " "}"
-      r"(?=$|[\u2028\n\r\u000B\f\u2029\u0085 	])",
+      r"(?=$|\s)",
       caseSensitive: false);
   static String fillTagTemplate(String tags) {
     _print("fillTagTemplate: Before: $tags");
@@ -627,14 +617,10 @@ sealed class E621 extends Site {
   // #region User API
   static e621.UserDetailed? resolveGetUserFuture(http.Response v,
       [bool updateIfLoggedIn = true]) {
-    if (v.statusCodeInfo.isError) {
-      lm.logResponse(v, _logger, lm.LogLevel.SEVERE);
-      return null;
-    } else if (!v.statusCodeInfo.isSuccessful) {
-      lm.logResponse(v, _logger, lm.LogLevel.WARNING);
+    lm.logResponseSmart(v, _logger);
+    if (!v.statusCodeInfo.isSuccessful) {
       return null;
     } else {
-      lm.logResponse(v, _logger, lm.LogLevel.FINER);
       try {
         final t = e621.UserLoggedInDetail.fromRawJson(v.body);
         if (updateIfLoggedIn) tryUpdateLoggedInUser(t);
@@ -688,8 +674,8 @@ sealed class E621 extends Site {
     limit ??= SearchView.i.postsPerPage;
     _print(tags);
     var a1 = SearchArgs(
-        // tags: [tags], //tags.split(RegExpExt.whitespace),
-        tags: tags.split(RegExp(RegExpExt.whitespacePattern)),
+        // tags: [tags], //tags.split(RegExp(r"\s")),
+        tags: tags.split(RegExp(r"\s")),
         limit: limit,
         pageModifier: pageModifier,
         postId: postId,
@@ -737,8 +723,8 @@ sealed class E621 extends Site {
     limit ??= SearchView.i.postsPerPage;
     _print(tags);
     var a1 = SearchArgs(
-        // tags: [tags], //tags.split(RegExpExt.whitespace),
-        tags: tags.split(RegExp(RegExpExt.whitespacePattern)),
+        // tags: [tags], //tags.split(RegExp(r"\s")),
+        tags: tags.split(RegExp(r"\s")),
         limit: limit,
         pageModifier: pageModifier,
         postId: postId,

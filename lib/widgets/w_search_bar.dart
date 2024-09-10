@@ -221,7 +221,7 @@ class _WSearchBarState extends State<WSearchBar> {
   }
 
   (String title, String subtitle) genTitleAndSubtitleFromString(String e) {
-    final wsRe = RegExp(RegExpExt.whitespaceCharacters);
+    final wsRe = RegExp(r"\s");
     logger.finest("e = $e Length: ${e.length}");
     e = e.trim();
     logger.finest("e.trim() = $e Length: ${e.length}");

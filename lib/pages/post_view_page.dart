@@ -770,7 +770,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                   ),
                 if (!SavedDataE6.all.any((e) =>
                     e.searchString.replaceAll(
-                      RegExpExt.whitespace,
+                      RegExp(r"\s"),
                       "",
                     ) ==
                     tag))

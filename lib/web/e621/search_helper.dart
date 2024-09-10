@@ -80,7 +80,7 @@ enum Order with SearchableEnum {
   // static const mPixelsAscending = mPixelsAsc;
   // static const fileSizeAscending = fileSizeAsc;
   // static const durationAscending = durationAsc;
-  static const matcherStr = "($prefix)([^${RegExpExt.whitespaceCharacters}]+)";
+  static const matcherStr = "($prefix)([^\\s]+)";
   static final matcher = RegExp(matcherStr);
   static RegExp get matcherGenerated => RegExp(matcherStr);
   static const prefix = "order:";
@@ -91,7 +91,7 @@ enum Order with SearchableEnum {
 
   const Order(this.tagSuffix);
   factory Order.fromTagText(String tagText) => switch (
-          tagText.replaceAll(("$prefix|${RegExpExt.whitespacePattern}"), "")) {
+          tagText.replaceAll(("$prefix|${r"\s"}"), "")) {
         "id" => id,
         "random" => random,
         "score" => score,
@@ -116,7 +116,7 @@ enum Order with SearchableEnum {
         _ => throw ArgumentError.value(tagText, "tagText", "Value not of type"),
       };
   factory Order.fromText(String text) =>
-      switch (text.replaceAll(("$prefix|${RegExpExt.whitespacePattern}"), "")) {
+      switch (text.replaceAll(("$prefix|${r"\s"}"), "")) {
         "id" => id,
         String t when t == id.name => id,
         "random" => random,
@@ -179,7 +179,7 @@ enum Rating with SearchableEnum {
   explicit;
 
   static const matcherNonStrictStr =
-      "($prefixModifierMatcher)($prefix)([^${RegExpExt.whitespaceCharacters}]+)";
+      "($prefixModifierMatcher)($prefix)([^\\s]+)";
   static RegExp get matcherNonStrictGenerated => RegExp(matcherNonStrictStr);
   static const matcherStr =
       "($prefixModifierMatcher)($prefix)(s|q|e|safe|questionable|explicit)";
@@ -401,7 +401,7 @@ enum FileType with SearchableEnum {
   webm;
 
   static const matcherNonStrictStr =
-      "($prefixModifierMatcher)($prefixFull)([^${RegExpExt.whitespaceCharacters}]+)";
+      "($prefixModifierMatcher)($prefixFull)([^\\s]+)";
   static final matcherNonStrict = RegExp(matcherNonStrictStr);
   static RegExp get matcherNonStrictGenerated => RegExp(matcherNonStrictStr);
   static const matcherStr = "($prefixModifierMatcher)"

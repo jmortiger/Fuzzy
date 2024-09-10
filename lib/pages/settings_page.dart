@@ -671,7 +671,7 @@ class _WSetStringFieldState extends State<WSetStringField> {
         var t = before;
         validation(String value) {
           validateVal?.call(
-                    value.split(RegExpExt.whitespace).toSet(),
+                    value.split(RegExp(r"\s")).toSet(),
                   ) ??
                   true
               ? t = value
@@ -718,7 +718,7 @@ class _WSetStringFieldState extends State<WSetStringField> {
               setState(() {
                 setVal(getVal
                   ..addAll(value
-                      .split(RegExpExt.whitespace)
+                      .split(RegExp(r"\s"))
                       .where((s) => s.isNotEmpty)));
               });
               _print("After: ${getVal.toString()}");
@@ -801,7 +801,7 @@ class _WEnumListFieldState<T extends Enum> extends State<WEnumListField<T>> {
 
   List<T> convertInputToValue(String input) {
     return input
-        .split(RegExpExt.whitespace)
+        .split(RegExp(r"\s"))
         .where((s) => s.isNotEmpty)
         .mapAsList(
           (e, index, list) => convertInputToEnumValue(e),
@@ -1008,7 +1008,7 @@ class _WIntegerFieldState extends State<WIntegerField> {
         validateVal: validateVal,
         onSetVal: (value) {
           _print("Before: $getVal");
-          setState(() => setVal(value!));
+          setState(() => setVal(value));
           _print("After: $getVal");
           _print(jsonEncode(AppSettings.i));
         },

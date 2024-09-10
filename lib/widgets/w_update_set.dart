@@ -15,12 +15,8 @@ class WUpdateSet extends StatefulWidget {
 }
 
 class _WUpdateSetState extends State<WUpdateSet> {
-  // #region Logger
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("WCreateSet");
-  // #endregion Logger
+  static late final logger = lm.generateLogger("WUpdateSet").logger;
   String postSetName = "";
   String? get initialPostSetName => widget.set?.name;
   TextEditingController? postSetNameController;

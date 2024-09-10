@@ -3,6 +3,7 @@ abstract base class Site {
   bool get usesPersistentCredentials;
   bool get mayRequireForegroundCredentialRefresh;
   bool get requiresForegroundCredentials;
+  const Site();
 }
 
 abstract base class PersistentSite extends Site {
@@ -14,4 +15,5 @@ abstract base class PersistentSite extends Site {
   bool get mayRequireForegroundCredentialRefresh;
   @override
   bool get requiresForegroundCredentials;
+  const PersistentSite();
 }

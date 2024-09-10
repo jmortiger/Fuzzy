@@ -52,7 +52,9 @@ class SavedDataE6 extends ChangeNotifier {
   static ListNotifier<SavedEntry> get all => searches;
   static int get length => searches.length;
   ListNotifier<ListNotifier<SavedEntry>> get $parented => SavedDataE6.parented;
-  static ListNotifier<ListNotifier<SavedEntry>> makeParented(List<SavedEntry> searches) => searches.fold(
+  static ListNotifier<ListNotifier<SavedEntry>> makeParented(
+          List<SavedEntry> searches) =>
+      searches.fold(
         ListNotifier<ListNotifier<SavedEntry>>.empty(true),
         (acc, element) {
           try {
@@ -440,6 +442,7 @@ class SavedDataE6 extends ChangeNotifier {
     searches.add(s);
     _save();
   }
+
   void addAndSaveSearches(Iterable<SavedSearchData> s) {
     searches.addAll(s);
     _save();
@@ -631,8 +634,7 @@ abstract base class SavedListData
 @immutable
 final class SavedSetData extends SavedListData {
   static const searchStringBase = "set:";
-  static const parseSearchString =
-      "($searchStringBase)([^${RegExpExt.whitespaceCharacters}]*)";
+  static const parseSearchString = "($searchStringBase)([^\\s]*)";
   @override
   String get searchString => "$searchStringBase$id";
   @override
@@ -724,16 +726,14 @@ final class SavedSetData extends SavedListData {
 @immutable
 final class SavedPoolData extends SavedListData {
   static const searchStringBase = "pool:";
-  static const parseSearchString =
-      "($searchStringBase)([^${RegExpExt.whitespaceCharacters}]*)";
+  static const parseSearchString = "($searchStringBase)([^\\s]*)";
   @override
   String get searchString => "$searchStringBase$id";
 
   @override
-  String? get searchableName => name.contains(
-          RegExp("[^${RegExpExt.letters}_${RegExpExt.whitespaceCharacters}]"))
+  String? get searchableName => name.contains(RegExp(r"[^a-zA-Z_\s]"))
       ? null
-      : name.replaceAll(RegExp("[${RegExpExt.whitespaceCharacters}]+"), "_");
+      : name.replaceAll(RegExp(r"\s+"), "_");
   const SavedPoolData({
     String? title,
     required super.id,

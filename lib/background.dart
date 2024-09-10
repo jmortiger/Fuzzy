@@ -1,4 +1,4 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/tag_subscription.dart';
 import 'package:workmanager/workmanager.dart';
@@ -37,7 +37,7 @@ final registerPeriodicTask = Workmanager().registerPeriodicTask;
 
 // FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 //     FlutterLocalNotificationsPlugin();
-// // initialise the plugin. app_icon needs to be a added as a drawable resource to the Android head project
+// // initialize the plugin. app_icon needs to be a added as a drawable resource to the Android head project
 // const AndroidInitializationSettings initializationSettingsAndroid =
 //     AndroidInitializationSettings('app_icon');
 // final DarwinInitializationSettings initializationSettingsDarwin =
