@@ -160,5 +160,8 @@ const Map<String, Color> htmlColorsFull = {
   "lightgray": Color(0xFFD3D3D3),
   "gainsboro": Color(0xFFDCDCDC),
 };
+const maroon = Color(0xFF800000);
+const sienna = Color(0xFFA0522D);
+const wheat = Color(0xFFF5DEB3);
 const htmlColorsFullMatcher =
     "mediumvioletred|deeppink|palevioletred|hotpink|lightpink|pink|darkred|red|firebrick|crimson|indianred|lightcoral|salmon|darksalmon|lightsalmon|indigo|purple|darkmagenta|darkviolet|darkslateblue|blueviolet|darkorchid|fuchsia|magenta|slateblue|mediumslateblue|mediumorchid|mediumpurple|orchid|violet|plum|thistle|lavender|orangered|tomato|darkorange|coral|orange|midnightblue|navy|darkblue|mediumblue|blue|royalblue|steelblue|dodgerblue|deepskyblue|cornflowerblue|skyblue|lightskyblue|lightsteelblue|lightblue|powderblue|darkkhaki|gold|khaki|peachpuff|yellow|palegoldenrod|moccasin|papayawhip|lightgoldenrodyellow|lemonchiffon|lightyellow|maroon|brown|saddlebrown|sienna|chocolate|darkgoldenrod|peru|rosybrown|goldenrod|sandybrown|tan|burlywood|wheat|navajowhite|bisque|blanchedalmond|cornsilk|teal|darkcyan|lightseagreen|cadetblue|darkturquoise|mediumturquoise|turquoise|aqua|cyan|aquamarine|paleturquoise|lightcyan|darkgreen|green|darkolivegreen|forestgreen|seagreen|olive|olivedrab|mediumseagreen|limegreen|lime|springgreen|mediumspringgreen|darkseagreen|mediumaquamarine|yellowgreen|lawngreen|chartreuse|lightgreen|greenyellow|palegreen|mistyrose|antiquewhite|linen|beige|whitesmoke|lavenderblush|oldlace|aliceblue|seashell|ghostwhite|honeydew|floralwhite|azure|mintcream|snow|ivory|white|black|darkslategray|dimgray|slategray|gray|lightslategray|darkgray|silver|lightgray|gainsboro";

@@ -56,7 +56,7 @@ class _PoolViewPageState extends State<PoolViewPage> {
             }
             loadingPosts = null;
           });
-        });
+        }).ignore();
     }
     currentPage = 1;
     rebuild = JPureEvent();

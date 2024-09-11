@@ -357,9 +357,9 @@ class _SavedSearchesPageSingletonState
               children: [
                 TextSpan(
                     text: " (${e.length} entries)",
-                    style: const DefaultTextStyle.fallback().style.copyWith(
-                          color: const Color.fromARGB(255, 80, 80, 80),
-                        )),
+                    style: const TextStyle(
+                      color: Color.fromARGB(255, 80, 80, 80),
+                    )),
               ],
             ),
           ),

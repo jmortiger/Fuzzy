@@ -122,7 +122,7 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
           );
           return null;
         }
-      case PostViewPageLoader.routeNameString:
+      case PostViewPageLoader.routeNameString when url.pathSegments.length != 1:
         try {
           try {
             final v = (settings.arguments as dynamic).post!;
@@ -147,6 +147,79 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
               );
               return null;
             }
+          }
+        } catch (e, s) {
+          routeLogger.severe(
+            "Routing failure\n"
+            "\tRoute: ${settings.name}\n"
+            "\tId: $id\n"
+            "\tArgs: ${settings.arguments}",
+            e,
+            s,
+          );
+          return null;
+        }
+      case PostViewPageLoader.routeNameString when url.pathSegments.length == 1:
+        try {
+          try {
+            final v = (settings.arguments as dynamic)!;
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (cxt) => buildHomePageWithProviders(
+                searchText: v.tags as String?,
+                limit: v.limit as int?,
+                page: v.page as String?,
+              ),
+            );
+          } catch (e) {
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (_) => buildHomePageWithProviders(
+                searchText: url.queryParameters["tags"],
+                limit: int.tryParse(url.queryParameters["limit"] ?? ""),
+                page: url.queryParameters["page"],
+              ),
+            );
+          }
+        } catch (e, s) {
+          routeLogger.severe(
+            "Routing failure\n"
+            "\tRoute: ${settings.name}\n"
+            "\tId: $id\n"
+            "\tArgs: ${settings.arguments}",
+            e,
+            s,
+          );
+          return null;
+        }
+      case "/post_sets" when url.pathSegments.length != 1:
+        try {
+          try {
+            id ??= (settings.arguments as dynamic)!.id;
+            int? limit;
+            String? page;
+            try {
+              limit = (settings.arguments as dynamic)!.limit;
+              page = (settings.arguments as dynamic)!.page;
+            } catch (e) {}
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (cxt) => buildHomePageWithProviders(
+                searchText: id != null ? "set:$id" : null,
+                limit: limit,
+                page: page,
+              ),
+            );
+          } catch (e) {
+            // id ??= (settings.arguments as PostViewParameters?)?.id;
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (_) => buildHomePageWithProviders(
+                searchText: id != null ? "set:$id" : null,
+                limit: int.tryParse(url.queryParameters["limit"] ?? ""),
+                page: url.queryParameters["page"],
+              ),
+            );
           }
         } catch (e, s) {
           routeLogger.severe(

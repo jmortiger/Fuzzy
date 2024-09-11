@@ -129,7 +129,7 @@ class SavedDataE6 extends ChangeNotifier {
   static Future<ListNotifier<SavedSearchData>> get storageAsync async =>
       await ((await file.getItemAsync())
               ?.readAsString()
-              .then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
+              .then((v) => SavedDataE6.fromJson(jsonDecode(v)).$searches) ??
           loadFromPref());
   // static ListNotifier<SavedSearchData>? get storageSync {
   //   String? t = file.$Safe?.readAsStringSync();
@@ -205,7 +205,9 @@ class SavedDataE6 extends ChangeNotifier {
       return;
     }
     file.getItemAsync().then((value) {
-      (value?.readAsString().then((v) => SavedDataE6.fromJson(jsonDecode(v))) ??
+      (value
+                  ?.readAsString()
+                  .then((v) => SavedDataE6.fromJson(jsonDecode(v)).$searches) ??
               loadFromPref())
           .then((v) {
         searches = v..addListener(notifyListeners);
@@ -291,10 +293,23 @@ class SavedDataE6 extends ChangeNotifier {
     return data;
   }
 
-  static ListNotifier<SavedSearchData> fromJson(Map<String, dynamic> json) =>
-      ListNotifier.of(
-        (json["searches"] as List).map((e) => SavedSearchData.fromJson(e)),
-      );
+  SavedDataE6.fromJson(Map<String, dynamic> json) {
+    searches = ListNotifier.of(
+      (json["searches"] as List).map((e) => SavedSearchData.fromJson(e)),
+    );
+    if (json["parentCount"] == null) {
+      searches.sort();
+    } else {
+      _parentCount.$ = (json["parentCount"] as Map).cast();
+    }
+  }
+  static ListNotifier<SavedSearchData> getListFromJson(
+      Map<String, dynamic> json) {
+    return ListNotifier.of(
+      (json["searches"] as List).map((e) => SavedSearchData.fromJson(e)),
+    );
+  }
+
   static Map<String, dynamic> toJson() => {
         "searches": searches..sort(),
         "parentCount": parentCount,
@@ -845,9 +860,11 @@ final class SavedSearchData extends SavedEntry {
       );
 
   @override
-  int compareTo(SavedEntry other) => (title.compareTo(other.title) != 0)
-      ? title.compareTo(other.title)
-      : searchString.compareTo(other.searchString);
+  int compareTo(SavedEntry other) => parent.compareTo(other.parent) != 0
+      ? parent.compareTo(other.parent)
+      : title.compareTo(other.title) != 0
+          ? title.compareTo(other.title)
+          : searchString.compareTo(other.searchString);
 
   @override
   bool operator ==(Object other) {

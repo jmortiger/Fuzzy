@@ -9,6 +9,7 @@ import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/pages/tag_db_editor.dart';
 import 'package:fuzzy/pages/user_profile_page.dart';
 import 'package:fuzzy/util/util.dart' as util;
+import 'package:fuzzy/web/e621/dtext_formatter.dart' as dtext show testText;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/widgets/w_back_button.dart';
@@ -400,6 +401,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                           height: double.maxFinite,
                           child: WBackButton.noOverlay(
                               child: WDTextPreviewScrollable(
+                            initialText: dtext.testText,
                             maxLines: 5,
                           )),
                         ),

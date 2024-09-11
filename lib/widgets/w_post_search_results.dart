@@ -257,7 +257,9 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
           : trueCount ?? widget.expectedCount;
   @widgetFactory
   GridView _makeGridView(E6Posts posts) {
-    final sc = Provider.of<ManagedPostCollectionSync>(context, listen: false);
+    final sc = !widget.stripToGridView
+        ? Provider.of<ManagedPostCollectionSync>(context, listen: false)
+        : null;
     return widget.useLazyBuilding
         ? GridView.builder(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -273,7 +275,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
               //     .posts
               //     .elementAtOrNull(index)?.inst.$Safe;
               // TODO: Make not dependent on current page / first loaded page.
-              index += sc.currentPageFirstPostIndex;
+              index += sc!.currentPageFirstPostIndex;
               var data = sc.collection[index].$Safe;
               return (data == null) ? null : constructImageResult(data, index);
             }
@@ -294,7 +296,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
             mainAxisSpacing: 4,
             childAspectRatio: SearchView.i.widthToHeightRatio,
             children: !widget.stripToGridView // sc.isMpcSync
-                ? sc
+                ? sc!
                         .getPostsOnPageSync(widget.pageIndex)
                         ?.mapAsList((e, i, l) => constructImageResult(
                               e,

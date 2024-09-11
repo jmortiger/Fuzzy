@@ -237,6 +237,13 @@ const urlMatcherStr = r"(http(?:s)?:\/\/)?"
 // r"(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)";
 RegExp get urlMatcherStrict => RegExp("^$urlMatcherStr\$");
 const urlMatcherStrictStr = "^$urlMatcherStr\$";
+const linkifierOptions = LinkifyOptions(
+  humanize: false,
+  removeWww: false,
+  looseUrl: false,
+  excludeLastPeriod: true,
+  defaultToHttps: true,
+);
 void defaultOnLinkifyOpen(LinkableElement link) {
   final url = Uri.parse(link.url);
   canLaunchUrl(url).then(
@@ -255,6 +262,73 @@ void defaultOnLinkifyOpen(LinkableElement link) {
                       ) */
     ,
   );
+}
+
+void Function(LinkableElement) buildDefaultOnE6LinkifyOpen(
+  BuildContext context,
+) =>
+    (LinkableElement link) {
+      final url = Uri.parse(link.url);
+      switch (url.pathSegments.first) {
+        case "post_sets":
+        case "pools":
+        case "posts":
+          if (!context.mounted) {
+            defaultOnLinkifyOpen(link);
+            return;
+          }
+          Navigator.pushNamed(context, link.url);
+          break;
+        default:
+          defaultOnLinkifyOpen(link);
+          break;
+      }
+    };
+
+class MyLinkifier extends UrlLinkifier {
+  const MyLinkifier();
+  @override
+  List<LinkifyElement> parse(
+      List<LinkifyElement> elements, LinkifyOptions options) {
+    final scheme = "http${options.defaultToHttps ? "s" : ""}://";
+    return /* super.parse( */
+        elements.expand(
+      (e) {
+        final p = RegExp(urlMatcherStr)
+            .allMatches(e.text)
+            .fold((<LinkifyElement>[], 0), (p, m) {
+          return (
+            p.$1
+              ..addAll([
+                TextElement(e.text.substring(p.$2, m.start)),
+                UrlElement(
+                  "${m.group(1) ?? scheme}"
+                      // "www."
+                      "${options.removeWww ? "" : m.group(2) ?? ""}"
+                      "${m.group(3)}.${m.group(4)}"
+                      "${options.excludeLastPeriod ? m.group(5)?.replaceAll(
+                            RegExp(r"\.$"),
+                            "",
+                          ) : m.group(5)}",
+                  "${options.humanize ? "" : m.group(1) ?? ""}"
+                      // "${options.removeWww ? "" : "www."}"
+                      "${options.removeWww ? "" : m.group(2) ?? ""}"
+                      "${m.group(3)}.${m.group(4)}"
+                      "${options.excludeLastPeriod ? m.group(5)?.replaceAll(
+                            RegExp(r"\.$"),
+                            "",
+                          ) : m.group(5)}",
+                )
+              ]),
+            m.end
+          );
+        });
+        return p.$1..add(TextElement(e.text.substring(p.$2)));
+      },
+    ).toList() /* ,
+        options) */
+        ;
+  }
 }
 
 const defaultLinkStyle = TextStyle(
