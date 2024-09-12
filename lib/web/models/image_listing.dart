@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart'
     show AssetImage, ImageProvider, NetworkImage, ResizeImage;
-import 'package:fuzzy/util/util.dart'
-    as util /* "deletedPreview" : {
-    "path": "assets/deleted-preview.png",
-    "width": 150,
-    "height": 150,
-  }, */
-    ;
+import 'package:fuzzy/util/asset_management.dart' as util;
 
 const deletedUrl = "deleted";
 
@@ -75,6 +69,81 @@ mixin RetrieveImageProvider on IImageInfo {
       );
 }
 
+final class ImageInfoRecordExplicit with IImageInfo {
+  @override
+  final Uri address;
+
+  @override
+  final String extension;
+
+  @override
+  final int height;
+
+  @override
+  final String url;
+
+  @override
+  final int width;
+
+  // const ImageInfoRecordExplicit({
+  //   required this.address,
+  //   required this.extension,
+  //   required this.height,
+  //   required this.url,
+  //   required this.width,
+  // });
+  const ImageInfoRecordExplicit(
+    this.address,
+    this.extension,
+    this.height,
+    this.url,
+    this.width,
+  );
+  ImageInfoRecordExplicit.derivedFromString(
+    this.url,
+    this.height,
+    this.width, {
+    String? extension,
+    Uri? address,
+  })  : extension = extension ?? url.substring(url.lastIndexOf(".") + 1),
+        address = address ?? Uri.parse(url);
+  ImageInfoRecordExplicit.derivedFromAddress(
+    this.address,
+    this.height,
+    this.width, {
+    String? url,
+    String? extension,
+  })  : extension = extension ?? address.pathSegments.last.substring(address.pathSegments.last.lastIndexOf(".") + 1),
+        url = url ?? address.toString();
+}
+final class ImageInfoRecord with IImageInfo {
+  @override
+  Uri get address => Uri.parse(url);
+
+  @override
+  String get extension => url.substring(url.lastIndexOf(".") + 1);
+
+  @override
+  final int height;
+
+  @override
+  final String url;
+
+  @override
+  final int width;
+
+  // const ImageInfoRecord({
+  //   required this.url,
+  //   required this.height,
+  //   required this.width,
+  // });
+  const ImageInfoRecord(
+    this.url,
+    this.height,
+    this.width,
+  );
+}
+
 mixin IImageInfo implements IImageInfoBare {
   int get width;
   int get height;
@@ -82,6 +151,9 @@ mixin IImageInfo implements IImageInfoBare {
   bool get hasValidUrl => IImageInfoBare.hasValidUrlImpl(this);
   @override
   bool get isAVideo => IImageInfoBare.isAVideoImpl(this);
+  bool get isWebResource =>
+      hasValidUrl &&
+      switch (address.scheme) { "http" || "https" => true, _ => false };
 }
 
 abstract interface class ISampleInfo with IImageInfo {

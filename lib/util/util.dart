@@ -13,10 +13,10 @@ import 'package:fuzzy/log_management.dart' as lm;
 import 'package:url_launcher/url_launcher.dart';
 
 // #region Logger
-lm.Printer get _print => lRecord.print;
-lm.FileLogger get _logger => lRecord.logger;
+lm.Printer get _print => _lRecord.print;
+lm.FileLogger get _logger => _lRecord.logger;
 // ignore: unnecessary_late
-late final lRecord = lm.generateLogger("Util");
+late final _lRecord = lm.generateLogger("Util");
 // #endregion Logger
 
 typedef JsonMap = Map<String, dynamic>;
@@ -53,6 +53,7 @@ T defaultOnError<T>(Object? error, StackTrace trace) {
   return _print(trace) as T;
 }
 
+// #region User Message
 ScaffoldFeatureController showUserMessage({
   required BuildContext context,
   required Widget content,
@@ -60,6 +61,7 @@ ScaffoldFeatureController showUserMessage({
   Duration? duration = const Duration(seconds: 2),
   (String label, VoidCallback onTap)? action,
   List<(String label, VoidCallback onTap)>? actions,
+  bool addDismissOption = true,
 }) =>
     // _showUserMessageSnackbar(
     _showUserMessageBanner(
@@ -69,6 +71,7 @@ ScaffoldFeatureController showUserMessage({
       actions: actions,
       autoHidePrior: autoHidePrior,
       duration: duration,
+      addDismissOption: addDismissOption,
     );
 
 ScaffoldFeatureController _showUserMessageSnackbar({
@@ -78,6 +81,7 @@ ScaffoldFeatureController _showUserMessageSnackbar({
   Duration? duration = const Duration(seconds: 2),
   (String label, VoidCallback onTap)? action,
   List<(String label, VoidCallback onTap)>? actions,
+  bool addDismissOption = true,
 }) {
   final message = SnackBar(
         content: content,
@@ -105,10 +109,11 @@ ScaffoldFeatureController _showUserMessageBanner({
   Duration? duration = const Duration(seconds: 2),
   (String label, VoidCallback onTap)? action,
   List<(String label, VoidCallback onTap)>? actions,
+  bool addDismissOption = true,
 }) {
   final message = MaterialBanner(
         content: content,
-        actions: _makeBannerAction(action, actions),
+        actions: _makeBannerAction(action, actions, addDismissOption),
       ),
       sm = ScaffoldMessenger.of(context);
   if (autoHidePrior) sm.hideCurrentMaterialBanner();
@@ -118,19 +123,23 @@ ScaffoldFeatureController _showUserMessageBanner({
   return ret;
 }
 
-List<Widget> _makeBannerAction((String label, VoidCallback onTap)? action,
-    List<(String label, VoidCallback onTap)>? actions) {
+List<Widget> _makeBannerAction(
+  (String label, VoidCallback onTap)? action,
+  List<(String label, VoidCallback onTap)>? actions, [
+  bool addDismissOption = true,
+]) {
   Widget make((String label, VoidCallback onTap) action) => TextButton.icon(
         label: Text(action.$1),
         onPressed: action.$2,
       );
   return [
-    if ((action ?? actions) == null || (action == null && actions!.isEmpty))
+    if (addDismissOption || (action ?? actions) == null || (action == null && actions!.isEmpty))
       TextButton.icon(label: const Text("Ok"), onPressed: () {}),
     if (action != null) make(action),
     if (actions != null) ...actions.map(make)
   ];
 }
+// #endregion User Message
 
 VoidCallback generateAlertDialog<DialogOutput>(
   BuildContext context, {
@@ -336,105 +345,3 @@ const defaultLinkStyle = TextStyle(
   color: Colors.amber,
   decoration: TextDecoration.underline,
 );
-
-const placeholderPath = "assets/snake_loader.webp";
-const placeholder = AssetImage(placeholderPath);
-// final deletedPreviewImage = LazyInitializer<Image>(() => rootBundle.load("assets/deleted-preview.png").then((v) => Image.asset(name)))
-const deletedPreviewImagePath = "assets/deleted-preview.png";
-
-// class StaticImageData {
-//   static const deletedPreview = _DeletedPreview,
-//       deleted4x = _Deleted4x,
-//       notFoundPreview = _NotFoundPreview,
-//       notFound4x = _NotFound4x;
-//   // static const deletedPreview = StaticImageRecord(
-//   //       path: "assets/deleted-preview.png",
-//   //       width: 150,
-//   //       height: 150,
-//   //     ),
-//   //     deleted4x = StaticImageRecord(
-//   //       path: "assets/deleted_4x.png",
-//   //       width: 600,
-//   //       height: 600,
-//   //     ),
-//   //     notFoundPreview = StaticImageRecord(
-//   //       path: "assets/not_found.png",
-//   //       width: 150,
-//   //       height: 150,
-//   //     ),
-//   //     notFound4x = StaticImageRecord(
-//   //       path: "assets/not_found_4x.png",
-//   //       width: 600,
-//   //       height: 600,
-//   //     );
-// }
-
-@immutable
-class StaticImageRecord {
-  final String path;
-  final int width;
-  final int height;
-
-  const StaticImageRecord(
-      {required this.path, required this.width, required this.height});
-}
-
-class StaticImageDataDeletedPreview {
-  static const path = "assets/deleted-preview.png", width = 150, height = 150;
-}
-
-class StaticImageDataDeleted4x {
-  static const path = "assets/deleted_4x.png", width = 600, height = 600;
-}
-
-class StaticImageDataNotFoundPreview {
-  static const path = "assets/not_found.png", width = 150, height = 150;
-}
-
-class StaticImageDataNotFound4x {
-  static const path = "assets/not_found_4x.png", width = 600, height = 600;
-}
-// const staticImageData = (
-//   deletedPreview : (
-//     path: "assets/deleted-preview.png",
-//     width: 150,
-//     height: 150,
-//   ),
-//   deleted4x : (
-//     path: "assets/deleted_4x.png",
-//     width: 600,
-//     height: 600,
-//   ),
-//   notFoundPreview : (
-//     path: "assets/not_found.png",
-//     width: 150,
-//     height: 150,
-//   ),
-//   notFound4x : (
-//     path: "assets/not_found_4x.png",
-//     width: 600,
-//     height: 600,
-//   ),
-// );
-// const staticImageData = {
-//   "deletedPreview" : {
-//     "path": "assets/deleted-preview.png",
-//     "width": 150,
-//     "height": 150,
-//   },
-//   "deleted4x" : {
-//     "path": "assets/deleted_4x.png",
-//     "width": 600,
-//     "height": 600,
-//   },
-//   "notFoundPreview" : {
-//     "path": "assets/not_found.png",
-//     "width": 150,
-//     "height": 150,
-//   },
-//   "notFound4x" : {
-//     "path": "assets/not_found_4x.png",
-//     "width": 600,
-//     "height": 600,
-//   },
-// };

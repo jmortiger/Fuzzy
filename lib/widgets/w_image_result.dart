@@ -7,7 +7,7 @@ import 'package:fuzzy/models/saved_data.dart' show SavedDataE6;
 import 'package:fuzzy/models/search_results.dart' show SearchResultsNotifier;
 import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/post_swipe_page.dart';
-import 'package:fuzzy/util/util.dart' show placeholder;
+import 'package:fuzzy/util/asset_management.dart' show determineResolution, placeholder;
 import 'package:fuzzy/web/e621/models/e6_models.dart' /*  show E6PostResponse */;
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/models/image_listing.dart'
@@ -174,6 +174,7 @@ class WImageResult extends StatelessWidget {
                 (v.tagsToAddToSearch as List<String>).foldToString();
           }
           if (!disallowSelections) {
+            // TODO: NEEDS TO TRIGGER REBUILD
             sr(context).selectedPostIds =
                 ((v.selectedPosts as Iterable<E6PostResponse>).map((e) => e.id))
                     .toSet();
@@ -560,124 +561,4 @@ enum PostInfoPaneItem {
                 ))
             : const TextSpan(),
       };
-}
-
-/// Determines the appropriate rendered dimensions, cached true resolution
-/// dimensions (as per [ResizeImage]), and aspect ratio for displaying the
-/// given image in the given area with the given fitment.
-///
-/// [fileWidth] & [fileHeight] are the image's natural, true,
-/// full-size dimensions.
-///
-/// [sizeWidth] & [sizeHeight] are dimensions that the image is to be
-/// rendered into. It is expected (but not required) that these do not match
-/// the natural aspect ratio of the image; this method's job is to handle that.
-///
-/// [fit] is the logic by which the image is rendered to the display dimensions.
-///
-/// TODO: Test with non-finite [sizeWidth] &/or [sizeHeight].
-///
-/// TODO: Look into [applyBoxFit].
-///
-/// Implementation Notes: Using the smaller of size(Dimension) and
-/// file(Dimension) for the cache(Dimension) causes big scale-ups (e.g.
-/// a long vertical comic) to have the wrong resolution, so cache is assigned
-/// by rendered size (if finite & corresponds to [fit]) or the file resolution.
-({
-  num width,
-  num height,
-  num? cacheWidth,
-  num? cacheHeight,
-  double aspectRatio,
-}) determineResolution(
-  final int fileWidth,
-  final int fileHeight,
-  final num sizeWidth,
-  final num sizeHeight,
-  final BoxFit fit,
-) {
-  num width, height;
-  num? cacheWidth, cacheHeight;
-  final double widthRatio = fileWidth / sizeWidth;
-  final double heightRatio = fileHeight / sizeHeight;
-  final bool finiteRatios = widthRatio.isFinite && heightRatio.isFinite;
-  if ((finiteRatios && widthRatio != heightRatio) || fileWidth != fileHeight) {
-    switch (fit) {
-      case BoxFit.scaleDown:
-        if ((widthRatio <= 1 || !widthRatio.isFinite) &&
-            (heightRatio <= 1 || !heightRatio.isFinite)) {
-          continue none;
-        } else {
-          continue contain;
-        }
-      case BoxFit.fill:
-        cacheWidth = fileWidth;
-        cacheHeight = fileHeight;
-        if (finiteRatios) {
-          width = sizeWidth;
-          height = sizeHeight;
-        } else if (sizeWidth.isFinite || !sizeHeight.isFinite) {
-          width = (sizeWidth.isFinite) ? sizeWidth : fileWidth;
-          height = (fileHeight * width) / fileWidth;
-        } else {
-          height = (sizeHeight.isFinite) ? sizeHeight : fileHeight;
-          width = (fileWidth * height) / fileHeight;
-        }
-        break;
-      none:
-      case BoxFit.none:
-        cacheWidth = width = fileWidth;
-        cacheHeight = height = fileHeight;
-        break;
-      fitHeight:
-      case BoxFit.fitHeight:
-        cacheHeight = (sizeHeight.isFinite) ? sizeHeight : null;
-        height = cacheHeight ?? fileHeight;
-        width = (fileWidth * height) / fileHeight;
-        break;
-      fitWidth:
-      case BoxFit.fitWidth:
-        cacheWidth = (sizeWidth.isFinite) ? sizeWidth : null;
-        width = cacheWidth ?? fileWidth;
-        height = (fileHeight * width) / fileWidth;
-        break;
-      case BoxFit.cover:
-        if ((finiteRatios && heightRatio > widthRatio) ||
-            (!finiteRatios && fileWidth < fileHeight)) {
-          // (!finiteRatios && fileWidth > fileHeight)) {
-          continue fitWidth;
-        } else {
-          continue fitHeight;
-        }
-      contain:
-      case BoxFit.contain:
-      default:
-        if ((finiteRatios && heightRatio > widthRatio) ||
-            (!finiteRatios && fileWidth < fileHeight)) {
-          // (!finiteRatios && fileWidth > fileHeight)) {
-          continue fitHeight;
-        } else {
-          continue fitWidth;
-        }
-    }
-  } else {
-    // TODO: This needs a switch too.
-    cacheHeight = cacheWidth = (sizeHeight.isFinite)
-        ? sizeHeight
-        : (sizeWidth.isFinite)
-            ? sizeWidth
-            : null;
-    height = width = (sizeHeight.isFinite)
-        ? sizeHeight
-        : (sizeWidth.isFinite)
-            ? sizeWidth
-            : fileWidth;
-  }
-  return (
-    width: width,
-    height: height,
-    cacheWidth: cacheWidth,
-    cacheHeight: cacheHeight,
-    aspectRatio: width / height,
-  );
 }

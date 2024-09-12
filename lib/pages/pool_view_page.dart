@@ -133,7 +133,7 @@ class _PoolViewPageState extends State<PoolViewPage> {
   }
 }
 
-typedef PoolViewParameters = ({PoolModel? pool, int? id});
+typedef PoolViewParameters = ({e621.Pool? pool, int? id});
 
 class PoolViewPageBuilder extends StatelessWidget
     implements IRoute<PoolViewPageBuilder> {
@@ -176,6 +176,181 @@ class PoolViewPageBuilder extends StatelessWidget
         } else {
           return Scaffold(
             appBar: AppBar(title: Text("Pool $poolId")),
+            body: const Column(children: [spinnerExpanded]),
+          );
+        }
+      },
+    );
+  }
+}
+
+class SetViewPage extends StatefulWidget implements IRoute<SetViewPage> {
+  static const routeNameString = "/setView";
+  @override
+  get routeName => routeNameString;
+  final SetModel set;
+  const SetViewPage({super.key, required this.set});
+
+  @override
+  State<SetViewPage> createState() => _SetViewPageState();
+}
+
+// var forcePostUniqueness = true;
+
+class _SetViewPageState extends State<SetViewPage> {
+  // ignore: unnecessary_late
+  static late final logger = lm.generateLogger("SetViewPage").logger;
+  SetModel get set => widget.set;
+  List<E6PostResponse> posts = [];
+  Future<List<E6PostResponse>>? loadingPosts;
+  int currentPage = 1;
+  JPureEvent rebuild = JPureEvent();
+  @override
+  void initState() {
+    super.initState();
+    if (widget.set.posts.isAssigned) {
+      posts = widget.set.posts.$;
+    } else {
+      loadingPosts = widget.set.posts.getItemAsync()
+        ..then((data) {
+          logger.finest("Done loading");
+          setState(() {
+            if (posts.isNotEmpty) {
+              posts.addAll(data);
+              logger.finer(
+                "posts.length before set conversion: ${posts.length}",
+              );
+              posts = posts.toSet().toList();
+              logger.finer(
+                "posts.length after set conversion: ${posts.length}",
+              );
+            } else {
+              posts = data;
+            }
+            loadingPosts = null;
+          });
+        }).ignore();
+    }
+    currentPage = 1;
+    rebuild = JPureEvent();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          "Set ${widget.set.id}: ${widget.set.name} "
+          "(${set.shortname}) by ${set.creatorId}",
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            if (widget.set.description.isNotEmpty)
+              ExpansionTile(
+                title: const Text("Description"),
+                dense: true,
+                initiallyExpanded: true,
+                children: [
+                  SelectableText.rich(
+                      dt.parse(widget.set.description) as TextSpan)
+                ],
+              ),
+            if (posts.isNotEmpty)
+              Expanded(
+                child: WPostSearchResults(
+                  posts: E6PostsSync(posts: posts),
+                  expectedCount: posts.length,
+                  disallowSelections: true,
+                  stripToGridView: true,
+                  fireRebuild: rebuild,
+                ),
+              ),
+            if (loadingPosts != null) spinnerExpanded,
+            Center(
+              child: Text(
+                "Loaded ${posts.length}/${widget.set.postCount} posts",
+              ),
+            ),
+            if (widget.set.postCount > posts.length && loadingPosts == null)
+              TextButton(
+                onPressed: () => setState(() {
+                  loadingPosts = widget.set.getPosts(page: ++currentPage)
+                    ..then((data) {
+                      logger.info("Done loading");
+                      setState(() {
+                        if (posts.isNotEmpty) {
+                          posts.addAll(data);
+                          if (forcePostUniqueness) {
+                            logger.finer(
+                              "posts.length before set conversion: ${posts.length}",
+                            );
+                            posts = posts.toSet().toList();
+                            logger.finer(
+                              "posts.length after set conversion: ${posts.length}",
+                            );
+                          }
+                        } else {
+                          posts = data;
+                        }
+                        loadingPosts = null;
+                        rebuild.invoke();
+                      });
+                    });
+                }),
+                child: const Text("Load More"),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+typedef SetViewParameters = ({e621.PostSet? set, int? id});
+
+class SetViewPageBuilder extends StatelessWidget
+    implements IRoute<SetViewPageBuilder> {
+  static const routeNameString = "/post_sets";
+  @override
+  get routeName => routeNameString;
+  final int setId;
+
+  const SetViewPageBuilder({
+    required this.setId,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: E621
+          .sendRequest(e621.initGetSetRequest(setId))
+          .toResponse()
+          .then((v) => SetViewPage(
+                set: SetModel.fromRawJson(v.body),
+              )),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          try {
+            return snapshot.data!;
+          } catch (e, s) {
+            return Scaffold(
+              appBar: AppBar(),
+              body: Text(
+                  "$e\n$s\n${snapshot.data}\n${snapshot.error}\n${snapshot.stackTrace}"),
+            );
+          }
+        } else if (snapshot.hasError) {
+          return ErrorPage(
+            error: snapshot.error,
+            stackTrace: snapshot.stackTrace,
+            logger: _SetViewPageState.logger,
+          );
+        } else {
+          return Scaffold(
+            appBar: AppBar(title: Text("Set $setId")),
             body: const Column(children: [spinnerExpanded]),
           );
         }

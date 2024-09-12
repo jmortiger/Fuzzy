@@ -12,6 +12,7 @@ import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/util/util.dart' as util;
+import 'package:fuzzy/util/asset_management.dart' as util_a;
 import 'package:fuzzy/web/e621/dtext_formatter.dart' as dt;
 import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
@@ -534,7 +535,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
     if (url == e6Post.preview.url) {
       return ProgressiveImage(
         blur: progressiveImageBlur,
-        placeholder: util.placeholder,
+        placeholder: util_a.placeholder,
         thumbnail: iFinal,
         image: iFinal,
         width: screenWidth, //cWidth.toDouble(),
@@ -568,7 +569,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
       } else {
         return ProgressiveImage(
           blur: progressiveImageBlur,
-          placeholder: util.placeholder,
+          placeholder: util_a.placeholder,
           thumbnail: iPreview,
           image: iFinal,
           width: screenWidth, //cWidth.toDouble(),

@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:fuzzy/models/app_settings.dart';
-import 'package:fuzzy/util/util.dart' as util;
+import 'package:fuzzy/util/asset_management.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
@@ -1539,6 +1539,19 @@ class PoolModel extends e621.Pool {
   }
   factory PoolModel.fromRawJson(String json) =>
       PoolModel.fromJson(jsonDecode(json));
+  factory PoolModel.fromInstance(e621.Pool i) => PoolModel(
+        id: i.id,
+        name: i.name,
+        createdAt: i.createdAt,
+        updatedAt: i.updatedAt,
+        creatorId: i.creatorId,
+        description: i.description,
+        isActive: i.isActive,
+        category: i.category,
+        postIds: i.postIds,
+        creatorName: i.creatorName,
+        postCount: i.postCount,
+      );
   PoolModel.fromJson(Map<String, dynamic> json)
       : this(
           id: json["id"],
@@ -1630,6 +1643,137 @@ class PoolModel extends e621.Pool {
     } catch (e, s) {
       logger.severe(
           "Failed to getOrderedPosts(poolId: $poolId, postsPerPage: $postsPerPage, page: $page), defaulting to empty array. PostIds: $postIds",
+          e,
+          s);
+      return [];
+    }
+  }
+}
+
+class SetModel extends e621.PostSet {
+  static lm.FileLogger get logger => _lRecord.logger;
+  SetModel({
+    required super.id,
+    required super.createdAt,
+    required super.updatedAt,
+    required super.creatorId,
+    required super.isPublic,
+    required super.name,
+    required super.shortname,
+    required super.description,
+    required super.postCount,
+    required super.transferOnDelete,
+    required super.postIds,
+  }) {
+    posts = LazyInitializer<List<E6PostResponse>>(
+      () async => getOrderedPosts(postIds, setId: id),
+    );
+  }
+  factory SetModel.fromRawJson(String json) =>
+      SetModel.fromJson(jsonDecode(json));
+  factory SetModel.fromInstance(e621.PostSet i) => SetModel(
+        id: i.id,
+        createdAt: i.createdAt,
+        updatedAt: i.updatedAt,
+        creatorId: i.creatorId,
+        isPublic: i.isPublic,
+        name: i.name,
+        shortname: i.shortname,
+        description: i.description,
+        postCount: i.postCount,
+        transferOnDelete: i.transferOnDelete,
+        postIds: i.postIds,
+      );
+  SetModel.fromJson(Map<String, dynamic> json)
+      : this(
+          id: json["id"],
+          name: json["name"],
+          createdAt: DateTime.parse(json["created_at"]),
+          updatedAt: DateTime.parse(json["updated_at"]),
+          creatorId: json["creator_id"],
+          isPublic: json["is_public"],
+          shortname: json["shortname"],
+          description: json["description"],
+          postCount: json["post_count"],
+          transferOnDelete: json["transfer_on_delete"],
+          postIds: (json["post_ids"] as List).cast<int>(),
+        );
+  late final LazyInitializer<List<E6PostResponse>> posts;
+  @Deprecated("Use name")
+  String get namePretty => name; //name.replaceAll("_", " ");
+
+  Future<List<E6PostResponse>> getPosts({
+    int page = 1,
+    int? postsPerPage,
+  }) =>
+      getOrderedPosts(
+        postIds,
+        setId: id,
+        postsPerPage: postsPerPage,
+        page: page,
+      );
+
+  /// TODO: Still not iron-clad in terms of ordering and page offsets.
+  ///
+  /// Uses `order:id_asc` to try and grab them in order. If there are too many
+  /// posts and a lot are out of order, this could cause failure somewhere.
+  static Future<List<E6PostResponse>> getOrderedPosts(
+    List<int> postIds, {
+    int? setId,
+    int? postsPerPage,
+    int page = 1,
+  }) async {
+    if (page <= 0) page = 1;
+    postsPerPage ??= SearchView.i.postsPerPage;
+    if (postIds.length > e621.maxPostsPerSearch) {
+      logger.warning("Too many posts in set for a single search request");
+    } else if (postIds.length > postsPerPage) {
+      logger.warning("Too many posts in set for 1 page");
+    } else if (setId == null && postIds.length > e621.maxTagsPerSearch - 1) {
+      logger.warning("Too many posts in set for 1 search (use the set id)");
+      postsPerPage = e621.maxTagsPerSearch - 1;
+    }
+    try {
+      final searchString = "${(setId != null ? "set:$setId" : postIds.getRange(
+            0,
+            min(postIds.length, postsPerPage),
+          ).fold(
+            "",
+            (previousValue, element) => "$previousValue~id:$element ",
+          ))} order:id_asc";
+      final response = await E621.performPostSearch(
+          tags: searchString, limit: postsPerPage, pageNumber: page);
+      logger.finer("first: ${postIds.first}");
+      logger.finer(response.responseBody);
+      logger.finer(response.statusCode);
+      final t1 = (jsonDecode(
+        (response).responseBody,
+      )["posts"] as List);
+      logger.finer("# posts in response: ${t1.length}");
+      int postOffset = (page - 1) * postsPerPage;
+      logger.finer(
+          "offset from start of setIds[$postOffset] = ${postIds[postOffset]}");
+      // Sort them by order in set
+      final t2 = postIds.getRange(postOffset, postIds.length).reduceUntilTrue(
+        (acc, e, i, l) {
+          var match =
+              t1.firstWhere((t) => e == (t["id"] as int), orElse: () => null);
+          return match != null
+              ? ((acc..add(E6PostResponse.fromJson(match))), false)
+              // Force it to stay alive until it's at least close.
+              : (acc, acc.length > l.length);
+        },
+        <E6PostResponse>[],
+      );
+      logger.finer("# posts after sorting: ${t2.length}");
+      if (t1.length != t2.length) {
+        logger.warning(
+            "# posts before ${t1.length} & after ${t2.length} sorting mismatched. There is likely 1 or more posts whose id is out of order with its order in the set. This will likely cause problems.");
+      }
+      return t2;
+    } catch (e, s) {
+      logger.severe(
+          "Failed to getOrderedPosts(setId: $setId, postsPerPage: $postsPerPage, page: $page), defaulting to empty array. PostIds: $postIds",
           e,
           s);
       return [];

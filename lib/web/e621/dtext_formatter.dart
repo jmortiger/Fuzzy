@@ -3,6 +3,7 @@ import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:fuzzy/web/e621/colors.dart' as e6_color;
 import 'package:fuzzy/util/html_colors.dart';
 import 'package:fuzzy/util/util.dart' as util;
+import 'package:fuzzy/widgets/w_post_thumbnail.dart';
 import 'package:j_util/e621_models.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
@@ -11,12 +12,11 @@ late final _logger = lm.generateLogger("DTextFormatter").logger;
 
 // https://e621.net/help/dtext
 
-const tagLinkStyle = TextStyle(
-    fontStyle: FontStyle.italic,
-    color: Colors.amber,
-    decoration: TextDecoration.underline);
-
 const safety = 1000;
+
+/// TODO: Add Setting for dtext section rendering
+var renderDTextSectionLeftBorder = true;
+var renderDTextSectionBg = false;
 
 // #region Linkifiers
 class TagJsonLinkifier extends UrlLinkifier {
@@ -154,23 +154,9 @@ class NamedLinkifier extends UrlLinkifier {
         options);
   }
 }
-
 // #endregion Linkifiers
 
 enum DTextMatchers {
-  header(
-    r"^(?:[\t ]*?)h(?<data>[1-6])\.\s?(?<main>.*)$",
-    incorrectlyParsedStyle,
-    multiLine: true,
-    dotAll: false,
-  ),
-  section(
-    r"\[section"
-    r"(?<data>(?<expanded>,expanded)?(?:=(?<title>.*?))?)?"
-    r"\](?<main>.*?)\[\/section\]",
-    incorrectlyParsedStyle,
-    dotAll: true,
-  ),
   bold(
     r"\[b\](?<main>.*?)\[\/b\]",
     TextStyle(fontWeight: FontWeight.bold),
@@ -191,11 +177,6 @@ enum DTextMatchers {
     TextStyle(decoration: TextDecoration.underline),
     dotAll: true,
   ),
-  spoiler(
-    r"\[spoiler\](?<main>.*?)\[\/spoiler\]",
-    unimplementedStyle,
-    dotAll: true,
-  ),
   superscript(
     r"\[sup\](?<main>.*?)\[\/sup\]",
     unimplementedStyle,
@@ -206,6 +187,31 @@ enum DTextMatchers {
     unimplementedStyle,
     dotAll: true,
   ),
+  spoiler(
+    r"\[spoiler\](?<main>.*?)\[\/spoiler\]",
+    unimplementedStyle,
+    dotAll: true,
+  ),
+  codeInline(
+      r"`(?<main>.*?)`",
+      TextStyle(
+        fontFamily: "Consolas",
+        fontFamilyFallback: ["Courier New", "monospace"],
+      )),
+  color(
+    r"\[color(?:=(?<data>(?<tagCategory>"
+    "${TagCategory.categoryNameRegExpStr}"
+    r")|(?<colorName>"
+    "$htmlColorsFullMatcher"
+    r")|(?<hex>#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})|.*?){0,1})\](?<main>.*?)"
+    r"\[\/color\]",
+    incorrectlyParsedStyle,
+    dotAll: true,
+  ),
+  // bareLink
+  escapedLink(r"<(?<main>" "${util.urlMatcherStr}" r".*?)>", linkStyle),
+  namedLink('"(?<main>.+?)":(?<url>${util.urlMatcherStr}){1}', linkStyle),
+  tagLink(r"\[\[(?:(?<tag>.*?)\|){0,1}(?<main>.+?)\]\]", linkStyle),
   searchLink(r"{{(?<main>(?<data>.+?))}}", linkStyle),
   postLink(r"(?<main>post #(?<data>[0-9]+))", linkStyle),
   postChangesLink(r"(?<main>post changes #(?<data>[0-9]+))", linkStyle),
@@ -218,33 +224,32 @@ enum DTextMatchers {
   recordLink(r"(?<main>record #(?<data>[0-9]+))", linkStyle),
   ticketLink(r"(?<main>ticket #(?<data>[0-9]+))", linkStyle),
   postThumbnail(r"(?<main>thumb #(?<data>[0-9]+))", unimplementedStyle),
-  tagLink(r"\[\[(?:(?<tag>.*?)\|){0,1}(?<main>.+?)\]\]", linkStyle),
-  escapedLink(r"<(?<main>" "${util.urlMatcherStr}" r".*?)>", linkStyle),
-  color(
-    r"\[color(?:=(?<data>(?<tagCategory>"
-    "${TagCategory.categoryNameRegExpStr}"
-    r")|(?<colorName>"
-    "$htmlColorsFullMatcher"
-    r")|(?<hex>#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})|.*?){0,1})\](?<main>.*?)"
-    r"\[\/color\]",
+  quote(
+    r"\[quote\](?<main>.*?)\[\/quote\]",
     incorrectlyParsedStyle,
     dotAll: true,
   ),
   code(
-    r"\[code\](?<main>.*?)\[\/code\]",
+    r"\[code\]\n?(?<main>.*?)\n?\[\/code\]",
     TextStyle(
       fontFamily: "Consolas",
       fontFamilyFallback: ["Courier New", "monospace"],
     ),
     dotAll: true,
   ),
-  codeInline(
-      r"`(?<main>.*?)`",
-      TextStyle(
-        fontFamily: "Consolas",
-        fontFamilyFallback: ["Courier New", "monospace"],
-      )),
-  namedLink('"(?<main>.+?)":(?<url>${util.urlMatcherStr}){1}', linkStyle),
+  header(
+    r"^(?:[\t ]*?)h(?<data>[1-6])\.\s?(?<main>.*)$",
+    incorrectlyParsedStyle,
+    multiLine: true,
+    dotAll: false,
+  ),
+  section(
+    r"\[section"
+    r"(?<data>(?<expanded>,expanded)?(?:=(?<title>.*?))?)?"
+    r"\](?<main>.*?)\[\/section\]",
+    incorrectlyParsedStyle,
+    dotAll: true,
+  ),
   ;
 
   static const e6Links = [searchLink];
@@ -312,7 +317,7 @@ enum DTextMatchers {
     return (i == null) ? null : Color(i);
   }
 
-  TextStyle styleFromCtxAndMatch(BuildContext context, RegExpMatch m) =>
+  TextStyle retrieveStyle(BuildContext context, RegExpMatch m) =>
       switch (this) {
         header => switch (m.namedGroup("data")) {
             "1" =>
@@ -339,6 +344,7 @@ enum DTextMatchers {
                 : htmlColorsFull[m.namedGroup("colorName")] ??
                     makeColorFromHexString(m.namedGroup("hex"))!),
         section => Theme.of(context).textTheme.bodyMedium ?? style,
+        quote => const TextStyle(),
         _ => style,
       };
   (RegExpMatch, DTextMatchers)? firstMatch(String dText) {
@@ -356,7 +362,29 @@ enum DTextMatchers {
     required RegExpMatch m,
     BuildContext? ctx,
   }) {
-    final style = ctx != null ? styleFromCtxAndMatch(ctx, m) : this.style;
+    const leftBorderWidth = 3.0,
+        leftBorderPadding = leftBorderWidth + 2,
+        borderRadius = BorderRadius.all(Radius.circular(3.75)),
+        sectionBackground = [
+          BoxShadow(
+            color: e6_color.sectionLighten10,
+            spreadRadius: 2,
+          ),
+        ],
+        sectionTileBorderNone = BorderSide(color: Colors.transparent),
+        sectionTileBorderShow = Border(
+          bottom: sectionTileBorderNone,
+          top: sectionTileBorderNone,
+          left: BorderSide(
+            color: e6_color.dtextSection,
+            width: leftBorderWidth,
+          ),
+        ),
+        sectionTileBorderHide = Border(
+          bottom: sectionTileBorderNone,
+          top: sectionTileBorderNone,
+        );
+    final style = ctx != null ? retrieveStyle(ctx, m) : this.style;
     String? text = m.namedGroup("main"); //getSubPatternFromPotentialMatch(m);
     bool isChildless = switch (this) {
       tagLink ||
@@ -423,19 +451,77 @@ enum DTextMatchers {
           // options: const LinkifyOptions(humanize: false),
           options: util.linkifierOptions,
         ),
+      code when renderDTextSectionBg || renderDTextSectionLeftBorder =>
+        WidgetSpan(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: renderDTextSectionLeftBorder
+                  ? const Border(
+                      left: BorderSide(
+                        color: e6_color.dtextCode,
+                        width: leftBorderWidth,
+                      ),
+                    )
+                  : null,
+              boxShadow: renderDTextSectionBg ? sectionBackground : null,
+              borderRadius: borderRadius,
+            ),
+            child: Padding(
+              padding:
+                  const EdgeInsets.fromLTRB(leftBorderPadding + 10, 0, 0, 0),
+              child: Text.rich(
+                parse(m.namedGroup("main")!, ctx),
+                style: style,
+              ),
+            ),
+          ),
+        ),
+      quote when renderDTextSectionBg || renderDTextSectionLeftBorder =>
+        WidgetSpan(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: renderDTextSectionLeftBorder
+                  ? const Border(
+                      left: BorderSide(
+                        color: e6_color.dtextQuote,
+                        width: leftBorderWidth,
+                      ),
+                    )
+                  : null,
+              boxShadow: renderDTextSectionBg ? sectionBackground : null,
+              borderRadius: borderRadius,
+            ),
+            child: Padding(
+              padding:
+                  const EdgeInsets.fromLTRB(leftBorderPadding + 10, 0, 0, 0),
+              child: Text.rich(
+                parse(m.namedGroup("main")!, ctx),
+                style: style,
+              ),
+            ),
+          ),
+        ),
       section => WidgetSpan(
           child: (() {
             final root = ExpansionTile(
-              visualDensity: VisualDensity.compact,
-              dense: true,
+              visualDensity: VisualDensity(
+                vertical: VisualDensity.minimumDensity,
+                horizontal: VisualDensity.compact.horizontal,
+              ),
+              shape: renderDTextSectionLeftBorder
+                  ? sectionTileBorderShow
+                  : sectionTileBorderHide,
+              collapsedShape: renderDTextSectionLeftBorder
+                  ? sectionTileBorderShow
+                  : sectionTileBorderHide,
+              expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
               controlAffinity: ListTileControlAffinity.leading,
               tilePadding: const EdgeInsets.symmetric(horizontal: 16.0),
-              childrenPadding: EdgeInsets.zero,
-              title: IgnorePointer(
-                child: SelectableText(
-                  m.namedGroup("title") ?? "",
-                  style: style,
-                ),
+              childrenPadding: const EdgeInsets.symmetric(horizontal: 16.0),
+              title: /* Selectable */
+                  Text.rich(
+                parse(m.namedGroup("title") ?? "", ctx),
+                style: style,
               ),
               initiallyExpanded: m.namedGroup("expanded") != null,
               children: [
@@ -447,24 +533,37 @@ enum DTextMatchers {
                   style: style,
                 ))
               ],
-            );
-            return ctx != null
+            ) /* ,
+                themeData = ctx != null ? Theme.of(ctx) : null */
+                ;
+            return /* themeData != null
                 ? Theme(
-                    data: Theme.of(ctx)
-                        .copyWith(dividerColor: Colors.transparent),
+                    data: themeData.copyWith(
+                      expansionTileTheme: themeData.expansionTileTheme.copyWith(
+                        collapsedBackgroundColor: themeData.colorScheme.surface,
+                      ),
+                    ),
+                    // data: themeData.copyWith(
+                    //   dividerColor: themeData.colorScheme.surface,
+                    //   dividerTheme: DividerThemeData(
+                    //       color: themeData.colorScheme.surface),
+                    // ),
                     child: root,
                   )
-                : root;
+                :  */
+                root;
           })(),
         ),
-      // postThumbnail => WidgetSpan(
-      //     text: m.group(1)!,
-      //     linkifiers: const [util.MyLinkifier()],
-      //     linkStyle: style,
-      //     onOpen: util.defaultOnLinkifyOpen,
-      //     // options: const LinkifyOptions(humanize: false),
-      //     options: util.linkifierOptions,
-      //   ),
+      // max of 150 for width and height or 1/5 the vertical height
+      postThumbnail => WidgetSpan(
+          child: WPostThumbnail.withId(
+            key: ValueKey((int.parse(m.namedGroup("data")!))),
+            id: int.parse(m.namedGroup("data")!),
+            maxHeight: 150,
+            maxWidth: 150,
+            fit: BoxFit.contain,
+          ),
+        ),
       _ => RegExp(util.urlMatcherStr).hasMatch(text ?? "")
           ? LinkifySpan(
               text: text!,
@@ -612,7 +711,38 @@ patreon.com/MariArt
 MariArt.info
 [i]Italics [b]and bolded [color=red]and red[/color][/b] text[/i]
 [sup]Superscript[/sup][sub]Subscript[/sub][spoiler]Spoiler[/spoiler]
-[section,expanded=Links]
+[quote]Quote[/quote]
+[code]std::cout << "Code Block!";[/code]
+`std::cout << "Code Inline!";`
+[section,expanded=Lists & Tables]
+* Item 1
+* Item 2
+** Item 2A
+** Item 2B
+* Item 3
+[table]
+  [thead]
+    [tr]
+      [th] header [/th]
+      [th] header [/th]
+      [th] header [/th]
+    [/tr]
+  [/thead]
+  [tbody]
+    [tr]
+      [td] column [/td]
+      [td] column [/td]
+      [td] column [/td]
+    [/tr]
+    [tr]
+      [td] column [/td]
+      [td] column [/td]
+      [td] column [/td]
+    [/tr]
+  [/tbody]
+[/table]
+[/section]
+[section=Links]
 [[American Dragon: Jake Long|Wiki Link]] [[American Dragon: Jake Long]]
 Tag search
 {{jun_kobayashi rating:s}}

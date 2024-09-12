@@ -92,7 +92,8 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
             final v = (settings.arguments as dynamic).pool!;
             return MaterialPageRoute(
               settings: settings,
-              builder: (cxt) => PoolViewPage(pool: v),
+              builder: (cxt) => PoolViewPage(
+                  pool: v is PoolModel ? v : PoolModel.fromInstance(v)),
             );
           } catch (e) {
             id ??= (settings.arguments as PostViewParameters?)?.id;
@@ -100,6 +101,43 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
               return MaterialPageRoute(
                 settings: settings,
                 builder: (cxt) => PoolViewPageBuilder(poolId: id!),
+              );
+            } else {
+              routeLogger.severe(
+                "Routing failure\n"
+                "\tRoute: ${settings.name}\n"
+                "\tId: $id\n"
+                "\tArgs: ${settings.arguments}",
+              );
+              return null;
+            }
+          }
+        } catch (e, s) {
+          routeLogger.severe(
+            "Routing failure\n"
+            "\tRoute: ${settings.name}\n"
+            "\tId: $id\n"
+            "\tArgs: ${settings.arguments}",
+            e,
+            s,
+          );
+          return null;
+        }
+      case SetViewPageBuilder.routeNameString:
+        try {
+          try {
+            final v = (settings.arguments as dynamic).set!;
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (cxt) => SetViewPage(
+                  set: v is SetModel ? v : SetModel.fromInstance(v)),
+            );
+          } catch (e) {
+            id ??= (settings.arguments as PostViewParameters?)?.id;
+            if (id != null) {
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (cxt) => SetViewPageBuilder(setId: id!),
               );
             } else {
               routeLogger.severe(
@@ -192,7 +230,7 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
           );
           return null;
         }
-      case "/post_sets" when url.pathSegments.length != 1:
+      /* case "/post_sets" when url.pathSegments.length != 1:
         try {
           try {
             id ??= (settings.arguments as dynamic)!.id;
@@ -231,7 +269,7 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
             s,
           );
           return null;
-        }
+        } */
       // editPostPage:
       case EditPostPageLoader.routeNameString:
         try {
