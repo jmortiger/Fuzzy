@@ -1,5 +1,5 @@
 # Fuzzy
-An all-in-one mobile frontend for multiple image submission sites.
+An (eventual) all-in-one mobile frontend for multiple image submission sites. Currently only supports e621.
 
 ## Feature List
 #### e621/e926
@@ -32,3 +32,4 @@ An all-in-one mobile frontend for multiple image submission sites.
 * Subscriptions
 * Warn about blacklist before loading parent/child w/ blacklisted tag
 * Combining (at least 2) searches (e.g. (a or b) and (c or d))
+* FurAffinity

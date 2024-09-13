@@ -155,7 +155,8 @@ class NamedLinkifier extends UrlLinkifier {
   }
 }
 // #endregion Linkifiers
-
+/// TODO: Pull into library
+/// TODO: Add configurability (const matchers & defaults w/ an instanced class with overrideable fields)
 enum DTextMatchers {
   bold(
     r"\[b\](?<main>.*?)\[\/b\]",
@@ -223,14 +224,16 @@ enum DTextMatchers {
   takedownLink(r"(?<main>takedown #(?<data>[0-9]+))", linkStyle),
   recordLink(r"(?<main>record #(?<data>[0-9]+))", linkStyle),
   ticketLink(r"(?<main>ticket #(?<data>[0-9]+))", linkStyle),
-  postThumbnail(r"(?<main>thumb #(?<data>[0-9]+))", unimplementedStyle),
+  postThumbnail(r"(?<main>thumb #(?<data>[0-9]+))", incorrectlyParsedStyle),
+  // Block formatting
   quote(
     r"\[quote\](?<main>.*?)\[\/quote\]",
     incorrectlyParsedStyle,
     dotAll: true,
   ),
   code(
-    r"\[code\]\n?(?<main>.*?)\n?\[\/code\]",
+    // infinite leading newlines are trimmed, 1 trailing newline is trimmed
+    r"\[code\]\n*(?<main>.*?)\n?\[\/code\]",
     TextStyle(
       fontFamily: "Consolas",
       fontFamilyFallback: ["Courier New", "monospace"],
@@ -243,6 +246,19 @@ enum DTextMatchers {
     multiLine: true,
     dotAll: false,
   ),
+
+  /// [Ref](https://e621.net/help/dtext#list)
+  ///
+  /// Leading whitespace only trimmed as a result of HTML whitespace stripping,
+  /// pattern 1 makes this consistently trim leading whitespace, pattern 2
+  /// makes this consistently fail to match leading whitespace.
+  list(
+    // r"^[ \t]*?(?<data>\*+)[ \t]+?(?<main>.*?)$",
+    r"^(?<data>\*+)[ \t]+?(?<main>.*?)$",
+    TextStyle(),
+    // dotAll: true,
+    multiLine: true,
+  ),
   section(
     r"\[section"
     r"(?<data>(?<expanded>,expanded)?(?:=(?<title>.*?))?)?"
@@ -250,9 +266,17 @@ enum DTextMatchers {
     incorrectlyParsedStyle,
     dotAll: true,
   ),
+  /* table(
+    r"\[table"
+    r"(?<data>(?<expanded>,expanded)?(?:=(?<title>.*?))?)?"
+    r"\](?<main>.*?)\[\/table\]",
+    incorrectlyParsedStyle,
+    dotAll: true,
+  ), */
   ;
 
-  static const e6Links = [searchLink];
+  // static const e6Links = [searchLink];
+  static const blockFormats = [quote, code, header, list, section /*, table*/];
   static const unimplementedStyle = TextStyle(
     decoration: TextDecoration.underline,
     decorationStyle: TextDecorationStyle.wavy,
@@ -362,30 +386,32 @@ enum DTextMatchers {
     required RegExpMatch m,
     BuildContext? ctx,
   }) {
+    // #region Constants
     const leftBorderWidth = 3.0,
         leftBorderPadding = leftBorderWidth + 2,
         borderRadius = BorderRadius.all(Radius.circular(3.75)),
         sectionBackground = [
-          BoxShadow(
-            color: e6_color.sectionLighten10,
-            spreadRadius: 2,
-          ),
+          BoxShadow(color: e6_color.sectionLighten10, spreadRadius: 2),
         ],
         sectionTileBorderNone = BorderSide(color: Colors.transparent),
         sectionTileBorderShow = Border(
           bottom: sectionTileBorderNone,
           top: sectionTileBorderNone,
-          left: BorderSide(
-            color: e6_color.dtextSection,
-            width: leftBorderWidth,
-          ),
+          left:
+              BorderSide(color: e6_color.dtextSection, width: leftBorderWidth),
         ),
         sectionTileBorderHide = Border(
           bottom: sectionTileBorderNone,
           top: sectionTileBorderNone,
-        );
+        ),
+        // tabText = "		";
+        tabText = "    ";
+    // #endregion Constants
+    getSectionShape() => renderDTextSectionLeftBorder
+        ? sectionTileBorderShow
+        : sectionTileBorderHide;
     final style = ctx != null ? retrieveStyle(ctx, m) : this.style;
-    String? text = m.namedGroup("main"); //getSubPatternFromPotentialMatch(m);
+    String? text = m.namedGroup("main");
     bool isChildless = switch (this) {
       tagLink ||
       namedLink ||
@@ -403,6 +429,21 @@ enum DTextMatchers {
         true,
       _ => firstMatches(text ?? "") == null,
     };
+    TextSpan defaultParser(String? text) =>
+        RegExp(util.urlMatcherStr).hasMatch(text ?? "")
+            ? LinkifySpan(
+                text: text!,
+                linkifiers: const [util.MyLinkifier()],
+                linkStyle: style,
+                onOpen: util.defaultOnLinkifyOpen,
+                options: util.linkifierOptions,
+              )
+            : TextSpan(
+                text: isChildless ? text : null,
+                children:
+                    isChildless ? null : buildChildrenFromMatch(m: m, ctx: ctx),
+                style: style,
+              );
     return switch (this) {
       searchLink ||
       postLink ||
@@ -502,59 +543,33 @@ enum DTextMatchers {
           ),
         ),
       section => WidgetSpan(
-          child: (() {
-            final root = ExpansionTile(
-              visualDensity: VisualDensity(
-                vertical: VisualDensity.minimumDensity,
-                horizontal: VisualDensity.compact.horizontal,
-              ),
-              shape: renderDTextSectionLeftBorder
-                  ? sectionTileBorderShow
-                  : sectionTileBorderHide,
-              collapsedShape: renderDTextSectionLeftBorder
-                  ? sectionTileBorderShow
-                  : sectionTileBorderHide,
-              expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
-              controlAffinity: ListTileControlAffinity.leading,
-              tilePadding: const EdgeInsets.symmetric(horizontal: 16.0),
-              childrenPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-              title: /* Selectable */
-                  Text.rich(
-                parse(m.namedGroup("title") ?? "", ctx),
+          child: ExpansionTile(
+            visualDensity: VisualDensity(
+              vertical: VisualDensity.minimumDensity,
+              horizontal: VisualDensity.compact.horizontal,
+            ),
+            shape: getSectionShape(),
+            collapsedShape: getSectionShape(),
+            expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+            controlAffinity: ListTileControlAffinity.leading,
+            tilePadding: const EdgeInsets.symmetric(horizontal: 16.0),
+            childrenPadding: const EdgeInsets.symmetric(horizontal: 16.0),
+            title: /* Selectable */
+                Text.rich(
+              parse(m.namedGroup("title") ?? "", ctx),
+              style: style,
+            ),
+            initiallyExpanded: m.namedGroup("expanded") != null,
+            children: [
+              Text.rich(TextSpan(
+                text: isChildless ? text : null,
+                children:
+                    isChildless ? null : buildChildrenFromMatch(m: m, ctx: ctx),
                 style: style,
-              ),
-              initiallyExpanded: m.namedGroup("expanded") != null,
-              children: [
-                Text.rich(TextSpan(
-                  text: isChildless ? text : null,
-                  children: isChildless
-                      ? null
-                      : buildChildrenFromMatch(m: m, ctx: ctx),
-                  style: style,
-                ))
-              ],
-            ) /* ,
-                themeData = ctx != null ? Theme.of(ctx) : null */
-                ;
-            return /* themeData != null
-                ? Theme(
-                    data: themeData.copyWith(
-                      expansionTileTheme: themeData.expansionTileTheme.copyWith(
-                        collapsedBackgroundColor: themeData.colorScheme.surface,
-                      ),
-                    ),
-                    // data: themeData.copyWith(
-                    //   dividerColor: themeData.colorScheme.surface,
-                    //   dividerTheme: DividerThemeData(
-                    //       color: themeData.colorScheme.surface),
-                    // ),
-                    child: root,
-                  )
-                :  */
-                root;
-          })(),
+              ))
+            ],
+          ),
         ),
-      // max of 150 for width and height or 1/5 the vertical height
       postThumbnail => WidgetSpan(
           child: WPostThumbnail.withId(
             key: ValueKey((int.parse(m.namedGroup("data")!))),
@@ -564,21 +579,9 @@ enum DTextMatchers {
             fit: BoxFit.contain,
           ),
         ),
-      _ => RegExp(util.urlMatcherStr).hasMatch(text ?? "")
-          ? LinkifySpan(
-              text: text!,
-              linkifiers: const [util.MyLinkifier()],
-              linkStyle: style,
-              onOpen: util.defaultOnLinkifyOpen,
-              // options: const LinkifyOptions(humanize: false),
-              options: util.linkifierOptions,
-            )
-          : TextSpan(
-              text: isChildless ? text : null,
-              children:
-                  isChildless ? null : buildChildrenFromMatch(m: m, ctx: ctx),
-              style: style,
-            ),
+      list => defaultParser(
+          "${List.generate(m.namedGroup("data")!.length, (index) => tabText).reduce((p, c) => "$p$c")} • $text"),
+      _ => defaultParser(text),
     };
   }
 
