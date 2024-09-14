@@ -271,23 +271,6 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                     SearchViewData.postsPerRowBounds.min,
                 increment: 1,
               ),
-              // WIntegerSliderField(
-              //   min: SearchViewData.postsPerRowBounds.min,
-              //   max: SearchViewData.postsPerRowBounds.max,
-              //   getVal: () => SearchView.i.postsPerRow,
-              //   name: "Posts per row",
-              //   setVal: (int val) => SearchView.i.postsPerRow = val.toInt(),
-              //   validateVal: (int? val) => (val?.toInt() ?? -1) >= 0,
-              //   defaultValue: SearchViewData.defaultData.postsPerRow,
-              //   // divisions: SearchViewData.postsPerRowBounds.max -
-              //   //     SearchViewData.postsPerRowBounds.min,
-              // ),
-              // WIntegerField(
-              //   getVal: () => SearchView.i.postsPerRow,
-              //   name: "Posts per row",
-              //   setVal: (int val) => SearchView.i.postsPerRow = val,
-              //   validateVal: (int? val) => (val ?? -1) >= 0,
-              // ),
               WNumSliderField<int>(
                 min: SearchViewData.postsPerPageBounds.min,
                 max: SearchViewData.postsPerPageBounds.max,
@@ -304,12 +287,6 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                     SearchViewData.postsPerPageBounds.min,
                 increment: 1,
               ),
-              // WIntegerField(
-              //   getVal: () => SearchView.i.postsPerPage,
-              //   name: "Posts per page",
-              //   setVal: (int val) => SearchView.i.postsPerPage = val,
-              //   validateVal: (int? val) => (val ?? -1) >= 0,
-              // ),
               WNumSliderField<double>(
                 min: SearchViewData.widthToHeightRatioBounds.min,
                 max: SearchViewData.widthToHeightRatioBounds.max,
@@ -330,13 +307,48 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                 //     SearchViewData.widthToHeightRatioBounds.min)*100).round(),
                 increment: .01,
               ),
-              // WIntegerField(
-              //   getVal: () => (SearchView.i.widthToHeightRatio * 100).toInt(),
-              //   name: "Width to height ratio",
-              //   setVal: (int val) =>
-              //       SearchView.i.widthToHeightRatio = val / 100,
-              //   // validateVal: (int? val) => (val ?? -1) >= 0,
-              // ),
+              WNumSliderField<double>(
+                getVal: () => SearchView.i.horizontalGridSpace,
+                name: "Horizontal grid space",
+                setVal: (num val) =>
+                    SearchView.i.horizontalGridSpace = val.toDouble(),
+                validateVal: (num? val) {
+                  return (val ??
+                              (SearchViewData.horizontalGridSpaceBounds.min -
+                                  1)) >=
+                          SearchViewData.horizontalGridSpaceBounds.min &&
+                      (val ?? -1) <=
+                          SearchViewData.horizontalGridSpaceBounds.max;
+                },
+                min: SearchViewData.horizontalGridSpaceBounds.min,
+                max: SearchViewData.horizontalGridSpaceBounds.max,
+                defaultValue: SearchViewData.defaultData.horizontalGridSpace,
+                // divisions: ((SearchViewData.horizontalGridSpaceBounds.max -
+                //     SearchViewData.horizontalGridSpaceBounds.min)*100).round(),
+                increment: .1,
+                incrementMultiplier: 10,
+              ),
+              WNumSliderField<double>(
+                getVal: () => SearchView.i.verticalGridSpace,
+                name: "Vertical grid space",
+                setVal: (num val) =>
+                    SearchView.i.verticalGridSpace = val.toDouble(),
+                validateVal: (num? val) {
+                  return (val ??
+                              (SearchViewData.verticalGridSpaceBounds.min -
+                                  1)) >=
+                          SearchViewData.verticalGridSpaceBounds.min &&
+                      (val ?? -1) <=
+                          SearchViewData.verticalGridSpaceBounds.max;
+                },
+                min: SearchViewData.verticalGridSpaceBounds.min,
+                max: SearchViewData.verticalGridSpaceBounds.max,
+                defaultValue: SearchViewData.defaultData.verticalGridSpace,
+                // divisions: ((SearchViewData.verticalGridSpaceBounds.max -
+                //     SearchViewData.verticalGridSpaceBounds.min)*100).round(),
+                increment: .1,
+                incrementMultiplier: 10,
+              ),
               WEnumListField<PostInfoPaneItem>.getter(
                 name: "Post Info Display",
                 getter: () => SearchView.i.postInfoBannerItems,

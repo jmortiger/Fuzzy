@@ -263,9 +263,9 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
     return widget.useLazyBuilding
         ? GridView.builder(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: AppSettings.i!.searchView.postsPerRow,
-              crossAxisSpacing: 4,
-              mainAxisSpacing: 4,
+              crossAxisCount: SearchView.i.postsPerRow,
+              crossAxisSpacing: SearchView.i.horizontalGridSpace,
+              mainAxisSpacing: SearchView.i.verticalGridSpace,
               childAspectRatio: SearchView.i.widthToHeightRatio,
             ),
             itemCount: estimatedCount,
@@ -291,9 +291,9 @@ class _WPostSearchResultsState extends State<WPostSearchResults> {
             //   },
             )
         : GridView.count(
-            crossAxisCount: AppSettings.i!.searchView.postsPerRow,
-            crossAxisSpacing: 4,
-            mainAxisSpacing: 4,
+            crossAxisCount: SearchView.i.postsPerRow,
+            crossAxisSpacing: SearchView.i.horizontalGridSpace,
+            mainAxisSpacing: SearchView.i.verticalGridSpace,
             childAspectRatio: SearchView.i.widthToHeightRatio,
             children: !widget.stripToGridView // sc.isMpcSync
                 ? sc!

@@ -562,23 +562,29 @@ class PostView implements PostViewData {
 }
 
 class SearchViewData {
-  static const postsPerPageBounds = (min: 1, max: 320);
-  static const postsPerRowBounds = (min: 1, max: 30);
-  static const widthToHeightRatioBounds = (min: .5, max: 2.0);
-  static const defaultData = SearchViewData(
-    postsPerPage: 50,
-    postsPerRow: 3,
-    postInfoBannerItems: PostInfoPaneItem.values,
-    widthToHeightRatio: 1,
-    useProgressiveImages: true,
-    numSavedSearchesInSearchBar: 5,
-    lazyLoad: false,
-    lazyBuilding: false,
-    preferSetShortname: true,
-    maxCharsInPostInfo: 100,
-  );
+  static const postsPerPageBounds = (min: 1, max: 320),
+      postsPerRowBounds = (min: 1, max: 30),
+      horizontalGridSpaceBounds = (min: 0.0, max: 10.0),
+      verticalGridSpaceBounds = horizontalGridSpaceBounds,
+      widthToHeightRatioBounds = (min: .5, max: 2.0),
+      defaultData = SearchViewData(
+        postsPerPage: 50,
+        postsPerRow: 3,
+        horizontalGridSpace: 4,
+        verticalGridSpace: 4,
+        postInfoBannerItems: PostInfoPaneItem.values,
+        widthToHeightRatio: 1,
+        useProgressiveImages: true,
+        numSavedSearchesInSearchBar: 5,
+        lazyLoad: false,
+        lazyBuilding: false,
+        preferSetShortname: true,
+        maxCharsInPostInfo: 100,
+      );
   final int postsPerPage;
   final int postsPerRow;
+  final double horizontalGridSpace;
+  final double verticalGridSpace;
   final List<PostInfoPaneItem> postInfoBannerItems;
   final double widthToHeightRatio;
   final bool useProgressiveImages;
@@ -590,6 +596,8 @@ class SearchViewData {
   const SearchViewData({
     required this.postsPerPage,
     required this.postsPerRow,
+    required this.horizontalGridSpace,
+    required this.verticalGridSpace,
     required this.postInfoBannerItems,
     required this.widthToHeightRatio,
     required this.useProgressiveImages,
@@ -602,6 +610,10 @@ class SearchViewData {
   factory SearchViewData.fromJson(JsonOut json) => SearchViewData(
         postsPerPage: json["postsPerPage"] ?? defaultData.postsPerPage,
         postsPerRow: json["postsPerRow"] ?? defaultData.postsPerRow,
+        horizontalGridSpace:
+            json["horizontalGridSpace"] ?? defaultData.horizontalGridSpace,
+        verticalGridSpace:
+            json["verticalGridSpace"] ?? defaultData.verticalGridSpace,
         postInfoBannerItems:
             (json["postInfoBannerItems"] as String?)?.split(",").mapAsList(
                       (e, i, l) => PostInfoPaneItem.fromJson(e),
@@ -623,6 +635,8 @@ class SearchViewData {
   JsonOut toJson() => {
         "postsPerPage": postsPerPage,
         "postsPerRow": postsPerRow,
+        "horizontalGridSpace": horizontalGridSpace,
+        "verticalGridSpace": verticalGridSpace,
         "postInfoBannerItems": postInfoBannerItems.fold(
           "",
           (previousValue, element) =>
@@ -655,6 +669,22 @@ class SearchView implements SearchViewData {
           v <= SearchViewData.postsPerRowBounds.max)
       ? _postsPerRow = v
       : "";
+  double _horizontalGridSpace;
+  @override
+  double get horizontalGridSpace => _horizontalGridSpace;
+  set horizontalGridSpace(double v) =>
+      (v >= SearchViewData.horizontalGridSpaceBounds.min &&
+              v <= SearchViewData.horizontalGridSpaceBounds.max)
+          ? _horizontalGridSpace = v
+          : "";
+  double _verticalGridSpace;
+  @override
+  double get verticalGridSpace => _verticalGridSpace;
+  set verticalGridSpace(double v) =>
+      (v >= SearchViewData.verticalGridSpaceBounds.min &&
+              v <= SearchViewData.verticalGridSpaceBounds.max)
+          ? _verticalGridSpace = v
+          : "";
   List<PostInfoPaneItem> _postInfoBannerItems;
   @override
   List<PostInfoPaneItem> get postInfoBannerItems => _postInfoBannerItems;
@@ -694,6 +724,8 @@ class SearchView implements SearchViewData {
   SearchView({
     required int postsPerPage,
     required int postsPerRow,
+    required double horizontalGridSpace,
+    required double verticalGridSpace,
     required int maxCharsInPostInfo,
     required List<PostInfoPaneItem> postInfoBannerItems,
     required double widthToHeightRatio,
@@ -704,6 +736,8 @@ class SearchView implements SearchViewData {
     required bool preferSetShortname,
   })  : _postsPerPage = postsPerPage,
         _postsPerRow = postsPerRow,
+        _horizontalGridSpace = horizontalGridSpace,
+        _verticalGridSpace = verticalGridSpace,
         _postInfoBannerItems = postInfoBannerItems,
         _widthToHeightRatio = widthToHeightRatio,
         _useProgressiveImages = useProgressiveImages,
@@ -716,6 +750,8 @@ class SearchView implements SearchViewData {
   factory SearchView.fromData(SearchViewData searchView) => SearchView(
         postsPerPage: searchView.postsPerPage,
         postsPerRow: searchView.postsPerRow,
+        horizontalGridSpace: searchView.horizontalGridSpace,
+        verticalGridSpace: searchView.verticalGridSpace,
         postInfoBannerItems: searchView.postInfoBannerItems,
         widthToHeightRatio: searchView.widthToHeightRatio,
         useProgressiveImages: searchView.useProgressiveImages,
@@ -728,6 +764,8 @@ class SearchView implements SearchViewData {
   void overwriteWithData(SearchViewData searchView) {
     _postsPerPage = searchView.postsPerPage;
     _postsPerRow = searchView.postsPerRow;
+    _horizontalGridSpace = searchView.horizontalGridSpace;
+    _verticalGridSpace = searchView.verticalGridSpace;
     _postInfoBannerItems = searchView.postInfoBannerItems.toList();
     _widthToHeightRatio = searchView.widthToHeightRatio;
     _useProgressiveImages = searchView.useProgressiveImages;
@@ -741,6 +779,8 @@ class SearchView implements SearchViewData {
   SearchViewData toData() => SearchViewData(
         postsPerPage: postsPerPage,
         postsPerRow: postsPerRow,
+        horizontalGridSpace: horizontalGridSpace,
+        verticalGridSpace: verticalGridSpace,
         postInfoBannerItems: postInfoBannerItems,
         widthToHeightRatio: widthToHeightRatio,
         useProgressiveImages: useProgressiveImages,

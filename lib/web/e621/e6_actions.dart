@@ -22,120 +22,6 @@ lm.FileLogger get _logger => lRecord.logger;
 late final lRecord = lm.generateLogger("E6Actions");
 // #endregion Logger
 
-// #region Post Actions
-VoidCallback makeClearSelectionsWithContext(
-  BuildContext context, {
-  bool listen = false,
-}) =>
-    Provider.of<SearchResultsNotifier>(
-      context,
-      listen: listen,
-    ).clearSelections;
-VoidCallback makeClearSelections({
-  BuildContext? context,
-  VoidCallback? clearSelection,
-  bool listen = false,
-}) =>
-    clearSelection ??
-    Provider.of<SearchResultsNotifier>(
-      context ??
-          (throw ArgumentError.value(
-              "Either context or clearSelection must be non-null.")),
-      listen: listen,
-    ).clearSelections;
-// #region Votes
-VoidCallback makeUpvotePostWithPost({
-  BuildContext? context,
-  required E6PostResponse post,
-  bool updatePost = true,
-  bool noUnvote = true,
-}) =>
-    () => voteOnPostWithPost(
-          post: post,
-          context: context,
-          isUpvote: true,
-          noUnvote: noUnvote,
-          updatePost: updatePost,
-        );
-VoidCallback makeUpvotePostWithId({
-  BuildContext? context,
-  required int postId,
-  bool noUnvote = true,
-}) =>
-    () => voteOnPostWithId(
-          context: context,
-          noUnvote: noUnvote,
-          // oldScore: oldScore,
-          isUpvote: true,
-          postId: postId,
-        );
-VoidCallback makeVoteOnPostWithPost({
-  BuildContext? context,
-  required E6PostResponse post,
-  required bool isUpvote,
-  bool updatePost = true,
-  bool noUnvote = true,
-}) =>
-    () => voteOnPostWithPost(
-          post: post,
-          context: context,
-          isUpvote: isUpvote,
-          noUnvote: noUnvote,
-          updatePost: updatePost,
-        );
-VoidCallback makeVoteOnPostWithId({
-  BuildContext? context,
-  required int postId,
-  bool noUnvote = true,
-  required bool isUpvote,
-}) =>
-    () => voteOnPostWithId(
-          context: context,
-          noUnvote: noUnvote,
-          // oldScore: oldScore,
-          isUpvote: isUpvote,
-          postId: postId,
-        );
-// #endregion Votes
-VoidCallback makeAddPostToFavoritesWithPost({
-  BuildContext? context,
-  required E6PostResponse post,
-  bool updatePost = true,
-}) =>
-    () => addPostToFavoritesWithPost(
-          post: post,
-          context: context,
-          updatePost: updatePost,
-        );
-VoidCallback makeRemovePostFromFavoritesWithPost({
-  BuildContext? context,
-  required E6PostResponse post,
-  bool updatePost = true,
-}) =>
-    () => removePostFromFavoritesWithPost(
-          post: post,
-          context: context,
-          updatePost: updatePost,
-        );
-VoidCallback makeAddPostToFavoritesWithId({
-  BuildContext? context,
-  required int postId,
-}) =>
-    () => addPostToFavoritesWithId(
-          postId: postId,
-          context: context,
-        );
-VoidCallback makeRemovePostFromFavoritesWithId({
-  BuildContext? context,
-  required int postId,
-}) =>
-    () => removePostFromFavoritesWithId(
-          postId: postId,
-          context: context,
-        );
-// #endregion Post Actions
-// #region Functions
-
 // #region Favorites
 Future<E6PostResponse> addPostToFavoritesWithPost({
   BuildContext? context,
@@ -149,6 +35,9 @@ Future<E6PostResponse> addPostToFavoritesWithPost({
       context: context!,
       content: Text(out),
     );
+  }
+  if (AppSettings.i!.upvoteOnFavorite) {
+    voteOnPostWithPost(isUpvote: true, post: post).ignore();
   }
   return E621
       // .sendRequest(
@@ -198,58 +87,10 @@ Future<E6PostResponse> removePostFromFavoritesWithPost({
   BuildContext? context,
   required E6PostResponse post,
   bool updatePost = true,
-}) {
-  return removePostFromFavorites(
-          context: context, post: post, updatePost: updatePost)
-      .then((v) => v!);
-  // final out = "Removing ${post.id} from favorites...";
-  // _logger.finer(out);
-  // if (context?.mounted ?? false) {
-  //   util.showUserMessage(context: context!, content: Text(out));
-  // }
-  // return E621
-  //     .sendRequest(
-  //       E621.initDeleteFavoriteRequest(
-  //         post.id,
-  //         username: E621AccessData.fallback?.username,
-  //         apiKey: E621AccessData.fallback?.apiKey,
-  //       ),
-  //     )
-  //     .toResponse()
-  //     .then(
-  //   (v) {
-  //     lm.logResponse(
-  //         v,
-  //         _logger,
-  //         v.statusCodeInfo.isSuccessful
-  //             ? lm.LogLevel.FINEST
-  //             : lm.LogLevel.SEVERE);
-  //     E6PostResponse postRet = v.statusCodeInfo.isSuccessful
-  //         ? E6PostResponse.fromRawJson(v.body)
-  //         : post;
-  //     if (context?.mounted ?? false) {
-  //       !v.statusCodeInfo.isSuccessful
-  //           ? util.showUserMessage(
-  //               context: context!,
-  //               content: Text("${v.statusCode}: ${v.reasonPhrase}"))
-  //           : util.showUserMessage(
-  //               context: context!,
-  //               content: Text("${post.id} removed from favorites"),
-  //               action: (
-  //                   "Undo",
-  //                   () => addPostToFavoritesWithPost(
-  //                         post: post,
-  //                         updatePost: updatePost,
-  //                         context: context,
-  //                       )
-  //                 ));
-  //     }
-  //     return updatePost && post is E6PostMutable
-  //         ? (post..overwriteFrom(postRet))
-  //         : postRet;
-  //   },
-  // );
-}
+}) =>
+    _removePostFromFavorites(
+            context: context, post: post, updatePost: updatePost)
+        .then((v) => v!);
 
 Future<E6PostResponse?> addPostToFavoritesWithId({
   BuildContext? context,
@@ -259,6 +100,9 @@ Future<E6PostResponse?> addPostToFavoritesWithId({
   _logger.finer(out);
   if (context?.mounted ?? false) {
     util.showUserMessage(context: context!, content: Text(out));
+  }
+  if (AppSettings.i!.upvoteOnFavorite) {
+    voteOnPostWithId(isUpvote: true, postId: postId).ignore();
   }
   return E621
       // .sendRequest(
@@ -304,63 +148,16 @@ Future<E6PostResponse?> addPostToFavoritesWithId({
 Future<E6PostResponse?> removePostFromFavoritesWithId({
   BuildContext? context,
   required int postId,
-}) {
-  return removePostFromFavorites(context: context, postId: postId);
-  // final out = "Removing $postId from favorites...";
-  // _logger.finer(out);
-  // if (context?.mounted ?? false) {
-  //   util.showUserMessage(context: context!, content: Text(out));
-  // }
-  // return E621
-  //     .sendRequest(
-  //       E621.initDeleteFavoriteRequest(
-  //         postId,
-  //         username: E621AccessData.fallback?.username,
-  //         apiKey: E621AccessData.fallback?.apiKey,
-  //       ),
-  //     )
-  //     .toResponse()
-  //     .then(
-  //   (v) {
-  //     lm.logResponse(
-  //         v,
-  //         _logger,
-  //         v.statusCodeInfo.isSuccessful
-  //             ? lm.LogLevel.FINEST
-  //             : lm.LogLevel.SEVERE);
-  //     final postRet = v.statusCodeInfo.isSuccessful
-  //         ? E6PostResponse.fromRawJson(v.body)
-  //         : null;
-  //     if (context?.mounted ?? false) {
-  //       !v.statusCodeInfo.isSuccessful
-  //           ? util.showUserMessage(
-  //               context: context!,
-  //               content: Text("${v.statusCode}: ${v.reasonPhrase}"))
-  //           : util.showUserMessage(
-  //               context: context!,
-  //               content: Text("$postId removed from favorites"),
-  //               action: (
-  //                   "Undo",
-  //                   () => addPostToFavoritesWithId(
-  //                         postId: postId,
-  //                         context: context,
-  //                       )
-  //                 ));
-  //     }
-  //     return postRet;
-  //   },
-  // );
-}
+}) =>
+    _removePostFromFavorites(context: context, postId: postId);
 
-Future<E6PostResponse?> removePostFromFavorites({
+Future<E6PostResponse?> _removePostFromFavorites({
   BuildContext? context,
   int? postId,
   E6PostResponse? post,
   bool updatePost = true,
 }) {
-  if ((postId ?? post) == null) {
-    throw ArgumentError.value("Either postId or post must be non-null");
-  }
+  assert((postId ?? post) != null, "Either postId or post must be non-null");
   final id = postId ?? post!.id;
   final out = "Removing $id from favorites...";
   _logger.finer(out);
@@ -420,6 +217,9 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithPosts({
   _logger.finer(str);
   if (context?.mounted ?? false) {
     util.showUserMessage(context: context!, content: Text(str));
+  }
+  if (AppSettings.i!.upvoteOnFavorite) {
+    voteOnPostsWithPosts(isUpvote: true, posts: posts).map((e) => e.ignore());
   }
   final pIds = posts.map((e) => e.id);
   return E621.sendAddFavoriteRequestBatch(
@@ -481,6 +281,10 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithIds({
   _logger.finer(str);
   if (context?.mounted ?? false) {
     util.showUserMessage(context: context!, content: Text(str));
+  }
+  if (AppSettings.i!.upvoteOnFavorite) {
+    voteOnPostsWithPostIds(isUpvote: true, postIds: postIds)
+        .map((e) => e.ignore());
   }
   return E621.sendAddFavoriteRequestBatch(
     postIds,
@@ -781,8 +585,8 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithIds({
     },
   );
 }
-
 // #endregion Favorites
+
 // #region SetMulti
 Future<e621.PostSet?> removeFromSetWithPosts({
   required BuildContext context,
@@ -1285,8 +1089,8 @@ Future<e621.PostSet?> addToSetWithIds({
   }
   return v;
 }
-
 // #endregion SetMulti
+
 // #region SetSingle
 Future<e621.PostSet?> removeFromSetWithPost({
   required BuildContext context,
@@ -1744,8 +1548,9 @@ Future<e621.PostSet?> addToSetWithId({
   }
   return v;
 }
-
 // #endregion SetSingle
+
+// #region Vote
 List<Future<E6PostResponse>> voteOnPostsWithPosts({
   BuildContext? context,
   required bool isUpvote,
@@ -1978,7 +1783,9 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
     },
   );
 }
+// #endregion Vote
 
+// #region Helpers
 /// TODO: FIX
 String createPostVoteString({
   required int postId,
@@ -2037,9 +1844,9 @@ E6PostResponse updatePostWithScore(
     return post.copyWith(score: update);
   }
 }
+// #endregion Helpers
 
 // typedef E6BatchActionEvent = ({int currentProgress, int totalProgress, String })
-// #endregion Functions
 class WE6BatchAction extends StatefulWidget {
   final StreamSubscription<E6BatchActionEvent> stream;
   const WE6BatchAction({
