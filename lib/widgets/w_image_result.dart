@@ -13,6 +13,7 @@ import 'package:fuzzy/web/e621/models/e6_models.dart' /*  show E6PostResponse */
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/models/image_listing.dart'
     show IImageInfo, PostListing, RetrieveImageProvider;
+import 'package:j_util/e621.dart' show TagCategory;
 import 'package:j_util/j_util_full.dart';
 import 'package:progressive_image/progressive_image.dart' show ProgressiveImage;
 import 'package:provider/provider.dart' show Provider;
@@ -78,6 +79,7 @@ class WImageResult extends StatelessWidget {
           PostInfoPane(
             post: imageListing,
             maxWidth: t.width,
+            maxHeight: t.height / 3,
           ),
         if (isSelected ||
             (!disallowSelections &&
@@ -409,8 +411,11 @@ class WImageResult extends StatelessWidget {
 }
 
 class PostInfoPane extends StatelessWidget {
+  // static const darkness = 46, alpha = 149, assumedTextHeight = 20.0;
+  static const darkness = 32, alpha = 168, assumedTextHeight = 20.0;
   final PostListing post;
   final double maxWidth;
+  final double maxHeight;
   E6PostResponse get e6Post => post as E6PostResponse;
   E6PostResponse? get e6PostSafe =>
       post.runtimeType == E6PostResponse ? post as E6PostResponse : null;
@@ -419,6 +424,7 @@ class PostInfoPane extends StatelessWidget {
     super.key,
     required this.post,
     required this.maxWidth,
+    required this.maxHeight,
   });
 
   @override
@@ -428,16 +434,16 @@ class PostInfoPane extends StatelessWidget {
       child: Container(
         constraints: BoxConstraints(
           maxWidth: maxWidth,
-          maxHeight: 150,
+          maxHeight: maxHeight,
+          minHeight: assumedTextHeight,
         ),
-        height: 20,
-        color: const Color.fromARGB(149, 46, 46, 46),
+        color: const Color.fromARGB(alpha, darkness, darkness, darkness),
         child: Text.rich(
           TextSpan(
             text: " ",
-            children: SearchView.i.postInfoBannerItems.mapAsList(
-              (e, i, l) => e.getMyTextSpan(e6Post),
-            ),
+            children: SearchView.i.postInfoBannerItems
+                .map((e) => e.getMyTextSpan(e6Post))
+                .toList(),
           ),
         ),
       ),
@@ -457,8 +463,17 @@ enum PostInfoPaneItem {
   isInPools,
   firstArtist,
   firstCharacter,
+  firstCopyright,
   ;
 
+  static const readabilityShadow = [
+    BoxShadow(
+      color: Colors.white,
+      spreadRadius: 10,
+      blurRadius: 2,
+      blurStyle: BlurStyle.solid,
+    ),
+  ];
   String toJson() => name;
   factory PostInfoPaneItem.fromJson(json) => switch (json) {
         String j when j == rating.name => rating,
@@ -472,6 +487,7 @@ enum PostInfoPaneItem {
         String j when j == isInPools.name => isInPools,
         String j when j == firstArtist.name => firstArtist,
         String j when j == firstCharacter.name => firstCharacter,
+        String j when j == firstCopyright.name => firstCopyright,
         _ => throw UnsupportedError("type not supported"),
       };
   InlineSpan getMyTextSpan(E6PostResponse e6Post) => switch (this) {
@@ -484,6 +500,7 @@ enum PostInfoPaneItem {
                 "e" => Colors.red,
                 _ => throw UnsupportedError("type not supported"),
               },
+              shadows: readabilityShadow,
               fontWeight: FontWeight.bold,
             )),
         fileExtension => TextSpan(text: "${e6Post.file.ext} "),
@@ -497,6 +514,7 @@ enum PostInfoPaneItem {
                 style: const TextStyle(
                   color: Colors.green,
                   decoration: TextDecoration.underline,
+                  shadows: readabilityShadow,
                 )),
             const TextSpan(text: "/"),
             TextSpan(
@@ -504,6 +522,7 @@ enum PostInfoPaneItem {
                 style: const TextStyle(
                   color: Colors.red,
                   decoration: TextDecoration.underline,
+                  shadows: readabilityShadow,
                 )),
             const TextSpan(text: ") "),
           ]),
@@ -513,6 +532,7 @@ enum PostInfoPaneItem {
                 style: TextStyle(
                   color: Colors.amber,
                   decoration: TextDecoration.underline,
+                  shadows: readabilityShadow,
                 ))
             : const TextSpan(),
         hasChildren => (e6Post.relationships.hasChildren)
@@ -521,6 +541,7 @@ enum PostInfoPaneItem {
                 style: const TextStyle(
                   color: Colors.amber,
                   decoration: TextDecoration.underline,
+                  shadows: readabilityShadow,
                 ))
             : const TextSpan(),
         hasActiveChildren => (e6Post.relationships.hasActiveChildren)
@@ -529,6 +550,7 @@ enum PostInfoPaneItem {
                 style: const TextStyle(
                   color: Colors.amber,
                   decoration: TextDecoration.underline,
+                  shadows: readabilityShadow,
                 ))
             : const TextSpan(),
         isFavorited => (e6Post.isFavorited)
@@ -536,6 +558,7 @@ enum PostInfoPaneItem {
                 text: "♥ ",
                 style: TextStyle(
                   color: Colors.red,
+                  shadows: readabilityShadow,
                 ))
             : const TextSpan(),
         isInPools => (e6Post.pools.isNotEmpty)
@@ -543,6 +566,7 @@ enum PostInfoPaneItem {
                 text: "P(${e6Post.pools.length}) ",
                 style: const TextStyle(
                   color: Colors.green,
+                  shadows: readabilityShadow,
                 ))
             : const TextSpan(),
         firstArtist => e6Post.tags.hasArtist
@@ -550,7 +574,8 @@ enum PostInfoPaneItem {
                 // text: "A: ${e6Post.tags.artistFiltered.first} ",
                 text: "${e6Post.tags.artistFiltered.first} ",
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: TagCategory.artistColor,
+                  shadows: readabilityShadow,
                 ))
             : const TextSpan(),
         firstCharacter => e6Post.tags.hasCharacter
@@ -558,7 +583,16 @@ enum PostInfoPaneItem {
                 // text: "A: ${e6Post.tags.characterFiltered.first} ",
                 text: "${e6Post.tags.characterFiltered.first} ",
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: TagCategory.characterColor,
+                  shadows: readabilityShadow,
+                ))
+            : const TextSpan(),
+        firstCopyright => e6Post.tags.copyright.isNotEmpty
+            ? TextSpan(
+                text: "${e6Post.tags.copyright.first} ",
+                style: const TextStyle(
+                  color: TagCategory.copyrightColor,
+                  shadows: readabilityShadow,
                 ))
             : const TextSpan(),
       };
