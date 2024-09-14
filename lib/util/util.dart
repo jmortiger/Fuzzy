@@ -133,7 +133,9 @@ List<Widget> _makeBannerAction(
         onPressed: action.$2,
       );
   return [
-    if (addDismissOption || (action ?? actions) == null || (action == null && actions!.isEmpty))
+    if (addDismissOption ||
+        (action ?? actions) == null ||
+        (action == null && actions!.isEmpty))
       TextButton.icon(label: const Text("Ok"), onPressed: () {}),
     if (action != null) make(action),
     if (actions != null) ...actions.map(make)

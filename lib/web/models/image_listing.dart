@@ -113,9 +113,12 @@ final class ImageInfoRecordExplicit with IImageInfo {
     this.width, {
     String? url,
     String? extension,
-  })  : extension = extension ?? address.pathSegments.last.substring(address.pathSegments.last.lastIndexOf(".") + 1),
+  })  : extension = extension ??
+            address.pathSegments.last
+                .substring(address.pathSegments.last.lastIndexOf(".") + 1),
         url = url ?? address.toString();
 }
+
 final class ImageInfoRecord with IImageInfo {
   @override
   Uri get address => Uri.parse(url);

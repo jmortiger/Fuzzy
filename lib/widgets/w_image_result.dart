@@ -7,7 +7,8 @@ import 'package:fuzzy/models/saved_data.dart' show SavedDataE6;
 import 'package:fuzzy/models/search_results.dart' show SearchResultsNotifier;
 import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/post_swipe_page.dart';
-import 'package:fuzzy/util/asset_management.dart' show determineResolution, placeholder;
+import 'package:fuzzy/util/asset_management.dart'
+    show determineResolution, placeholder;
 import 'package:fuzzy/web/e621/models/e6_models.dart' /*  show E6PostResponse */;
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/models/image_listing.dart'

@@ -155,6 +155,7 @@ class NamedLinkifier extends UrlLinkifier {
   }
 }
 // #endregion Linkifiers
+
 /// TODO: Pull into library
 /// TODO: Add configurability (const matchers & defaults w/ an instanced class with overrideable fields)
 enum DTextMatchers {
@@ -194,11 +195,12 @@ enum DTextMatchers {
     dotAll: true,
   ),
   codeInline(
-      r"`(?<main>.*?)`",
-      TextStyle(
-        fontFamily: "Consolas",
-        fontFamilyFallback: ["Courier New", "monospace"],
-      )),
+    r"`(?<main>.*?)`",
+    TextStyle(
+      fontFamily: "Consolas",
+      fontFamilyFallback: ["Courier New", "monospace"],
+    ),
+  ),
   color(
     r"\[color(?:=(?<data>(?<tagCategory>"
     "${TagCategory.categoryNameRegExpStr}"
@@ -266,13 +268,11 @@ enum DTextMatchers {
     incorrectlyParsedStyle,
     dotAll: true,
   ),
-  /* table(
-    r"\[table"
-    r"(?<data>(?<expanded>,expanded)?(?:=(?<title>.*?))?)?"
-    r"\](?<main>.*?)\[\/table\]",
-    incorrectlyParsedStyle,
-    dotAll: true,
-  ), */
+  // table(
+  //   r"\[table\](?<main>.*?)\[\/table\]",
+  //   incorrectlyParsedStyle,
+  //   dotAll: true,
+  // ),
   ;
 
   // static const e6Links = [searchLink];
@@ -403,8 +403,7 @@ enum DTextMatchers {
         sectionTileBorderHide = Border(
           bottom: sectionTileBorderNone,
           top: sectionTileBorderNone,
-        ),
-        // tabText = "		";
+        ), // tabText = "		";
         tabText = "    ";
     // #endregion Constants
     getSectionShape() => renderDTextSectionLeftBorder

@@ -95,21 +95,27 @@ class _WPostThumbnailState extends State<WPostThumbnail> {
             ),
           )
         : GestureDetector(
-          onTap: () => Navigator.pushNamed(context, "/posts/${widget.id ?? widget.post?.id}", arguments: (id: widget.id ?? widget.post?.id, post: widget.post)),
-          child: (info!.isWebResource ? Image.network : Image.asset)(
+            onTap: () => Navigator.pushNamed(
+                context, "/posts/${widget.id ?? widget.post?.id}", arguments: (
+              id: widget.id ?? widget.post?.id,
+              post: widget.post
+            )),
+            child: (info!.isWebResource ? Image.network : Image.asset)(
               info!.url,
               width: renderData!.width.toDouble(),
               height: renderData!.height.toDouble(),
               cacheHeight: renderData!.cacheHeight?.toInt(),
               cacheWidth: renderData!.cacheWidth?.toInt(),
             ),
-        );
+          );
   }
 }
+
 class WPostThumbnailKey extends ValueKey {
-  const WPostThumbnailKey({required int id,
+  const WPostThumbnailKey({
+    required int id,
     int maxWidth = 150,
     int maxHeight = 150,
-    BoxFit fit = BoxFit.contain,}) : super("$id $maxWidth $maxHeight $fit");
-  
+    BoxFit fit = BoxFit.contain,
+  }) : super("$id $maxWidth $maxHeight $fit");
 }

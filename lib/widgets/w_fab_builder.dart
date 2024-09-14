@@ -66,6 +66,7 @@ class WFabBuilder extends StatelessWidget {
       shouldRebuild: (previous, next) => setEquals(previous.$1, next.$1),
     );
   }
+
   /// TODO: Fails after toggle selection in single post view
   static ActionButton getClearSelectionButton(
     BuildContext context, [
