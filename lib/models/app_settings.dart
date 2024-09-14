@@ -20,6 +20,7 @@ class AppSettingsRecord {
   final bool autoLoadUserProfile;
   final bool applyProfileBlacklist;
   final bool applyProfileFavTags;
+  final bool upvoteOnFavorite;
   final int maxSearchesToSave;
   final SearchViewData searchView;
 
@@ -32,6 +33,7 @@ class AppSettingsRecord {
     required this.autoLoadUserProfile,
     required this.applyProfileBlacklist,
     required this.applyProfileFavTags,
+    required this.upvoteOnFavorite,
     required this.maxSearchesToSave,
   });
   static const defaultSettings = AppSettingsRecord(
@@ -45,6 +47,7 @@ class AppSettingsRecord {
     autoLoadUserProfile: false,
     applyProfileBlacklist: true,
     applyProfileFavTags: true,
+    upvoteOnFavorite: true,
     maxSearchesToSave: 200,
   );
   factory AppSettingsRecord.fromJson(JsonOut json) => AppSettingsRecord(
@@ -64,6 +67,8 @@ class AppSettingsRecord {
             defaultSettings.applyProfileBlacklist,
         applyProfileFavTags:
             json["applyProfileFavTags"] ?? defaultSettings.applyProfileFavTags,
+        upvoteOnFavorite:
+            json["upvoteOnFavorite"] ?? defaultSettings.upvoteOnFavorite,
         maxSearchesToSave:
             json["maxSearchesToSave"] ?? defaultSettings.maxSearchesToSave,
       );
@@ -76,6 +81,7 @@ class AppSettingsRecord {
         "autoLoadUserProfile": autoLoadUserProfile,
         "applyProfileBlacklist": applyProfileBlacklist,
         "applyProfileFavTags": applyProfileFavTags,
+        "upvoteOnFavorite": upvoteOnFavorite,
         "maxSearchesToSave": maxSearchesToSave,
       };
 }
@@ -160,6 +166,7 @@ class AppSettings implements AppSettingsRecord {
         autoLoadUserProfile: r.autoLoadUserProfile,
         applyProfileBlacklist: r.applyProfileBlacklist,
         applyProfileFavTags: r.applyProfileFavTags,
+        upvoteOnFavorite: r.upvoteOnFavorite,
         maxSearchesToSave: r.maxSearchesToSave,
       );
   AppSettingsRecord toRecord() => AppSettingsRecord(
@@ -171,6 +178,7 @@ class AppSettings implements AppSettingsRecord {
         autoLoadUserProfile: _autoLoadUserProfile,
         applyProfileBlacklist: _applyProfileBlacklist,
         applyProfileFavTags: _applyProfileFavTags,
+        upvoteOnFavorite: _upvoteOnFavorite,
         maxSearchesToSave: _maxSearchesToSave,
       );
   void overwriteWithRecord([
@@ -184,6 +192,7 @@ class AppSettings implements AppSettingsRecord {
     _autoLoadUserProfile = r.autoLoadUserProfile;
     _applyProfileBlacklist = r.applyProfileBlacklist;
     _applyProfileFavTags = r.applyProfileFavTags;
+    _upvoteOnFavorite = r.upvoteOnFavorite;
     _maxSearchesToSave = r.maxSearchesToSave;
   }
 
@@ -196,6 +205,7 @@ class AppSettings implements AppSettingsRecord {
     required bool autoLoadUserProfile,
     required bool applyProfileBlacklist,
     required bool applyProfileFavTags,
+    required bool upvoteOnFavorite,
     required int maxSearchesToSave,
   })  : _postView = postView,
         _searchView = searchView,
@@ -205,6 +215,7 @@ class AppSettings implements AppSettingsRecord {
         _autoLoadUserProfile = autoLoadUserProfile,
         _applyProfileBlacklist = applyProfileBlacklist,
         _applyProfileFavTags = applyProfileFavTags,
+        _upvoteOnFavorite = upvoteOnFavorite,
         _maxSearchesToSave = maxSearchesToSave;
   PostView _postView;
   @override
@@ -258,6 +269,11 @@ class AppSettings implements AppSettingsRecord {
   @override
   bool get applyProfileFavTags => _applyProfileFavTags;
   set applyProfileFavTags(bool value) => _applyProfileFavTags = value;
+
+  bool _upvoteOnFavorite;
+  @override
+  bool get upvoteOnFavorite => _upvoteOnFavorite;
+  set upvoteOnFavorite(bool value) => _upvoteOnFavorite = value;
 
   int _maxSearchesToSave;
   @override
@@ -745,24 +761,4 @@ class SearchView implements SearchViewData {
   static SearchView get instance => AppSettings.i!.searchView;
   static SearchView get i => instance;
   // #endregion Singleton (don't need updating w/ new fields)
-}
-
-extension OnAppSettings on AppSettings {
-  // TagDB
-}
-
-class Field<T> {
-  T _item;
-  T get item => _item;
-  set item(T value) => _item = value;
-  Field(T item) : _item = item;
-  factory Field.fromJson(dynamic item) => Field(item);
-  dynamic toJson() => item /* .toString() */;
-}
-
-enum ProfileLoading {
-  auto,
-  lazy,
-  explicit,
-  ;
 }

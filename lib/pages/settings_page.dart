@@ -229,6 +229,11 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                   "If profile is loaded, add its fav tags to the local fav tags",
               setVal: (bool val) => AppSettings.i!.applyProfileFavTags = val,
             ),
+            WBooleanField(
+              getVal: () => AppSettings.i!.upvoteOnFavorite,
+              name: "Upvote on favorite",
+              setVal: (bool val) => AppSettings.i!.upvoteOnFavorite = val,
+            ),
             // if (!AppSettings.i!.autoLoadUserProfile)
             //   WBooleanField(
             //     getVal: () => AppSettings.i!.autoLoadUserProfile,
