@@ -451,7 +451,7 @@ class _SavedSearchesPageSingletonState
           ),
         SavedEntryDialogOptions.searchById => Navigator.pop<String>(
             context,
-            "${mye6.E621.delimiter}${entry.uniqueId}",
+            "${mye6.E621.savedSearchTag}${entry.uniqueId}",
           ),
         SavedEntryDialogOptions.addToClipboard =>
           Clipboard.setData(ClipboardData(text: entry.searchString)).then((v) {
@@ -462,12 +462,12 @@ class _SavedSearchesPageSingletonState
           }),
         SavedEntryDialogOptions.addIdToClipboard =>
           Clipboard.setData(ClipboardData(
-            text: "${mye6.E621.delimiter}${entry.uniqueId}",
+            text: "${mye6.E621.savedSearchTag}${entry.uniqueId}",
           )).then((v) {
             util.showUserMessage(
                 context: context,
                 content: Text(
-                  "${mye6.E621.delimiter}${entry.uniqueId} added to clipboard.",
+                  "${mye6.E621.savedSearchTag}${entry.uniqueId} added to clipboard.",
                 ));
             Navigator.pop(context);
           }),

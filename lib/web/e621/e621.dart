@@ -246,32 +246,24 @@ sealed class E621 extends Site {
 
   // #region Saved Search Parsing
   /// The (escaped) character used to delimit saved search insertion.
-  static const savedSearchInsertionDelimiter = r"#";
+  static const savedSearchTag = r"#";
 
   /// Matches either whitespace or the end of input without consuming characters
-  static const savedSearchInsertionEnd = r'(?=' + r"\s" + r'+?|$)';
-
-  /// The (escaped) character used to delimit saved search insertion.
-  static const delimiter = savedSearchInsertionDelimiter;
+  static const searchTokenEnd = r'(?=\s+?|$)';
 
   /// Used to inject a saved search entry into a search using the entry's unique ID.
   ///
   /// Lazily expands
   /// #(.+?)(?=[\u2028\n\r\u000B\f\u2029\u0085 ]+?|$)
   static final savedSearchInsertion =
-      RegExp("$delimiter(.+?)$savedSearchInsertionEnd");
+      RegExp("$savedSearchTag(.+?)$searchTokenEnd");
 
-  /// Used to inject a saved search entry into a search using the entry's unique ID.
-  ///
-  /// Matches all characters other than [delimiter]
-  static final savedSearchInsertionAlt =
-      RegExp("$delimiter([^$delimiter]+?)$savedSearchInsertionEnd");
   // #endregion Saved Search Parsing
-  static RegExp get userFavoriteSearchFinder => RegExp(
-      r"(?<=^|\s|\+)fav:"
-      "${loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username ?? " "}"
-      r"(?=$|\s)",
-      caseSensitive: false);
+  static String get userFavoriteSearch => r"(?<=^|\s|\+)fav:"
+      "${loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username ?? r"$^"}"
+      r"(?=$|\s)";
+  static RegExp get userFavoriteSearchRegex =>
+      RegExp(userFavoriteSearch, caseSensitive: false);
   static String fillTagTemplate(String tags) {
     _print("fillTagTemplate: Before: $tags");
     tags = tags.replaceAllMapped(
@@ -286,18 +278,19 @@ sealed class E621 extends Site {
         }
       },
     );
-    _print("fillTagTemplate: After: $tags", lm.LogLevel.FINER);
-    if (!tags.contains(userFavoriteSearchFinder)) {
-      tags += AppSettings.i?.blacklistedTags.map((e) => "-$e").fold(
+    _logger.finer("fillTagTemplate: After: $tags");
+    // Uncomment to force remove blacklist
+    /* if (!tags.contains(userFavoriteSearchRegex)) {
+      tags += AppSettings.i?.blacklistedTagsAll.map((e) => "-$e").fold(
                 "",
                 (p, e) => "$p $e",
               ) ??
           "";
-      _print("fillTagTemplate: After Blacklist: $tags", lm.LogLevel.FINER);
+      _logger.finer("fillTagTemplate: After Blacklist: $tags");
     } else {
-      _print("fillTagTemplate: User favorite search, not applying blacklist",
-          lm.LogLevel.FINER);
-    }
+      _logger.finer(
+          "fillTagTemplate: User favorite search, not applying blacklist");
+    } */
     return tags;
   }
 

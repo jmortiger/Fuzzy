@@ -1,7 +1,6 @@
 // https://e621.net/help/cheatsheet
 import 'package:flutter/material.dart';
 import 'package:fuzzy/map_notifier.dart';
-import 'package:j_util/j_util.dart';
 
 mixin SearchableEnum on Enum {
   String get searchString;

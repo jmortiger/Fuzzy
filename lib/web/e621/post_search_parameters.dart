@@ -1,6 +1,5 @@
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/util/extensions.dart';
-import 'package:j_util/j_util.dart';
 
 abstract final class IPostSearchParameters {
   String? get tags;

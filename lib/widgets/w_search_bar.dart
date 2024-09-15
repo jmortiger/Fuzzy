@@ -519,18 +519,18 @@ class _WSearchBarState extends State<WSearchBar> {
             ),
           ),
         if (SavedDataE6.isInit &&
-            currSubString.contains(E621.delimiter) &&
+            currSubString.contains(E621.savedSearchTag) &&
             showSavedSearches)
           ...(SavedDataE6.all
                   .where(
                     (v) =>
                         v.verifyUniqueness() &&
                         !currFullText
-                            .contains("${E621.delimiter}${v.uniqueId}") &&
-                        "${E621.delimiter}${v.uniqueId}"
+                            .contains("${E621.savedSearchTag}${v.uniqueId}") &&
+                        "${E621.savedSearchTag}${v.uniqueId}"
                             .contains(currSubString),
                   )
-                  .map((v) => "$currPrefix ${E621.delimiter}${v.uniqueId}")
+                  .map((v) => "$currPrefix ${E621.savedSearchTag}${v.uniqueId}")
                   .toList()
                 ..sort(comp))
               .map(
@@ -625,16 +625,16 @@ class _WSearchBarState extends State<WSearchBar> {
               );
           })(),
         if (SavedDataE6.isInit &&
-            currSubString.contains(E621.delimiter) &&
+            currSubString.contains(E621.savedSearchTag) &&
             showSavedSearches)
           ...SavedDataE6.all
               .where(
                 (v) =>
                     v.verifyUniqueness() &&
-                    !currText.contains("${E621.delimiter}${v.uniqueId}") &&
-                    "${E621.delimiter}${v.uniqueId}".contains(currSubString),
+                    !currText.contains("${E621.savedSearchTag}${v.uniqueId}") &&
+                    "${E621.savedSearchTag}${v.uniqueId}".contains(currSubString),
               )
-              .map((v) => "$currPrefix ${E621.delimiter}${v.uniqueId}")
+              .map((v) => "$currPrefix ${E621.savedSearchTag}${v.uniqueId}")
               .toList()
             ..sort(
               str_util.getFineInverseSimilarityComparator(currText),
