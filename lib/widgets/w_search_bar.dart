@@ -737,11 +737,13 @@ class _WSearchBarState extends State<WSearchBar> {
       currentText = s;
     });
     sbcCloseAndUnfocus();
-    Provider.of<ManagedPostCollectionSync>(context, listen: false).parameters =
-        PostSearchQueryRecord(
-      limit: SearchView.i.postsPerPage,
-      page: "1",
-      tags: "$s${mts.toString()}",
+    Provider.of<ManagedPostCollectionSync>(context, listen: false)
+        .launchOrReloadSearch(
+      PostSearchQueryRecord(
+        limit: SearchView.i.postsPerPage,
+        page: "1",
+        tags: "$s${mts.toString()}",
+      ),
     );
     widget.onSelected?.call();
   }

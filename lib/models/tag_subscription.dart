@@ -345,11 +345,12 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
       return ErrorPage.errorWidgetWrapper(logger: SubscriptionManager.logger,
           () {
         final ps = E6PostsSync.fromRawJson(snapshot.data!.body);
-        return WPostSearchResults.sync(
+        return WPostSearchResults(
           posts: ps,
           expectedCount: ps.length,
           stripToGridView: true,
           disallowSelections: true,
+          useProviderForPosts: false,
         );
       }).value;
     } else if (snapshot.hasError) {

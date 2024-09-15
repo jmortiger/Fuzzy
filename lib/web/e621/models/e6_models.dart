@@ -8,6 +8,7 @@ import 'dart:math';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/util/asset_management.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
+import 'package:fuzzy/web/e621/util.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
@@ -31,6 +32,7 @@ abstract class E6Posts with ListMixin<E6PostResponse> {
     int index, {
     bool checkForValidFileUrl = true,
     bool allowDeleted = true,
+    bool filterBlacklist = false,
   });
   Set<int> get restrictedIndices;
   Set<int> get deletedIndices;
@@ -65,17 +67,26 @@ final class E6PostsLazy extends E6Posts {
     int index, {
     bool checkForValidFileUrl = true,
     bool allowDeleted = true,
+    bool filterBlacklist = false,
   }) {
+    void iterate() {
+      while (this[index].file.url == "") {
+        this[index].flags.deleted
+            ? deletedIndices.add(index++)
+            : restrictedIndices.add(index++);
+      }
+    }
+
     try {
       if (checkForValidFileUrl) {
-        index += allowDeleted
-            ? restrictedIndices.where((element) => element <= index).length
-            : unavailableIndices.where((element) => element <= index).length;
-        while (this[index].file.url == "") {
-          this[index].flags.deleted
-              ? deletedIndices.add(index++)
-              : restrictedIndices.add(index++);
-        }
+        index += (allowDeleted ? restrictedIndices : unavailableIndices)
+            .where((element) => element <= index)
+            .length;
+        iterate();
+      }
+      while (filterBlacklist && hasBlacklistedTag(this[index].tagList)) {
+        ++index;
+        iterate();
       }
       return this[index];
       // return !unavailableIndices.contains(index)
@@ -142,22 +153,24 @@ final class E6PostsSync extends E6Posts {
     int index, {
     bool checkForValidFileUrl = true,
     bool allowDeleted = true,
+    bool filterBlacklist = false,
   }) {
+    final filterSet = (allowDeleted ? restrictedIndices : unavailableIndices);
     try {
       if (checkForValidFileUrl) {
-        index += allowDeleted
-            ? restrictedIndices.where((element) => element <= index).length
-            : unavailableIndices.where((element) => element <= index).length;
+        index += filterSet.where((element) => element <= index).length;
       }
-      // return this[index];
-      return !unavailableIndices.contains(index)
-          ? this[index]
-          : this[index].copyWith(
-              file:
-                  this[index].file.copyWith(url: util.deletedPreviewImagePath));
-      // return (!checkForValidFileUrl || this[index].file.url != "")
+      while (filterBlacklist &&
+          (filterSet.contains(index) ||
+              hasBlacklistedTag(this[index].tagList))) {
+        ++index;
+      }
+      return this[index];
+      // return !unavailableIndices.contains(index)
       //     ? this[index]
-      //     : this[index + 1];
+      //     : this[index].copyWith(
+      //         file:
+      //             this[index].file.copyWith(url: util.deletedPreviewImagePath));
     } catch (e) {
       return null;
     }
@@ -334,7 +347,7 @@ class E6PostResponse implements PostListing, e621.Post {
     hasNotes: false,
     duration: -1,
   );
-  E6PostResponse({
+  const E6PostResponse({
     required this.id,
     required this.createdAt,
     required this.updatedAt,
@@ -378,34 +391,33 @@ class E6PostResponse implements PostListing, e621.Post {
           ];
   }
 
-  factory E6PostResponse.fromJson(JsonOut json) => E6PostResponse(
-        id: json["id"] as int,
-        createdAt: DateTime.parse(json["created_at"]),
-        updatedAt: DateTime.parse(json["updated_at"]),
-        file: E6FileResponse.fromJson(json["file"]
+  E6PostResponse.fromJson(JsonOut json)
+      : id = json["id"] as int,
+        createdAt = DateTime.parse(json["created_at"]),
+        updatedAt = DateTime.parse(json["updated_at"]),
+        file = E6FileResponse.fromJson(json["file"]
           ..["url"] ??= (json["flags"]["deleted"] as bool) ? deletedUrl : null),
-        preview: E6Preview.fromJson(json["preview"]
+        preview = E6Preview.fromJson(json["preview"]
           ..["url"] ??= (json["flags"]["deleted"] as bool) ? deletedUrl : null),
-        sample: E6Sample.fromJson(json["sample"]
+        sample = E6Sample.fromJson(json["sample"]
           ..["url"] ??= (json["flags"]["deleted"] as bool) ? deletedUrl : null),
-        score: e621.Score.fromJson(json["score"]),
-        tags: E6PostTags.fromJson(json["tags"]),
-        lockedTags: (json["locked_tags"] as List).cast<String>(),
-        changeSeq: json["change_seq"] as int,
-        flags: E6FlagsBit.fromJson(json["flags"]),
-        rating: json["rating"] as String,
-        favCount: json["fav_count"] as int,
-        sources: (json["sources"] as List).cast<String>(),
-        pools: (json["pools"] as List).cast<int>(),
-        relationships: E6Relationships.fromJson(json["relationships"]),
-        approverId: json["approver_id"] as int?,
-        uploaderId: json["uploader_id"] as int,
-        description: json["description"] as String,
-        commentCount: json["comment_count"] as int,
-        isFavorited: json["is_favorited"] as bool,
-        hasNotes: json["has_notes"] as bool,
-        duration: json["duration"] as num?,
-      );
+        score = e621.Score.fromJson(json["score"]),
+        tags = E6PostTags.fromJson(json["tags"]),
+        lockedTags = (json["locked_tags"] as List).cast<String>(),
+        changeSeq = json["change_seq"] as int,
+        flags = E6FlagsBit.fromJson(json["flags"]),
+        rating = json["rating"] as String,
+        favCount = json["fav_count"] as int,
+        sources = (json["sources"] as List).cast<String>(),
+        pools = (json["pools"] as List).cast<int>(),
+        relationships = E6Relationships.fromJson(json["relationships"]),
+        approverId = json["approver_id"] as int?,
+        uploaderId = json["uploader_id"] as int,
+        description = json["description"] as String,
+        commentCount = json["comment_count"] as int,
+        isFavorited = json["is_favorited"] as bool,
+        hasNotes = json["has_notes"] as bool,
+        duration = json["duration"] as num?;
   Map<String, dynamic> toJson() => {
         "id": id,
         "createdAt": createdAt.toIso8601String(),

@@ -8,6 +8,7 @@ import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_cache.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
+import 'package:fuzzy/web/e621/util.dart';
 import 'package:j_util/j_util_full.dart';
 
 import 'post_search_parameters.dart';
@@ -53,6 +54,15 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   // #endregion Logger
   // #region Fields
   bool treatAsNull = true;
+  bool _filterBlacklist;
+
+  bool get filterBlacklist => _filterBlacklist;
+
+  set filterBlacklist(bool value) {
+    _filterBlacklist = value;
+    notifyListeners();
+  }
+
   bool tryValidatingSearches = false;
   final PostCollectionSync collection;
   final onPageRetrievalFailure = JEvent<PostCollectionEvent>();
@@ -106,7 +116,9 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     super.lastPostIdCached,
     super.lastPostOnPageIdCached,
     super.hasNextPageCached,
-  })  : _parameters = parameters ?? const PostSearchQueryRecord(),
+    bool filterBlacklist = true,
+  })  : _filterBlacklist = filterBlacklist,
+        _parameters = parameters ?? const PostSearchQueryRecord(),
         _currentPageOffset = 0,
         _startingPage =
             (parameters ?? const PostSearchQueryRecord()).pageIndex ?? 0,
@@ -134,7 +146,9 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     super.lastPostIdCached,
     super.lastPostOnPageIdCached,
     super.hasNextPageCached,
-  })  : _parameters = parameters ?? const PostSearchQueryRecord(),
+    bool filterBlacklist = true,
+  })  : _filterBlacklist = filterBlacklist,
+        _parameters = parameters ?? const PostSearchQueryRecord(),
         _currentPageOffset = 0,
         _startingPage =
             (parameters ?? const PostSearchQueryRecord()).pageIndex ?? 0,
@@ -191,6 +205,30 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   int get postsPerPage => SearchView.i.postsPerPage;
 
   PostSearchQueryRecord get parameters => _parameters;
+  void launchOrReloadSearch(PostSearchQueryRecord value) {
+    logger.info("Forcibly relaunching search"
+        "\n\told:"
+        "\n\t\ttags:${_parameters.tags}"
+        "\n\t\tlimit:${_parameters.limit}"
+        "\n\t\tpageNumber:${_parameters.pageNumber}"
+        "\n\tnew:"
+        "\n\t\ttags:${value.tags}"
+        "\n\t\tlimit:${value.limit}"
+        "\n\t\tpageNumber:${value.pageNumber}");
+    _parameters = value;
+    _reload();
+  }
+
+  void _reload() {
+    lastPostIdCached = firstPostIdCached = /* hasNextPageCached =  */
+        lastPostOnPageIdCached = null;
+    collection.clear();
+    logger.finest("Length after clearing: ${collection.length}");
+    _numPagesInSearch = null;
+    _totalPostsInSearch = LazyInitializer<int>(_numSearchPostsInit)
+      ..getItemAsync().ignore();
+    notifyListeners();
+  }
 
   set parameters(PostSearchQueryRecord value) {
     logger.finest("set parameters called"
@@ -202,18 +240,11 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         "\n\t\ttags:${value.tags}"
         "\n\t\tlimit:${value.limit}"
         "\n\t\tpageNumber:${value.pageNumber}");
-    if (/* !setEquals(_parameters.tagSet, value.tagSet) */ true) {
+    if (!setEquals(_parameters.tagSet, value.tagSet)) {
       logger.info("Tag Parameter changed from ${_parameters.tagSet} "
           "to ${value.tagSet}, clearing collection and notifying listeners");
       _parameters = value;
-      lastPostIdCached = firstPostIdCached = /* hasNextPageCached =  */
-          lastPostOnPageIdCached = null;
-      collection.clear();
-      logger.finest("Length after clearing: ${collection.length}");
-      _numPagesInSearch = null;
-      _totalPostsInSearch = LazyInitializer<int>(_numSearchPostsInit)
-        ..getItemAsync().ignore();
-      notifyListeners();
+      _reload();
     } else {
       logger.finer("Unchanged tag parameter, not "
           "clearing collection nor notifying listeners");
@@ -309,63 +340,90 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   /// {@template loadWarn}
   /// If [pageIndex] is not loaded in [collection], it will attempt to load it.
   /// {@endtemplate}
-  FutureOr<E6Posts?> getPostsOnPageAsObj(final int pageIndex) =>
-      (getPostsOnPageAsObjSync(pageIndex) ??
-          getPostsOnPageAsObjAsync(pageIndex)) as FutureOr<E6Posts?>;
+  FutureOr<E6Posts?> getPostsOnPageAsObj(
+    final int pageIndex, [
+    bool? filterBlacklist,
+  ]) =>
+      (getPostsOnPageAsObjSync(pageIndex, filterBlacklist) ??
+              getPostsOnPageAsObjAsync(pageIndex, filterBlacklist))
+          as FutureOr<E6Posts?>;
 
   /// {@template notLoadWarn}
   /// If [pageIndex] is not loaded in [collection], it will *NOT* attempt
   ///  to load it, it will return null.
   /// {@endtemplate}
-  E6Posts? getPostsOnPageAsObjSync(final int index) => (isPageLoaded(index))
-      ? _genFromStartAndCount(
-          start: getPageFirstPostIndex(index),
-        )
-      : null;
+  E6Posts? getPostsOnPageAsObjSync(
+    final int index, [
+    bool? filterBlacklist,
+  ]) =>
+      (isPageLoaded(index))
+          ? _genFromStartAndCount(
+              start: getPageFirstPostIndex(index),
+              filterBlacklist: filterBlacklist,
+            )
+          : null;
 
   /// {@macro loadWarn}
-  Future<E6Posts?> getPostsOnPageAsObjAsync(final int index) async {
+  Future<E6Posts?> getPostsOnPageAsObjAsync(
+    final int index, [
+    bool? filterBlacklist,
+  ]) async {
     final s = checkLoading(parameters.copyWith(pageIndex: index + 1));
     if (s != null) {
       return s.then((v) => v != null
           ? _genFromStartAndCount(
               start: getPageFirstPostIndex(index),
+              filterBlacklist: filterBlacklist,
             )
           : null);
     }
     return await tryRetrievePage(index)
         ? _genFromStartAndCount(
             start: getPageFirstPostIndex(index),
+            filterBlacklist: filterBlacklist,
           )
         : null;
   }
 
   /// {@macro loadWarn}
-  FutureOr<Iterable<E6PostResponse>?> getPostsOnPage(final int index) =>
-      (getPostsOnPageSync(index) ?? getPostsOnPageAsync(index))
+  FutureOr<Iterable<E6PostResponse>?> getPostsOnPage(
+    final int index, [
+    bool? filterBlacklist,
+  ]) =>
+      (getPostsOnPageSync(index, filterBlacklist) ??
+              getPostsOnPageAsync(index, filterBlacklist))
           as FutureOr<Iterable<E6PostResponse>?>;
 
   /// {@macro notLoadWarn}
-  Iterable<E6PostResponse>? getPostsOnPageSync(final int index) =>
+  Iterable<E6PostResponse>? getPostsOnPageSync(
+    final int index, [
+    bool? filterBlacklist,
+  ]) =>
       (isPageLoaded(index))
           ? _getRawPostFromStartAndCount(
               start: getPageFirstPostIndex(index),
+              filterBlacklist: filterBlacklist,
             )
           : null;
 
   /// {@macro loadWarn}
-  Future<Iterable<E6PostResponse>?> getPostsOnPageAsync(final int index) async {
+  Future<Iterable<E6PostResponse>?> getPostsOnPageAsync(
+    final int index, [
+    bool? filterBlacklist,
+  ]) async {
     final s = checkLoading(parameters.copyWith(pageIndex: index + 1));
     if (s != null) {
       return s.then((v) => v != null
           ? _getRawPostFromStartAndCount(
               start: getPageFirstPostIndex(index),
+              filterBlacklist: filterBlacklist,
             )
           : null);
     }
     return await tryRetrievePage(index)
         ? _getRawPostFromStartAndCount(
             start: getPageFirstPostIndex(index),
+            filterBlacklist: filterBlacklist,
           )
         : null;
   }
@@ -588,7 +646,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       return _fetchPage(p).then((v) {
         if (v?.isEmpty ?? true) {
           logger.info(
-            "No prior page from server\n"
+            "No page index $p from server\n"
+            "\tFunction: tryLoadPriorPage\n"
             "\tvalidLimit: ${p.validLimit}\n"
             "\tpageNumber: ${p.pageNumber}\n"
             "\ttags: ${p.tags}",
@@ -597,6 +656,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         }
         logger.info(
           "Got prior page from server\n"
+          "\tFunction: tryLoadPriorPage\n"
           "\tvalidLimit: ${p.validLimit}\n"
           "\tpageNumber: ${p.pageNumber}\n"
           "\ttags: ${p.tags}"
@@ -636,7 +696,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         return _fetchPage(param).then((v) {
           if (v?.isEmpty ?? true) {
             logger.info(
-              "No prior page from server\n"
+              "No page index $p from server\n"
+              "\tFunction: tryRetrieveFormerPage\n"
               "\tvalidLimit: ${param.validLimit}\n"
               "\tpageNumber: ${param.pageNumber}\n"
               "\ttags: ${param.tags}",
@@ -644,7 +705,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
             return false;
           }
           logger.info(
-            "Got prior page from server\n"
+            "Got page index $p from server\n"
+            "\tFunction: tryRetrieveFormerPage\n"
             "\tvalidLimit: ${param.validLimit}\n"
             "\tpageNumber: ${param.pageNumber}\n"
             "\ttags: ${param.tags}"
@@ -693,6 +755,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           if (v?.isEmpty ?? true) {
             logger.info(
               "No page index $p from server\n"
+              "\tFunction: tryRetrieveFuturePage\n"
               "\tvalidLimit: ${param.validLimit}\n"
               "\tpageNumber: ${param.pageNumber}\n"
               "\ttags: ${param.tags}",
@@ -701,6 +764,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           }
           logger.info(
             "Got page index $p from server\n"
+            "\tFunction: tryRetrieveFuturePage\n"
             "\tvalidLimit: ${param.validLimit}\n"
             "\tpageNumber: ${param.pageNumber}\n"
             "\ttags: ${param.tags}"
@@ -743,27 +807,10 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     String? apiKey,
   }) {
     if (isPageLoaded(0)) return true;
-    final param = _parameters.copyWith(pageIndex: 0);
-    return _fetchPage(param).then((v) {
-      if (v?.isEmpty ?? true) {
-        logger.info(
-          "No page index ${param.pageIndex} from server\n"
-          "\tvalidLimit: ${param.validLimit}\n"
-          "\tpageNumber: ${param.pageNumber}\n"
-          "\ttags: ${param.tags}",
-        );
-        return false;
-      }
-      logger.info(
-        "Got page ${param.pageIndex} from server\n"
-        "\tvalidLimit: ${param.validLimit}\n"
-        "\tpageNumber: ${param.pageNumber}\n"
-        "\ttags: ${param.tags}"
-        "Result length: ${v?.length}",
-      );
-      assignPagePosts(param.pageIndex!, v!);
-      return true;
-    });
+    return tryRetrieveFirstPageAsync(
+      username: username,
+      apiKey: apiKey,
+    );
   }
 
   Future<bool> tryRetrieveFirstPageAsync({
@@ -775,6 +822,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       if (v?.isEmpty ?? true) {
         logger.info(
           "No page index ${param.pageIndex} from server\n"
+          "\tFunction: tryRetrieveFirstPageAsync\n"
           "\tvalidLimit: ${param.validLimit}\n"
           "\tpageNumber: ${param.pageNumber}\n"
           "\ttags: ${param.tags}",
@@ -783,6 +831,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       }
       logger.info(
         "Got page ${param.pageIndex} from server\n"
+        "\tFunction: tryRetrieveFirstPageAsync\n"
         "\tvalidLimit: ${param.validLimit}\n"
         "\tpageNumber: ${param.pageNumber}\n"
         "\ttags: ${param.tags}"
@@ -978,46 +1027,103 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       ..then((v) => _loading.remove(parameters!));
   }
 
+  /// Doesn't add posts if blacklist is filtered.
+  ///
   /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
-  E6Posts _genFromRange({int start = 0, int? end}) => _genFromStartAndCount(
-        start: start,
-        count: (end ?? (SearchView.i.postsPerPage + start)) - start,
-      );
-
-  /// If null, [count] defaults to [SearchView.i.postsPerPage].
-  E6Posts _genFromStartAndCount({int start = 0, int? count}) => E6PostsSync(
-        posts: _getRawPostFromStartAndCount(
+  E6Posts _genFromRange({
+    int start = 0,
+    int? end,
+    bool? filterBlacklist,
+  }) =>
+      E6PostsSync(
+        posts: _getRawPostFromRange(
           start: start,
-          count: count,
+          end: end,
+          filterBlacklist: filterBlacklist,
         ).toList(),
       );
 
-  /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
-  Iterable<E6PostResponse> _getRawPostFromRange({int start = 0, int? end}) =>
-      _getRawPostFromStartAndCount(
-        start: start,
-        count: (end ?? (SearchView.i.postsPerPage + start)) - start,
+  /// Adds posts if blacklist is filtered.
+  ///
+  /// If null, [count] defaults to [SearchView.i.postsPerPage].
+  E6Posts _genFromStartAndCount({
+    int start = 0,
+    int? count,
+    bool? filterBlacklist,
+  }) =>
+      E6PostsSync(
+        posts: _getRawPostFromStartAndCount(
+          start: start,
+          count: count,
+          filterBlacklist: filterBlacklist,
+        ).toList(),
       );
 
+  /// Doesn't add posts if blacklist is filtered.
+  ///
+  /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
+  Iterable<E6PostResponse> _getRawPostFromRange({
+    int start = 0,
+    int? end,
+    bool? filterBlacklist,
+  }) =>
+      _getFromRange(
+        start: start,
+        end: end,
+        filterBlacklist: filterBlacklist,
+      ).map((e) => e.$);
+
+  /// Adds posts if blacklist is filtered.
+  ///
   /// If null, [count] defaults to [SearchView.i.postsPerPage].
-  Iterable<E6PostResponse> _getRawPostFromStartAndCount(
-          {int start = 0, int? count}) =>
+  Iterable<E6PostResponse> _getRawPostFromStartAndCount({
+    int start = 0,
+    int? count,
+    bool? filterBlacklist,
+  }) =>
       _getFromStartAndCount(
         start: start,
         count: count,
+        filterBlacklist: filterBlacklist,
       ).map((e) => e.$);
 
+  /// Doesn't add posts if blacklist is filtered.
+  ///
   /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
-  Iterable<E6PostEntrySync> _getFromRange({int start = 0, int? end}) =>
-      _getFromStartAndCount(
-        start: start,
-        count: (end ?? (SearchView.i.postsPerPage + start)) - start,
-      );
+  Iterable<E6PostEntrySync> _getFromRange({
+    int start = 0,
+    int? end,
+    bool? filterBlacklist,
+  }) {
+    final count = (end ?? (SearchView.i.postsPerPage + start)) - start;
+    return (filterBlacklist ?? _filterBlacklist)
+        ? collection._posts.skip(start).reduceUntilTrue((acc, e, i, __) {
+            !hasBlacklistedTag(e.$.tagList) ? (acc as List).add(e) : "";
+            return (acc, i + start >= count + start);
+          }, [])
+        : collection._posts.skip(start).take(count);
+  }
 
+  /// Adds posts if blacklist is filtered.
+  ///
   /// If null, [count] defaults to [SearchView.i.postsPerPage].
-  Iterable<E6PostEntrySync> _getFromStartAndCount(
-          {int start = 0, int? count}) =>
-      collection._posts.skip(start).take(count ?? SearchView.i.postsPerPage);
+  Iterable<E6PostEntrySync> _getFromStartAndCount({
+    int start = 0,
+    int? count,
+    bool? filterBlacklist,
+  }) {
+    return (filterBlacklist ?? _filterBlacklist)
+        ? collection._posts
+            .skip(start)
+            .take(count ?? SearchView.i.postsPerPage)
+            .fold<List<E6PostEntrySync>>(
+                [],
+                (acc, e) => hasBlacklistedTag(e.$.tagList) ? acc : (acc
+                  ..add(e)))
+        : collection._posts
+            .skip(start)
+            .take(count ?? SearchView.i.postsPerPage);
+  }
 
   // void _onUserSearchBegan(SearchArgs e) {
   //   if ((_parameters.tagSet?.intersection(e.tagSet).length ?? -5) !=
