@@ -425,7 +425,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
               MaterialPageRoute(
                 builder: (_) => FutureBuilder(
                   future: E621
-                      .sendRequest(e621.initSearchPostRequest(e))
+                      .sendRequest(e621.initGetPostRequest(e))
                       .toResponse()
                       .then((v) => jsonDecode(v.body)),
                   builder: (_, snapshot) {
@@ -735,7 +735,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                 ),
                 if (!(AppSettings.i?.blacklistedTags.contains(tag) ?? true))
                   ListTile(
-                    title: const Text("Add to blacklist"),
+                    title: const Text("Add to local blacklist"),
                     onTap: () {
                       AppSettings.i?.blacklistedTags.add(tag);
                       AppSettings.i?.writeToFile();
@@ -744,7 +744,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                   ),
                 if (AppSettings.i?.blacklistedTags.contains(tag) ?? false)
                   ListTile(
-                    title: const Text("Remove from blacklist"),
+                    title: const Text("Remove from local blacklist"),
                     onTap: () {
                       AppSettings.i?.blacklistedTags.remove(tag);
                       AppSettings.i?.writeToFile();
@@ -753,7 +753,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                   ),
                 if (!(AppSettings.i?.favoriteTags.contains(tag) ?? true))
                   ListTile(
-                    title: const Text("Add to favorites"),
+                    title: const Text("Add to local favorites"),
                     onTap: () {
                       AppSettings.i?.favoriteTags.add(tag);
                       AppSettings.i?.writeToFile();
@@ -762,7 +762,7 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                   ),
                 if (AppSettings.i?.favoriteTags.contains(tag) ?? false)
                   ListTile(
-                    title: const Text("Remove from favorites"),
+                    title: const Text("Remove from local favorites"),
                     onTap: () {
                       AppSettings.i?.favoriteTags.remove(tag);
                       AppSettings.i?.writeToFile();
@@ -1053,7 +1053,7 @@ class PostViewPageLoader extends StatelessWidget
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: e621.sendRequest(e621.initSearchPostRequest(
+      future: e621.sendRequest(e621.initGetPostRequest(
         postId,
         credentials: E621AccessData.fallback?.cred,
       )),

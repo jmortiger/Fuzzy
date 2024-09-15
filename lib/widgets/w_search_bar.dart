@@ -58,7 +58,7 @@ class _WSearchBarState extends State<WSearchBar> {
   // #region Properties
   bool get allSuggestionSourcesEmpty =>
       (dbi.DO_NOT_USE_TAG_DB || dbi.tagDbLazy.$Safe == null) &&
-      (AppSettings.i?.favoriteTags.isEmpty ?? true) &&
+      (AppSettings.i?.favoriteTagsAll.isEmpty ?? true) &&
       !SavedDataE6.isInit &&
       CachedSearches.searches.isEmpty;
   TagDB? get retrieveTagDB =>
@@ -471,7 +471,7 @@ class _WSearchBarState extends State<WSearchBar> {
               .map((e) => "$currPrefix$e")
               .where((v) => v.contains(currFullText))
           : const Iterable<String>.empty();
-      if (((AppSettings.i?.favoriteTags.isEmpty ?? true) || !showFavTags) &&
+      if (((AppSettings.i?.favoriteTagsAll.isEmpty ?? true) || !showFavTags) &&
           (!SavedDataE6.isInit || !showSavedSearches) &&
           (CachedSearches.searches.isEmpty || !showPriorSearches)) {
         return (r.toList()..sort(comp)).take(50).map((e) => genTileFromString(
@@ -541,8 +541,8 @@ class _WSearchBarState extends State<WSearchBar> {
               leading: const Icon(Icons.save),
             ),
           ),
-        if ((AppSettings.i?.favoriteTags.isNotEmpty ?? false) && showFavTags)
-          ...(AppSettings.i!.favoriteTags
+        if ((AppSettings.i?.favoriteTagsAll.isNotEmpty ?? false) && showFavTags)
+          ...(AppSettings.i!.favoriteTagsAll
                   .where((element) => !currPrefix.contains(element))
                   .map((e) => "$currPrefix$e")
                   .toList()
@@ -593,7 +593,7 @@ class _WSearchBarState extends State<WSearchBar> {
               .map((e) => "$currPrefix$e")
               .where((v) => v.contains(currText))
           : const Iterable<String>.empty();
-      if (((AppSettings.i?.favoriteTags.isEmpty ?? true) || !showFavTags) &&
+      if (((AppSettings.i?.favoriteTagsAll.isEmpty ?? true) || !showFavTags) &&
           (!SavedDataE6.isInit || !showSavedSearches) &&
           (CachedSearches.searches.isEmpty || !showPriorSearches)) {
         return (r.toList()
@@ -632,15 +632,16 @@ class _WSearchBarState extends State<WSearchBar> {
                 (v) =>
                     v.verifyUniqueness() &&
                     !currText.contains("${E621.savedSearchTag}${v.uniqueId}") &&
-                    "${E621.savedSearchTag}${v.uniqueId}".contains(currSubString),
+                    "${E621.savedSearchTag}${v.uniqueId}"
+                        .contains(currSubString),
               )
               .map((v) => "$currPrefix ${E621.savedSearchTag}${v.uniqueId}")
               .toList()
             ..sort(
               str_util.getFineInverseSimilarityComparator(currText),
             ),
-        if ((AppSettings.i?.favoriteTags.isNotEmpty ?? false) && showFavTags)
-          ...(AppSettings.i!.favoriteTags
+        if ((AppSettings.i?.favoriteTagsAll.isNotEmpty ?? false) && showFavTags)
+          ...(AppSettings.i!.favoriteTagsAll
                   .where((element) => !currPrefix.contains(element))
                   .map((e) => "$currPrefix$e")
                   .toList()

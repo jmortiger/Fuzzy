@@ -110,12 +110,8 @@ class WExpansionTileAsync extends StatefulWidget {
 }
 
 class _WExpansionTileAsyncState extends State<WExpansionTileAsync> {
-  // #region Logger
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("WExpansionTileAsync");
-  // #endregion Logger
+  static late final logger = lm.generateLogger("WExpansionTileAsync").logger;
   bool hasChildren = false;
   late List<Widget> children;
   late Future<List<Widget>>? future;

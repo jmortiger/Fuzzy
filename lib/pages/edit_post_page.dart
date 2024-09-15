@@ -614,7 +614,7 @@ class EditPostPageLoader extends StatelessWidget
     return post != null
         ? EditPostPage(post: post!)
         : FutureBuilder(
-            future: e621.sendRequest(e621.initSearchPostRequest(
+            future: e621.sendRequest(e621.initGetPostRequest(
               postId!,
               credentials: E621AccessData.fallbackForced?.cred,
             )),

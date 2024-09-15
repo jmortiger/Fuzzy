@@ -6,7 +6,6 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:fuzzy/models/app_settings.dart';
-import 'package:fuzzy/util/asset_management.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/util.dart';
 import 'package:j_util/e621.dart' as e621;
@@ -89,11 +88,6 @@ final class E6PostsLazy extends E6Posts {
         iterate();
       }
       return this[index];
-      // return !unavailableIndices.contains(index)
-      //     ? this[index]
-      //     : this[index].copyWith(
-      //         file:
-      //             this[index].file.copyWith(url: util.deletedPreviewImagePath));
     } catch (e) {
       return null;
     }

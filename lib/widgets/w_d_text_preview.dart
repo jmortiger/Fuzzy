@@ -98,7 +98,7 @@ class _WDTextPreviewState extends State<WDTextPreview> {
 
 class WDTextPreviewScrollable extends StatefulWidget {
   final String? initialText;
-  final bool makePreviewCollapsible;
+  // final bool makePreviewCollapsible;
   final int? maxLines;
   final int? minLines;
   final bool expands;
@@ -115,7 +115,7 @@ class WDTextPreviewScrollable extends StatefulWidget {
   const WDTextPreviewScrollable({
     super.key,
     this.initialText,
-    this.makePreviewCollapsible = false,
+    // this.makePreviewCollapsible = false,
     this.maxLines /*  = 1 */,
     this.minLines,
     this.expands = false,
@@ -171,14 +171,14 @@ class _WDTextPreviewScrollableState extends State<WDTextPreviewScrollable> {
     );
   }
 
-  StatefulWidget _temp() {
-    return widget.makePreviewCollapsible
-        ? ExpansionTile(
-            title: const Text("Preview"),
-            children: [_rootNotifier()],
-          )
-        : _rootNotifier();
-  }
+  // StatefulWidget _temp() {
+  //   return widget.makePreviewCollapsible
+  //       ? ExpansionTile(
+  //           title: const Text("Preview"),
+  //           children: [_rootNotifier()],
+  //         )
+  //       : _rootNotifier();
+  // }
 
   SelectorNotifier<TextEditingController, String> _rootNotifier() {
     return SelectorNotifier(

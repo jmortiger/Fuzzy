@@ -338,8 +338,7 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                               (SearchViewData.verticalGridSpaceBounds.min -
                                   1)) >=
                           SearchViewData.verticalGridSpaceBounds.min &&
-                      (val ?? -1) <=
-                          SearchViewData.verticalGridSpaceBounds.max;
+                      (val ?? -1) <= SearchViewData.verticalGridSpaceBounds.max;
                 },
                 min: SearchViewData.verticalGridSpaceBounds.min,
                 max: SearchViewData.verticalGridSpaceBounds.max,

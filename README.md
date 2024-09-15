@@ -19,17 +19,17 @@ An (eventual) all-in-one mobile frontend for multiple image submission sites. Cu
 * Multi-upvote/downvote
 * Favorites page (order preserved)
 * DText parsing
+* Unified blacklist/fav tags
+* Warn about blacklist before loading parent/child w/ blacklisted tag
 ##### TODO List
 * Comments
   * Viewing
   * Leaving
   * Voting
-* Unified blacklist/fav tags
 * Notes
 * Improve loading shared urls
 * Downloading
 * Ordering
 * Subscriptions
-* Warn about blacklist before loading parent/child w/ blacklisted tag
 * Combining (at least 2) searches (e.g. (a or b) and (c or d))
 * FurAffinity

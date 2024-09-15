@@ -370,7 +370,7 @@ class WSetTile extends StatelessWidget {
                             AppSettings.i!.blacklistedTags
                                 .contains(set.searchById)))
                           ListTile(
-                            title: const Text("Add to blacklist"),
+                            title: const Text("Add to local blacklist"),
                             onTap: () {
                               AppSettings.i?.blacklistedTags.add(
                                   SearchView.i.preferSetShortname
@@ -384,7 +384,7 @@ class WSetTile extends StatelessWidget {
                                 .contains(set.searchById) ??
                             false)
                           ListTile(
-                            title: const Text("Remove from blacklist"),
+                            title: const Text("Remove from local blacklist"),
                             onTap: () {
                               AppSettings.i?.blacklistedTags
                                   .remove(set.searchById);
@@ -396,7 +396,7 @@ class WSetTile extends StatelessWidget {
                                 .contains(set.searchByShortname) ??
                             false)
                           ListTile(
-                            title: const Text("Remove from blacklist"),
+                            title: const Text("Remove from local blacklist"),
                             onTap: () {
                               AppSettings.i?.blacklistedTags
                                   .remove(set.searchByShortname);
@@ -410,7 +410,7 @@ class WSetTile extends StatelessWidget {
                             AppSettings.i!.favoriteTags
                                 .contains(set.searchById)))
                           ListTile(
-                            title: const Text("Add to favorites"),
+                            title: const Text("Add to local favorites"),
                             onTap: () {
                               AppSettings.i?.favoriteTags.add(
                                   SearchView.i.preferSetShortname
@@ -424,7 +424,7 @@ class WSetTile extends StatelessWidget {
                                 .contains(set.searchById) ??
                             false)
                           ListTile(
-                            title: const Text("Remove from favorites"),
+                            title: const Text("Remove from local favorites"),
                             onTap: () {
                               AppSettings.i?.favoriteTags
                                   .remove(set.searchById);

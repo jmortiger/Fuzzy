@@ -1118,8 +1118,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
             .take(count ?? SearchView.i.postsPerPage)
             .fold<List<E6PostEntrySync>>(
                 [],
-                (acc, e) => hasBlacklistedTag(e.$.tagList) ? acc : (acc
-                  ..add(e)))
+                (acc, e) =>
+                    hasBlacklistedTag(e.$.tagList) ? acc : (acc..add(e)))
         : collection._posts
             .skip(start)
             .take(count ?? SearchView.i.postsPerPage);

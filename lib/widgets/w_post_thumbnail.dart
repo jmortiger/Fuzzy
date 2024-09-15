@@ -53,7 +53,7 @@ class _WPostThumbnailState extends State<WPostThumbnail> {
       info = retrieveImageInfo(widget.post!);
     } else {
       future =
-          e621.sendRequest(e621.initSearchPostRequest(widget.id!)).then((v) {
+          e621.sendRequest(e621.initGetPostRequest(widget.id!)).then((v) {
         return v.statusCode >= 300
             ? null
             : retrieveImageInfo(E6PostResponse.fromRawJson(v.body));
