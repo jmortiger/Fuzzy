@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
+import 'package:fuzzy/main.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart' as path;
@@ -275,24 +276,49 @@ void defaultOnLinkifyOpen(LinkableElement link) {
   );
 }
 
+void defaultOnE6LinkifyOpen(LinkableElement link, BuildContext context) {
+  if (supportedFirstPathSegments.contains(
+        Uri.tryParse(link.url)?.pathSegments.first,
+      ) &&
+      context.mounted) {
+    Navigator.pushNamed(context, link.url);
+    return;
+  }
+  return defaultOnLinkifyOpen(link);
+}
+
+void Function(LinkableElement) buildInAppOnE6LinkifyOpen(
+        BuildContext context) =>
+    (LinkableElement link) => defaultOnE6LinkifyOpen(link, context);
 void Function(LinkableElement) buildDefaultOnE6LinkifyOpen(
-  BuildContext context,
-) =>
+        BuildContext context) =>
     (LinkableElement link) {
-      final url = Uri.parse(link.url);
-      switch (url.pathSegments.first) {
-        case "post_sets":
-        case "pools":
-        case "posts":
-          if (!context.mounted) {
-            defaultOnLinkifyOpen(link);
-            return;
-          }
-          Navigator.pushNamed(context, link.url);
-          break;
-        default:
-          defaultOnLinkifyOpen(link);
-          break;
+      if (supportedFirstPathSegments.contains(
+            Uri.tryParse(link.url)?.pathSegments.first,
+          ) &&
+          context.mounted) {
+        showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text("Launch In App")),
+              TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text("Launch In Browser")),
+            ],
+          ),
+        ).then((v) => switch (v) {
+              // true => defaultOnE6LinkifyOpen(link, context),
+              true => context.mounted
+                  ? Navigator.pushNamed(context, link.url)
+                  : defaultOnLinkifyOpen(link),
+              false => defaultOnLinkifyOpen(link),
+              null => null,
+            });
+      } else {
+        defaultOnLinkifyOpen(link);
       }
     };
 

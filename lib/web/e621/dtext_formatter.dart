@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:fuzzy/web/e621/colors.dart' as e6_color;
@@ -71,7 +72,10 @@ class TagLinkifier extends UrlLinkifier {
               )
             : UrlElement(
                 // "${scheme}www.$root${convertToLink(m.namedGroup("tag") ?? m.namedGroup("main")!)}",
-                "$schemeAnd$root${convertToLink(m.namedGroup("tag") ?? m.namedGroup("main")!)}",
+                !DTextMatchers.anchorPattern.hasMatch(
+                        (m.namedGroup("tag") ?? m.namedGroup("main"))!)
+                    ? "$schemeAnd$root${convertToLink(m.namedGroup("tag") ?? m.namedGroup("main")!)}"
+                    : (m.namedGroup("tag") ?? m.namedGroup("main")!).trim(),
                 m.namedGroup("main") ?? m.namedGroup("tag"),
               );
       },
@@ -154,11 +158,59 @@ class NamedLinkifier extends UrlLinkifier {
         options);
   }
 }
-// #endregion Linkifiers
 
+// #endregion Linkifiers
+class _Empty extends StatefulWidget {
+  final void Function(BuildContext ctx)? onScroll;
+  const _Empty({super.key, this.onScroll});
+
+  @override
+  State<_Empty> createState() => __EmptyState();
+}
+
+class __EmptyState extends State<_Empty> {
+  @override
+  Widget build(BuildContext context) => const SizedBox(width: 0, height: 0);
+  // Widget build(BuildContext context) => const SizedBox.shrink();
+}
+
+class _Anchor extends StatefulWidget {
+  final void Function(BuildContext ctx)? onScroll;
+  final ValueListenable<bool>? scrollRequested;
+  const _Anchor({super.key, this.onScroll, this.scrollRequested});
+
+  @override
+  State<_Anchor> createState() => __AnchorState();
+}
+
+class __AnchorState extends State<_Anchor> {
+  @override
+  void initState() {
+    super.initState();
+    widget.scrollRequested?.addListener(listener);
+  }
+
+  @override
+  void dispose() {
+    widget.scrollRequested?.removeListener(listener);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(width: 0, height: 0);
+  // Widget build(BuildContext context) => const SizedBox.shrink();
+
+  void listener() {
+    Scrollable.ensureVisible(context);
+    widget.onScroll?.call(context);
+  }
+}
+
+/// TODO: Scroll to collapsed section?
 /// TODO: Pull into library
 /// TODO: Add configurability (const matchers & defaults w/ an instanced class with fields that can be overridden)
 enum DTextMatchers {
+  /// [Ref](https://e621.net/help/dtext#basics)
   bold(
     r"\[b\](?<main>.*?)\[\/b\]",
     TextStyle(fontWeight: FontWeight.bold),
@@ -201,6 +253,8 @@ enum DTextMatchers {
       fontFamilyFallback: ["Courier New", "monospace"],
     ),
   ),
+
+  /// [Ref](https://e621.net/help/dtext#colors)
   color(
     r"\[color(?:=(?<data>(?<tagCategory>"
     "${TagCategory.categoryNameRegExpStr}"
@@ -215,6 +269,7 @@ enum DTextMatchers {
   escapedLink(r"<(?<main>" "${util.urlMatcherStr}" r".*?)>", linkStyle),
   namedLink('"(?<main>.+?)":(?<url>${util.urlMatcherStr}){1}', linkStyle),
   tagLink(r"\[\[(?:(?<tag>.*?)\|){0,1}(?<main>.+?)\]\]", linkStyle),
+  anchor(r"\[(?<data>#.+?)\](?<main>(?<=\]))", incorrectlyParsedStyle),
   searchLink(r"{{(?<main>(?<data>.+?))}}", linkStyle),
   postLink(r"(?<main>post #(?<data>[0-9]+))", linkStyle),
   postChangesLink(r"(?<main>post changes #(?<data>[0-9]+))", linkStyle),
@@ -300,6 +355,8 @@ enum DTextMatchers {
     color: e6_color.link,
     decoration: TextDecoration.underline,
   );
+  static const anchorPatternStr = r"^\s*?#(?<anchor>.+)$";
+  static RegExp get anchorPattern => RegExp(anchorPatternStr);
   final String patternStr;
   final TextStyle style;
   final bool multiLine, caseSensitive, unicode, dotAll;
@@ -344,22 +401,18 @@ enum DTextMatchers {
   TextStyle retrieveStyle(BuildContext context, RegExpMatch m) =>
       switch (this) {
         header => switch (m.namedGroup("data")) {
-            "1" =>
-              Theme.of(context).textTheme.displayLarge /* headlineLarge */ ??
-                  style,
-            "2" =>
-              Theme.of(context).textTheme.displayMedium /* headlineMedium */ ??
-                  style,
-            "3" =>
-              Theme.of(context).textTheme.displaySmall /* headlineSmall */ ??
-                  style,
-            "4" => Theme.of(context).textTheme.headlineLarge /* labelLarge */ ??
-                style,
-            "5" =>
-              Theme.of(context).textTheme.headlineMedium /* labelMedium */ ??
-                  style,
-            "6" => Theme.of(context).textTheme.headlineSmall /* labelSmall */ ??
-                style,
+            // "1" => Theme.of(context).textTheme.displayLarge ?? style,
+            // "2" => Theme.of(context).textTheme.displayMedium ?? style,
+            // "3" => Theme.of(context).textTheme.displaySmall ?? style,
+            // "4" => Theme.of(context).textTheme.headlineLarge ?? style,
+            // "5" => Theme.of(context).textTheme.headlineMedium ?? style,
+            // "6" => Theme.of(context).textTheme.headlineSmall ?? style,
+            "1" => Theme.of(context).textTheme.headlineLarge ?? style,
+            "2" => Theme.of(context).textTheme.headlineMedium ?? style,
+            "3" => Theme.of(context).textTheme.headlineSmall ?? style,
+            "4" => Theme.of(context).textTheme.titleLarge ?? style,
+            "5" => Theme.of(context).textTheme.titleMedium ?? style,
+            "6" => Theme.of(context).textTheme.titleSmall ?? style,
             _ => throw UnsupportedError("Header value not supported"),
           },
         color => TextStyle(
@@ -368,7 +421,16 @@ enum DTextMatchers {
                 : htmlColorsFull[m.namedGroup("colorName")] ??
                     makeColorFromHexString(m.namedGroup("hex"))!),
         section => Theme.of(context).textTheme.bodyMedium ?? style,
-        quote => const TextStyle(),
+        quote || spoiler => const TextStyle(),
+        // subscript => const TextStyle(fontFeatures: [FontFeature.subscripts()]),
+        // superscript =>
+        //   const TextStyle(fontFeatures: [FontFeature.superscripts()]),
+        subscript ||
+        superscript =>
+          Theme.of(context).textTheme.labelSmall ?? style,
+        // subscript || superscript => style.copyWith(
+        //     fontSize: Theme.of(context).textTheme.labelSmall?.fontSize,
+        //   ),
         _ => style,
       };
   (RegExpMatch, DTextMatchers)? firstMatch(String dText) {
@@ -382,9 +444,19 @@ enum DTextMatchers {
     return m == null ? null : (m, m.namedGroup("main")!, this);
   }
 
+  // static buildAnchorLinkOnOpenWithController(ScrollController scrollController) => (LinkableElement link) => scrollController;
+  static buildAnchorLinkOnOpenWithKeys(Map<String, GlobalKey> anchorKeys) =>
+      (LinkableElement link) {
+        final ctx = anchorKeys[link.url]?.currentContext;
+        if (ctx != null) Scrollable.ensureVisible(ctx);
+      };
+
   InlineSpan buildFromMatchRecursive({
     required RegExpMatch m,
     BuildContext? ctx,
+    // ScrollController? scrollController,
+    Map<String, GlobalKey>? anchorKeys,
+    Map<String, VoidCallback>? anchorTriggerScrolls,
   }) {
     // #region Constants
     const leftBorderWidth = 3.0,
@@ -412,6 +484,7 @@ enum DTextMatchers {
     final style = ctx != null ? retrieveStyle(ctx, m) : this.style;
     String? text = m.namedGroup("main");
     bool isChildless = switch (this) {
+      anchor ||
       tagLink ||
       namedLink ||
       postLink ||
@@ -428,21 +501,34 @@ enum DTextMatchers {
         true,
       _ => firstMatches(text ?? "") == null,
     };
-    TextSpan defaultParser(String? text) =>
-        RegExp(util.urlMatcherStr).hasMatch(text ?? "")
-            ? LinkifySpan(
-                text: text!,
-                linkifiers: const [util.MyLinkifier()],
-                linkStyle: style,
-                onOpen: util.defaultOnLinkifyOpen,
-                options: util.linkifierOptions,
-              )
-            : TextSpan(
-                text: isChildless ? text : null,
-                children:
-                    isChildless ? null : buildChildrenFromMatch(m: m, ctx: ctx),
-                style: style,
-              );
+    TextSpan defaultParser(String? text) {
+      return RegExp(util.urlMatcherStr).hasMatch(text ?? "")
+          ? LinkifySpan(
+              text: text!,
+              linkifiers: const [util.MyLinkifier()],
+              linkStyle: style,
+              onOpen: ctx != null &&
+                      RegExp("e621|e926").hasMatch(RegExp(util.urlMatcherStr)
+                          .firstMatch(text)!
+                          .group(3)!)
+                  ? util.buildDefaultOnE6LinkifyOpen(ctx)
+                  : util.defaultOnLinkifyOpen,
+              options: util.linkifierOptions,
+            )
+          : TextSpan(
+              text: isChildless ? text : null,
+              children: isChildless
+                  ? null
+                  : buildChildrenFromMatch(
+                      m: m,
+                      ctx: ctx,
+                      anchorKeys: anchorKeys,
+                      anchorTriggerScrolls: anchorTriggerScrolls,
+                    ),
+              style: style,
+            );
+    }
+
     return switch (this) {
       searchLink ||
       postLink ||
@@ -467,28 +553,74 @@ enum DTextMatchers {
               : util.defaultOnLinkifyOpen,
           options: util.linkifierOptions,
         ),
-      tagLink => LinkifySpan(
-          linkifiers: const [TagLinkifier()],
-          text: /* text! */ m.group(0)!,
-          linkStyle: style,
-          onOpen: util.defaultOnLinkifyOpen,
-          // options: const LinkifyOptions(humanize: false),
-          options: util.linkifierOptions,
-        ),
+      anchor => anchorKeys != null
+          ? (() {
+              final data = m.namedGroup("data")!;
+              _logger.info("building anchorKey for $data");
+              return WidgetSpan(
+                  child: _Empty(
+                key: anchorKeys[data] = GlobalObjectKey<__EmptyState>(data),
+              ));
+            })()
+          : anchorTriggerScrolls != null
+              ? (() {
+                  final data = m.namedGroup("data")!,
+                      doScroll = ValueNotifier(false);
+                  _logger.info("building anchorTrigger for $data");
+                  anchorTriggerScrolls[data] =
+                      () => doScroll.value = !doScroll.value;
+                  return WidgetSpan(child: _Anchor(scrollRequested: doScroll));
+                })()
+              : const TextSpan(),
+      tagLink =>
+        !anchorPattern.hasMatch((m.namedGroup("tag") ?? m.namedGroup("main"))!)
+            ? LinkifySpan(
+                linkifiers: const [TagLinkifier()],
+                text: m.group(0)!,
+                linkStyle: style,
+                onOpen: ctx != null
+                    ? util.buildDefaultOnE6LinkifyOpen(ctx)
+                    : util.defaultOnLinkifyOpen,
+                options: util.linkifierOptions,
+              )
+            : LinkifySpan(
+                linkifiers: const [TagLinkifier()],
+                text: m.group(0)!,
+                linkStyle: style,
+                // onOpen: util.defaultOnLinkifyOpen,
+                onOpen: (link) {
+                  _logger.info(
+                      "Trying to launch ${link.url}/${(m.namedGroup("tag") ?? m.namedGroup("main"))!}");
+                  anchorKeys != null
+                      ? buildAnchorLinkOnOpenWithKeys(anchorKeys)(link)
+                      : anchorTriggerScrolls?[
+                              (m.namedGroup("tag") ?? m.namedGroup("main"))!
+                                  .trim()]
+                          ?.call();
+                },
+                // onOpen: anchorKeys != null
+                //     ? buildAnchorLinkOnOpenWithKeys(anchorKeys)
+                //     : anchorTriggerScrolls?[
+                //         (m.namedGroup("tag") ?? m.namedGroup("main"))!
+                //             .trim()],
+                options: util.linkifierOptions,
+              ),
       namedLink => LinkifySpan(
           text: m.group(0)!,
           linkifiers: const [NamedLinkifier()],
           linkStyle: style,
-          onOpen: util.defaultOnLinkifyOpen,
-          // options: const LinkifyOptions(humanize: false),
+          onOpen: ctx != null
+              ? util.buildDefaultOnE6LinkifyOpen(ctx)
+              : util.defaultOnLinkifyOpen,
           options: util.linkifierOptions,
         ),
       escapedLink => LinkifySpan(
           text: m.group(1)!,
           linkifiers: const [util.MyLinkifier()],
           linkStyle: style,
-          onOpen: util.defaultOnLinkifyOpen,
-          // options: const LinkifyOptions(humanize: false),
+          onOpen: ctx != null
+              ? util.buildDefaultOnE6LinkifyOpen(ctx)
+              : util.defaultOnLinkifyOpen,
           options: util.linkifierOptions,
         ),
       code when renderDTextSectionBg || renderDTextSectionLeftBorder =>
@@ -510,7 +642,13 @@ enum DTextMatchers {
               padding:
                   const EdgeInsets.fromLTRB(leftBorderPadding + 10, 0, 0, 0),
               child: Text.rich(
-                parse(m.namedGroup("main")!, ctx),
+                TextSpan(
+                    children: rawParse(
+                  m.namedGroup("main")!,
+                  ctx: ctx,
+                  anchorKeys: anchorKeys,
+                  anchorTriggerScrolls: anchorTriggerScrolls,
+                )),
                 style: style,
               ),
             ),
@@ -535,7 +673,13 @@ enum DTextMatchers {
               padding:
                   const EdgeInsets.fromLTRB(leftBorderPadding + 10, 0, 0, 0),
               child: Text.rich(
-                parse(m.namedGroup("main")!, ctx),
+                TextSpan(
+                    children: rawParse(
+                  m.namedGroup("main")!,
+                  ctx: ctx,
+                  anchorKeys: anchorKeys,
+                  anchorTriggerScrolls: anchorTriggerScrolls,
+                )),
                 style: style,
               ),
             ),
@@ -555,15 +699,27 @@ enum DTextMatchers {
             childrenPadding: const EdgeInsets.symmetric(horizontal: 16.0),
             title: /* Selectable */
                 Text.rich(
-              parse(m.namedGroup("title") ?? "", ctx),
+              TextSpan(
+                  children: rawParse(
+                m.namedGroup("title") ?? "",
+                ctx: ctx,
+                anchorKeys: anchorKeys,
+                anchorTriggerScrolls: anchorTriggerScrolls,
+              )),
               style: style,
             ),
             initiallyExpanded: m.namedGroup("expanded") != null,
             children: [
               Text.rich(TextSpan(
                 text: isChildless ? text : null,
-                children:
-                    isChildless ? null : buildChildrenFromMatch(m: m, ctx: ctx),
+                children: isChildless
+                    ? null
+                    : buildChildrenFromMatch(
+                        m: m,
+                        ctx: ctx,
+                        anchorKeys: anchorKeys,
+                        anchorTriggerScrolls: anchorTriggerScrolls,
+                      ),
                 style: style,
               ))
             ],
@@ -580,6 +736,39 @@ enum DTextMatchers {
         ),
       list => defaultParser(
           "${List.generate(m.namedGroup("data")!.length, (index) => tabText).reduce((p, c) => "$p$c")} • $text"),
+      superscript => WidgetSpan(
+          child: Transform.translate(
+              offset: const Offset(0, -4),
+              child: Text.rich(
+                defaultParser(text),
+                textScaler: const TextScaler.linear(.7),
+              ))),
+      subscript => WidgetSpan(
+          child: Transform.translate(
+              offset: const Offset(0, 2),
+              child: Text.rich(
+                defaultParser(text),
+                textScaler: const TextScaler.linear(.7),
+              ))),
+      spoiler => WidgetSpan(
+          child: (() {
+            bool isRevealed = false;
+            return StatefulBuilder(
+              builder: (context, setState) => GestureDetector(
+                child: Text.rich(
+                  defaultParser(text),
+                  style: isRevealed
+                      ? style
+                      : const TextStyle(
+                          color: Colors.black,
+                          backgroundColor: Colors.black,
+                        ),
+                ),
+                onTap: () => setState(() => isRevealed = !isRevealed),
+              ),
+            );
+          })(),
+        ),
       _ => defaultParser(text),
     };
   }
@@ -591,9 +780,18 @@ enum DTextMatchers {
   String getSubPatternFromMatch(RegExpMatch m) =>
       getSubPatternFromPotentialMatch(m)!;
 
-  List<InlineSpan> buildChildrenFromMatch(
-      {required RegExpMatch m, BuildContext? ctx}) {
-    return rawParse(getSubPatternFromMatch(m), ctx);
+  List<InlineSpan> buildChildrenFromMatch({
+    required RegExpMatch m,
+    BuildContext? ctx,
+    Map<String, GlobalKey>? anchorKeys,
+    Map<String, VoidCallback>? anchorTriggerScrolls,
+  }) {
+    return rawParse(
+      getSubPatternFromMatch(m),
+      ctx: ctx,
+      anchorKeys: anchorKeys,
+      anchorTriggerScrolls: anchorTriggerScrolls,
+    );
   }
 }
 
@@ -614,7 +812,14 @@ enum DTextMatchers {
   return m;
 }
 
-List<InlineSpan> rawParse(String dText, [BuildContext? ctx]) {
+List<InlineSpan> rawParse(
+  String dText, {
+  BuildContext? ctx,
+  Map<String, GlobalKey>? anchorKeys,
+  Map<String, VoidCallback>? anchorTriggerScrolls,
+}) {
+  // anchorKeys ??= {};
+  anchorTriggerScrolls ??= {};
   List<InlineSpan> parsed = [/* TextSpan(text: dText) */];
   for (var i = 0, m = firstMatches(dText);
       m != null && i < safety;
@@ -627,9 +832,10 @@ List<InlineSpan> rawParse(String dText, [BuildContext? ctx]) {
         LinkifySpan(
           text: beforeUrlMatch.group(1)!,
           linkifiers: const [util.MyLinkifier()],
-          onOpen: util.defaultOnLinkifyOpen,
+          onOpen: ctx != null
+              ? util.buildDefaultOnE6LinkifyOpen(ctx)
+              : util.defaultOnLinkifyOpen,
           linkStyle: util.defaultLinkStyle,
-          // options: const LinkifyOptions(looseUrl: true)),
           options: util.linkifierOptions,
         ),
       ]);
@@ -640,6 +846,8 @@ List<InlineSpan> rawParse(String dText, [BuildContext? ctx]) {
     parsed.add(m.$2.buildFromMatchRecursive(
       m: m.$1,
       ctx: ctx,
+      anchorKeys: anchorKeys,
+      anchorTriggerScrolls: anchorTriggerScrolls,
     ));
     dText = dText.substring(m.$1.end);
   }
@@ -647,7 +855,9 @@ List<InlineSpan> rawParse(String dText, [BuildContext? ctx]) {
       ? LinkifySpan(
           text: dText,
           linkifiers: const [util.MyLinkifier()],
-          onOpen: util.defaultOnLinkifyOpen,
+          onOpen: ctx != null
+              ? util.buildDefaultOnE6LinkifyOpen(ctx)
+              : util.defaultOnLinkifyOpen,
           linkStyle: util.defaultLinkStyle,
           options: util.linkifierOptions,
         )
@@ -658,9 +868,19 @@ List<InlineSpan> rawParse(String dText, [BuildContext? ctx]) {
 /// Recurses
 ///
 /// https://e621.net/help/dtext
-InlineSpan parse(String dText, [BuildContext? ctx]) {
-  return TextSpan(children: rawParse(dText, ctx));
-}
+InlineSpan parse(
+  String dText, [
+  BuildContext? ctx,
+  Map<String, GlobalKey>? anchorKeys,
+  Map<String, VoidCallback>? anchorTriggerScrolls,
+]) =>
+    TextSpan(
+        children: rawParse(
+      dText,
+      ctx: ctx,
+      anchorKeys: anchorKeys,
+      anchorTriggerScrolls: anchorTriggerScrolls,
+    ));
 
 /// Recurses
 ///

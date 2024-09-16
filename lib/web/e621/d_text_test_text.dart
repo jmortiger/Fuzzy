@@ -1,5 +1,9 @@
 // #region Test Text
 const testText = """
+[#startAnchor]
+[[#startAnchor]]
+[[#endAnchor|End]]
+[[#namedLinks|Named Links]]
 [section=Headers]
 h1.h1
 h2. h2
@@ -23,7 +27,7 @@ MariArt.info
 [quote]Quote[/quote]
 [code]std::cout << "Code Block!";[/code]
 `std::cout << "Code Inline!";`
-[section,expanded=Lists & Tables]
+[section=Lists & Tables]
 * Item 1
 * Item 2
 ** Item 2A
@@ -52,7 +56,6 @@ MariArt.info
 [/table]
 [/section]
 [section=Links]
-[[American Dragon: Jake Long|Wiki Link]] [[American Dragon: Jake Long]]
 Tag search
 {{jun_kobayashi rating:s}}
 Post Link
@@ -77,6 +80,11 @@ ticket
 ticket #1234
 thumb
 thumb #3796501
+[[American Dragon: Jake Long|Named Wiki Link]] [[American Dragon: Jake Long]]
+[[#startAnchor]]
+[[#endAnchor|End]]
+[[malka_(the_lion_king)]]
+[#namedLinks]
 Thank you "@/BaskyCase":https://x.com/BaskyCase & "@/nyaruh1":https://x.com/nyaruh1 for "Tennis Ace":https://wotbasket.itch.io/tennis-ace
 "Twitter":https://x.com/tennisace_vn
 On "Patreon":https://www.patreon.com/tennisace
@@ -95,5 +103,8 @@ back to back https://x.com/tennisace_vn w/ text in between https://x.com/tennisa
 [section]Pretend this is a really large block of text.[/section]
 [section=Titled]This one has a title.[/section]
 [section,expanded=Titled And Expanded]This is expanded and titled.[/section]
-[section,expanded]This is expanded by default.[/section]""";
+[section,expanded]This is expanded by default.[/section]
+[[#startAnchor]]
+[[#endAnchor|End]]
+[#endAnchor]""";
 // #endregion Test Text

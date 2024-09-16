@@ -12,11 +12,13 @@ import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/pages/edit_post_page.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/pages/post_view_page.dart';
+import 'package:fuzzy/pages/wiki_page.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
+import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/platform_finder.dart';
 import 'package:j_util/serialization.dart' as storable;
 import 'package:path_provider/path_provider.dart' as path;
@@ -54,6 +56,7 @@ void main(List<String> args) async {
   final searchText =
       (await CachedSearches.loadFromStorageAsync()).lastOrNull?.searchString;
   await E621AccessData.tryLoad();
+  e621.activeCredentials = E621AccessData.fallbackForced?.cred;
   CachedFavorites.fileFullPath.getItemAsync().ignore();
   SavedDataE6.init();
   try {
@@ -70,6 +73,14 @@ void main(List<String> args) async {
   }
 }
 
+const supportedFirstPathSegments = [
+  "",
+  "posts",
+  "pools",
+  "wiki_pages",
+  "post_sets",
+  "post_edit",
+];
 Route<dynamic>? generateRoute(RouteSettings settings) {
   if (settings.name != null) {
     final url = Uri.parse(settings.name!);
@@ -86,6 +97,54 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
         return MaterialPageRoute(
             builder: (ctx) => buildHomePageWithProviders(
                 searchText: url.queryParameters["tags"]));
+      case WikiPageBuilder.routeNameString:
+        try {
+          try {
+            final v = (settings.arguments as dynamic).wikiPage!;
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (cxt) => WikiPage(wikiPage: v),
+            );
+          } catch (e) {
+            id ??= (settings.arguments as WikiPageParameters?)?.id;
+            if (id != null) {
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (cxt) => WikiPageBuilder.fromId(id: id!),
+              );
+            } else if ((url.queryParameters["search[title]"] ??
+                    url.queryParameters["title"] ??
+                    (settings.arguments as WikiPageParameters?)?.title) !=
+                null) {
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (cxt) => WikiPageBuilder.fromTitle(
+                  title: url.queryParameters["search[title]"] ??
+                      url.queryParameters["title"] ??
+                      (settings.arguments as WikiPageParameters).title!,
+                ),
+              );
+            } else {
+              routeLogger.severe(
+                "Routing failure\n"
+                "\tRoute: ${settings.name}\n"
+                "\tId: $id\n"
+                "\tArgs: ${settings.arguments}",
+              );
+              return null;
+            }
+          }
+        } catch (e, s) {
+          routeLogger.severe(
+            "Routing failure\n"
+            "\tRoute: ${settings.name}\n"
+            "\tId: $id\n"
+            "\tArgs: ${settings.arguments}",
+            e,
+            s,
+          );
+          return null;
+        }
       case PoolViewPageBuilder.routeNameString:
         try {
           try {
@@ -96,7 +155,7 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
                   pool: v is PoolModel ? v : PoolModel.fromInstance(v)),
             );
           } catch (e) {
-            id ??= (settings.arguments as PostViewParameters?)?.id;
+            id ??= (settings.arguments as PoolViewParameters?)?.id;
             if (id != null) {
               return MaterialPageRoute(
                 settings: settings,
@@ -133,7 +192,7 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
                   set: v is SetModel ? v : SetModel.fromInstance(v)),
             );
           } catch (e) {
-            id ??= (settings.arguments as PostViewParameters?)?.id;
+            id ??= (settings.arguments as SetViewParameters?)?.id;
             if (id != null) {
               return MaterialPageRoute(
                 settings: settings,

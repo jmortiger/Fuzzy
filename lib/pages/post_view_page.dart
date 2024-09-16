@@ -11,6 +11,7 @@ import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
+import 'package:fuzzy/pages/wiki_page.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/util/asset_management.dart' as util_a;
 import 'package:fuzzy/web/e621/dtext_formatter.dart' as dt;
@@ -888,43 +889,55 @@ class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
                     showDialog(
                       context: this.context,
                       builder: (context) {
-                        e621.WikiPage? result;
-                        Future<e621.WikiPage>? f;
-                        f = e621
-                            .sendRequest(
-                                E621.initWikiTagSearchRequest(tag: tag))
-                            .then((value) =>
-                                e621.WikiPage.fromRawJson(value.body));
                         return AlertDialog(
+                          title: AppBar(title: Text(tag)),
                           content: SizedBox(
                             width: double.maxFinite,
-                            child: StatefulBuilder(
-                              builder: (context, setState) {
-                                f
-                                    ?.then((v) => setState(() {
-                                          result = v;
-                                          f?.ignore();
-                                          f = null;
-                                        }))
-                                    .ignore();
-                                return SingleChildScrollView(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (f != null)
-                                        // util.spinnerExpanded
-                                        const CircularProgressIndicator()
-                                      else
-                                        result != null
-                                            ? Text.rich(dt.parse(result!.body))
-                                            : const Text("Failed to load"),
-                                    ],
-                                  ),
-                                );
-                              },
+                            child: SingleChildScrollView(
+                              child: WikiPageBuilder.fromTitle(
+                                title: tag,
+                                isFullPage: false,
+                              ),
                             ),
                           ),
                         );
+                        // e621.WikiPage? result;
+                        // Future<e621.WikiPage>? f;
+                        // f = e621
+                        //     .sendRequest(
+                        //         E621.initWikiTagSearchRequest(tag: tag))
+                        //     .then((value) =>
+                        //         e621.WikiPage.fromRawJson(value.body));
+                        // return AlertDialog(
+                        //   content: SizedBox(
+                        //     width: double.maxFinite,
+                        //     child: StatefulBuilder(
+                        //       builder: (context, setState) {
+                        //         f
+                        //             ?.then((v) => setState(() {
+                        //                   result = v;
+                        //                   f?.ignore();
+                        //                   f = null;
+                        //                 }))
+                        //             .ignore();
+                        //         return SingleChildScrollView(
+                        //           child: Column(
+                        //             mainAxisSize: MainAxisSize.min,
+                        //             children: [
+                        //               if (f != null)
+                        //                 // util.spinnerExpanded
+                        //                 const CircularProgressIndicator()
+                        //               else
+                        //                 result != null
+                        //                     ? Text.rich(dt.parse(result!.body))
+                        //                     : const Text("Failed to load"),
+                        //             ],
+                        //           ),
+                        //         );
+                        //       },
+                        //     ),
+                        //   ),
+                        // );
                       },
                     );
                   },
