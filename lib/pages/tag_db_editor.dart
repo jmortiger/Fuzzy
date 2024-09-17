@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:file_saver/file_saver.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/util/util.dart' as util;
@@ -286,21 +288,51 @@ class _TagDbEditorPageState extends State<TagDbEditorPage> {
                   ),
                   TextButton(
                     onPressed: () {
-                      final f = jsonEncode(parsedData);
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          content: SizedBox(
-                            width: double.maxFinite,
-                            height: double.maxFinite,
-                            child: SafeArea(
-                              child: SingleChildScrollView(child: Text(f)),
-                            ),
-                          ),
-                        ),
-                      ).ignore();
+                      compute(jsonEncode, parsedData!)
+                          .then((f) => showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  content: SizedBox(
+                                    width: double.maxFinite,
+                                    height: double.maxFinite,
+                                    child: SafeArea(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Expanded(
+                                            child: SingleChildScrollView(
+                                                child: SelectableText(f)),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => FileSaver.instance
+                                                .saveFile(
+                                                    name:
+                                                        "${parsedData!.length} tags.json",
+                                                    ext: "",
+                                                    bytes: utf8.encode(f))
+                                                .then((v) =>
+                                                    Navigator.pop(context)),
+                                            child: const Text("Save to file"),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ).ignore())
+                          .ignore();
                     },
-                    child: const Text("As Json"),
+                    child: const Text("View as JSON"),
+                  ),
+                  TextButton(
+                    onPressed: () => compute(jsonEncode, parsedData!).then(
+                        (f) => FileSaver.instance
+                            .saveFile(
+                                name: "${parsedData!.length} tags.json",
+                                ext: "",
+                                bytes: utf8.encode(f))
+                            .then((v) => Navigator.pop(context))),
+                    child: const Text("Save as JSON"),
                   ),
                   TextButton(
                     onPressed: () {
@@ -313,8 +345,26 @@ class _TagDbEditorPageState extends State<TagDbEditorPage> {
                                   width: double.maxFinite,
                                   height: double.maxFinite,
                                   child: SafeArea(
-                                    child:
-                                        SingleChildScrollView(child: Text(f)),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Expanded(
+                                          child: SingleChildScrollView(
+                                              child: SelectableText(f)),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => FileSaver.instance
+                                              .saveFile(
+                                                  name:
+                                                      "${parsedData!.length} tags.csv",
+                                                  ext: "",
+                                                  bytes: utf8.encode(f))
+                                              .then((v) =>
+                                                  Navigator.pop(context)),
+                                          child: const Text("Save to file"),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
@@ -322,7 +372,17 @@ class _TagDbEditorPageState extends State<TagDbEditorPage> {
                           )
                           .ignore();
                     },
-                    child: const Text("As CSV"),
+                    child: const Text("View as CSV"),
+                  ),
+                  TextButton(
+                    onPressed: () => makeEncodedCsvStringFull(parsedData!).then(
+                        (f) => FileSaver.instance
+                            .saveFile(
+                                name: "${parsedData!.length} tags.csv",
+                                ext: "",
+                                bytes: utf8.encode(f))
+                            .then((v) => Navigator.pop(context))),
+                    child: const Text("Save as CSV"),
                   ),
                 ],
               ),

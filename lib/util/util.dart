@@ -169,25 +169,29 @@ VoidCallback generateAlertDialog<DialogOutput>(
 dynamic colorToJson(Color c) => c.value;
 Color colorFromJson(json) => Color(json as int);
 
+/// For easy chaining
 extension StringPrint on String {
+  /// For easy chaining
   String printMe({
     lm.LogLevel level = lm.LogLevel.FINEST,
     Object? error,
     StackTrace? stackTrace,
     Zone? zone,
+    lm.FileLogger? logger,
   }) {
-    _print(this, level, error, stackTrace, zone);
+    (logger ?? _logger).log(level, this, error, stackTrace, zone);
     return this;
   }
 }
 
-T castMap<T>(dynamic e, int i, Iterable<dynamic> l) => e as T;
-final nonNumeric = RegExp(r'[^1234567890]');
-final TextInputFormatter numericFormatter = TextInputFormatter.withFunction(
-  (oldValue, newValue) =>
-      (nonNumeric.hasMatch(newValue.text)) ? oldValue : newValue,
+// final nonNumeric = RegExp(r'[^1234567890]');
+RegExp get nonNumeric => RegExp(r'[^0-9]');
+// ignore: unnecessary_late
+late final numericFormatter = TextInputFormatter.withFunction(
+  (old, newV) => nonNumeric.hasMatch(newV.text) ? old : newV,
 );
-final TextInputFormatter parsableDecimal = getParsableDecimalFormatter();
+// ignore: unnecessary_late
+late final TextInputFormatter parsableDecimal = getParsableDecimalFormatter();
 
 TextInputFormatter getParsableDecimalFormatter([bool Function(double)? test]) =>
     TextInputFormatter.withFunction(

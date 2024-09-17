@@ -12,6 +12,7 @@ import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/d_text_test_text.dart' as dtext;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
+import 'package:fuzzy/web/e621/search_helper.dart' as sh;
 import 'package:fuzzy/widgets/w_back_button.dart';
 import 'package:fuzzy/widgets/w_d_text_preview.dart';
 import 'package:fuzzy/widgets/w_fab_builder.dart';
@@ -404,6 +405,55 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                             initialText: dtext.testText,
                             maxLines: 5,
                           )),
+                        ),
+                      ));
+            },
+          ),
+          ListTile(
+            title: const Text("Test Search MetaTag parsing"),
+            leading: const Icon(Icons.question_mark),
+            onTap: () {
+              Navigator.pop(context);
+              showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                        content: SizedBox(
+                          width: double.maxFinite,
+                          height: double.maxFinite,
+                          child: WBackButton.noOverlay(
+                            child: (() {
+                              var inputText = "",
+                                  mts = sh.MetaTagSearchData.fromSearchString(
+                                      inputText);
+                              strip() => sh.removeMetaTags(inputText);
+                              stripMatched() =>
+                                  mts.removeMatchedMetaTags(inputText);
+                              return StatefulBuilder(
+                                builder: (context, setState) => Column(
+                                  children: [
+                                    const Text("MetaTag String"),
+                                    Text(mts.toString()),
+                                    const Text("String stripped of metatags"),
+                                    Text(strip()),
+                                    const Text("Resultant Search"),
+                                    Text("${strip()}${mts.toString()}"),
+                                    const Text(
+                                        "String stripped of matched metatags"),
+                                    Text(stripMatched()),
+                                    const Text("Resultant Search"),
+                                    Text("${stripMatched()}${mts.toString()}"),
+                                    TextField(
+                                      onChanged: (value) => setState(
+                                        () => mts = sh.MetaTagSearchData
+                                            .fromSearchString(
+                                                inputText = value),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            })(),
+                          ),
                         ),
                       ));
             },

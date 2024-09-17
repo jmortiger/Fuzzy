@@ -579,6 +579,7 @@ class SearchViewData {
         lazyLoad: false,
         lazyBuilding: false,
         preferSetShortname: true,
+        tagDbPath: "",
         maxCharsInPostInfo: 100,
       );
   final int postsPerPage;
@@ -592,6 +593,7 @@ class SearchViewData {
   final bool lazyLoad;
   final bool lazyBuilding;
   final bool preferSetShortname;
+  final String tagDbPath;
   final int maxCharsInPostInfo;
   const SearchViewData({
     required this.postsPerPage,
@@ -605,6 +607,7 @@ class SearchViewData {
     required this.lazyLoad,
     required this.lazyBuilding,
     required this.preferSetShortname,
+    required this.tagDbPath,
     required this.maxCharsInPostInfo,
   });
   factory SearchViewData.fromJson(JsonOut json) => SearchViewData(
@@ -629,6 +632,7 @@ class SearchViewData {
         lazyBuilding: json["lazyBuilding"] ?? defaultData.lazyBuilding,
         preferSetShortname:
             json["preferSetShortname"] ?? defaultData.preferSetShortname,
+        tagDbPath: json["tagDbPath"] ?? defaultData.tagDbPath,
         maxCharsInPostInfo:
             json["maxCharsInPostInfo"] ?? defaultData.maxCharsInPostInfo,
       );
@@ -649,6 +653,7 @@ class SearchViewData {
         "lazyLoad": lazyLoad,
         "lazyBuilding": lazyBuilding,
         "preferSetShortname": preferSetShortname,
+        "tagDbPath": tagDbPath,
         "maxCharsInPostInfo": maxCharsInPostInfo,
       };
 }
@@ -717,6 +722,10 @@ class SearchView implements SearchViewData {
   @override
   bool get preferSetShortname => _preferSetShortname;
   set preferSetShortname(bool v) => _preferSetShortname = v;
+  String _tagDbPath;
+  @override
+  String get tagDbPath => _tagDbPath;
+  set tagDbPath(String v) => _tagDbPath = v;
   int _maxCharsInPostInfo;
   @override
   int get maxCharsInPostInfo => _maxCharsInPostInfo;
@@ -734,6 +743,7 @@ class SearchView implements SearchViewData {
     required bool lazyLoad,
     required bool lazyBuilding,
     required bool preferSetShortname,
+    required String tagDbPath,
   })  : _postsPerPage = postsPerPage,
         _postsPerRow = postsPerRow,
         _horizontalGridSpace = horizontalGridSpace,
@@ -745,6 +755,7 @@ class SearchView implements SearchViewData {
         _lazyLoad = lazyLoad,
         _lazyBuilding = lazyBuilding,
         _preferSetShortname = preferSetShortname,
+        _tagDbPath = tagDbPath,
         _maxCharsInPostInfo = maxCharsInPostInfo;
 
   factory SearchView.fromData(SearchViewData searchView) => SearchView(
@@ -759,6 +770,7 @@ class SearchView implements SearchViewData {
         lazyLoad: searchView.lazyLoad,
         lazyBuilding: searchView.lazyBuilding,
         preferSetShortname: searchView.preferSetShortname,
+        tagDbPath: searchView.tagDbPath,
         maxCharsInPostInfo: searchView.maxCharsInPostInfo,
       );
   void overwriteWithData(SearchViewData searchView) {
@@ -773,6 +785,7 @@ class SearchView implements SearchViewData {
     _lazyLoad = searchView.lazyLoad;
     _lazyBuilding = searchView.lazyBuilding;
     _preferSetShortname = searchView.preferSetShortname;
+    _tagDbPath = searchView.tagDbPath;
     _maxCharsInPostInfo = searchView.maxCharsInPostInfo;
   }
 
@@ -788,6 +801,7 @@ class SearchView implements SearchViewData {
         lazyLoad: lazyLoad,
         lazyBuilding: lazyBuilding,
         preferSetShortname: preferSetShortname,
+        tagDbPath: tagDbPath,
         maxCharsInPostInfo: maxCharsInPostInfo,
       );
 

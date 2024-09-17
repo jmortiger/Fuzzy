@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
@@ -259,6 +260,38 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
         ExpansionTile(
             title: Text("Search View Settings", style: SettingsPage.titleStyle),
             children: [
+              ListTile(
+                title: TextField(
+                  onTap: () => FilePicker.platform.pickFiles(
+                      allowedExtensions: ["gz", "csv"],
+                      type: FileType.custom,
+                      initialDirectory: SearchView.i.tagDbPath.isNotEmpty
+                          ? SearchView.i.tagDbPath.substring(
+                              0,
+                              SearchView.i.tagDbPath
+                                  .lastIndexOf(RegExp(r"\\|/")))
+                          : null).then(
+                    (value) {
+                      final v = (!Platform.isWeb
+                              ? value?.paths.firstOrNull ??
+                                  value?.files.firstOrNull?.path
+                              : null) ??
+                          SearchView.i.tagDbPath;
+                      if (v != SearchView.i.tagDbPath) {
+                        setState(() {
+                          SearchView.i.tagDbPath = v;
+                        });
+                      }
+                    },
+                  ),
+                  readOnly: true,
+                  decoration: const InputDecoration(
+                      labelText: "Tag database path",
+                      hintText: "Tag database path"),
+                  controller: util.defaultSelection(SearchView.i.tagDbPath),
+                ),
+                subtitle: const Text("Used for search suggestions."),
+              ),
               WNumSliderField<int>(
                 min: SearchViewData.postsPerRowBounds.min,
                 max: SearchViewData.postsPerRowBounds.max,

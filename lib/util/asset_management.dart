@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart'
-    show AssetImage, BoxFit, ResizeImage, applyBoxFit;
+    show AssetImage, BoxFit, ResizeImage, VoidCallback, applyBoxFit;
+import 'package:fuzzy/log_management.dart' as lm;
 
 const placeholderPath = "assets/snake_loader.webp";
 const placeholder = AssetImage(placeholderPath);
@@ -157,3 +162,66 @@ typedef ImageRenderInfo = ({
     aspectRatio: width / height,
   );
 }
+
+Future<String?> tryLoadSingleTextFile({
+  String? dialogTitle,
+  String? initialDirectory,
+  FileType type = FileType.any,
+  List<String>? allowedExtensions,
+  dynamic Function(FilePickerStatus)? onFileLoading,
+  bool allowCompression = true,
+  int compressionQuality = 30,
+  // bool allowMultiple = false,
+  bool withData = false,
+  bool withReadStream = false,
+  bool lockParentWindow = false,
+  bool readSequential = false,
+  lm.FileLogger? logger,
+  VoidCallback? afterSelectionCallback,
+}) =>
+    FilePicker.platform
+        .pickFiles(
+      dialogTitle: dialogTitle,
+      allowedExtensions: allowedExtensions,
+      type: allowedExtensions != null ? FileType.custom : type,
+      allowCompression: allowCompression,
+      compressionQuality: compressionQuality,
+      // allowMultiple: allowMultiple,
+      initialDirectory: initialDirectory,
+      onFileLoading: onFileLoading,
+      lockParentWindow: lockParentWindow,
+      withData: withData,
+      readSequential: readSequential,
+      withReadStream: withReadStream,
+    )
+        .then((result) {
+      afterSelectionCallback?.call();
+      Future<String?> f;
+      if (result == null) {
+        // User canceled the picker
+        return null;
+      } else {
+        if (result.files.single.readStream != null) {
+          f = utf8.decodeStream(result.files.single.readStream!);
+        } else if (result.files.single.bytes != null) {
+          f = Future.sync(
+              () => utf8.decode(result.files.single.bytes!.toList()));
+        } else {
+          try {
+            f = (File(result.files.single.path!).readAsString()
+                    as Future<String?>)
+                .onError((e, s) {
+              logger?.severe("Failed import", e, s);
+              return null;
+            });
+          } catch (e, s) {
+            logger?.severe("Failed import", e, s);
+            return null;
+          }
+        }
+      }
+      return f.onError((e, s) {
+        logger?.severe("Failed import", e, s);
+        return null;
+      });
+    });

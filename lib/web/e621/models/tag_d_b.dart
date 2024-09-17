@@ -75,9 +75,9 @@ String _rootEncodeCsvFromRecord(
           TagCategory category,
           int postCount,
         }) e) =>
-    "${e.id},${e.name},${e.category},${e.postCount}";
+    "${e.id},${e.name},${e.category.index},${e.postCount}";
 String _rootEncodeCsvFromEntry(TagDBEntryFull e) =>
-    "${e.id},${e.name},${e.category},${e.postCount}";
+    "${e.id},${e.name},${e.category.index},${e.postCount}";
 String encodeCsvString(List<TagDBEntryFull> entries) =>
     "${entries.map((e) => _rootEncodeCsvFromEntry(e)).fold(
           firstLine,
@@ -143,16 +143,17 @@ TagDBEntryFull parseTagEntryFullCsvString(String e) {
 // #endregion Parse Direct
 
 Future<String> makeEncodedCsvStringFull(List<TagDBEntryFull> entries) async =>
-    compute((List<TagDBEntryFull> entries) => encodeCsvString(entries), entries,
+    compute(encodeCsvString, entries,
         debugLabel: "Make CSV String From List Full");
 List<TagDBEntryFull> fromCsvStringFull(String csv) => (csv.split("\n")
       ..removeAt(0)
       ..removeLast())
-    .map((e) => /* TagDBEntryFull._fromRecord( */
-        parseTagEntryFullCsvString(e)) //)
+    .map(parseTagEntryFullCsvString)
+    // .map((e) => /* TagDBEntryFull._fromRecord( */
+    //     parseTagEntryFullCsvString(e)) //)
     .toList();
 Future<List<TagDBEntryFull>> makeFromCsvStringFull(String csv) async =>
-    compute((String csv) => fromCsvStringFull(csv), csv,
+    compute(fromCsvStringFull, csv,
         debugLabel: "Make List Full From CSV String");
 List<TagDBEntry> fromCsvString(String csv) => (csv.split("\n")
       ..removeAt(0)
@@ -160,7 +161,7 @@ List<TagDBEntry> fromCsvString(String csv) => (csv.split("\n")
     .map((e) => TagDBEntry._fromRecord(parseTagEntryCsvString(e)))
     .toList();
 Future<List<TagDBEntry>> makeFromCsvString(String csv) async =>
-    compute((String csv) => fromCsvString(csv), csv,
+    compute(fromCsvString, csv,
         debugLabel: "Make List From CSV String");
 Future<List<T>> makeTypeFromCsvString<T extends TagDBEntry>(String csv) =>
     switch (T) {

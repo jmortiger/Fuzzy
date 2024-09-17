@@ -5,15 +5,13 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/util.dart';
+import 'package:fuzzy/web/models/image_listing.dart';
 import 'package:j_util/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
-
-import '../../models/image_listing.dart';
-
-import 'package:fuzzy/log_management.dart' as lm;
 
 // ignore: unnecessary_late
 late final _lRecord = lm.generateLogger("E6Models");
@@ -191,7 +189,7 @@ final class E6PostsSync extends E6Posts {
   //       posts.indicesWhere((e, i, l) => !e.file.hasValidUrl).toSet();
   factory E6PostsSync.fromJson(JsonOut json) => E6PostsSync(
       posts: (json["posts"] as List)
-          .mapAsList((e, i, l) => E6PostResponse.fromJson(e)));
+          .mapAsList((e, i, l) => E6PostMutable.fromJson(e)));
   factory E6PostsSync.fromRawJson(String json) =>
       E6PostsSync.fromJson(jsonDecode(json));
 

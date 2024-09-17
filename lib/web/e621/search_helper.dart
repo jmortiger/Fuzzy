@@ -2,11 +2,18 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/map_notifier.dart';
 
-mixin SearchableEnum on Enum {
+mixin SearchableEnum /* <T extends SearchableEnum<T>> */ on Enum {
   String get searchString;
+  // T? _retrieve(String str);
+  // (Modifier, T)? _retrieveWithModifier(String str);
+  // Iterable<(Modifier, T)>? _retrieveAllWithModifier(String str);
 }
 
-enum Order with SearchableEnum {
+mixin SearchableStatefulEnum<T> on Enum {
+  String toSearch(T state);
+}
+
+enum Order with SearchableEnum /* <Order> */ {
   /// Oldest to newest
   id("id"),
 
@@ -79,8 +86,12 @@ enum Order with SearchableEnum {
   // static const mPixelsAscending = mPixelsAsc;
   // static const fileSizeAscending = fileSizeAsc;
   // static const durationAscending = durationAsc;
-  static const matcherStr = "($prefix)([^\\s]+)";
-  static final matcher = RegExp(matcherStr);
+  static const matcherNonStrictStr = "($prefix)([^\\s]+)";
+  static const matcherStr = "($prefix)(id|random|score|score_asc|"
+      "favcount|favcount_asc|tagcount|tagcount_asc|comment_count|"
+      "comment_count_asc|comment_bumped|comment_bumped_asc|mpixels|"
+      "mpixels_asc|filesize|filesize_asc|landscape|portrait|change|"
+      r"duration|duration_asc)(?=\s|$)";
   static RegExp get matcherGenerated => RegExp(matcherStr);
   static const prefix = "order:";
   final String tagSuffix;
@@ -160,7 +171,7 @@ enum Order with SearchableEnum {
         String t when t == durationAsc.name => durationAsc,
         _ => throw ArgumentError.value(text, "text", "Value not of type"),
       };
-  static Order? retrieveOrderFromSearchString(String str) {
+  static Order? retrieve(String str) {
     try {
       return Order.fromTagText(
           Order.matcherGenerated.firstMatch(str)!.group(2)!);
@@ -168,11 +179,35 @@ enum Order with SearchableEnum {
       return null;
     }
   }
+
+  static (Modifier, Order)? retrieveWithModifier(String str) {
+    final v = retrieve(str);
+    return v == null ? null : (Modifier.add, v);
+  }
+
+  static Iterable<(Modifier, Order)>? retrieveAllWithModifier(String str) {
+    try {
+      return Order.matcherGenerated
+          .allMatches(str)
+          .map((e) => (Modifier.add, Order.fromTagText(e.group(2)!)));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // @override
+  // Order? _retrieve(String str) => retrieve(str);
+  // @override
+  // (Modifier, Order)? _retrieveWithModifier(String str) =>
+  //     retrieveWithModifier(str);
+  // @override
+  // Iterable<(Modifier, Order)>? _retrieveAllWithModifier(String str) =>
+  //     retrieveAllWithModifier(str);
 }
 
 const prefixModifierMatcher = r"[\-\~\+]?";
 
-enum Rating with SearchableEnum {
+enum Rating with SearchableEnum /* <Rating> */ {
   safe,
   questionable,
   explicit;
@@ -180,8 +215,8 @@ enum Rating with SearchableEnum {
   static const matcherNonStrictStr =
       "($prefixModifierMatcher)($prefix)([^\\s]+)";
   static RegExp get matcherNonStrictGenerated => RegExp(matcherNonStrictStr);
-  static const matcherStr =
-      "($prefixModifierMatcher)($prefix)(s|q|e|safe|questionable|explicit)";
+  static const matcherStr = "($prefixModifierMatcher)($prefix)"
+      r"(s|q|e|safe|questionable|explicit)(?=\s|$)";
   static RegExp get matcherGenerated => RegExp(matcherStr);
   static const prefix = "rating:";
   @override
@@ -210,7 +245,20 @@ enum Rating with SearchableEnum {
         "$prefix:safe" => safe,
         _ => Rating.fromTagText(str),
       };
-  static (Modifier, Rating)? retrieveRatingFromSearchString(String str) {
+
+  // @override
+  // Rating? _retrieve(String str) => retrieve(str);
+  static Rating? retrieve(String str) {
+    if (!Rating.matcherGenerated.hasMatch(str)) {
+      return null;
+    }
+    return Rating.fromTagText(matcherGenerated.firstMatch(str)!.group(3)!);
+  }
+
+  // @override
+  // (Modifier, Rating)? _retrieveWithModifier(String str) =>
+  //     retrieveWithModifier(str);
+  static (Modifier, Rating)? retrieveWithModifier(String str) {
     if (!Rating.matcherGenerated.hasMatch(str)) {
       return null;
     }
@@ -303,8 +351,7 @@ enum Modifier {
 
   const Modifier();
   factory Modifier.fromString(String s) => switch (s) {
-        "" => Modifier.add,
-        "+" => Modifier.add,
+        "+" || "" => Modifier.add,
         "-" => Modifier.remove,
         "~" => Modifier.or,
         _ => throw UnsupportedError("type not supported"),
@@ -400,12 +447,12 @@ enum FileType with SearchableEnum {
   webm;
 
   static const matcherNonStrictStr =
-      "($prefixModifierMatcher)($prefixFull)([^\\s]+)";
+      "($prefixModifierMatcher)($prefixFull)" r"([^\s]+)";
   static final matcherNonStrict = RegExp(matcherNonStrictStr);
   static RegExp get matcherNonStrictGenerated => RegExp(matcherNonStrictStr);
   static const matcherStr = "($prefixModifierMatcher)"
       "($prefixFull)"
-      "(jpg|png|gif|swf|webm)";
+      r"(jpg|png|gif|swf|webm)(?=\s|$)";
   static final matcher = RegExp(matcherStr);
   static RegExp get matcherGenerated => RegExp(matcherStr);
   static const prefixFull = "type:";
@@ -432,7 +479,7 @@ enum FileType with SearchableEnum {
         _ => FileType.fromTagText(str),
       };
 
-  static List<(Modifier, FileType)>? retrieveFromSearchString(String str) {
+  static List<(Modifier, FileType)>? retrieveAllWithModifier(String str) {
     if (!FileType.matcherGenerated.hasMatch(str)) {
       return null;
     }
@@ -451,7 +498,7 @@ enum FileType with SearchableEnum {
   }
 }
 
-enum BooleanSearchTag {
+enum BooleanSearchTag with SearchableStatefulEnum<bool> {
   isChild("ischild"),
   isParent("isparent"),
   hasSource("hassource"),
@@ -495,28 +542,96 @@ enum BooleanSearchTag {
       };
   String toSearchTagNullable(bool? value) =>
       value == null ? "" : "$tagPrefix:$value";
-  String toSearchTag(bool value) => "$tagPrefix:$value";
-  static const String matcherStr =
-      "($prefixModifierMatcher)(ischild|isparent|hassource|hasdescription|ratinglocked|notelocked|inpool|pending_replacements):(true|false)";
+  @override
+  String toSearch(bool state) => "$tagPrefix:$state";
+
+  static const String matcherStr = "($prefixModifierMatcher)"
+      r"(ischild|isparent|hassource|hasdescription|ratinglocked|notelocked|inpool|pending_replacements):(true|false)";
   static RegExp get matcher => RegExp(matcherStr);
-  static List<(BooleanSearchTag, bool)>? retrieveFromSearchString(String str) {
+  // static List<(Modifier, (BooleanSearchTag, bool))>? retrieveAllWithModifier(
+  //     String str) {
+  //   if (!BooleanSearchTag.matcher.hasMatch(str)) {
+  //     return null;
+  //   }
+  //   validate(Set<(Modifier, (BooleanSearchTag, bool))> set,
+  //       (Modifier, (BooleanSearchTag, bool)) e) {
+  //     final prior =
+  //         set.firstWhere((element) => element.$1 == e.$1, orElse: () => e);
+  //     return switch (prior) {
+  //       (Modifier m, (_, bool b)) when m == e.$1 && b == e.$2.$2 => set
+  //         ..remove(prior)
+  //         ..add(e),
+  //       (Modifier m, (_, bool b)) when m == e.$1 && b != e.$2.$2 => set..remove(prior),
+  //       (Modifier m, (_, bool b)) when m != e.$1 && b == e.$2.$2 => switch ((m,b,e.$1)) {
+  //         (Modifier.or, _, Modifier.add) || (Modifier.or, _, Modifier.remove) => set..remove(prior)..add(e),
+  //         (Modifier.add, _, Modifier.or) || (Modifier.remove, _, Modifier.or) => set,
+  //         (Modifier p1, bool p2,Modifier c) when p1 == Modifier.or =>set..remove(prior)..add(e),
+  //         _ => throw UnsupportedError("type not supported"),
+  //       },
+  //       (Modifier m, (_, bool b)) when m != e.$1 && b == e.$2.$2 => switch ((m,b,e.$1,e.$2.$2)) {
+  //         (Modifier p1, bool p2,Modifier c1,bool c2) when p1 == Modifier.or =>set..remove(prior),
+  //         _ => throw UnsupportedError("type not supported"),
+  //       },
+  //     };
+  //   }
+
+  //   final ms = BooleanSearchTag.matcher.allMatches(str);
+  //   final tags = ms.fold(
+  //       <(Modifier, (BooleanSearchTag, bool))>{},
+  //       (previousValue, e) =>
+  //           validate(previousValue, retrieveWithModifier(e.group(0)!))
+  //       // previousValue..add(retrieveWithModifier(e.group(0)!)),
+  //       );
+  //   return tags.toList();
+  // }
+
+  static List<(BooleanSearchTag, bool)>? retrieveAll(String str) {
     if (!BooleanSearchTag.matcher.hasMatch(str)) {
       return null;
     }
+    validate(Set<(BooleanSearchTag, bool)> set, (BooleanSearchTag, bool) e) {
+      final prior =
+          set.firstWhere((element) => element.$1 == e.$1, orElse: () => e);
+      return switch (prior.$2) {
+        bool t when t == e.$2 => set
+          ..remove(prior)
+          ..add(e),
+        bool t when t != e.$2 => set..remove(prior),
+        true || false => throw UnimplementedError(),
+      };
+    }
+
     final ms = BooleanSearchTag.matcher.allMatches(str);
     final tags = ms.fold(
-      <(BooleanSearchTag, bool)>{},
-      (previousValue, e) =>
-          previousValue..add(parseSearchFragment(e.group(0)!)),
-    );
+        <(BooleanSearchTag, bool)>{},
+        (previousValue, e) =>
+            validate(previousValue, parseSearchFragment(e.group(0)!))
+        // previousValue..add(parseSearchFragment(e.group(0)!)),
+        );
     return tags.toList();
+  }
+
+  static (Modifier, (BooleanSearchTag, bool))? retrieveWithModifier(
+      String str) {
+    final m = BooleanSearchTag.matcher.firstMatch(str);
+    return m == null
+        ? null
+        : (
+            Modifier.fromString(m.group(1)!),
+            (BooleanSearchTag.fromTagText(m.group(2)!), bool.parse(m.group(3)!))
+          );
   }
 
   static (BooleanSearchTag, bool)? tryParseSearchFragment(String str) {
     final m = BooleanSearchTag.matcher.firstMatch(str);
     return m == null
         ? null
-        : (BooleanSearchTag.fromTagText(m.group(1)!), m.group(2)! == "true");
+        : (
+            BooleanSearchTag.fromTagText(m.group(2)!),
+            Modifier.fromString(m.group(1)!) != Modifier.remove
+                ? bool.parse(m.group(3)!)
+                : !bool.parse(m.group(3)!)
+          );
   }
 
   static (BooleanSearchTag, bool) parseSearchFragment(String str) =>
@@ -533,8 +648,8 @@ enum Status with SearchableEnum {
 
   static const prefix = "status";
   static const prefixFull = "status:";
-  static const String matcherStr =
-      "($prefixModifierMatcher)$prefixFull(pending|active|deleted|flagged|modqueue|any)";
+  static const String matcherStr = "($prefixModifierMatcher)$prefixFull"
+      r"(pending|active|deleted|flagged|modqueue|any)(?=\s|$)";
   static RegExp get matcher => RegExp(matcherStr);
 
   @override
@@ -558,7 +673,7 @@ enum Status with SearchableEnum {
         _ => Status.fromTagText(str),
       };
 
-  static List<(Modifier, Status)>? retrieveFromSearchString(String str) {
+  static List<(Modifier, Status)>? retrieveAllWithModifier(String str) {
     if (!Status.matcher.hasMatch(str)) {
       return null;
     }
@@ -747,20 +862,11 @@ class MetaTagSearchData extends ChangeNotifier {
     _status.addListener(_listener);
   }
   void _listener() => notifyListeners();
-  static Order? retrieveOrderFromSearchString(String str) {
-    try {
-      return Order.fromTagText(
-          Order.matcherGenerated.firstMatch(str)!.group(2)!);
-    } catch (e) {
-      return null;
-    }
-  }
 
   factory MetaTagSearchData.fromSearchString(String str) {
-    // throw UnimplementedError(
-    //     "MetaTagSearchData.fromSearchString not implemented");
-    final r = Rating.retrieveRatingFromSearchString(str);
-    final b = BooleanSearchTag.retrieveFromSearchString(str);
+    if (str.isEmpty) return MetaTagSearchData();
+    final r = Rating.retrieveWithModifier(str);
+    final b = BooleanSearchTag.retrieveAll(str);
     bool? isChild,
         isParent,
         pendingReplacements,
@@ -798,13 +904,13 @@ class MetaTagSearchData extends ChangeNotifier {
       }
     }
     return MetaTagSearchData.req(
-      order: Order.retrieveOrderFromSearchString(str),
+      order: Order.retrieve(str),
       addRating: r?.$1 == Modifier.add
           ? true
           : r?.$1 == Modifier.remove
               ? false
               : null,
-      rating: Rating.retrieveRatingFromSearchString(str)?.$2 ?? defaultRating,
+      rating: Rating.retrieveWithModifier(str)?.$2 ?? defaultRating,
       isChild: isChild,
       isParent: isParent,
       pendingReplacements: pendingReplacements,
@@ -813,13 +919,13 @@ class MetaTagSearchData extends ChangeNotifier {
       ratingLocked: ratingLocked,
       noteLocked: noteLocked,
       inPool: inPool,
-      status: Status.retrieveFromSearchString(str)
+      status: Status.retrieveAllWithModifier(str)
               ?.fold<Map<Status, Modifier>>({}, (prior, e) {
             prior[e.$2] = e.$1;
             return prior;
           }) ??
           {},
-      types: FileType.retrieveFromSearchString(str)
+      types: FileType.retrieveAllWithModifier(str)
               ?.fold<Map<FileType, Modifier>>({}, (prior, e) {
             prior[e.$2] = e.$1;
             return prior;
@@ -893,29 +999,28 @@ class MetaTagSearchData extends ChangeNotifier {
   String get ratingString => addRating != null
       ? " ${addRating! ? "" : "-"}${rating.searchString}"
       : "";
-  String get isChildString => isChild == null
-      ? ""
-      : " ${BooleanSearchTag.isChild.toSearchTag(isChild!)}";
+  String get isChildString =>
+      isChild == null ? "" : " ${BooleanSearchTag.isChild.toSearch(isChild!)}";
   String get isParentString => isParent == null
       ? ""
-      : " ${BooleanSearchTag.isParent.toSearchTag(isParent!)}";
+      : " ${BooleanSearchTag.isParent.toSearch(isParent!)}";
   String get pendingReplacementsString => pendingReplacements == null
       ? ""
-      : " ${BooleanSearchTag.pendingReplacements.toSearchTag(pendingReplacements!)}";
+      : " ${BooleanSearchTag.pendingReplacements.toSearch(pendingReplacements!)}";
   String get hasSourceString => hasSource == null
       ? ""
-      : " ${BooleanSearchTag.hasSource.toSearchTag(hasSource!)}";
+      : " ${BooleanSearchTag.hasSource.toSearch(hasSource!)}";
   String get hasDescriptionString => hasDescription == null
       ? ""
-      : " ${BooleanSearchTag.hasDescription.toSearchTag(hasDescription!)}";
+      : " ${BooleanSearchTag.hasDescription.toSearch(hasDescription!)}";
   String get ratingLockedString => ratingLocked == null
       ? ""
-      : " ${BooleanSearchTag.ratingLocked.toSearchTag(ratingLocked!)}";
+      : " ${BooleanSearchTag.ratingLocked.toSearch(ratingLocked!)}";
   String get noteLockedString => noteLocked == null
       ? ""
-      : " ${BooleanSearchTag.noteLocked.toSearchTag(noteLocked!)}";
+      : " ${BooleanSearchTag.noteLocked.toSearch(noteLocked!)}";
   String get inPoolString =>
-      inPool == null ? "" : " ${BooleanSearchTag.inPool.toSearchTag(inPool!)}";
+      inPool == null ? "" : " ${BooleanSearchTag.inPool.toSearch(inPool!)}";
   // #endregion toString Properties
 
   @override
@@ -932,6 +1037,35 @@ class MetaTagSearchData extends ChangeNotifier {
       ratingLockedString +
       noteLockedString +
       inPoolString;
+  String removeMatchedMetaTags(String str) {
+    return str.replaceAll(
+        RegExp("($orderString)|"
+            "($ratingString)|"
+            "($typeString)|"
+            "($statusString)|"
+            "($isChildString)|"
+            "($isParentString)|"
+            "($pendingReplacementsString)|"
+            "($hasSourceString)|"
+            "($hasDescriptionString)|"
+            "($ratingLockedString)|"
+            "($noteLockedString)|"
+            "($inPoolString)"),
+        "");
+    // .replaceAll(RegExp(r"\s{2,}"), " ");
+  }
+}
+
+String removeMetaTags(String str) {
+  return str
+      .replaceAll(
+          RegExp("(${Rating.matcherStr})|"
+              "(${BooleanSearchTag.matcherStr})|"
+              "(${Order.matcherStr})|"
+              "(${Status.matcherStr})|"
+              "(${FileType.matcherStr})"),
+          "")
+      .replaceAll(RegExp(r"\s{2,}"), " ");
 }
 
 const modifierTagCompleteListString = [
