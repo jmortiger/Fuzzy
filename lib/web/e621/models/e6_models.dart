@@ -10,7 +10,7 @@ import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/util.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
-import 'package:j_util/e621.dart' as e621;
+import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
 // ignore: unnecessary_late

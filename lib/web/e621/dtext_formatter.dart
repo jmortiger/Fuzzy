@@ -5,7 +5,7 @@ import 'package:fuzzy/web/e621/colors.dart' as e6_color;
 import 'package:fuzzy/util/html_colors.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/widgets/w_post_thumbnail.dart';
-import 'package:j_util/e621_models.dart';
+import 'package:e621/e621_models.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
 // ignore: unnecessary_late

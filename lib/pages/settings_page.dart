@@ -11,7 +11,7 @@ import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/models/tag_subscription.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/widgets/w_image_result.dart';
-import 'package:j_util/e621.dart' as e621;
+import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
 // #region Logger
@@ -235,6 +235,11 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               name: "Upvote on favorite",
               setVal: (bool val) => AppSettings.i!.upvoteOnFavorite = val,
             ),
+            WBooleanField(
+              getVal: () => AppSettings.i!.enableDownloads,
+              name: "Enable downloads",
+              setVal: (bool val) => AppSettings.i!.enableDownloads = val,
+            ),
             // if (!AppSettings.i!.autoLoadUserProfile)
             //   WBooleanField(
             //     getVal: () => AppSettings.i!.autoLoadUserProfile,
@@ -258,202 +263,198 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
           ],
         ),
         ExpansionTile(
-            title: Text("Search View Settings", style: SettingsPage.titleStyle),
-            children: [
-              ListTile(
-                title: TextField(
-                  onTap: () => FilePicker.platform.pickFiles(
-                      allowedExtensions: ["gz", "csv"],
-                      type: FileType.custom,
-                      initialDirectory: SearchView.i.tagDbPath.isNotEmpty
-                          ? SearchView.i.tagDbPath.substring(
-                              0,
-                              SearchView.i.tagDbPath
-                                  .lastIndexOf(RegExp(r"\\|/")))
-                          : null).then(
-                    (value) {
-                      final v = (!Platform.isWeb
-                              ? value?.paths.firstOrNull ??
-                                  value?.files.firstOrNull?.path
-                              : null) ??
-                          SearchView.i.tagDbPath;
-                      if (v != SearchView.i.tagDbPath) {
-                        setState(() {
-                          SearchView.i.tagDbPath = v;
-                        });
-                      }
-                    },
-                  ),
-                  readOnly: true,
-                  decoration: const InputDecoration(
-                      labelText: "Tag database path",
-                      hintText: "Tag database path"),
-                  controller: util.defaultSelection(SearchView.i.tagDbPath),
+          title: Text("Search View Settings", style: SettingsPage.titleStyle),
+          children: [
+            ListTile(
+              title: TextField(
+                onTap: () => FilePicker.platform.pickFiles(
+                    allowedExtensions: ["gz", "csv"],
+                    type: FileType.custom,
+                    initialDirectory: SearchView.i.tagDbPath.isNotEmpty
+                        ? SearchView.i.tagDbPath.substring(0,
+                            SearchView.i.tagDbPath.lastIndexOf(RegExp(r"\\|/")))
+                        : null).then(
+                  (value) {
+                    final v = (!Platform.isWeb
+                            ? value?.paths.firstOrNull ??
+                                value?.files.firstOrNull?.path
+                            : null) ??
+                        SearchView.i.tagDbPath;
+                    if (v != SearchView.i.tagDbPath) {
+                      setState(() {
+                        SearchView.i.tagDbPath = v;
+                      });
+                    }
+                  },
                 ),
-                subtitle: const Text("Used for search suggestions."),
+                readOnly: true,
+                decoration: const InputDecoration(
+                    labelText: "Tag database path",
+                    hintText: "Tag database path"),
+                controller: util.defaultSelection(SearchView.i.tagDbPath),
               ),
-              WNumSliderField<int>(
-                min: SearchViewData.postsPerRowBounds.min,
-                max: SearchViewData.postsPerRowBounds.max,
-                getVal: () => SearchView.i.postsPerRow,
-                name: "Posts per row",
-                setVal: (num val) => SearchView.i.postsPerRow = val.toInt(),
-                validateVal: (num? val) => (val?.toInt() ?? -1) >= 0,
-                defaultValue: SearchViewData.defaultData.postsPerRow,
-                divisions: SearchViewData.postsPerRowBounds.max -
-                    SearchViewData.postsPerRowBounds.min,
-                increment: 1,
-              ),
-              WNumSliderField<int>(
-                min: SearchViewData.postsPerPageBounds.min,
-                max: SearchViewData.postsPerPageBounds.max,
-                getVal: () => SearchView.i.postsPerPage,
-                name: "Posts per page",
-                setVal: (num val) => SearchView.i.postsPerPage = val.round(),
-                validateVal: (num? val) {
-                  final v = (val?.round() ?? -1);
-                  return v >= SearchViewData.postsPerPageBounds.min &&
-                      v <= SearchViewData.postsPerPageBounds.max;
-                },
-                defaultValue: SearchViewData.defaultData.postsPerPage,
-                divisions: SearchViewData.postsPerPageBounds.max -
-                    SearchViewData.postsPerPageBounds.min,
-                increment: 1,
-              ),
-              WNumSliderField<double>(
-                min: SearchViewData.widthToHeightRatioBounds.min,
-                max: SearchViewData.widthToHeightRatioBounds.max,
-                getVal: () => SearchView.i.widthToHeightRatio,
-                name: "Width to height ratio",
-                setVal: (num val) =>
-                    SearchView.i.widthToHeightRatio = val.toDouble(),
-                validateVal: (num? val) {
-                  return (val ??
-                              (SearchViewData.widthToHeightRatioBounds.min -
-                                  1)) >=
-                          SearchViewData.widthToHeightRatioBounds.min &&
-                      (val ?? -1) <=
-                          SearchViewData.widthToHeightRatioBounds.max;
-                },
-                defaultValue: SearchViewData.defaultData.widthToHeightRatio,
-                // divisions: ((SearchViewData.widthToHeightRatioBounds.max -
-                //     SearchViewData.widthToHeightRatioBounds.min)*100).round(),
-                increment: .01,
-              ),
-              WNumSliderField<double>(
-                getVal: () => SearchView.i.horizontalGridSpace,
-                name: "Horizontal grid space",
-                setVal: (num val) =>
-                    SearchView.i.horizontalGridSpace = val.toDouble(),
-                validateVal: (num? val) {
-                  return (val ??
-                              (SearchViewData.horizontalGridSpaceBounds.min -
-                                  1)) >=
-                          SearchViewData.horizontalGridSpaceBounds.min &&
-                      (val ?? -1) <=
-                          SearchViewData.horizontalGridSpaceBounds.max;
-                },
-                min: SearchViewData.horizontalGridSpaceBounds.min,
-                max: SearchViewData.horizontalGridSpaceBounds.max,
-                defaultValue: SearchViewData.defaultData.horizontalGridSpace,
-                // divisions: ((SearchViewData.horizontalGridSpaceBounds.max -
-                //     SearchViewData.horizontalGridSpaceBounds.min)*100).round(),
-                increment: .1,
-                incrementMultiplier: 10,
-              ),
-              WNumSliderField<double>(
-                getVal: () => SearchView.i.verticalGridSpace,
-                name: "Vertical grid space",
-                setVal: (num val) =>
-                    SearchView.i.verticalGridSpace = val.toDouble(),
-                validateVal: (num? val) {
-                  return (val ??
-                              (SearchViewData.verticalGridSpaceBounds.min -
-                                  1)) >=
-                          SearchViewData.verticalGridSpaceBounds.min &&
-                      (val ?? -1) <= SearchViewData.verticalGridSpaceBounds.max;
-                },
-                min: SearchViewData.verticalGridSpaceBounds.min,
-                max: SearchViewData.verticalGridSpaceBounds.max,
-                defaultValue: SearchViewData.defaultData.verticalGridSpace,
-                // divisions: ((SearchViewData.verticalGridSpaceBounds.max -
-                //     SearchViewData.verticalGridSpaceBounds.min)*100).round(),
-                increment: .1,
-                incrementMultiplier: 10,
-              ),
-              WEnumListField<PostInfoPaneItem>.getter(
-                name: "Post Info Display",
-                getter: () => SearchView.i.postInfoBannerItems,
-                setVal: (/* List<PostInfoPaneItem>  */ val) => SearchView
-                    .i.postInfoBannerItems = val.cast<PostInfoPaneItem>(),
-                values: PostInfoPaneItem.values,
-              ),
-              ListTile(
-                title: const Text("Toggle Image Display Method"),
-                onTap: () {
-                  _logger.finest("Before: ${imageFit.name}");
-                  setState(() {
-                    imageFit = imageFit == BoxFit.contain
-                        ? BoxFit.cover
-                        : BoxFit.contain;
-                  });
-                  _logger.finer("After: ${imageFit.name}");
-                  // Navigator.pop(context);
-                },
-                trailing: Text(imageFit.name),
-              ),
-              WBooleanField(
-                getVal: () => SearchView.i.useProgressiveImages,
-                name: "Use Progressive Images",
-                subtitle:
-                    "Load a low-quality preview before loading the main image?",
-                setVal: (bool val) => SearchView.i.useProgressiveImages = val,
-              ),
-              // WIntegerField(
-              //   getVal: () => SearchView.i.numSavedSearchesInSearchBar,
-              //   name: "# of prior searches in search bar",
-              //   subtitle: "Limits the # of prior searches in the search "
-              //       "bar's suggestions to prevent it from clogging results",
-              //   setVal: (int val) =>
-              //       SearchView.i.numSavedSearchesInSearchBar = val,
-              //   validateVal: (int? val) => (val ?? -1) >= 0,
-              // ),
-              WNumSliderField<int>(
-                min: 0,
-                max: 20,
-                getVal: () => SearchView.i.numSavedSearchesInSearchBar,
-                name: "# of prior searches in search bar",
-                subtitle: "Limits the # of prior searches in the search "
-                    "bar's suggestions to prevent it from clogging results",
-                setVal: (num val) =>
-                    SearchView.i.numSavedSearchesInSearchBar = val.toInt(),
-                validateVal: (num? val) => (val?.round() ?? -1) >= 0,
-                defaultValue:
-                    SearchViewData.defaultData.numSavedSearchesInSearchBar,
-                divisions: 20,
-                // useIncrementalButtons: true,
-                increment: 1,
-              ),
-              WBooleanField(
-                getVal: () => SearchView.i.lazyLoad,
-                name: "Lazily load search results",
-                // subtitle: "",
-                setVal: (bool val) => SearchView.i.lazyLoad = val,
-              ),
-              WBooleanField(
-                getVal: () => SearchView.i.lazyBuilding,
-                name: "Lazily build tiles in grid view",
-                // subtitle: "",
-                setVal: (bool val) => SearchView.i.lazyBuilding = val,
-              ),
-              WBooleanField(
-                getVal: () => SearchView.i.preferSetShortname,
-                name: "Prefer set shortname",
-                subtitle:
-                    'Wherever possible, search using a set\'s shortname instead its id (e.g. "set:my_set" over "set:123"). This will break saved searches if the shortname changes.',
-                setVal: (bool val) => SearchView.i.preferSetShortname = val,
-              ),
-            ]),
+              subtitle: const Text("Used for search suggestions."),
+            ),
+            WNumSliderField<int>(
+              min: SearchViewData.postsPerRowBounds.min,
+              max: SearchViewData.postsPerRowBounds.max,
+              getVal: () => SearchView.i.postsPerRow,
+              name: "Posts per row",
+              setVal: (num val) => SearchView.i.postsPerRow = val.toInt(),
+              validateVal: (num? val) => (val?.toInt() ?? -1) >= 0,
+              defaultValue: SearchViewData.defaultData.postsPerRow,
+              divisions: SearchViewData.postsPerRowBounds.max -
+                  SearchViewData.postsPerRowBounds.min,
+              increment: 1,
+            ),
+            WNumSliderField<int>(
+              min: SearchViewData.postsPerPageBounds.min,
+              max: SearchViewData.postsPerPageBounds.max,
+              getVal: () => SearchView.i.postsPerPage,
+              name: "Posts per page",
+              setVal: (num val) => SearchView.i.postsPerPage = val.round(),
+              validateVal: (num? val) {
+                final v = (val?.round() ?? -1);
+                return v >= SearchViewData.postsPerPageBounds.min &&
+                    v <= SearchViewData.postsPerPageBounds.max;
+              },
+              defaultValue: SearchViewData.defaultData.postsPerPage,
+              divisions: SearchViewData.postsPerPageBounds.max -
+                  SearchViewData.postsPerPageBounds.min,
+              increment: 1,
+            ),
+            WNumSliderField<double>(
+              min: SearchViewData.widthToHeightRatioBounds.min,
+              max: SearchViewData.widthToHeightRatioBounds.max,
+              getVal: () => SearchView.i.widthToHeightRatio,
+              name: "Width to height ratio",
+              setVal: (num val) =>
+                  SearchView.i.widthToHeightRatio = val.toDouble(),
+              validateVal: (num? val) {
+                return (val ??
+                            (SearchViewData.widthToHeightRatioBounds.min -
+                                1)) >=
+                        SearchViewData.widthToHeightRatioBounds.min &&
+                    (val ?? -1) <= SearchViewData.widthToHeightRatioBounds.max;
+              },
+              defaultValue: SearchViewData.defaultData.widthToHeightRatio,
+              // divisions: ((SearchViewData.widthToHeightRatioBounds.max -
+              //     SearchViewData.widthToHeightRatioBounds.min)*100).round(),
+              increment: .01,
+            ),
+            WNumSliderField<double>(
+              getVal: () => SearchView.i.horizontalGridSpace,
+              name: "Horizontal grid space",
+              setVal: (num val) =>
+                  SearchView.i.horizontalGridSpace = val.toDouble(),
+              validateVal: (num? val) {
+                return (val ??
+                            (SearchViewData.horizontalGridSpaceBounds.min -
+                                1)) >=
+                        SearchViewData.horizontalGridSpaceBounds.min &&
+                    (val ?? -1) <= SearchViewData.horizontalGridSpaceBounds.max;
+              },
+              min: SearchViewData.horizontalGridSpaceBounds.min,
+              max: SearchViewData.horizontalGridSpaceBounds.max,
+              defaultValue: SearchViewData.defaultData.horizontalGridSpace,
+              // divisions: ((SearchViewData.horizontalGridSpaceBounds.max -
+              //     SearchViewData.horizontalGridSpaceBounds.min)*100).round(),
+              increment: .1,
+              incrementMultiplier: 10,
+            ),
+            WNumSliderField<double>(
+              getVal: () => SearchView.i.verticalGridSpace,
+              name: "Vertical grid space",
+              setVal: (num val) =>
+                  SearchView.i.verticalGridSpace = val.toDouble(),
+              validateVal: (num? val) {
+                return (val ??
+                            (SearchViewData.verticalGridSpaceBounds.min - 1)) >=
+                        SearchViewData.verticalGridSpaceBounds.min &&
+                    (val ?? -1) <= SearchViewData.verticalGridSpaceBounds.max;
+              },
+              min: SearchViewData.verticalGridSpaceBounds.min,
+              max: SearchViewData.verticalGridSpaceBounds.max,
+              defaultValue: SearchViewData.defaultData.verticalGridSpace,
+              // divisions: ((SearchViewData.verticalGridSpaceBounds.max -
+              //     SearchViewData.verticalGridSpaceBounds.min)*100).round(),
+              increment: .1,
+              incrementMultiplier: 10,
+            ),
+            WEnumListField<PostInfoPaneItem>.getter(
+              name: "Post Info Display",
+              getter: () => SearchView.i.postInfoBannerItems,
+              setVal: (/* List<PostInfoPaneItem>  */ val) => SearchView
+                  .i.postInfoBannerItems = val.cast<PostInfoPaneItem>(),
+              values: PostInfoPaneItem.values,
+            ),
+            ListTile(
+              title: const Text("Toggle Image Display Method"),
+              onTap: () {
+                _logger.finest("Before: ${imageFit.name}");
+                setState(() {
+                  imageFit = imageFit == BoxFit.contain
+                      ? BoxFit.cover
+                      : BoxFit.contain;
+                });
+                _logger.finer("After: ${imageFit.name}");
+                // Navigator.pop(context);
+              },
+              trailing: Text(imageFit.name),
+            ),
+            WBooleanField(
+              getVal: () => SearchView.i.useProgressiveImages,
+              name: "Use Progressive Images",
+              subtitle:
+                  "Load a low-quality preview before loading the main image?",
+              setVal: (bool val) => SearchView.i.useProgressiveImages = val,
+            ),
+            // WIntegerField(
+            //   getVal: () => SearchView.i.numSavedSearchesInSearchBar,
+            //   name: "# of prior searches in search bar",
+            //   subtitle: "Limits the # of prior searches in the search "
+            //       "bar's suggestions to prevent it from clogging results",
+            //   setVal: (int val) =>
+            //       SearchView.i.numSavedSearchesInSearchBar = val,
+            //   validateVal: (int? val) => (val ?? -1) >= 0,
+            // ),
+            WNumSliderField<int>(
+              min: 0,
+              max: 20,
+              getVal: () => SearchView.i.numSavedSearchesInSearchBar,
+              name: "# of prior searches in search bar",
+              subtitle: "Limits the # of prior searches in the search "
+                  "bar's suggestions to prevent it from clogging results",
+              setVal: (num val) =>
+                  SearchView.i.numSavedSearchesInSearchBar = val.toInt(),
+              validateVal: (num? val) => (val?.round() ?? -1) >= 0,
+              defaultValue:
+                  SearchViewData.defaultData.numSavedSearchesInSearchBar,
+              divisions: 20,
+              // useIncrementalButtons: true,
+              increment: 1,
+            ),
+            WBooleanField(
+              getVal: () => SearchView.i.lazyLoad,
+              name: "Lazily load search results",
+              // subtitle: "",
+              setVal: (bool val) => SearchView.i.lazyLoad = val,
+            ),
+            WBooleanField(
+              getVal: () => SearchView.i.lazyBuilding,
+              name: "Lazily build tiles in grid view",
+              // subtitle: "",
+              setVal: (bool val) => SearchView.i.lazyBuilding = val,
+            ),
+            WBooleanField(
+              getVal: () => SearchView.i.preferSetShortname,
+              name: "Prefer set shortname",
+              subtitle:
+                  'Wherever possible, search using a set\'s shortname instead its id (e.g. "set:my_set" over "set:123"). This will break saved searches if the shortname changes.',
+              setVal: (bool val) => SearchView.i.preferSetShortname = val,
+            ),
+          ],
+        ),
         ExpansionTile(
           title: Text(
             "Post View Settings",

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
-import 'package:j_util/e621.dart' as e621;
+import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/serialization.dart';
 import 'package:fuzzy/log_management.dart' as lm;

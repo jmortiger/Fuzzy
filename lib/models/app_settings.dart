@@ -7,8 +7,8 @@ import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
-import 'package:j_util/e621.dart' show TagCategory;
-import 'package:j_util/e621.dart' as e621;
+import 'package:e621/e621.dart' show TagCategory;
+import 'package:e621/e621.dart' as e621;
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:j_util/j_util_full.dart';
 
@@ -21,6 +21,7 @@ class AppSettingsRecord {
   final bool applyProfileBlacklist;
   final bool applyProfileFavTags;
   final bool upvoteOnFavorite;
+  final bool enableDownloads;
   final int maxSearchesToSave;
   final SearchViewData searchView;
 
@@ -34,6 +35,7 @@ class AppSettingsRecord {
     required this.applyProfileBlacklist,
     required this.applyProfileFavTags,
     required this.upvoteOnFavorite,
+    required this.enableDownloads,
     required this.maxSearchesToSave,
   });
   static const defaultSettings = AppSettingsRecord(
@@ -48,6 +50,7 @@ class AppSettingsRecord {
     applyProfileBlacklist: true,
     applyProfileFavTags: true,
     upvoteOnFavorite: true,
+    enableDownloads: false,
     maxSearchesToSave: 200,
   );
   factory AppSettingsRecord.fromJson(JsonOut json) => AppSettingsRecord(
@@ -69,6 +72,8 @@ class AppSettingsRecord {
             json["applyProfileFavTags"] ?? defaultSettings.applyProfileFavTags,
         upvoteOnFavorite:
             json["upvoteOnFavorite"] ?? defaultSettings.upvoteOnFavorite,
+        enableDownloads:
+            json["enableDownloads"] ?? defaultSettings.enableDownloads,
         maxSearchesToSave:
             json["maxSearchesToSave"] ?? defaultSettings.maxSearchesToSave,
       );
@@ -82,6 +87,7 @@ class AppSettingsRecord {
         "applyProfileBlacklist": applyProfileBlacklist,
         "applyProfileFavTags": applyProfileFavTags,
         "upvoteOnFavorite": upvoteOnFavorite,
+        "enableDownloads": enableDownloads,
         "maxSearchesToSave": maxSearchesToSave,
       };
 }
@@ -167,6 +173,7 @@ class AppSettings implements AppSettingsRecord {
         applyProfileBlacklist: r.applyProfileBlacklist,
         applyProfileFavTags: r.applyProfileFavTags,
         upvoteOnFavorite: r.upvoteOnFavorite,
+        enableDownloads: r.enableDownloads,
         maxSearchesToSave: r.maxSearchesToSave,
       );
   AppSettingsRecord toRecord() => AppSettingsRecord(
@@ -179,6 +186,7 @@ class AppSettings implements AppSettingsRecord {
         applyProfileBlacklist: _applyProfileBlacklist,
         applyProfileFavTags: _applyProfileFavTags,
         upvoteOnFavorite: _upvoteOnFavorite,
+        enableDownloads: _enableDownloads,
         maxSearchesToSave: _maxSearchesToSave,
       );
   void overwriteWithRecord([
@@ -193,6 +201,7 @@ class AppSettings implements AppSettingsRecord {
     _applyProfileBlacklist = r.applyProfileBlacklist;
     _applyProfileFavTags = r.applyProfileFavTags;
     _upvoteOnFavorite = r.upvoteOnFavorite;
+    _enableDownloads = r.enableDownloads;
     _maxSearchesToSave = r.maxSearchesToSave;
   }
 
@@ -206,6 +215,7 @@ class AppSettings implements AppSettingsRecord {
     required bool applyProfileBlacklist,
     required bool applyProfileFavTags,
     required bool upvoteOnFavorite,
+    required bool enableDownloads,
     required int maxSearchesToSave,
   })  : _postView = postView,
         _searchView = searchView,
@@ -216,6 +226,7 @@ class AppSettings implements AppSettingsRecord {
         _applyProfileBlacklist = applyProfileBlacklist,
         _applyProfileFavTags = applyProfileFavTags,
         _upvoteOnFavorite = upvoteOnFavorite,
+        _enableDownloads = enableDownloads,
         _maxSearchesToSave = maxSearchesToSave;
   PostView _postView;
   @override
@@ -274,6 +285,11 @@ class AppSettings implements AppSettingsRecord {
   @override
   bool get upvoteOnFavorite => _upvoteOnFavorite;
   set upvoteOnFavorite(bool value) => _upvoteOnFavorite = value;
+
+  bool _enableDownloads;
+  @override
+  bool get enableDownloads => _enableDownloads;
+  set enableDownloads(bool value) => _enableDownloads = value;
 
   int _maxSearchesToSave;
   @override

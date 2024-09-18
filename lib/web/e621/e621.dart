@@ -15,7 +15,7 @@ import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:fuzzy/widgets/w_search_set.dart';
 import 'package:http/http.dart' as http;
 import 'package:j_util/j_util_full.dart';
-import 'package:j_util/e621.dart' as e621;
+import 'package:e621/e621.dart' as e621;
 
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:url_launcher/url_launcher.dart';

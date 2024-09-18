@@ -13,7 +13,7 @@ import 'package:fuzzy/web/e621/models/e6_models.dart' /*  show E6PostResponse */
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/models/image_listing.dart'
     show IImageInfo, PostListing, RetrieveImageProvider;
-import 'package:j_util/e621.dart' show TagCategory;
+import 'package:e621/e621.dart' show TagCategory;
 import 'package:j_util/j_util_full.dart';
 import 'package:progressive_image/progressive_image.dart' show ProgressiveImage;
 import 'package:provider/provider.dart' show Provider;

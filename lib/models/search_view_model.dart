@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
-import 'package:j_util/e621.dart' as e6;
+import 'package:e621/e621.dart' as e6;
 import 'package:j_util/j_util_full.dart';
 
 import '../web/e621/e621.dart';

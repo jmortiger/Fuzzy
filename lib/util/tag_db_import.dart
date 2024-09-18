@@ -8,7 +8,7 @@ import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:http/http.dart' as http;
-import 'package:j_util/e621.dart' as e621;
+import 'package:e621/e621.dart' as e621;
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:j_util/j_util_full.dart'
     show LateFinal, LateInstance, LazyInitializer, Platform;

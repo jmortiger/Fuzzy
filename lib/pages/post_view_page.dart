@@ -20,7 +20,7 @@ import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
 import 'package:fuzzy/widgets/w_back_button.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
-import 'package:j_util/e621.dart' as e621;
+import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 import 'package:progressive_image/progressive_image.dart' show ProgressiveImage;
 import 'package:url_launcher/url_launcher.dart';

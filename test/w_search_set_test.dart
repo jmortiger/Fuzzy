@@ -9,7 +9,7 @@
 // import 'package:flutter_test/flutter_test.dart';
 
 // import 'package:fuzzy/widgets/w_search_set.dart';
-// import 'package:j_util/e621.dart';
+// import 'package:e621/e621.dart';
 
 // void main() {
 //   testWidgets('WSearchSet with full args test', (WidgetTester tester) async {

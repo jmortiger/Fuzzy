@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fuzzy/domain_verification_page.dart';
 import 'package:fuzzy/intent.dart';
 import 'package:fuzzy/main.dart';
 import 'package:fuzzy/models/app_settings.dart';
@@ -21,7 +20,7 @@ import 'package:fuzzy/widgets/w_update_set.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:fuzzy/widgets/w_search_pool.dart';
 import 'package:fuzzy/widgets/w_search_set.dart';
-import 'package:j_util/e621.dart' as e621;
+import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:fuzzy/log_management.dart' as lm;
@@ -339,18 +338,6 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => const SubscriptionPage(),
-                  ));
-            },
-          ),
-          ListTile(
-            title: const Text("Linking test"),
-            leading: const Icon(Icons.question_mark),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const DomainVerificationPage(),
                   ));
             },
           ),

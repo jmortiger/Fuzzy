@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:j_util/j_util_full.dart';
-import 'package:j_util/e621_models.dart' show TagCategory;
+import 'package:e621/e621_models.dart' show TagCategory;
 
 class TagDB {
   final Set<String> tagSet;

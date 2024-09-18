@@ -5,7 +5,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/util/util.dart';
-import 'package:j_util/e621.dart' as e6;
+import 'package:e621/e621.dart' as e6;
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/serialization.dart' show Storable;
 

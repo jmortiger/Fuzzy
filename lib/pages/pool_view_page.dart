@@ -8,7 +8,7 @@ import 'package:fuzzy/web/e621/dtext_formatter.dart' as dt;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 
-import 'package:j_util/e621.dart' as e621;
+import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
 class PoolViewPage extends StatefulWidget implements IRoute<PoolViewPage> {

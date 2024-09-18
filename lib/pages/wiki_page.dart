@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/web/e621/dtext_formatter.dart' as dtext;
-import 'package:j_util/e621.dart' as e621;
+import 'package:e621/e621.dart' as e621;
 
 class WikiPage extends StatelessWidget {
   final e621.WikiPage wikiPage;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/util/asset_management.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
-import 'package:j_util/e621_api.dart' as e621;
+import 'package:e621/e621_api.dart' as e621;
 
 class WPostThumbnail extends StatefulWidget {
   final double maxWidth;

@@ -10,7 +10,7 @@ import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/widgets/w_update_set.dart';
 import 'package:http/http.dart';
-import 'package:j_util/e621.dart' as e621;
+import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
 import '../web/e621/e621_access_data.dart';

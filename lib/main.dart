@@ -18,7 +18,7 @@ import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
-import 'package:j_util/e621.dart' as e621;
+import 'package:e621/e621.dart' as e621;
 import 'package:j_util/platform_finder.dart';
 import 'package:j_util/serialization.dart' as storable;
 import 'package:path_provider/path_provider.dart' as path;
