@@ -1,11 +1,11 @@
+import 'package:e621/ui.dart' as e6_color;
+import 'package:e621/e621_models.dart' show TagCategory;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
-import 'package:fuzzy/web/e621/colors.dart' as e6_color;
 import 'package:fuzzy/util/html_colors.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/widgets/w_post_thumbnail.dart';
-import 'package:e621/e621_models.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
 // ignore: unnecessary_late
