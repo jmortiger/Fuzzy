@@ -282,10 +282,10 @@ void logRequest(
 ]) {
   logger.log(
     level,
-    "${switch (r.runtimeType) {
-      http.Request => "",
-      http.StreamedRequest => "Streamed",
-      http.MultipartRequest => "Multipart",
+    "${switch (r) {
+      http.Request _ => "",
+      http.StreamedRequest _ => "Streamed",
+      http.MultipartRequest _ => "Multipart",
       _ => "Base",
     }}Request:"
     "\n\t$r"
@@ -304,9 +304,9 @@ void logResponse(
 ]) {
   logger.log(
     level,
-    "${switch (r.runtimeType) {
-      http.Response => "",
-      http.StreamedResponse => "Streamed",
+    "${switch (r) {
+      http.Response _ => "",
+      http.StreamedResponse _ => "Streamed",
       _ => "Base",
     }}Response:"
     "\n\t$r"
@@ -332,9 +332,9 @@ void logResponseSmart(
             : r.statusCodeInfo.isSuccessful
                 ? baseLevel
                 : nonSuccessLevel),
-    "${switch (r.runtimeType) {
-      http.Response => "",
-      http.StreamedResponse => "Streamed",
+    "${switch (r) {
+      http.Response _ => "",
+      http.StreamedResponse _ => "Streamed",
       _ => "Base",
     }}Response:"
     "\n\t$r"
@@ -352,10 +352,10 @@ extension LogReq on http.BaseRequest {
   ]) {
     logger.log(
       level,
-      "${switch (runtimeType) {
-        http.Request => "",
-        http.StreamedRequest => "Streamed",
-        http.MultipartRequest => "Multipart",
+      "${switch (this) {
+        http.Request _ => "",
+        http.StreamedRequest _ => "Streamed",
+        http.MultipartRequest _ => "Multipart",
         _ => "Base",
       }}Request:"
       "\n\t$this"
@@ -382,9 +382,9 @@ extension LogRes on http.BaseResponse {
               : statusCodeInfo.isSuccessful
                   ? baseLevel
                   : nonSuccessLevel),
-      "${switch (runtimeType) {
-        http.Response => "",
-        http.StreamedResponse => "Streamed",
+      "${switch (this) {
+        http.Response _ => "",
+        http.StreamedResponse _ => "Streamed",
         _ => "Base",
       }}Response:"
       "\n\t$this"

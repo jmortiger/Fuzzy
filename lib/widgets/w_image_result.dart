@@ -199,7 +199,7 @@ class WImageResult extends StatelessWidget {
                         p ?? sc!.getPageOfGivenPostIndexOnPage(index),
                     posts: sc!,
                     onAddToSearch: getOnAddToSearch(context),
-                    tagsToAdd: [],
+                    // tagsToAdd: [],
                     selectedPosts: sc.collection
                         .where(
                           (element) => sr(context)
@@ -225,7 +225,7 @@ class WImageResult extends StatelessWidget {
                         )
                         .map((e) => e.$)
                         .toList(),
-                    tagsToAdd: [],
+                    // tagsToAdd: [],
                   ),
           )).then<void>(parseReturnValue);
     }

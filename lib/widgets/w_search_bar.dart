@@ -36,7 +36,7 @@ class WSearchBar extends StatefulWidget {
 
 class _WSearchBarState extends State<WSearchBar> {
   // #region Static Members
-  static const whitespaceCharacters = r'\u2028\n\r\u000B\f\u2029\u0085 	';
+  static const limitPriorSearchesInSearchBar = false;
   static const tagModifiersRegexString = r'\+\~\-';
   static const noOutputStyle = TextStyle(
     color: Colors.white38,
@@ -57,10 +57,21 @@ class _WSearchBarState extends State<WSearchBar> {
 
   // #region Properties
   bool get allSuggestionSourcesEmpty =>
-      (dbi.DO_NOT_USE_TAG_DB || dbi.tagDbLazy.$Safe == null) &&
-      (AppSettings.i?.favoriteTagsAll.isEmpty ?? true) &&
-      !SavedDataE6.isInit &&
-      CachedSearches.searches.isEmpty;
+      !hasSuggestionsFromTagDb &&
+      !hasSuggestionsFromFavTags &&
+      !hasSuggestionsFromSavedSearches &&
+      !hasSuggestionsFromCachedSearches;
+  bool get hasSuggestionsFromCachedSearches =>
+      showPriorSearches &&
+      CachedSearches.searches.isNotEmpty &&
+      (!limitPriorSearchesInSearchBar ||
+          SearchView.i.numSavedSearchesInSearchBar > 0);
+  bool get hasSuggestionsFromSavedSearches =>
+      showSavedSearches && SavedDataE6.isInit;
+  bool get hasSuggestionsFromFavTags =>
+      (AppSettings.i?.favoriteTagsAll.isNotEmpty ?? false) && showFavTags;
+  bool get hasSuggestionsFromTagDb =>
+      !dbi.DO_NOT_USE_TAG_DB && dbi.tagDbLazy.$Safe != null;
   TagDB? get retrieveTagDB =>
       !dbi.DO_NOT_USE_TAG_DB ? dbi.tagDbLazy.$Safe : null;
   // #endregion Properties
@@ -83,7 +94,6 @@ class _WSearchBarState extends State<WSearchBar> {
       };
   // #endregion Tristate management
 
-  // TODO: Just launch tag search requests for autocomplete, wrap in a class
   @override
   Widget build(BuildContext context) {
     // final style = Theme.of(context).menuButtonTheme.style?.textStyle?.resolve(states)
@@ -98,14 +108,9 @@ class _WSearchBarState extends State<WSearchBar> {
       searchController: searchController,
       suggestionsBuilder: (context, controller) {
         logger.finer("Text: ${controller.text}");
-
-        /// USING THE LIBRARY CAUSES THE ERROR.
-        /* return generateSortedOptions(controller.text).map(
-          (e) => genTileFromString(e, controller: controller),
-        ); */
-        return generateOptions(controller.value, controller: controller);
+        return _generateOptions(controller.value, controller: controller);
       },
-      onSubmitted: sbcOnSubmitted,
+      onSubmitted: _sbcOnSubmitted,
       onChanged: (value) => setState(() {
         currentText = value;
       }),
@@ -114,113 +119,111 @@ class _WSearchBarState extends State<WSearchBar> {
       //   currentText = value;
       // }),
       viewTrailing: [
-        buildAdvancedSearchMenuBar(),
+        _buildAdvancedSearchMenuBar(),
         StatefulBuilder(
-            builder: (context, setState) => MenuBar(
-                  children: [
-                    SubmenuButton(
-                      menuChildren: [
-                        MenuItemButton(
-                          leadingIcon: const Icon(Icons.close),
-                          onPressed: () => /* this. */ setState(() {
-                            searchController.text = currentText = "";
-                          }),
-                          child: const Text("Clear text"),
-                        ),
-                        MenuItemButton(
-                          leadingIcon: const Icon(Icons.close),
-                          onPressed: () => setState(() {
-                            mts.clear();
-                          }),
-                          child: const Text("Clear metatags"),
-                        ),
-                        MenuItemButton(
-                          leadingIcon: Checkbox(
-                            value: showMetaTags,
-                            onChanged: (value) => value != null
-                                ? setState(() {
-                                    showMetaTags = value;
-                                  })
-                                : "",
-                          ),
-                          onPressed: () => setState(() {
-                            showMetaTags = !showMetaTags;
-                          }),
-                          child: const Text("Show Meta Tags"),
-                        ),
-                        MenuItemButton(
-                          leadingIcon: Checkbox(
-                            value: showSavedSearches,
-                            onChanged: (value) => value != null
-                                ? setState(() {
-                                    showSavedSearches = value;
-                                  })
-                                : "",
-                          ),
-                          onPressed: () => setState(() {
-                            showSavedSearches = !showSavedSearches;
-                          }),
-                          child: const Text("Show Saved Searches"),
-                        ),
-                        MenuItemButton(
-                          leadingIcon: Checkbox(
-                            value: showPriorSearches,
-                            onChanged: (value) => value != null
-                                ? setState(() {
-                                    showPriorSearches = value;
-                                  })
-                                : "",
-                          ),
-                          onPressed: () => setState(() {
-                            showPriorSearches = !showPriorSearches;
-                          }),
-                          child: const Text("Show Prior Searches"),
-                        ),
-                        MenuItemButton(
-                          leadingIcon: Checkbox(
-                            value: showFavTags,
-                            onChanged: (value) => value != null
-                                ? setState(() {
-                                    showFavTags = value;
-                                  })
-                                : "",
-                          ),
-                          onPressed: () => setState(() {
-                            showFavTags = !showFavTags;
-                          }),
-                          child: const Text("Show Fav Tags"),
-                        ),
-                      ],
-                      child: const Icon(Icons.manage_search),
+          builder: (context, setState) => MenuBar(
+            children: [
+              SubmenuButton(
+                menuChildren: [
+                  MenuItemButton(
+                    leadingIcon: const Icon(Icons.close),
+                    onPressed: () => /* this. */ setState(() {
+                      searchController.text = currentText = "";
+                    }),
+                    child: const Text("Clear text"),
+                  ),
+                  MenuItemButton(
+                    leadingIcon: const Icon(Icons.close),
+                    onPressed: () => setState(() {
+                      mts.clear();
+                    }),
+                    child: const Text("Clear metatags"),
+                  ),
+                  MenuItemButton(
+                    leadingIcon: Checkbox(
+                      value: showMetaTags,
+                      onChanged: (value) => value != null
+                          ? setState(() {
+                              showMetaTags = value;
+                            })
+                          : "",
                     ),
-                  ],
-                )),
+                    onPressed: () => setState(() {
+                      showMetaTags = !showMetaTags;
+                    }),
+                    child: const Text("Show Meta Tags"),
+                  ),
+                  MenuItemButton(
+                    leadingIcon: Checkbox(
+                      value: showSavedSearches,
+                      onChanged: (value) => value != null
+                          ? setState(() {
+                              showSavedSearches = value;
+                            })
+                          : "",
+                    ),
+                    onPressed: () => setState(() {
+                      showSavedSearches = !showSavedSearches;
+                    }),
+                    child: const Text("Show Saved Searches"),
+                  ),
+                  MenuItemButton(
+                    leadingIcon: Checkbox(
+                      value: showPriorSearches,
+                      onChanged: (value) => value != null
+                          ? setState(() {
+                              showPriorSearches = value;
+                            })
+                          : "",
+                    ),
+                    onPressed: () => setState(() {
+                      showPriorSearches = !showPriorSearches;
+                    }),
+                    child: const Text("Show Prior Searches"),
+                  ),
+                  MenuItemButton(
+                    leadingIcon: Checkbox(
+                      value: showFavTags,
+                      onChanged: (value) => value != null
+                          ? setState(() {
+                              showFavTags = value;
+                            })
+                          : "",
+                    ),
+                    onPressed: () => setState(() {
+                      showFavTags = !showFavTags;
+                    }),
+                    child: const Text("Show Fav Tags"),
+                  ),
+                ],
+                child: const Icon(Icons.manage_search),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  ListTile genTileFromString(
+  ListTile _genTileFromString(
     String e, {
     Widget? leading,
     Widget? trailing,
     SearchController? controller,
     void Function()? onTap,
   }) {
-    final tAndS = genTitleAndSubtitleFromString(e);
+    final tAndS = _genTitleAndSubtitleWidgetFromString(e);
     return ListTile(
       dense: true,
-      title: Text(tAndS.$1),
-      subtitle: Text(tAndS.$2),
-      onTap: onTap ??
-          () {
-            if (controller?.isAttached ?? false) controller!.closeView(e);
-          },
+      title: tAndS.$1,
+      subtitle: tAndS.$2,
+      onTap: _genCallback(e, onTap, controller),
       leading: leading,
       trailing: trailing,
     );
   }
 
-  (String title, String subtitle) genTitleAndSubtitleFromString(String e) {
+  (String title, String subtitle) _genTitleAndSubtitleFromString(String e) {
     final wsRe = RegExp(r"\s");
     logger.finest("e = $e Length: ${e.length}");
     e = e.trim();
@@ -229,8 +232,13 @@ class _WSearchBarState extends State<WSearchBar> {
     return ((e.contains(wsRe) ? e.split(wsRe) : [e]).last, e);
   }
 
+  (Text title, Text subtitle) _genTitleAndSubtitleWidgetFromString(String e) {
+    final t = _genTitleAndSubtitleFromString(e);
+    return (Text(t.$1), Text(t.$2));
+  }
+
   static const _previewLength = 15;
-  Widget buildAdvancedSearchMenuBar() {
+  Widget _buildAdvancedSearchMenuBar() {
     final ms = WidgetStatePropertyAll<Size?>(Size(
         0,
         Theme.of(context)
@@ -314,32 +322,32 @@ class _WSearchBarState extends State<WSearchBar> {
               ),
               SubmenuButton(
                 menuChildren: [
-                  buildDropdown(
+                  _buildDropdown(
                     sh.Status.deleted,
                     mts.status,
                     setState,
                   ),
-                  buildDropdown(
+                  _buildDropdown(
                     sh.Status.pending,
                     mts.status,
                     setState,
                   ),
-                  buildDropdown(
+                  _buildDropdown(
                     sh.Status.active,
                     mts.status,
                     setState,
                   ),
-                  buildDropdown(
+                  _buildDropdown(
                     sh.Status.flagged,
                     mts.status,
                     setState,
                   ),
-                  buildDropdown(
+                  _buildDropdown(
                     sh.Status.modqueue,
                     mts.status,
                     setState,
                   ),
-                  buildDropdown(
+                  _buildDropdown(
                     sh.Status.any,
                     mts.status,
                     setState,
@@ -352,27 +360,27 @@ class _WSearchBarState extends State<WSearchBar> {
               ),
               SubmenuButton(
                 menuChildren: [
-                  buildDropdown(
+                  _buildDropdown(
                     sh.FileType.webm,
                     mts.types,
                     setState,
                   ),
-                  buildDropdown(
+                  _buildDropdown(
                     sh.FileType.gif,
                     mts.types,
                     setState,
                   ),
-                  buildDropdown(
+                  _buildDropdown(
                     sh.FileType.swf,
                     mts.types,
                     setState,
                   ),
-                  buildDropdown(
+                  _buildDropdown(
                     sh.FileType.png,
                     mts.types,
                     setState,
                   ),
-                  buildDropdown(
+                  _buildDropdown(
                     sh.FileType.jpg,
                     mts.types,
                     setState,
@@ -384,7 +392,7 @@ class _WSearchBarState extends State<WSearchBar> {
                 ),
               ),
               ...sh.BooleanSearchTag.values.map(
-                (e) => buildTristateBool(e),
+                (e) => _buildTristateBool(e),
               ),
             ],
             child: const Text("..."),
@@ -394,7 +402,7 @@ class _WSearchBarState extends State<WSearchBar> {
     );
   }
 
-  Widget buildTristateBool(sh.BooleanSearchTag tag) {
+  Widget _buildTristateBool(sh.BooleanSearchTag tag) {
     return StatefulBuilder(
       builder: (context, setState) => MenuItemButton(
         closeOnActivate: false,
@@ -419,7 +427,7 @@ class _WSearchBarState extends State<WSearchBar> {
     );
   }
 
-  MenuItemButton buildDropdown<E extends sh.SearchableEnum>(
+  MenuItemButton _buildDropdown<E extends sh.SearchableEnum>(
       E enumValue, Map<E, sh.Modifier> map, StateSetter setState) {
     // logger.info(
     //     "X: ${util.calculateTextSize(text: "X", style: DefaultTextStyle.of(context).style).width}\n~: ${util.calculateTextSize(text: "~", style: DefaultTextStyle.of(context).style).width}\n+: ${util.calculateTextSize(text: "+", style: DefaultTextStyle.of(context).style).width}\n-: ${util.calculateTextSize(text: "-", style: DefaultTextStyle.of(context).style).width}");
@@ -447,16 +455,21 @@ class _WSearchBarState extends State<WSearchBar> {
     );
   }
 
-  Iterable<ListTile> generateOptions(
+  static String? _pullFromSubtitle(ListTile t) => (t.subtitle as Text).data;
+  Iterable<ListTile> _generateOptions(
     TextEditingValue currentTextValue, {
     SearchController? controller,
     void Function()? onTap,
   }) {
     final currFullText = currentTextValue.text;
-    var lastTermIndex = currFullText
-        .lastIndexOf(RegExp('[$whitespaceCharacters$tagModifiersRegexString]'));
+    var lastTermIndex =
+        currFullText.lastIndexOf(RegExp('[\\s$tagModifiersRegexString]'));
     lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
+
+    /// The current incomplete token.
     final currSubString = currFullText.substring(lastTermIndex);
+
+    /// All the text before the current incomplete token.
     final currPrefix = currFullText.substring(0, lastTermIndex);
     logger.finer("currText: $currFullText");
     logger.finer("lastTermIndex: $lastTermIndex");
@@ -464,273 +477,187 @@ class _WSearchBarState extends State<WSearchBar> {
     logger.finer("currPrefix: $currPrefix");
     if (allSuggestionSourcesEmpty) return const Iterable<ListTile>.empty();
     final comp = str_util.getFineInverseSimilarityComparator(currFullText);
-    var db = retrieveTagDB;
-    // if (db == null) {
     var r = showMetaTags
         ? sh.modifierTagsSuggestionsList
             .map((e) => "$currPrefix$e")
             .where((v) => v.contains(currFullText))
         : const Iterable<String>.empty();
-    if (((AppSettings.i?.favoriteTagsAll.isEmpty ?? true) || !showFavTags) &&
-        (!SavedDataE6.isInit || !showSavedSearches) &&
-        (CachedSearches.searches.isEmpty || !showPriorSearches)) {
-      return (r.toList()..sort(comp)).take(50).map((e) => genTileFromString(
+    if (allSuggestionSourcesEmpty) {
+      return (r.toList()..sort(comp)).take(50).map((e) => _genTileFromString(
             e,
             controller: controller,
             onTap: onTap,
             leading: const Text("Meta"),
           ));
     }
-    Iterable<ListTile>? dbResults;
-    try {
-      dbResults = (db != null)
-          ? genSearchOptionsFromTagDB(
-              db: db,
-              currText: currFullText,
-              currPrefix: currPrefix,
-            ).map((e) => genTileFromString(
-                e,
-                controller: controller,
-                onTap: onTap,
-                leading: const Text("TagDB"),
-              ))
-          : null;
-    } catch (e, s) {
-      logger.severe(e, e, s);
-      dbResults = null;
+    final addedResultantValues = <String>{};
+    int compListTile(ListTile a, ListTile b) =>
+        comp(_pullFromSubtitle(a)!, _pullFromSubtitle(b)!);
+    Iterable<ListTile> genFromCachedSearches() {
+      var relatedSearches = CachedSearches.searches;
+      List<ListTile> folderCS(List<ListTile> p, e) =>
+          addedResultantValues.add(e.searchString)
+              ? (p
+                ..add(_genTileFromString(
+                  e.searchString,
+                  controller: controller,
+                  onTap: onTap,
+                  leading: const Icon(Icons.youtube_searched_for),
+                  trailing: IconButton(
+                    // TODO: Make deleting a search remove it from suggestions immediately
+                    onPressed: () => CachedSearches.removeSearch(element: e),
+                    icon: const Icon(Icons.delete),
+                    tooltip: "Delete saved search",
+                  ),
+                )))
+              : p;
+      if (limitPriorSearchesInSearchBar) {
+        // Searches where its not fully typed out and some of it matches
+        relatedSearches = CachedSearches.searches
+            .where((e) =>
+                !currFullText.contains(e.searchString) &&
+                e.searchString.contains(currFullText))
+            .toList();
+        if (currFullText.isNotEmpty) {
+          relatedSearches
+              .sort((e1, e2) => comp(e1.searchString, e2.searchString));
+        } else {
+          relatedSearches = relatedSearches.reversed.toList();
+        }
+        relatedSearches.removeRange(
+          min(
+            SearchView.i.numSavedSearchesInSearchBar,
+            relatedSearches.length,
+          ),
+          relatedSearches.length,
+        );
+        return relatedSearches.fold<List<ListTile>>([], folderCS);
+      } else {
+        // Searches where its not fully typed out and some of it matches
+        return relatedSearches.fold<List<ListTile>>(
+          [],
+          (p, e) => !currFullText.contains(e.searchString) &&
+                  e.searchString.contains(currFullText)
+              ? folderCS(p, e)
+              : p,
+        );
+      }
     }
+
     return [
-      if (CachedSearches.searches.isNotEmpty && showPriorSearches)
-        ...(() {
-          var relatedSearches = CachedSearches.searches
-              .where((e) =>
-                  !currFullText.contains(e.searchString) &&
-                  e.searchString.contains(currFullText))
-              .toList();
-          if (currFullText.isNotEmpty) {
-            relatedSearches
-                .sort((e1, e2) => comp(e1.searchString, e2.searchString));
-          } else {
-            relatedSearches = relatedSearches.reversed.toList();
-          }
-          return relatedSearches
-            ..removeRange(
-              min(
-                SearchView.i.numSavedSearchesInSearchBar,
-                relatedSearches.length,
-              ),
-              relatedSearches.length,
-            );
-        })()
-            .map(
-          (e) => genTileFromString(
-            e.searchString,
-            controller: controller,
-            onTap: onTap,
-            leading: const Icon(Icons.youtube_searched_for),
-            trailing: IconButton(
-              // TODO: Make deleting a search remove it from suggestions
-              onPressed: () => CachedSearches.removeSearch(element: e),
-              icon: const Icon(Icons.delete),
-              tooltip: "Delete saved search",
-            ),
-          ),
+      if (hasSuggestionsFromCachedSearches) ...genFromCachedSearches(),
+      if (hasSuggestionsFromSavedSearches &&
+          currSubString.contains(E621.savedSearchTag))
+        ...SavedDataE6.all.fold<List<ListTile>>(
+          <ListTile>[],
+          (p, v) => v.verifyUniqueness() &&
+                  !currFullText
+                      .contains("${E621.savedSearchTag}${v.uniqueId}") &&
+                  "${E621.savedSearchTag}${v.uniqueId}"
+                      .contains(currSubString) &&
+                  addedResultantValues
+                      .add("$currPrefix ${E621.savedSearchTag}${v.uniqueId}")
+              ? (p
+                ..add(_genTileFromString(
+                  "$currPrefix ${E621.savedSearchTag}${v.uniqueId}",
+                  controller: controller,
+                  onTap: onTap,
+                  leading: const Icon(Icons.save),
+                )))
+              : p,
         ),
-      if (SavedDataE6.isInit &&
-          currSubString.contains(E621.savedSearchTag) &&
-          showSavedSearches)
-        ...(SavedDataE6.all
-                .where(
-                  (v) =>
-                      v.verifyUniqueness() &&
-                      !currFullText
-                          .contains("${E621.savedSearchTag}${v.uniqueId}") &&
-                      "${E621.savedSearchTag}${v.uniqueId}"
-                          .contains(currSubString),
-                )
-                .map((v) => "$currPrefix ${E621.savedSearchTag}${v.uniqueId}")
-                .toList()
-              ..sort(comp))
-            .map(
-          (e) => genTileFromString(
-            e,
-            controller: controller,
-            onTap: onTap,
-            leading: const Icon(Icons.save),
-          ),
-        ),
-      if ((AppSettings.i?.favoriteTagsAll.isNotEmpty ?? false) && showFavTags)
+      if (hasSuggestionsFromFavTags)
         ...(AppSettings.i!.favoriteTagsAll
                 .where((element) => !currPrefix.contains(element))
                 .map((e) => "$currPrefix$e")
                 .toList()
               ..sort(comp))
             .take(5)
-            .map((e) => genTileFromString(
+            .fold<List<ListTile>>(
+                [],
+                (p, e) => addedResultantValues.add(e)
+                    ? (p
+                      ..add(_genTileFromString(
+                        e,
+                        controller: controller,
+                        onTap: onTap,
+                        leading: const Icon(Icons.favorite),
+                      )))
+                    : p),
+      ...r.take(20).fold<List<ListTile>>(
+          [],
+          (p, e) => addedResultantValues.add(e)
+              ? (p
+                ..add(_genTileFromString(
                   e,
                   controller: controller,
                   onTap: onTap,
-                  leading: const Icon(Icons.favorite),
-                )),
-      ...r.take(20).map((e) => genTileFromString(
-            e,
-            controller: controller,
-            onTap: onTap,
-            leading: const Text("Meta"),
-          )),
-      ...?dbResults
-    ]..sort((e1, e2) =>
-        comp((e1.subtitle as Text).data!, (e2.subtitle as Text).data!));
+                  leading: const Text("Meta"),
+                )))
+              : p),
+      if (retrieveTagDB != null)
+        ..._filterSearchOptionsFromTagDB(
+          db: retrieveTagDB!,
+          currText: currFullText,
+          currPrefix: currPrefix,
+        ).fold<List<ListTile>>(
+            [],
+            (p, e) => addedResultantValues.add("$currPrefix ${e.name}")
+                ? (p
+                  ..add(_genTagDbTile(
+                    e,
+                    currPrefix: currPrefix,
+                    controller: controller,
+                    onTap: onTap,
+                  )))
+                : p),
+    ]..sort(compListTile);
   }
 
-  Iterable<String> _generateSortedOptions(String currentTextValue) {
-    final currText = currentTextValue;
-    var lastTermIndex = currText.lastIndexOf(
-      RegExp('[$whitespaceCharacters$tagModifiersRegexString]'),
-    );
-    lastTermIndex = lastTermIndex >= 0 ? lastTermIndex + 1 : 0;
-    final currSubString = currText.substring(lastTermIndex);
-    final currPrefix = currText.substring(0, lastTermIndex);
-    logger.finer("currText: $currText");
-    logger.finer("lastTermIndex: $lastTermIndex");
-    logger.finer("currSubString: $currSubString");
-    logger.finer("currPrefix: $currPrefix");
-    if (allSuggestionSourcesEmpty /*  || currText.isEmpty */) {
-      return const Iterable<String>.empty();
-    }
-    var db = retrieveTagDB;
-    if (db == null) {
-      var r = showMetaTags
-          ? sh.modifierTagsSuggestionsList
-              .map((e) => "$currPrefix$e")
-              .where((v) => v.contains(currText))
-          : const Iterable<String>.empty();
-      if (((AppSettings.i?.favoriteTagsAll.isEmpty ?? true) || !showFavTags) &&
-          (!SavedDataE6.isInit || !showSavedSearches) &&
-          (CachedSearches.searches.isEmpty || !showPriorSearches)) {
-        return (r.toList()
-              ..sort(
-                str_util.getFineInverseSimilarityComparator(currText),
-              ))
-            .take(50);
-      }
-      return {
-        // currText,
-        if (CachedSearches.searches.isNotEmpty && showPriorSearches)
-          ...(() {
-            var relatedSearches = CachedSearches.searches.where(
-              (element) =>
-                  !currText.contains(element.searchString) &&
-                  element.searchString.contains(currText),
-            );
-            return relatedSearches.map((e) => e.searchString).toList()
-              ..sort(
-                str_util.getFineInverseSimilarityComparator(currText),
-              )
-              ..removeRange(
-                relatedSearches.length -
-                    min(
-                      SearchView.i.numSavedSearchesInSearchBar,
-                      relatedSearches.length,
-                    ),
-                relatedSearches.length,
-              );
-          })(),
-        if (SavedDataE6.isInit &&
-            currSubString.contains(E621.savedSearchTag) &&
-            showSavedSearches)
-          ...SavedDataE6.all
-              .where(
-                (v) =>
-                    v.verifyUniqueness() &&
-                    !currText.contains("${E621.savedSearchTag}${v.uniqueId}") &&
-                    "${E621.savedSearchTag}${v.uniqueId}"
-                        .contains(currSubString),
-              )
-              .map((v) => "$currPrefix ${E621.savedSearchTag}${v.uniqueId}")
-              .toList()
-            ..sort(
-              str_util.getFineInverseSimilarityComparator(currText),
-            ),
-        if ((AppSettings.i?.favoriteTagsAll.isNotEmpty ?? false) && showFavTags)
-          ...(AppSettings.i!.favoriteTagsAll
-                  .where((element) => !currPrefix.contains(element))
-                  .map((e) => "$currPrefix$e")
-                  .toList()
-                ..sort(
-                  str_util.getFineInverseSimilarityComparator(currText),
-                ))
-              .take(5),
-        ...r.take(20),
-      }.toList()
-        ..sort(str_util.getFineInverseSimilarityComparator(currText));
-    }
-    return genSearchOptionsFromTagDB(
-      db: db,
-      currText: currText,
-      currPrefix: currPrefix,
+  VoidCallback? _genCallback(
+    String output,
+    void Function()? onTap,
+    SearchController? controller,
+  ) =>
+      onTap ??
+      () {
+        if (controller?.isAttached ?? false) controller!.closeView(output);
+      };
+
+  ListTile _genTagDbTile(
+    TagDBEntry element, {
+    required String currPrefix,
+    Widget? trailing,
+    SearchController? controller,
+    void Function()? onTap,
+  }) {
+    final e = "$currPrefix ${element.name}";
+    final tAndS = _genTitleAndSubtitleFromString(e);
+    return ListTile(
+      dense: true,
+      title: Text("${tAndS.$1} {${element.category.name}}"),
+      subtitle: Text(tAndS.$2),
+      onTap: _genCallback(e, onTap, controller),
+      // leading: const Text("TagDB"),
+      leading: const Icon(Icons.lightbulb),
+      trailing: trailing,
     );
   }
 
   /// [currText] is all the text in the field; the value of [TextEditingValue.text].
-  Iterable<String> genSearchOptionsFromTagDB({
+  Iterable<TagDBEntry> _filterSearchOptionsFromTagDB({
     required TagDB db,
     required String currText,
-    required String currPrefix,
+    String? currPrefix,
+    Set<String>? priorEntries,
   }) {
-    if (currText.isEmpty) return const Iterable<String>.empty();
-    var (s, e) = db.getCharStartAndEnd(currText[0]);
-    if (s < 0 || e < 0) return const Iterable<String>.empty();
-    logger.finer("range For ${currText[0]}: $s - $e");
-    if (currText.length == 1) {
-      return [
-        currText,
-        ...(db.tagsByString.queue.getRange(s, e).toList(growable: false)
-              //..sort((a, b) => b.postCount - a.postCount))
-              ..sort(
-                (a, b) {
-                  return str_util.getFineInverseSimilarityComparator(currText)(
-                    a.name,
-                    b.name,
-                  );
-                },
-              ))
-            .map((e) => "$currPrefix ${e.name}"),
-      ];
-    }
-    var t = db.tagsByString.queue.getRange(s, e).toList(growable: false),
-        s1 = t.indexWhere((element) => element.name.startsWith(currText));
-    if (s1 == -1) {
-      s1 = t.indexWhere((element) => element.name.startsWith(
-            currText.substring(
-              0,
-              currText.length - 1,
-            ),
-          ));
-    }
-    if (s1 == -1) return const Iterable<String>.empty();
-    var e1 = t.lastIndexWhere((element) => element.name.startsWith(currText));
-    if (e1 == -1) {
-      e1 = t.lastIndexWhere(
-          (element) => element.name.startsWith(currText.substring(
-                0,
-                currText.length - 1,
-              )));
-    }
-    if (e1 == -1) return const Iterable<String>.empty();
-    return [
-      currText,
-      ...(t.getRange(s1, e1).toList(growable: false)
-            //..sort((a, b) => b.postCount - a.postCount))
-            ..sort(
-              (a, b) {
-                return str_util.getFineInverseSimilarityComparator(
-                  currText,
-                )(a.name, b.name);
-              },
-            ))
-          .map((e) => "$currPrefix ${e.name}"),
-    ];
+    Iterable<TagDBEntry> filter(Iterable<TagDBEntry> before) =>
+        priorEntries != null && currPrefix != null
+            ? before
+                .where((e) => !priorEntries.contains("$currPrefix ${e.name}"))
+            : before;
+
+    return filter(db.getSublist(currText, charactersToBacktrack: 1));
   }
 
   @override
@@ -744,17 +671,17 @@ class _WSearchBarState extends State<WSearchBar> {
   }
 
   // #region Search Bar Callbacks
-  void sbcCloseAndUnfocus() {
+  void _sbcCloseAndUnfocus() {
     if (searchController.isAttached && searchController.isOpen) {
       searchController.closeView(currentText);
     }
   }
 
-  void sbcOnSubmitted(String s) {
+  void _sbcOnSubmitted(String s) {
     setState(() {
       currentText = s;
     });
-    sbcCloseAndUnfocus();
+    _sbcCloseAndUnfocus();
     Provider.of<ManagedPostCollectionSync>(context, listen: false)
         .launchOrReloadSearch(
       PostSearchQueryRecord(

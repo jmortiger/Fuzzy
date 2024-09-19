@@ -361,7 +361,7 @@ class WFabBuilder extends StatelessWidget {
                   resolveDesync: false,
                   throwOnDesync: false,
                 )
-            : selected.remove(post.id)
+            : selected.remove(post)
                 ? ""
                 : selected.add(post);
       },
@@ -415,108 +415,121 @@ class WFabBuilder extends StatelessWidget {
       logger
           .warning("Couldn't access SearchResultsNotifier in fab" /* , e, s */);
     }
-
-    return SelectorNotifier(
-      value: useFab,
-      selector: (_, value) => value.value,
-      builder: (context, useFab, _) =>
-          (useFab ? ExpandableFab.new : WPullTab.new)(
-        openIcon: isMultiplePosts
-            ? IconButton(
-                onPressed: null,
-                disabledColor: Theme.of(context)
-                        .iconButtonTheme
-                        .style
-                        ?.iconColor
-                        ?.resolve(<WidgetState>{}) ??
-                    Theme.of(context).iconTheme.color,
-                icon: Text(posts!.length.toString()),
-              )
-            : IconButton(
-                onPressed: null,
-                disabledColor: Theme.of(context)
-                        .iconButtonTheme
-                        .style
-                        ?.iconColor
-                        ?.resolve(<WidgetState>{}) ??
-                    Theme.of(context).iconTheme.color,
-                icon: const Icon(Icons.create),
-              ),
-        useDefaultHeroTag: false,
-        distance: useFab
-            ? Platform.isDesktop
-                ? 112
-                : 224
-            : MediaQuery.sizeOf(context).height - 24 * 2,
-        // disabledTooltip: (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
-        //     ? ""
-        //     : "Long-press to select posts and perform bulk actions.",
-        children: /* (isSinglePost ||
+    Widget builder(
+            BuildContext context,
+            ({bool useFab, List<E6PostResponse>? rs, E6PostResponse? r}) useFab,
+            _) =>
+        (useFab.useFab ? ExpandableFab.new : WPullTab.new)(
+          anchorAlignment: AnchorAlignment.right,
+          openIcon: isMultiplePosts
+              ? IconButton(
+                  onPressed: null,
+                  disabledColor: Theme.of(context)
+                          .iconButtonTheme
+                          .style
+                          ?.iconColor
+                          ?.resolve(<WidgetState>{}) ??
+                      Theme.of(context).iconTheme.color,
+                  icon: Text(posts!.length.toString()),
+                )
+              : IconButton(
+                  onPressed: null,
+                  disabledColor: Theme.of(context)
+                          .iconButtonTheme
+                          .style
+                          ?.iconColor
+                          ?.resolve(<WidgetState>{}) ??
+                      Theme.of(context).iconTheme.color,
+                  icon: const Icon(Icons.create),
+                ),
+          useDefaultHeroTag: false,
+          distance: useFab.useFab
+              ? Platform.isDesktop
+                  ? 112
+                  : 224
+              : MediaQuery.sizeOf(context).width - 24 * 2,
+          initialOpen: true,
+          // disabledTooltip: (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
+          //     ? ""
+          //     : "Long-press to select posts and perform bulk actions.",
+          children: /* (isSinglePost ||
                 (isMultiplePosts && posts!.isNotEmpty) ||
                 (customActions?.isNotEmpty ?? false))
             ?  */
-            [
-          if (!isSinglePost)
-            WFabBuilder.getClearSelectionButton(
-                context, onClearSelections /* , selectedPosts */),
-          if (!isSinglePost && isSelected != canSelect)
-            WFabBuilder.getChangePageSelectionButton(context, select: true),
-          if (!isSinglePost && isSelected != canSelect)
-            WFabBuilder.getChangePageSelectionButton(context, select: false),
-          if (!isSinglePost)
-            WFabBuilder.getMultiplePostsAddToSetAction(context, posts!),
-          if (isSinglePost)
-            WFabBuilder.getSinglePostAddToSetAction(context, post!),
-          if (!isSinglePost && posts!.indexWhere((p) => !p.isFavorited) != -1)
-            WFabBuilder.getMultiplePostsAddFavAction(context, posts!),
-          if (isSinglePost && !post!.isFavorited)
-            WFabBuilder.getSinglePostAddFavAction(context, post!),
-          if (!isSinglePost)
-            getMultiplePostsRemoveFromSetAction(context, posts!),
-          if (isSinglePost) getSinglePostRemoveFromSetAction(context, post!),
-          if (!isSinglePost && posts!.indexWhere((p) => p.isFavorited) != -1)
-            getMultiplePostsRemoveFavAction(context, posts!),
-          if (isSinglePost && post!.isFavorited)
-            getSinglePostRemoveFavAction(context, post!),
-          if (isSinglePost)
-            useFab
-                ? getSinglePostUpvoteAction(context, post!)
-                : getSinglePostDownvoteAction(context, post!),
-          if (isSinglePost)
-            useFab
-                ? getSinglePostDownvoteAction(context, post!)
-                : getSinglePostUpvoteAction(context, post!),
-          if (isMultiplePosts)
-            useFab
-                ? getMultiplePostsUpvoteAction(context, posts!)
-                : getMultiplePostsDownvoteAction(context, posts!),
-          if (isMultiplePosts)
-            useFab
-                ? getMultiplePostsDownvoteAction(context, posts!)
-                : getMultiplePostsUpvoteAction(context, posts!),
-          if (isSinglePost) getSinglePostEditAction(context, post!),
-          if (isSinglePost && isSelected != null)
-            if (isSelected)
-              getSinglePostToggleSelectAction(
-                context,
-                post!,
-                isSelected: isSelected,
-                toggleSelection: toggleSelectionCallback,
-                selected: selectedPosts,
-              )
-            else
-              getSinglePostToggleSelectAction(
-                context,
-                post!,
-                isSelected: isSelected,
-                toggleSelection: toggleSelectionCallback,
-                selected: selectedPosts,
-              ),
-          // getPrintSelectionsAction(context, post, posts),
-          if (customActions != null) ...customActions!,
-        ] /* : [] */,
-      ),
-    );
+              [
+            if (!isSinglePost)
+              WFabBuilder.getClearSelectionButton(
+                  context, onClearSelections /* , selectedPosts */),
+            if (!isSinglePost && isSelected != canSelect)
+              WFabBuilder.getChangePageSelectionButton(context, select: true),
+            if (!isSinglePost && isSelected != canSelect)
+              WFabBuilder.getChangePageSelectionButton(context, select: false),
+            if (!isSinglePost)
+              WFabBuilder.getMultiplePostsAddToSetAction(context, posts!),
+            if (isSinglePost)
+              WFabBuilder.getSinglePostAddToSetAction(context, post!),
+            if (!isSinglePost && posts!.indexWhere((p) => !p.isFavorited) != -1)
+              WFabBuilder.getMultiplePostsAddFavAction(context, posts!),
+            if (isSinglePost && !post!.isFavorited)
+              WFabBuilder.getSinglePostAddFavAction(context, post!),
+            if (!isSinglePost)
+              getMultiplePostsRemoveFromSetAction(context, posts!),
+            if (isSinglePost) getSinglePostRemoveFromSetAction(context, post!),
+            if (!isSinglePost && posts!.indexWhere((p) => p.isFavorited) != -1)
+              getMultiplePostsRemoveFavAction(context, posts!),
+            if (isSinglePost && post!.isFavorited)
+              getSinglePostRemoveFavAction(context, post!),
+            if (isSinglePost)
+              useFab.useFab
+                  ? getSinglePostUpvoteAction(context, post!)
+                  : getSinglePostDownvoteAction(context, post!),
+            if (isSinglePost)
+              useFab.useFab
+                  ? getSinglePostDownvoteAction(context, post!)
+                  : getSinglePostUpvoteAction(context, post!),
+            if (isMultiplePosts)
+              useFab.useFab
+                  ? getMultiplePostsUpvoteAction(context, posts!)
+                  : getMultiplePostsDownvoteAction(context, posts!),
+            if (isMultiplePosts)
+              useFab.useFab
+                  ? getMultiplePostsDownvoteAction(context, posts!)
+                  : getMultiplePostsUpvoteAction(context, posts!),
+            if (isSinglePost) getSinglePostEditAction(context, post!),
+            if (isSinglePost && isSelected != null)
+              if (isSelected)
+                getSinglePostToggleSelectAction(
+                  context,
+                  post!,
+                  isSelected: isSelected,
+                  toggleSelection: toggleSelectionCallback,
+                  selected: selectedPosts,
+                )
+              else
+                getSinglePostToggleSelectAction(
+                  context,
+                  post!,
+                  isSelected: isSelected,
+                  toggleSelection: toggleSelectionCallback,
+                  selected: selectedPosts,
+                ),
+            // getPrintSelectionsAction(context, post, posts),
+            if (customActions != null) ...customActions!,
+          ] /* : [] */,
+        );
+    return /* (post ?? posts) is ChangeNotifier
+        ? SelectorNotifier2(
+            value1: useFab,
+            value2: (post ?? posts) as ChangeNotifier,
+            selector: (_, value, __) =>
+                (useFab: value.value, r: post, rs: posts),
+            builder: builder,
+          )
+        :  */SelectorNotifier(
+            value: useFab,
+            selector: (_, value) => (useFab: value.value, r: post, rs: posts),
+            builder: builder,
+          );
   }
 }
 

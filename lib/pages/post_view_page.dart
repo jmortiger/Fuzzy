@@ -28,9 +28,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../web/e621/e621.dart';
 import '../widgets/w_fab_builder.dart';
 
-abstract interface class IReturnsTags {
+/* abstract interface class IReturnsTags {
   List<String>? get tagsToAdd;
-}
+} */
 
 bool overrideQuality = true;
 const descriptionTheme = TextStyle(fontWeight: FontWeight.bold, fontSize: 18);
@@ -43,7 +43,7 @@ const headerStyle = TextStyle(
 );
 
 class PostViewPage extends StatefulWidget
-    implements IReturnsTags, IRoute<PostViewPage> {
+    implements /* IReturnsTags,  */IRoute<PostViewPage> {
   // #region Logger
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
@@ -92,7 +92,7 @@ class PostViewPage extends StatefulWidget
   State<PostViewPage> createState() => _PostViewPageState();
 }
 
-class _PostViewPageState extends State<PostViewPage> implements IReturnsTags {
+class _PostViewPageState extends State<PostViewPage> /* implements IReturnsTags */ {
   static lm.FileLogger get logger => PostViewPage.logger;
   @override
   List<String>? get tagsToAdd => widget.tagsToAdd;

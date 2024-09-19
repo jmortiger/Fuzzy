@@ -1,5 +1,5 @@
 import 'package:j_util/j_util_full.dart';
-
+/// TODO: Add date data
 class SearchData {
   final String searchString;
   final List<String> tagList;
@@ -37,22 +37,18 @@ class SearchMetrics extends SearchData {
   final int frequency;
   const SearchMetrics.$const({
     required this.frequency,
-    required String searchString,
-    required List<String> tagList,
-    required Set<String> tagSet,
-  }) : super.$const(
-          searchString: searchString,
-          tagList: tagList,
-          tagSet: tagSet,
-        );
+    required super.searchString,
+    required super.tagList,
+    required super.tagSet,
+  }) : super.$const();
   SearchMetrics.fromString({
     required this.frequency,
-    required String searchString,
-  }) : super.fromString(searchString: searchString);
+    required super.searchString,
+  }) : super.fromString();
   SearchMetrics.fromList({
     required this.frequency,
-    required List<String> tagList,
-  }) : super.fromList(tagList: tagList);
+    required super.tagList,
+  }) : super.fromList();
   factory SearchMetrics.fromJson(Map<String, dynamic> json) =>
       SearchMetrics.fromString(
         frequency: json["frequency"],

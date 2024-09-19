@@ -29,3 +29,15 @@ Comparator<String> getFineInverseSimilarityComparator(String mainComparison) =>
     (String a, String b) => b
         .similarityTo(mainComparison)
         .compareTo(a.similarityTo(mainComparison));
+
+// /// Lower output value means lower similarity
+// double Function(String,String) getDoubleSimilarityComparison(String mainComparison) =>
+//     (String a, String b) => a
+//         .similarityTo(mainComparison)
+//         .compareTo(b.similarityTo(mainComparison));
+
+// /// Lower output value means higher similarity
+// double Function(String,String) getDoubleInverseSimilarityComparison(String mainComparison) =>
+//     (String a, String b) => b
+//         .similarityTo(mainComparison)
+//         .compareTo(a.similarityTo(mainComparison));

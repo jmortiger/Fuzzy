@@ -195,10 +195,10 @@ final class PageNumSearchParameterRecord extends PageNumSearchParameters {
     super.limit,
   });
   const PageNumSearchParameterRecord.withNumber({
-    String? tags,
-    int? pageNumber,
-    int? limit,
-  }) : super.withNumber(tags: tags, pageNumber: pageNumber, limit: limit);
+    super.tags,
+    super.pageNumber,
+    super.limit,
+  }) : super.withNumber();
   PageNumSearchParameterRecord.fromSlim({
     PostSearchParametersSlim? s,
     int? pageIndex,
@@ -331,19 +331,19 @@ final class PageNumFullParameters extends PageNumSearchParameters
     this.apiKey,
   });
   PageNumFullParameters.withIndex({
-    String? tags,
-    int? pageIndex,
-    int? limit,
+    super.tags,
+    super.pageIndex,
+    super.limit,
     this.username,
     this.apiKey,
-  }) : super.withIndex(tags: tags, pageIndex: pageIndex, limit: limit);
+  }) : super.withIndex();
   PageNumFullParameters.withNumber({
-    String? tags,
-    int? pageNumber,
-    int? limit,
+    super.tags,
+    super.pageNumber,
+    super.limit,
     this.username,
     this.apiKey,
-  }) : super.withNumber(tags: tags, pageNumber: pageNumber, limit: limit);
+  }) : super.withNumber();
 
   @override
   PageNumFullParameters copyWith({

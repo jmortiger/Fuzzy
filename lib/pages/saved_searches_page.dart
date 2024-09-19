@@ -401,10 +401,10 @@ class _SavedSearchesPageSingletonState
                   onChanged: (value) =>
                       value! ? selected.add(r) : selected.remove(r),
                 )
-              : switch (entry.runtimeType) {
-                  SavedSearchData => const Text("S"),
-                  SavedPoolData => const Text("P"),
-                  SavedSetData => const Text("s"),
+              : switch (entry) {
+                  SavedSearchData _ => const Text("S"),
+                  SavedPoolData _ => const Text("P"),
+                  SavedSetData _ => const Text("s"),
                   _ => throw UnsupportedError("not supported"),
                 },
           title: Text(entry.title),
@@ -483,25 +483,25 @@ class _SavedSearchesPageSingletonState
               .then((value) {
             if (value != null) {
               data.$. /* SavedDataE6. */ editAndSave(
-                edited: switch (entry.runtimeType) {
-                  SavedPoolData => SavedPoolData.fromSearchString(
+                edited: switch (entry) {
+                  SavedPoolData _ => SavedPoolData.fromSearchString(
                       // id: int.parse(value.mainData),
                       searchString: value.mainData,
                       title: value.title,
                     ),
-                  SavedSetData => SavedSetData.fromSearchString(
+                  SavedSetData _ => SavedSetData.fromSearchString(
                       // id: int.parse(value.mainData),
                       searchString: value.mainData,
                       title: value.title,
                       parent: value.parent ?? "",
                       uniqueId: value.uniqueId ?? "",
                     ),
-                  // SavedSetData => SavedSetData.fromSearchString(
+                  // SavedSetData _ => SavedSetData.fromSearchString(
                   //     // id: int.parse(value.mainData),
                   //     searchString: value.mainData,
                   //     title: value.title,
                   //   ),
-                  SavedSearchData => SavedSearchData.fromSearchString(
+                  SavedSearchData _ => SavedSearchData.fromSearchString(
                       searchString: value.mainData,
                       title: value.title,
                       parent: value.parent ?? "",

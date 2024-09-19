@@ -1,26 +1,86 @@
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:e621/e621_models.dart'
+    show Tag, TagCategory, TagDbEntry, TagDbEntrySlim;
 import 'package:flutter/foundation.dart';
 import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/log_management.dart' as lm;
 import 'package:j_util/j_util_full.dart';
-import 'package:e621/e621_models.dart' show TagCategory;
+import 'package:string_similarity/string_similarity.dart';
 
 class TagDB {
+  // ignore: unnecessary_late
+  static late final logger = lm.generateLogger("TagDB").logger;
   final Set<String> tagSet;
   final List<TagDBEntry /* Full */ > tags;
   final Map<String, (TagCategory, int)> tagsMap;
-  final PriorityQueue<TagDBEntry /* Full */ > tagsByPopularity;
+  // final PriorityQueueFlat<TagDBEntry /* Full */ > tagsByPopularity;
+  final List<TagDBEntry /* Full */ > tagsByPopularity;
   // final List<PriorityQueue<TagDBEntry/* Full */>> tagsByFirstCharsThenPopularity;
+  /// In alphabetical order
   final CustomPriorityQueue<TagDBEntry /* Full */ > tagsByString;
-  final Map<String, (int, int)> _startEndOfChar = <String, (int, int)>{};
-  (int, int) getCharStartAndEnd(String character) =>
-      _startEndOfChar[character[0]] ??
-      (_startEndOfChar[character[0]] = (
-        tagsByString.queue
-            .indexWhere((element) => character[0] == element.name[0]),
-        tagsByString.queue
-            .lastIndexWhere((element) => character[0] == element.name[0])
-      ));
+  final _startEndOfChar = <String, (int startIndex, int endIndex)>{};
+  (int startIndex, int endIndex) getCharStartAndEnd(String character) =>
+      _startEndOfChar[character[0]] ??= (
+        tagsByString.queue.indexWhere((e) => character[0] == e.name[0]),
+        tagsByString.queue.lastIndexWhere((e) => character[0] == e.name[0])
+      );
+  /// If there are no locations that perfectly match [query], 
+  /// [allowedVariance] & [charactersToBacktrack] are fallbacks.
+  /// 
+  /// [charactersToBacktrack] searches for [query] without 
+  /// the last [charactersToBacktrack] characters.
+  /// 
+  /// [allowedVariance] searches for the 1st and last string that has a 
+  /// [StringSimilarity.compareTwoStrings] value >= [allowedVariance].
+  Iterable<TagDBEntry> getSublist(
+    String query, {
+    double? allowedVariance,
+    int charactersToBacktrack = 0,
+  }) {
+    if (query.isEmpty) return const Iterable<TagDBEntry>.empty();
+    var (start, end) = getCharStartAndEnd(query[0]);
+    if (start < 0 || end < 0) return const Iterable<TagDBEntry>.empty();
+    logger.finer("range For ${query[0]}: $start - $end");
+    if (query.length == 1) {
+      return start == end
+          ? [tagsByString.queue[start]]
+          : tagsByString.queue.getRange(start, end);
+    }
+    var t = tagsByString.queue.getRange(start, end).toList(growable: false);
+    var comp = (TagDBEntry e) => e.name.startsWith(query);
+    start = t.indexWhere(comp);
+    if (start < 0) {
+      if (charactersToBacktrack < 1 && !(allowedVariance?.isFinite ?? false)) {
+        return const Iterable<TagDBEntry>.empty();
+      } else if (charactersToBacktrack < 1) {
+        comp = (e) => e.name.similarityTo(query) >= allowedVariance!;
+      } else {
+        charactersToBacktrack = min(query.length - 1, charactersToBacktrack);
+        final querySub = query.substring(0, charactersToBacktrack);
+        comp = (e) => e.name.startsWith(querySub);
+      }
+      start = t.indexWhere(comp);
+      if (start < 0) return const Iterable<TagDBEntry>.empty();
+    }
+    end = t.lastIndexWhere(comp);
+    if (end < 0) {
+      logger.warning("getSublist: SHOULD NEVER BE ENTERED");
+      if (charactersToBacktrack < 1 && !(allowedVariance?.isFinite ?? false)) {
+        return const Iterable<TagDBEntry>.empty();
+      } else if (charactersToBacktrack < 1) {
+        comp = (e) => e.name.similarityTo(query) >= allowedVariance!;
+      } else {
+        charactersToBacktrack = min(query.length - 1, charactersToBacktrack);
+        final querySub = query.substring(0, charactersToBacktrack);
+        comp = (e) => e.name.startsWith(querySub);
+      }
+      end = t.lastIndexWhere(comp);
+      if (end < 0) return const Iterable<TagDBEntry>.empty();
+    }
+    return (end == start) ? [t[start]] : t.getRange(start, end);
+  }
 
   /// This will likely take awhile. Try async.
   TagDB({
@@ -28,7 +88,6 @@ class TagDB {
     required this.tags,
     required this.tagsMap,
     required this.tagsByPopularity,
-    // required this.tagsByFirstCharsThenPopularity,
     required this.tagsByString,
   });
   TagDB.fromEntries(List<TagDBEntryFull> entries)
@@ -37,33 +96,19 @@ class TagDB {
         tags = entries,
         tagsMap = Map.unmodifiable(
             {for (var e in entries) e.name: (e.category, e.postCount)}),
-        tagsByPopularity = PriorityQueue(entries),
-        tagsByString = CustomPriorityQueue(
-            entries,
-            (a, b) => a.name.compareTo(b
-                .name)) /* ,
-        tagsByFirstCharsThenPopularity = entries..sort((a, b) => a.name.compareTo(b.name))..reduceToType((accumulator, elem, index, list){
-          
-        }, ("")) */
-  ;
+        tagsByPopularity = entries.sublist(0)
+          ..sort(coarseComparator), //PriorityQueueFlat(entries),
+        tagsByString =
+            CustomPriorityQueue(entries, (a, b) => a.name.compareTo(b.name));
+
+  static int coarseComparator(TagDbEntrySlim a, TagDbEntrySlim other) =>
+      (other.postCount - (other.postCount % 5)) -
+      (a.postCount - a.postCount % 5);
   factory TagDB.fromCsvString(String csv) =>
       TagDB.fromEntries(fromCsvStringFull(csv));
   static Future<TagDB> makeFromCsvString(String csv) async =>
       compute((String csv) => TagDB.fromCsvString(csv), csv,
           debugLabel: "Make TagDB From CSV String");
-  // Future.microtask(() => TagDB.fromCsvString(csv));
-  // JsonMap toJson() => {
-  //   "id": id,
-  //   "name": name,
-  //   "category": category.index,
-  //   "post_count": post_count,
-  // };
-  // factory TagDBEntry.fromJson(JsonMap json) => TagDBEntry(
-  //   id: json["id"] as int,
-  //   name: json["name"] as String,
-  //   category: json["category"] as TagCategory,
-  //   post_count: json["post_count"] as int,
-  // );
 }
 
 // #region Parse Direct
@@ -127,18 +172,13 @@ TagDBEntryFull parseTagEntryFullCsvString(String e) {
       postCount: int.parse(t[3]));
 }
 
-({
-  String name,
-  TagCategory category,
-  int postCount,
-}) parseTagEntryCsvString(String e) {
+TagDBEntry parseTagEntryCsvString(String e) {
   final t = _rootParse(e);
-  return (
-    // id: int.parse(t[0]),
-    name: t[1],
-    category: TagCategory.values[int.parse(t[2])],
-    postCount: int.parse(t[3])
-  );
+  return TagDBEntry(
+      // id: int.parse(t[0]),
+      name: t[1],
+      category: TagCategory.values[int.parse(t[2])],
+      postCount: int.parse(t[3]));
 }
 // #endregion Parse Direct
 
@@ -158,160 +198,79 @@ Future<List<TagDBEntryFull>> makeFromCsvStringFull(String csv) async =>
 List<TagDBEntry> fromCsvString(String csv) => (csv.split("\n")
       ..removeAt(0)
       ..removeLast())
-    .map((e) => TagDBEntry._fromRecord(parseTagEntryCsvString(e)))
+    .map((e) => parseTagEntryCsvString(e))
     .toList();
 Future<List<TagDBEntry>> makeFromCsvString(String csv) async =>
-    compute(fromCsvString, csv,
-        debugLabel: "Make List From CSV String");
+    compute(fromCsvString, csv, debugLabel: "Make List From CSV String");
 Future<List<T>> makeTypeFromCsvString<T extends TagDBEntry>(String csv) =>
     switch (T) {
-      TagDBEntryFull => makeFromCsvStringFull(csv),
-      TagDBEntry => makeFromCsvString(csv),
+      const (TagDBEntryFull) => makeFromCsvStringFull(csv),
+      const (TagDBEntry) => makeFromCsvString(csv),
       Type() => throw UnimplementedError(),
     } as Future<List<T>>;
 List<T> typeFromCsvString<T extends TagDBEntry>(String csv) => switch (T) {
-      TagDBEntryFull => fromCsvStringFull(csv),
-      TagDBEntry => fromCsvString(csv),
+      const (TagDBEntryFull) => fromCsvStringFull(csv),
+      const (TagDBEntry) => fromCsvString(csv),
       Type() => throw UnimplementedError(),
     } as List<T>;
 
-final class TagDBEntryFull extends TagDBEntry {
-  final int id;
+typedef TagDBEntryFull = TagDbEntry;
+typedef TagDBEntry = TagDbEntrySlim;
+// final class TagDBEntryFull extends TagDbEntry {
+//   const TagDBEntryFull({
+//     required super.id,
+//     required super.name,
+//     required super.category,
+//     required super.postCount,
+//   });
+//   TagDBEntryFull.fromJson(super.json) : super.fromJson();
+//   TagDBEntryFull.fromCsv(super.csv) : super.fromCsv();
+// }
 
-  const TagDBEntryFull({
-    required this.id,
-    required super.name,
-    required super.category,
-    required super.postCount,
-  });
-  TagDBEntryFull._fromRecord(
-      ({int id, String name, TagCategory category, int postCount}) r)
-      : this(
-          id: r.id,
-          name: r.name,
-          category: r.category,
-          postCount: r.postCount,
-        );
-  TagDBEntryFull._fromJson({
-    required this.id,
-    required json,
-  }) : super.fromJson(json);
-  @override
-  JsonMap toJson() => super.toJson()..addAll({"id": id});
-  factory TagDBEntryFull.fromJson(JsonMap json) => TagDBEntryFull._fromJson(
-        id: json["id"] as int,
-        json: json,
-      );
-}
+// final class TagDBEntry implements Comparable<TagDBEntry> {
+//   final String name;
+//   final TagCategory category;
+//   final int postCount;
 
-final class TagDBEntry implements Comparable<TagDBEntry> {
-  final String name;
-  final TagCategory category;
-  final int postCount;
+//   const TagDBEntry({
+//     required this.name,
+//     required this.category,
+//     required this.postCount,
+//   });
+//   TagDBEntry._fromRecord(({String name, TagCategory category, int postCount}) r)
+//       : this(
+//           name: r.name,
+//           category: r.category,
+//           postCount: r.postCount,
+//         );
+//   JsonMap toJson() => {
+//         "name": name,
+//         "category": category.index,
+//         "post_count": postCount,
+//       };
+//   TagDBEntry.fromJson(JsonMap json)
+//       : name = json["name"] as String,
+//         category = json["category"] as TagCategory,
+//         postCount = json["post_count"] as int;
+//   /* const  */ TagDBEntry.fromFull(TagDBEntryFull entry)
+//       : name = entry.name,
+//         category = entry.category,
+//         postCount = entry.postCount;
 
-  const TagDBEntry({
-    required this.name,
-    required this.category,
-    required this.postCount,
-  });
-  TagDBEntry._fromRecord(({String name, TagCategory category, int postCount}) r)
-      : this(
-          name: r.name,
-          category: r.category,
-          postCount: r.postCount,
-        );
-  JsonMap toJson() => {
-        "name": name,
-        "category": category.index,
-        "post_count": postCount,
-      };
-  TagDBEntry.fromJson(JsonMap json)
-      : name = json["name"] as String,
-        category = json["category"] as TagCategory,
-        postCount = json["post_count"] as int;
-  /* const  */ TagDBEntry.fromFull(TagDBEntryFull entry)
-      : name = entry.name,
-        category = entry.category,
-        postCount = entry.postCount;
-
-  @override
-  // int compareTo(TagDBEntry other) => other.postCount - postCount;
-  int compareTo(TagDBEntry other) =>
-      (other.postCount - (other.postCount % 5)) - (postCount - postCount % 5);
-}
+//   @override
+//   // int compareTo(TagDBEntry other) => other.postCount - postCount;
+//   int compareTo(TagDBEntry other) =>
+//       (other.postCount - (other.postCount % 5)) - (postCount - postCount % 5);
+// }
 
 class TagSearchModel {
-  final List<TagSearchEntry> tags;
+  final List<Tag> tags;
 
   TagSearchModel({required this.tags});
 
   factory TagSearchModel.fromJson(JsonMap json) => TagSearchModel(
-      tags: json["tags"] != null ? [] : (json as List).cast<TagSearchEntry>());
+      tags: json["tags"] != null ? [] : (json as List).cast<Tag>());
 
   dynamic toJson() =>
       tags.isEmpty ? {"tags": []} : json.decode(tags.toString());
-}
-
-/// TODO: Implements TagDBEntry
-class TagSearchEntry {
-  /// <numeric tag id>,
-  final int id;
-
-  /// <tag display name>,
-  final String name;
-
-  /// <# matching visible posts>,
-  final int postCount;
-
-  /// <space-delimited list of tags>,
-  final List<String> relatedTags;
-
-  /// <ISO8601 timestamp>,
-  final DateTime relatedTagsUpdatedAt;
-
-  /// <numeric category id>,
-  final TagCategory category;
-
-  /// <boolean>,
-  final bool isLocked;
-
-  /// <ISO8601 timestamp>,
-  final DateTime createdAt;
-
-  /// <ISO8601 timestamp>
-  final DateTime updatedAt;
-
-  TagSearchEntry({
-    required this.id,
-    required this.name,
-    required this.postCount,
-    required this.relatedTags,
-    required this.relatedTagsUpdatedAt,
-    required this.category,
-    required this.isLocked,
-    required this.createdAt,
-    required this.updatedAt,
-  });
-  factory TagSearchEntry.fromJson(JsonMap json) => TagSearchEntry(
-        id: json["id"] as int,
-        name: json["name"] as String,
-        postCount: json["post_count"] as int,
-        relatedTags: (json["related_tags"] as List).cast<String>(),
-        relatedTagsUpdatedAt: json["related_tags_updated_at"] as DateTime,
-        category: json["category"] as TagCategory,
-        isLocked: json["is_locked"] as bool,
-        createdAt: json["created_at"] as DateTime,
-        updatedAt: json["updated_at"] as DateTime,
-      );
-  JsonMap toJson() => {
-        "id": id,
-        "name": name,
-        "post_count": postCount,
-        "related_tags": relatedTags,
-        "related_tags_updated_at": relatedTagsUpdatedAt,
-        "category": category,
-        "is_locked": isLocked,
-        "created_at": createdAt,
-        "updated_at": updatedAt,
-      };
 }

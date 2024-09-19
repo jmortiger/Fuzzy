@@ -12,7 +12,14 @@ import 'package:fuzzy/log_management.dart' as lm;
 import '../widgets/w_page_indicator.dart';
 
 class PostSwipePage extends StatefulWidget
-    implements IReturnsTags, IRoute<PostSwipePage> {
+    implements /* 
+  void sortBySecondaryComparator() {
+    if (secondaryComparator != null) {
+      for (final e in queue) {
+        e.sort(secondaryComparator);
+      }
+    }
+  } */IRoute<PostSwipePage> {
   static const routeNameString = "/";
 
   final bool startFullscreen;
@@ -24,7 +31,7 @@ class PostSwipePage extends StatefulWidget
   Iterable<E6PostResponse> get posts => postsObj?.posts ?? postsIterable!;
   final void Function(String addition)? onAddToSearch;
   @override
-  final List<String>? tagsToAdd;
+  // final List<String>? tagsToAdd;
   // final srn_lib.SearchResultsNotifier? selectedPosts;
   final List<E6PostResponse>? selectedPosts;
 
@@ -33,7 +40,7 @@ class PostSwipePage extends StatefulWidget
     required this.initialIndex,
     required Iterable<E6PostResponse> posts,
     this.onAddToSearch,
-    this.tagsToAdd,
+    // this.tagsToAdd,
     this.startFullscreen = false,
     this.selectedPosts,
   })  : postsObj = null,
@@ -43,7 +50,7 @@ class PostSwipePage extends StatefulWidget
     required this.initialIndex,
     required E6Posts posts,
     this.onAddToSearch,
-    this.tagsToAdd,
+    // this.tagsToAdd,
     this.startFullscreen = false,
     this.selectedPosts,
   })  : postsObj = posts,
@@ -129,7 +136,7 @@ class _PostSwipePageState extends State<PostSwipePage>
   void onAddToSearch(String s) {
     // widget.onAddToSearch?.call(s);
     toReturn = "$toReturn $s";
-    widget.tagsToAdd?.add(s);
+    // widget.tagsToAdd?.add(s);
     tagsToAddToSearch.add(s);
   }
 
@@ -160,7 +167,7 @@ class _PostSwipePageState extends State<PostSwipePage>
 }
 
 class PostSwipePageManaged extends StatefulWidget
-    implements IReturnsTags, IRoute<PostSwipePageManaged> {
+    implements /* IReturnsTags,  */IRoute<PostSwipePageManaged> {
   static const routeNameString = "/";
 
   final bool startFullscreen;
@@ -172,8 +179,8 @@ class PostSwipePageManaged extends StatefulWidget
   Iterable<E6PostResponse> get posts => postsObj.posts!.posts;
   Iterable<E6PostEntrySync> get postCache => postsObj.collection.posts;
   final void Function(String addition)? onAddToSearch;
-  @override
-  final List<String>? tagsToAdd;
+  // @override
+  // final List<String>? tagsToAdd;
   final List<E6PostResponse>? selectedPosts;
 
   const PostSwipePageManaged({
@@ -182,7 +189,7 @@ class PostSwipePageManaged extends StatefulWidget
     required this.initialPageIndex,
     required ManagedPostCollectionSync posts,
     this.onAddToSearch,
-    this.tagsToAdd,
+    // this.tagsToAdd,
     this.startFullscreen = false,
     required this.selectedPosts,
   }) : postsObj = posts;
@@ -355,7 +362,7 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
 
   void onAddToSearch(String s) {
     toReturn = "$toReturn $s";
-    widget.tagsToAdd?.add(s);
+    // widget.tagsToAdd?.add(s);
     tagsToAddToSearch.add(s);
   }
 

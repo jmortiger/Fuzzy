@@ -52,26 +52,25 @@ class _WPostThumbnailState extends State<WPostThumbnail> {
     if (widget.post != null) {
       info = retrieveImageInfo(widget.post!);
     } else {
-      future =
-          e621.sendRequest(e621.initGetPostRequest(widget.id!)).then((v) {
+      future = e621.sendRequest(e621.initGetPostRequest(widget.id!)).then((v) {
         return v.statusCode >= 300
             ? null
             : retrieveImageInfo(E6PostResponse.fromRawJson(v.body));
       })
-            ..then((p) {
-              setState(() {
-                info = p ?? const ImageInfoRecord(ImgError.path, 200, 200);
-                renderData = determineResolution(
-                  info!.width,
-                  info!.height,
-                  widget.maxWidth,
-                  widget.maxHeight,
-                  widget.fit,
-                );
-                future?.ignore();
-                future = null;
-              });
-            }).ignore();
+        ..then((p) {
+          setState(() {
+            info = p ?? const ImageInfoRecord(ImgError.path, 200, 200);
+            renderData = determineResolution(
+              info!.width,
+              info!.height,
+              widget.maxWidth,
+              widget.maxHeight,
+              widget.fit,
+            );
+            future?.ignore();
+            future = null;
+          });
+        }).ignore();
     }
   }
 

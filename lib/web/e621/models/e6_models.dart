@@ -5,6 +5,7 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/web/e621/e621.dart';
@@ -209,19 +210,27 @@ final class E6PostsSync extends E6Posts {
 
 class E6PostResponse implements PostListing, e621.Post {
   // #region Json Fields
+  /// {@template id}
   /// The ID number of the post.
+  /// {@endtemplate}
   @override
   final int id;
 
+  /// {@template createdAt}
   /// The time the post was created in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.
+  /// {@endtemplate} 
   @override
   final DateTime createdAt;
 
+  /// {@template updatedAt}
   /// The time the post was last updated in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.
+  /// {@endtemplate}
   @override
   final DateTime updatedAt;
 
+  /// {@template file}
   /// (array group)
+  /// {@endtemplate} 
   final E6FileResponse file;
 
   /// (array group)
@@ -238,31 +247,45 @@ class E6PostResponse implements PostListing, e621.Post {
   @override
   final E6PostTags tags;
 
+  /// {@template lockedTags}
   /// A JSON array of tags that are locked on the post.
+  /// {@endtemplate} 
   @override
   final List<String> lockedTags;
 
+  /// {@template changeSeq}
   /// An ID that increases for every post alteration on E6 (explained below)
+  /// {@endtemplate}
   @override
   final int changeSeq;
 
+  /// {@template flags}
   /// (array group)
+  /// {@endtemplate} 
   @override
   final E6Flags flags;
 
-  /// The post’s rating. Either s, q or e.
+  /// {@template rating}
+  /// The post’s rating. Either `s`, `q` or `e`.
+  /// {@endtemplate}
   @override
   final String rating;
 
+  /// {@template favCount}
   /// How many people have favorited the post.
+  /// {@endtemplate} 
   @override
   final int favCount;
 
+  /// {@template sources}
   /// The source field of the post.
+  /// {@endtemplate}
   @override
   final List<String> sources;
 
+  /// {@template pools}
   /// An array of Pool IDs that the post is a part of.
+  /// {@endtemplate} 
   @override
   final List<int> pools;
 
@@ -650,9 +673,9 @@ class E6PostMutable implements E6PostResponse {
   });
 
   factory E6PostMutable.fromJson(JsonOut json) =>
-      E6PostMutable.fromImmutable(E6PostResponse.fromJson(json));
+      E6PostMutable.fromInstance(E6PostResponse.fromJson(json));
   factory E6PostMutable.fromRawJson(String json) =>
-      E6PostMutable.fromImmutable(E6PostResponse.fromRawJson(json));
+      E6PostMutable.fromInstance(E6PostResponse.fromRawJson(json));
   static Iterable<E6PostMutable> fromRawJsonResults(String json) {
     final t = jsonDecode(json);
     return t["posts"] != null
@@ -758,13 +781,13 @@ class E6PostMutable implements E6PostResponse {
     this.pools = pools ?? this.pools;
     this.relationships =
         relationships as E6Relationships? ?? this.relationships;
-    this.approverId = (approverId ?? 1) < 0 ? approverId : this.approverId;
+    this.approverId = (approverId ?? 1) >= 0 ? approverId : this.approverId;
     this.uploaderId = uploaderId ?? this.uploaderId;
     this.description = description ?? this.description;
     this.commentCount = commentCount ?? this.commentCount;
     this.isFavorited = isFavorited ?? this.isFavorited;
     this.hasNotes = hasNotes ?? this.hasNotes;
-    this.duration = (duration ?? 1) < 0 ? duration : this.duration;
+    this.duration = (duration ?? 1) >= 0 ? duration : this.duration;
   }
 
   void overwriteFrom(E6PostResponse other) {
@@ -818,7 +841,7 @@ class E6PostMutable implements E6PostResponse {
         hasNotes: hasNotes,
         duration: duration,
       );
-  E6PostMutable.fromImmutable(E6PostResponse i)
+  E6PostMutable.fromInstance(E6PostResponse i)
       : id = i.id,
         createdAt = i.createdAt,
         updatedAt = i.updatedAt,
@@ -842,6 +865,642 @@ class E6PostMutable implements E6PostResponse {
         isFavorited = i.isFavorited,
         hasNotes = i.hasNotes,
         duration = i.duration;
+
+  @override
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "createdAt": createdAt.toIso8601String(),
+        "updatedAt": updatedAt.toIso8601String(),
+        "file": file.toJson(),
+        "preview": preview.toJson(),
+        "sample": sample.toJson(),
+        "score": score.toJson(),
+        "tags": tags.toJson(),
+        "lockedTags": lockedTags,
+        "changeSeq": changeSeq,
+        "flags": flags.toJson(),
+        "rating": rating,
+        "favCount": favCount,
+        "sources": sources,
+        "pools": pools,
+        "relationships": relationships.toJson(),
+        "approverId": approverId,
+        "uploaderId": uploaderId,
+        "description": description,
+        "commentCount": commentCount,
+        "isFavorited": isFavorited,
+        "hasNotes": hasNotes,
+        "duration": duration,
+      };
+}
+
+class PostNotifier extends ChangeNotifier implements E6PostMutable {
+  // #region Json Fields
+  /// The ID number of the post.
+  int _id;
+
+  /// The ID number of the post.
+  @override
+  int get id => _id;
+
+  /// The ID number of the post.
+  @override
+  set id(int value) {
+    _id = value;
+    notifyListeners();
+  }
+
+  /// The time the post was created in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.
+  DateTime _createdAt;
+
+  /// The time the post was created in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.
+  @override
+  DateTime get createdAt => _createdAt;
+
+  /// The time the post was created in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.
+  @override
+  set createdAt(DateTime value) {
+    _createdAt = value;
+    notifyListeners();
+  }
+
+  /// The time the post was last updated in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.
+  DateTime _updatedAt;
+
+  /// The time the post was last updated in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.
+  @override
+  DateTime get updatedAt => _updatedAt;
+
+  /// The time the post was last updated in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.
+  @override
+  set updatedAt(DateTime value) {
+    _updatedAt = value;
+    notifyListeners();
+  }
+
+  /// (array group)
+  E6FileResponse _file;
+
+  /// (array group)
+  @override
+  E6FileResponse get file => _file;
+
+  /// (array group)
+  @override
+  set file(E6FileResponse value) {
+    _file = value;
+    notifyListeners();
+  }
+
+  /// (array group)
+  E6Preview _preview;
+
+  /// (array group)
+  @override
+  E6Preview get preview => _preview;
+
+  /// (array group)
+  @override
+  set preview(E6Preview value) {
+    _preview = value;
+    notifyListeners();
+  }
+
+  /// (array group)
+  E6Sample _sample;
+
+  /// (array group)
+  @override
+  E6Sample get sample => _sample;
+
+  /// (array group)
+  @override
+  set sample(E6Sample value) {
+    _sample = value;
+    notifyListeners();
+  }
+
+  /// (array group)
+  e621.Score _score;
+
+  /// (array group)
+  @override
+  e621.Score get score => _score;
+
+  /// (array group)
+  @override
+  set score(e621.Score value) {
+    _score = value;
+    notifyListeners();
+  }
+
+  /// (array group)
+  E6PostTags _tags;
+
+  /// (array group)
+  @override
+  E6PostTags get tags => _tags;
+
+  /// (array group)
+  @override
+  set tags(E6PostTags value) {
+    _tags = value;
+    notifyListeners();
+  }
+
+  /// A JSON array of tags that are locked on the post.
+  List<String> _lockedTags;
+
+  /// A JSON array of tags that are locked on the post.
+  @override
+  List<String> get lockedTags => _lockedTags;
+
+  /// A JSON array of tags that are locked on the post.
+  @override
+  set lockedTags(List<String> value) {
+    _lockedTags = value;
+    notifyListeners();
+  }
+
+  /// An ID that increases for every post alteration on E6 (explained below)
+  int _changeSeq;
+
+  /// An ID that increases for every post alteration on E6 (explained below)
+  @override
+  int get changeSeq => _changeSeq;
+
+  /// An ID that increases for every post alteration on E6 (explained below)
+  @override
+  set changeSeq(int value) {
+    _changeSeq = value;
+    notifyListeners();
+  }
+
+  /// (array group)
+  E6Flags _flags;
+
+  /// (array group)
+  @override
+  E6Flags get flags => _flags;
+
+  /// (array group)
+  @override
+  set flags(E6Flags value) {
+    _flags = value;
+    notifyListeners();
+  }
+
+  /// The post’s rating. Either s, q or e.
+  String _rating;
+
+  /// The post’s rating. Either s, q or e.
+  @override
+  String get rating => _rating;
+
+  /// The post’s rating. Either s, q or e.
+  @override
+  set rating(String value) {
+    _rating = value;
+    notifyListeners();
+  }
+
+  /// How many people have favorited the post.
+  int _favCount;
+
+  /// How many people have favorited the post.
+  @override
+  int get favCount => _favCount;
+
+  /// How many people have favorited the post.
+  @override
+  set favCount(int value) {
+    _favCount = value;
+    notifyListeners();
+  }
+
+  /// The source field of the post.
+  List<String> _sources;
+
+  /// The source field of the post.
+  @override
+  List<String> get sources => _sources;
+
+  /// The source field of the post.
+  @override
+  set sources(List<String> value) {
+    _sources = value;
+    notifyListeners();
+  }
+
+  /// An array of Pool IDs that the post is a part of.
+  List<int> _pools;
+
+  /// An array of Pool IDs that the post is a part of.
+  @override
+  List<int> get pools => _pools;
+
+  /// An array of Pool IDs that the post is a part of.
+  @override
+  set pools(List<int> value) {
+    _pools = value;
+    notifyListeners();
+  }
+
+  /// (array group)
+  E6Relationships _relationships;
+
+  /// (array group)
+  @override
+  E6Relationships get relationships => _relationships;
+
+  /// (array group)
+  @override
+  set relationships(E6Relationships value) {
+    _relationships = value;
+    notifyListeners();
+  }
+
+  /// The ID of the user that approved the post, if available.
+  int? _approverId;
+
+  /// The ID of the user that approved the post, if available.
+  @override
+  int? get approverId => _approverId;
+
+  /// The ID of the user that approved the post, if available.
+  @override
+  set approverId(int? value) {
+    _approverId = value;
+    notifyListeners();
+  }
+
+  /// The ID of the user that uploaded the post.
+  int _uploaderId;
+
+  /// The ID of the user that uploaded the post.
+  @override
+  int get uploaderId => _uploaderId;
+
+  /// The ID of the user that uploaded the post.
+  @override
+  set uploaderId(int value) {
+    _uploaderId = value;
+  }
+
+  /// The post’s description.
+  String _description;
+
+  /// The post’s description.
+  @override
+  String get description => _description;
+
+  /// The post’s description.
+  @override
+  set description(String value) {
+    _description = value;
+    notifyListeners();
+  }
+
+  /// The count of comments on the post.
+  int _commentCount;
+
+  /// The count of comments on the post.
+  @override
+  int get commentCount => _commentCount;
+
+  /// The count of comments on the post.
+  @override
+  set commentCount(int value) {
+    _commentCount = value;
+    notifyListeners();
+  }
+
+  /// If provided auth credentials, will return if the authenticated user has
+  /// favorited the post or not. If not provided, will be false.
+  bool _isFavorited;
+
+  /// If provided auth credentials, will return if the authenticated user has
+  /// favorited the post or not. If not provided, will be false.
+  @override
+  bool get isFavorited => _isFavorited;
+
+  /// If provided auth credentials, will return if the authenticated user has
+  /// favorited the post or not. If not provided, will be false.
+  @override
+  set isFavorited(bool value) {
+    _isFavorited = value;
+    notifyListeners();
+  }
+
+  // #region Not Documented
+  bool _hasNotes;
+
+  @override
+  bool get hasNotes => _hasNotes;
+
+  @override
+  set hasNotes(bool value) {
+    _hasNotes = value;
+    notifyListeners();
+  }
+
+  /// If post is a video, the video length. Otherwise, null.
+  num? _duration;
+
+  /// If post is a video, the video length. Otherwise, null.
+  @override
+  num? get duration => _duration;
+
+  /// If post is a video, the video length. Otherwise, null.
+  @override
+  set duration(num? value) {
+    _duration = value;
+    notifyListeners();
+  }
+  // #endregion Not Documented
+  // #endregion Json Fields
+
+  @override
+  ITagData get tagData => tags;
+  @override
+  List<String> get tagList => tags.allTags;
+  @override
+  bool get isAnimatedGif =>
+      file.extension == "gif" && tags.meta.contains("animated");
+  @override
+  bool? get voteState => score is e621.UpdatedScore
+      ? (score as e621.UpdatedScore).voteState
+      : null;
+  // ignore: unnecessary_late
+  static late final error = PostNotifier(
+    id: -1,
+    createdAt: DateTime.now(),
+    updatedAt: DateTime.now(),
+    file: E6FileResponse.error,
+    preview: E6Preview.error,
+    sample: E6Sample.error,
+    score: errorScore,
+    tags: E6PostTags.error,
+    lockedTags: [],
+    changeSeq: -1,
+    flags: E6Flags.error,
+    rating: "",
+    favCount: -1,
+    sources: [],
+    pools: [],
+    relationships: E6Relationships.error,
+    approverId: -1,
+    uploaderId: -1,
+    description: "",
+    commentCount: -1,
+    isFavorited: false,
+    hasNotes: false,
+    duration: -1,
+  );
+  PostNotifier({
+    required int id,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    required E6FileResponse file,
+    required E6Preview preview,
+    required E6Sample sample,
+    required e621.Score score,
+    required E6PostTags tags,
+    required List<String> lockedTags,
+    required int changeSeq,
+    required E6Flags flags,
+    required String rating,
+    required int favCount,
+    required List<String> sources,
+    required List<int> pools,
+    required E6Relationships relationships,
+    required int? approverId,
+    required int uploaderId,
+    required String description,
+    required int commentCount,
+    required bool isFavorited,
+    required bool hasNotes,
+    required num? duration,
+  })  : _duration = duration,
+        _hasNotes = hasNotes,
+        _isFavorited = isFavorited,
+        _commentCount = commentCount,
+        _description = description,
+        _uploaderId = uploaderId,
+        _approverId = approverId,
+        _relationships = relationships,
+        _pools = pools,
+        _sources = sources,
+        _favCount = favCount,
+        _rating = rating,
+        _flags = flags,
+        _changeSeq = changeSeq,
+        _lockedTags = lockedTags,
+        _tags = tags,
+        _score = score,
+        _sample = sample,
+        _preview = preview,
+        _file = file,
+        _updatedAt = updatedAt,
+        _createdAt = createdAt,
+        _id = id;
+
+  factory PostNotifier.fromJson(JsonOut json) =>
+      PostNotifier.fromInstance(E6PostResponse.fromJson(json));
+  factory PostNotifier.fromRawJson(String json) =>
+      PostNotifier.fromInstance(E6PostResponse.fromRawJson(json));
+  static Iterable<PostNotifier> fromRawJsonResults(String json) {
+    final t = jsonDecode(json);
+    return t["posts"] != null
+        ? t["posts"].map<PostNotifier>((e) => PostNotifier.fromJson(e))
+        : [
+            t["post"] != null
+                ? PostNotifier.fromJson(t["post"])
+                : PostNotifier.fromJson(t)
+          ];
+  }
+
+  @override
+  PostNotifier copyWith({
+    int? id,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    e621.File? file,
+    e621.Preview? preview,
+    e621.Sample? sample,
+    e621.Score? score,
+    e621.PostTags? tags,
+    List<String>? lockedTags,
+    int? changeSeq,
+    e621.PostFlags? flags,
+    String? rating,
+    int? favCount,
+    List<String>? sources,
+    List<int>? pools,
+    e621.PostRelationships? relationships,
+    int? approverId = -1,
+    int? uploaderId,
+    String? description,
+    int? commentCount,
+    bool? isFavorited,
+    bool? hasNotes,
+    num? duration = -1,
+  }) =>
+      PostNotifier(
+        id: id ?? this.id,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        file: file as E6FileResponse? ?? this.file,
+        preview: preview as E6Preview? ?? this.preview,
+        sample: sample as E6Sample? ?? this.sample,
+        score: score ?? this.score,
+        tags: tags as E6PostTags? ?? this.tags,
+        lockedTags: lockedTags ?? this.lockedTags,
+        changeSeq: changeSeq ?? this.changeSeq,
+        flags: flags as E6Flags? ?? this.flags,
+        rating: rating ?? this.rating,
+        favCount: favCount ?? this.favCount,
+        sources: sources ?? this.sources,
+        pools: pools ?? this.pools,
+        relationships: relationships as E6Relationships? ?? this.relationships,
+        approverId: (approverId ?? 1) < 0 ? approverId : this.approverId,
+        uploaderId: uploaderId ?? this.uploaderId,
+        description: description ?? this.description,
+        commentCount: commentCount ?? this.commentCount,
+        isFavorited: isFavorited ?? this.isFavorited,
+        hasNotes: hasNotes ?? this.hasNotes,
+        duration: (duration ?? 1) < 0 ? duration : this.duration,
+      );
+
+  @override
+  void overwriteWith({
+    int? id,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    e621.File? file,
+    e621.Preview? preview,
+    e621.Sample? sample,
+    e621.Score? score,
+    e621.PostTags? tags,
+    List<String>? lockedTags,
+    int? changeSeq,
+    e621.PostFlags? flags,
+    String? rating,
+    int? favCount,
+    List<String>? sources,
+    List<int>? pools,
+    e621.PostRelationships? relationships,
+    int? approverId = -1,
+    int? uploaderId,
+    String? description,
+    int? commentCount,
+    bool? isFavorited,
+    bool? hasNotes,
+    num? duration = -1,
+  }) {
+    this.id = id ?? this.id;
+    this.createdAt = createdAt ?? this.createdAt;
+    this.updatedAt = updatedAt ?? this.updatedAt;
+    this.file = file as E6FileResponse? ?? this.file;
+    this.preview = preview as E6Preview? ?? this.preview;
+    this.sample = sample as E6Sample? ?? this.sample;
+    this.score = score ?? this.score;
+    this.tags = tags as E6PostTags? ?? this.tags;
+    this.lockedTags = lockedTags ?? this.lockedTags;
+    this.changeSeq = changeSeq ?? this.changeSeq;
+    this.flags = flags as E6Flags? ?? this.flags;
+    this.rating = rating ?? this.rating;
+    this.favCount = favCount ?? this.favCount;
+    this.sources = sources ?? this.sources;
+    this.pools = pools ?? this.pools;
+    this.relationships =
+        relationships as E6Relationships? ?? this.relationships;
+    this.approverId = (approverId ?? 1) >= 0 ? approverId : this.approverId;
+    this.uploaderId = uploaderId ?? this.uploaderId;
+    this.description = description ?? this.description;
+    this.commentCount = commentCount ?? this.commentCount;
+    this.isFavorited = isFavorited ?? this.isFavorited;
+    this.hasNotes = hasNotes ?? this.hasNotes;
+    this.duration = (duration ?? 1) >= 0 ? duration : this.duration;
+  }
+
+  @override
+  void overwriteFrom(E6PostResponse other) {
+    id = other.id;
+    createdAt = other.createdAt;
+    updatedAt = other.updatedAt;
+    file = other.file;
+    preview = other.preview;
+    sample = other.sample;
+    score = other.score;
+    tags = other.tags;
+    lockedTags = other.lockedTags;
+    changeSeq = other.changeSeq;
+    flags = other.flags;
+    rating = other.rating;
+    favCount = other.favCount;
+    sources = other.sources;
+    pools = other.pools;
+    relationships = other.relationships;
+    approverId = other.approverId;
+    uploaderId = other.uploaderId;
+    description = other.description;
+    commentCount = other.commentCount;
+    isFavorited = other.isFavorited;
+    hasNotes = other.hasNotes;
+    duration = other.duration;
+  }
+
+  @override
+  E6PostResponse toImmutable() => E6PostResponse(
+        id: id,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+        file: file,
+        preview: preview,
+        sample: sample,
+        score: score,
+        tags: tags,
+        lockedTags: lockedTags,
+        changeSeq: changeSeq,
+        flags: flags,
+        rating: rating,
+        favCount: favCount,
+        sources: sources,
+        pools: pools,
+        relationships: relationships,
+        approverId: approverId,
+        uploaderId: uploaderId,
+        description: description,
+        commentCount: commentCount,
+        isFavorited: isFavorited,
+        hasNotes: hasNotes,
+        duration: duration,
+      );
+  PostNotifier.fromInstance(E6PostResponse i)
+      : _id = i.id,
+        _createdAt = i.createdAt,
+        _updatedAt = i.updatedAt,
+        _file = i.file,
+        _preview = i.preview,
+        _sample = i.sample,
+        _score = i.score,
+        _tags = i.tags,
+        _lockedTags = i.lockedTags,
+        _changeSeq = i.changeSeq,
+        _flags = i.flags,
+        _rating = i.rating,
+        _favCount = i.favCount,
+        _sources = i.sources,
+        _pools = i.pools,
+        _relationships = i.relationships,
+        _approverId = i.approverId,
+        _uploaderId = i.uploaderId,
+        _description = i.description,
+        _commentCount = i.commentCount,
+        _isFavorited = i.isFavorited,
+        _hasNotes = i.hasNotes,
+        _duration = i.duration;
 
   @override
   Map<String, dynamic> toJson() => {

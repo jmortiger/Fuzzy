@@ -518,10 +518,10 @@ class SavedDataE6 extends ChangeNotifier {
     VoidCallback Function(SavedEntry)? generateOnTap,
   }) {
     return ListTile(
-      leading: switch (entry.runtimeType) {
-        SavedSearchData => const Text("S"),
-        SavedPoolData => const Text("P"),
-        SavedSetData => const Text("s"),
+      leading: switch (entry) {
+        SavedSearchData _ => const Text("S"),
+        SavedPoolData _ => const Text("P"),
+        SavedSetData _ => const Text("s"),
         _ => throw UnsupportedError("not supported"),
       },
       title: Text(entry.title),
@@ -621,10 +621,9 @@ final class SavedSetData extends SavedListData {
     super.uniqueId = "",
     super.name = "",
     this.searchableName = "",
-    String modifiers = "",
+    super.modifiers = "",
   }) : super(
           title: title ?? "$searchStringBase$id",
-          modifiers: modifiers,
         );
   SavedSetData.fromSet({
     String? title,

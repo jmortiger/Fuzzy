@@ -481,10 +481,10 @@ Widget _buildSavedEntry<T extends SavedEntry>({
                       value! ? selected.add(r) : selected.remove(r),
                 )
               :  */
-            switch (entry.runtimeType) {
-          SavedSearchData => const Text("S"),
-          SavedPoolData => const Text("P"),
-          SavedSetData => const Text("s"),
+            switch (entry) {
+          SavedSearchData _ => const Text("S"),
+          SavedPoolData _ => const Text("P"),
+          SavedSetData _ => const Text("s"),
           _ => throw UnsupportedError("not supported"),
         },
         title: Text(entry.title),
