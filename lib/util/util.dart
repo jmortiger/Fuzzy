@@ -243,9 +243,23 @@ const spinnerExpanded = Expanded(
     child: CircularProgressIndicator(),
   ),
 );
+const commonTopLevelDomainStr = "com|org|gov|net|edu|jp|us|au|uk|tv"; //|mil|xxx
 // https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
 RegExp get urlMatcher => RegExp(urlMatcherStr);
-const urlMatcherStr = r"(http(?:s)?:\/\/)?"
+
+/// Requires at least one of these:
+/// * A scheme of `http(s)`
+/// * `www.`
+/// * One of the values in [commonTopLevelDomainStr]
+const urlMatcherStr =
+    r"(?:(http(?:s)?:\/\/)|(?=www\.)|(?=(?:www\.)?(?:[-a-zA-Z0-9@:%._\+~#=]{1,256}?\.(?:"
+    "$commonTopLevelDomainStr"
+    r")\b)))"
+    r"(www\.)?"
+    r"([-a-zA-Z0-9@:%._\+~#=]{1,256})"
+    r"\.([a-z]{2,6})\b"
+    r"([-a-zA-Z0-9@:%_\+.~#?&//=]*)";
+const urlMatcherOldStr = r"(http(?:s)?:\/\/)?"
     r"(www\.){0,1}"
     r"([-a-zA-Z0-9@:%._\+~#=]{1,256})"
     r"\.([a-z]{2,6})\b"

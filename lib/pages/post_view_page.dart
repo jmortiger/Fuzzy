@@ -29,7 +29,7 @@ import '../web/e621/e621.dart';
 import '../widgets/w_fab_builder.dart';
 
 /* abstract interface class IReturnsTags {
-  List<String>? get tagsToAdd;
+  // List<String>? get tagsToAdd;
 } */
 
 bool overrideQuality = true;
@@ -58,15 +58,15 @@ class PostViewPage extends StatefulWidget
   final bool Function()? getFullscreen;
   final void Function(bool)? setFullscreen;
   final List<ActionButton>? extraActions;
-  @override
-  final List<String>? tagsToAdd;
+  // @override
+  // final List<String>? tagsToAdd;
   final List<E6PostResponse>? selectedPosts;
   const PostViewPage({
     super.key,
     required this.postListing,
     this.onAddToSearch,
     this.onPop,
-    this.tagsToAdd,
+    // this.tagsToAdd,
     bool this.startFullscreen = false,
     this.extraActions,
     this.selectedPosts,
@@ -77,7 +77,7 @@ class PostViewPage extends StatefulWidget
     required this.postListing,
     this.onAddToSearch,
     this.onPop,
-    this.tagsToAdd,
+    // this.tagsToAdd,
     this.startFullscreen,
     this.extraActions,
     this.selectedPosts,
@@ -94,8 +94,8 @@ class PostViewPage extends StatefulWidget
 
 class _PostViewPageState extends State<PostViewPage> /* implements IReturnsTags */ {
   static lm.FileLogger get logger => PostViewPage.logger;
-  @override
-  List<String>? get tagsToAdd => widget.tagsToAdd;
+  // @override
+  // // List<String>? get tagsToAdd => widget.tagsToAdd;
   E6PostResponse get e6Post => widget.postListing as E6PostResponse;
 
   PostView get pvs => AppSettings.i!.postView;
@@ -730,7 +730,7 @@ class _PostViewPageState extends State<PostViewPage> /* implements IReturnsTags 
                   title: const Text("Add to search"),
                   onTap: () {
                     widget.onAddToSearch?.call(tag);
-                    widget.tagsToAdd?.add(tag);
+                    // widget.tagsToAdd?.add(tag);
                     Navigator.pop(context);
                   },
                 ),

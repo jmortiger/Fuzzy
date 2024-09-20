@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:convert' as dc;
 
+import 'package:e621/e621.dart' as e621;
 import 'package:flutter/material.dart';
+import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_favorites.dart' as cf;
 import 'package:fuzzy/util/util.dart' as util;
@@ -9,10 +12,9 @@ import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:fuzzy/widgets/w_search_set.dart';
-import 'package:e621/e621.dart' as e621;
+import 'package:file_saver/file_saver.dart' as saver;
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
-import 'package:fuzzy/log_management.dart' as lm;
 
 // #region Logger
 lm.Printer get _print => lRecord.print;
@@ -26,7 +28,10 @@ Future<E6PostResponse> addPostToFavoritesWithPost({
   BuildContext? context,
   required E6PostResponse post,
   bool updatePost = true,
-}) {
+}) =>
+    _addPostToFavorites(context: context, post: post, updatePost: updatePost)
+        .then((v) => v!);
+/* }) {
   final out = "Adding ${post.id} to favorites...";
   _logger.finer(out);
   if (context?.mounted ?? false) {
@@ -80,21 +85,14 @@ Future<E6PostResponse> addPostToFavoritesWithPost({
           : postRet;
     },
   );
-}
-
-Future<E6PostResponse> removePostFromFavoritesWithPost({
-  BuildContext? context,
-  required E6PostResponse post,
-  bool updatePost = true,
-}) =>
-    _removePostFromFavorites(
-            context: context, post: post, updatePost: updatePost)
-        .then((v) => v!);
+} */
 
 Future<E6PostResponse?> addPostToFavoritesWithId({
   BuildContext? context,
   required int postId,
-}) {
+}) =>
+    _addPostToFavorites(context: context, postId: postId);
+/* }) {
   final out = "Adding $postId to favorites...";
   _logger.finer(out);
   if (context?.mounted ?? false) {
@@ -142,7 +140,80 @@ Future<E6PostResponse?> addPostToFavoritesWithId({
       return postRet;
     },
   );
+} */
+
+Future<E6PostResponse?> _addPostToFavorites({
+  BuildContext? context,
+  int? postId,
+  E6PostResponse? post,
+  bool updatePost = true,
+}) {
+  assert((postId ?? post) != null, "Either postId or post must be non-null");
+  final id = postId ??= post!.id;
+  final out = "Adding $id to favorites...";
+  _logger.finer(out);
+  if (context?.mounted ?? false) {
+    util.showUserMessage(context: context!, content: Text(out));
+  }
+  if (AppSettings.i!.upvoteOnFavorite) {
+    (post != null
+            ? voteOnPostWithPost(isUpvote: true, post: post)
+            : voteOnPostWithId(isUpvote: true, postId: id))
+        .ignore();
+  }
+  return E621
+      // .sendRequest(
+      //   E621.initAddFavoriteRequest(
+      //     id,
+      //     username: E621AccessData.fallback?.username,
+      //     apiKey: E621AccessData.fallback?.apiKey,
+      //   ),
+      // )
+      // .toResponse()
+      .sendAddFavoriteRequest(
+    id,
+    username: E621AccessData.fallback?.username,
+    apiKey: E621AccessData.fallback?.apiKey,
+  )
+      .then(
+    (v) {
+      lm.logResponseSmart(v, _logger);
+      var postRet = v.statusCodeInfo.isSuccessful
+          ? E6PostMutable.fromRawJson(v.body)
+          : post;
+      if (context?.mounted ?? false) {
+        !v.statusCodeInfo.isSuccessful
+            ? util.showUserMessage(
+                context: context!,
+                content: Text("${v.statusCode}: ${v.reasonPhrase}"))
+            : util.showUserMessage(
+                context: context!,
+                content: Text("$id removed from favorites"),
+                action: (
+                    "Undo",
+                    () => _removePostFromFavorites(
+                          context: context,
+                          post: post,
+                          postId: postId,
+                          updatePost: updatePost,
+                        )
+                  ));
+      }
+      return updatePost && post is E6PostMutable
+          ? (post..overwriteFrom(postRet!))
+          : postRet;
+    },
+  );
 }
+
+Future<E6PostResponse> removePostFromFavoritesWithPost({
+  BuildContext? context,
+  required E6PostResponse post,
+  bool updatePost = true,
+}) =>
+    _removePostFromFavorites(
+            context: context, post: post, updatePost: updatePost)
+        .then((v) => v!);
 
 Future<E6PostResponse?> removePostFromFavoritesWithId({
   BuildContext? context,
@@ -1782,7 +1853,298 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
     },
   );
 }
+
 // #endregion Vote
+Future<String?> downloadPostRoot(E6PostResponse post) =>
+    /* e621.client
+      .get(
+        post.file.address,
+        headers: (E621AccessData.fallbackForced?.cred ?? e621.activeCredentials)
+            ?.addToTyped({"Access-Control-Allow-Origin":"*"}),
+      )
+      .then((r) =>  */
+    (Platform.isWeb
+        ? saver.FileSaver.instance.saveFile
+        : saver.FileSaver.instance.saveAs)(
+      name: "[${post.id}] ${post.file.url.split(RegExp(r"\\|/"))}",
+      link: saver.LinkDetails(
+        link: post.file.url,
+        headers: (E621AccessData.fallbackForced?.cred ?? e621.activeCredentials)
+            ?.addToTyped({}),
+      ),
+      // bytes: r.bodyBytes,
+      ext: "",
+      mimeType: switch (
+          post.file.url.substring(post.file.url.lastIndexOf("."))) {
+        // String s when saver.MimeType.values.any((e) => (e as Enum).name.startsWith(s)) => saver.MimeType.values.firstWhere((e) => (e as Enum).name.startsWith(s)),
+        "png" => saver.MimeType.png,
+        "mp4" => saver.MimeType.mp4Video,
+        "gif" => saver.MimeType.gif,
+        "jpeg" || "jpg" => saver.MimeType.jpeg,
+        "apng" => saver.MimeType.apng,
+        _ => saver.MimeType.other,
+      },
+    ) //)
+    ;
+const valueOnError = "FAILED";
+Future<String> downloadPostWithPost({
+  final BuildContext? context,
+  required E6PostResponse post,
+}) {
+  final id = post.id;
+  final out = "Downloading post $id...";
+  _logger.finer(out);
+  if (context?.mounted ?? false) {
+    util.showUserMessage(context: context!, content: Text(out));
+  }
+  return downloadPostRoot(post).then((v) {
+    final out = "Downloaded $id to ${v ?? "an unknown path"}";
+    _logger.info(out);
+    if (context?.mounted ?? false) {
+      util.showUserMessage(
+        context: context!,
+        content: Text(out),
+      );
+    }
+    return v ?? "";
+  }).onError((e, s) {
+    final out = "Failed to download $id";
+    _logger.severe(out, e, s);
+    if (context?.mounted ?? false) {
+      util.showUserMessage(
+        context: context!,
+        content: Text("$out ($e)"),
+        duration: const Duration(seconds: 10),
+      );
+    }
+    return valueOnError;
+  });
+}
+
+Future<String> downloadPostWithId({
+  final BuildContext? context,
+  required final int postId,
+}) =>
+    e621
+        .sendRequest(e621.initGetPostRequest(postId))
+        .then((r) => downloadPostWithPost(
+              context: context,
+              post: E6PostResponse.fromRawJson(r.body),
+            ))
+        .onError((e, s) {
+      final out = "Failed to download $postId";
+      _logger.severe(out, e, s);
+      if (context?.mounted ?? false) {
+        util.showUserMessage(
+          context: context!,
+          content: Text("$out (${e.runtimeType})"),
+          duration: const Duration(seconds: 10),
+        );
+      }
+      return valueOnError;
+    });
+Future<List<String>> downloadPostsWithPosts({
+  final BuildContext? context,
+  required Iterable<E6PostResponse> posts,
+}) {
+  final out = "Downloading ${posts.length} posts...";
+  _logger.finer(out);
+  if (context?.mounted ?? false) {
+    util.showUserMessage(context: context!, content: Text(out));
+  }
+  return Future.wait(posts.map((e) => downloadPostRoot(e).then((v) {
+        final out = "Downloaded ${e.id} to ${v ?? "an unknown path"}";
+        _logger.finer(out);
+        return v ?? "";
+      }).onError((er, s) {
+        final out = "Failed to download ${e.id}";
+        _logger.severe(out, er, s);
+        return valueOnError;
+      }))).then((v) {
+    final out =
+        "${v.where((e) => e != valueOnError).length}/${v.length} posts downloaded";
+    _logger.info(out);
+    if (context?.mounted ?? false) {
+      util.showUserMessage(
+        context: context!,
+        content: Text(out),
+      );
+    }
+    return v;
+  });
+}
+
+Future<List<String>> downloadPostsWithIds({
+  final BuildContext? context,
+  required final Iterable<int> postIds,
+}) =>
+    Future.wait(postIds.map((postId) => e621
+            .sendRequest(e621.initGetPostRequest(postId))
+            .then((r) => E6PostResponse.fromRawJson(r.body))
+            .onError((e, s) {
+          final out = "Failed to get $postId";
+          _logger.severe(out, e, s);
+          // if (context?.mounted ?? false) {
+          //   util.showUserMessage(
+          //     context: context!,
+          //     content: Text("$out (${e.runtimeType})"),
+          //     duration: const Duration(seconds: 10),
+          //   );
+          // }
+          // return valueOnError;
+          return E6PostResponse.error;
+        }).then((e) => downloadPostRoot(e).then((v) {
+                  final out = "Downloaded ${e.id} to ${v ?? "an unknown path"}";
+                  _logger.finer(out);
+                  return v ?? "";
+                }).onError((er, s) {
+                  final out = "Failed to download ${e.id}";
+                  _logger.severe(out, er, s);
+                  return valueOnError;
+                })))).then((v) {
+      final out =
+          "${v.where((e) => e != valueOnError).length}/${v.length} posts downloaded";
+      _logger.info(out);
+      if (context?.mounted ?? false) {
+        util.showUserMessage(
+          context: context!,
+          content: Text(out),
+        );
+      }
+      return v;
+    });
+
+Future<String?> downloadDescriptionRoot(E6PostResponse post) {
+  return (Platform.isWeb
+      ? saver.FileSaver.instance.saveFile
+      : saver.FileSaver.instance.saveAs)(
+    name: "${post.id}",
+    bytes: dc.utf8.encode(post.description),
+    ext: ".txt",
+    mimeType: saver.MimeType.text,
+  );
+}
+
+Future<String> downloadDescriptionWithPost({
+  final BuildContext? context,
+  required E6PostResponse post,
+}) {
+  final id = post.id;
+  final out = "Downloading post $id description...";
+  _logger.finer(out);
+  if (context?.mounted ?? false) {
+    util.showUserMessage(context: context!, content: Text(out));
+  }
+  return downloadDescriptionRoot(post).then((v) {
+    final out = "Downloaded $id to ${v ?? "an unknown path"}";
+    _logger.info(out);
+    if (context?.mounted ?? false) {
+      util.showUserMessage(
+        context: context!,
+        content: Text(out),
+      );
+    }
+    return v ?? "";
+  }).onError((e, s) {
+    final out = "Failed to download $id";
+    _logger.severe(out, e, s);
+    if (context?.mounted ?? false) {
+      util.showUserMessage(
+        context: context!,
+        content: Text("$out ($e)"),
+        duration: const Duration(seconds: 10),
+      );
+    }
+    return valueOnError;
+  });
+}
+
+Future<String> downloadDescriptionWithId({
+  final BuildContext? context,
+  required final int postId,
+}) =>
+    e621
+        .sendRequest(e621.initGetPostRequest(postId))
+        .then((r) => downloadDescriptionWithPost(
+              context: context,
+              post: E6PostResponse.fromRawJson(r.body),
+            ))
+        .onError((e, s) {
+      final out = "Failed to download $postId";
+      _logger.severe(out, e, s);
+      if (context?.mounted ?? false) {
+        util.showUserMessage(
+          context: context!,
+          content: Text("$out (${e.runtimeType})"),
+          duration: const Duration(seconds: 10),
+        );
+      }
+      return valueOnError;
+    });
+Future<List<String>> downloadDescriptionsWithPosts({
+  final BuildContext? context,
+  required Iterable<E6PostResponse> posts,
+}) {
+  final out = "Downloading ${posts.length} posts...";
+  _logger.finer(out);
+  if (context?.mounted ?? false) {
+    util.showUserMessage(context: context!, content: Text(out));
+  }
+  return Future.wait(posts.map((e) => downloadDescriptionRoot(e).then((v) {
+        final out = "Downloaded ${e.id} to ${v ?? "an unknown path"}";
+        _logger.finer(out);
+        return v ?? "";
+      }).onError((er, s) {
+        final out = "Failed to download ${e.id}";
+        _logger.severe(out, er, s);
+        return valueOnError;
+      }))).then((v) {
+    final out =
+        "${v.where((e) => e != valueOnError).length}/${v.length} descriptions downloaded";
+    _logger.info(out);
+    if (context?.mounted ?? false) {
+      util.showUserMessage(
+        context: context!,
+        content: Text(out),
+      );
+    }
+    return v;
+  });
+}
+
+Future<List<String>> downloadDescriptionsWithIds({
+  final BuildContext? context,
+  required final Iterable<int> postIds,
+}) =>
+    Future.wait(postIds.map((postId) => e621
+            .sendRequest(e621.initGetPostRequest(postId))
+            .then((r) => E6PostResponse.fromRawJson(r.body))
+            .onError((e, s) {
+          final out = "Failed to get $postId";
+          _logger.severe(out, e, s);
+          return E6PostResponse.error;
+        }).then(
+          (e) => downloadDescriptionRoot(e).then((v) {
+            final out = "Downloaded ${e.id} to ${v ?? "an unknown path"}";
+            _logger.finer(out);
+            return v ?? "";
+          }).onError((er, s) {
+            final out = "Failed to download ${e.id}";
+            _logger.severe(out, er, s);
+            return valueOnError;
+          }),
+        ))).then((v) {
+      final out =
+          "${v.where((e) => e != valueOnError).length}/${v.length} posts downloaded";
+      _logger.info(out);
+      if (context?.mounted ?? false) {
+        util.showUserMessage(
+          context: context!,
+          content: Text(out),
+        );
+      }
+      return v;
+    });
 
 // #region Helpers
 /// TODO: FIX

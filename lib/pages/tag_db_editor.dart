@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/models/tag_d_b.dart';
+import 'package:j_util/platform_finder.dart';
 
 class TagDbEditorPage extends StatefulWidget {
   const TagDbEditorPage({super.key});
@@ -304,12 +305,16 @@ class _TagDbEditorPageState extends State<TagDbEditorPage> {
                                                 child: SelectableText(f)),
                                           ),
                                           TextButton(
-                                            onPressed: () => FileSaver.instance
-                                                .saveFile(
+                                            onPressed: () => (Platform.isWeb
+                                                        ? FileSaver
+                                                            .instance.saveFile
+                                                        : FileSaver
+                                                            .instance.saveAs)(
                                                     name:
                                                         "${parsedData!.length} tags.json",
                                                     ext: "",
-                                                    bytes: utf8.encode(f))
+                                                    bytes: utf8.encode(f),
+                                                    mimeType: MimeType.other)
                                                 .then((v) =>
                                                     Navigator.pop(context)),
                                             child: const Text("Save to file"),
@@ -326,11 +331,13 @@ class _TagDbEditorPageState extends State<TagDbEditorPage> {
                   ),
                   TextButton(
                     onPressed: () => compute(jsonEncode, parsedData!).then(
-                        (f) => FileSaver.instance
-                            .saveFile(
+                        (f) => (Platform.isWeb
+                                    ? FileSaver.instance.saveFile
+                                    : FileSaver.instance.saveAs)(
                                 name: "${parsedData!.length} tags.json",
                                 ext: "",
-                                bytes: utf8.encode(f))
+                                bytes: utf8.encode(f),
+                                mimeType: MimeType.other)
                             .then((v) => Navigator.pop(context))),
                     child: const Text("Save as JSON"),
                   ),
@@ -353,12 +360,15 @@ class _TagDbEditorPageState extends State<TagDbEditorPage> {
                                               child: SelectableText(f)),
                                         ),
                                         TextButton(
-                                          onPressed: () => FileSaver.instance
-                                              .saveFile(
+                                          onPressed: () => (Platform.isWeb
+                                                      ? FileSaver.instance.saveFile
+                                                      : FileSaver
+                                                          .instance.saveAs)(
                                                   name:
                                                       "${parsedData!.length} tags.csv",
                                                   ext: "",
-                                                  bytes: utf8.encode(f))
+                                                  bytes: utf8.encode(f),
+                                                  mimeType: MimeType.other)
                                               .then((v) =>
                                                   Navigator.pop(context)),
                                           child: const Text("Save to file"),
@@ -376,11 +386,13 @@ class _TagDbEditorPageState extends State<TagDbEditorPage> {
                   ),
                   TextButton(
                     onPressed: () => makeEncodedCsvStringFull(parsedData!).then(
-                        (f) => FileSaver.instance
-                            .saveFile(
+                        (f) => (Platform.isWeb
+                                    ? FileSaver.instance.saveFile
+                                    : FileSaver.instance.saveAs)(
                                 name: "${parsedData!.length} tags.csv",
                                 ext: "",
-                                bytes: utf8.encode(f))
+                                bytes: utf8.encode(f),
+                                mimeType: MimeType.other)
                             .then((v) => Navigator.pop(context))),
                     child: const Text("Save as CSV"),
                   ),

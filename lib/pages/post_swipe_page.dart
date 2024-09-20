@@ -30,7 +30,7 @@ class PostSwipePage extends StatefulWidget
   final Iterable<E6PostResponse>? postsIterable;
   Iterable<E6PostResponse> get posts => postsObj?.posts ?? postsIterable!;
   final void Function(String addition)? onAddToSearch;
-  @override
+  // @override
   // final List<String>? tagsToAdd;
   // final srn_lib.SearchResultsNotifier? selectedPosts;
   final List<E6PostResponse>? selectedPosts;

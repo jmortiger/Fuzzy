@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/pages/edit_post_page.dart';
 import 'package:fuzzy/util/util.dart' as util;
@@ -132,6 +133,26 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
+  static ActionButton getSinglePostDownvoteAction(
+    BuildContext context,
+    E6PostResponse post, {
+    bool noUnvote = true,
+  }) {
+    return ActionButton(
+      icon: const Icon(Icons.arrow_downward),
+      tooltip: "Downvote",
+      onPressed: () => actions
+          .voteOnPostWithPost(
+            context: context,
+            post: post,
+            isUpvote: false,
+            noUnvote: noUnvote,
+            updatePost: post is E6PostMutable,
+          )
+          .ignore(),
+    );
+  }
+
   static ActionButton getMultiplePostsUpvoteAction(
     BuildContext context,
     List<E6PostResponse> posts, {
@@ -165,25 +186,6 @@ class WFabBuilder extends StatelessWidget {
         context: context,
         updatePosts: true,
       ),
-    );
-  }
-
-  static ActionButton getSinglePostDownvoteAction(
-    BuildContext context,
-    E6PostResponse post,
-  ) {
-    return ActionButton(
-      icon: const Icon(Icons.arrow_downward),
-      tooltip: "Downvote",
-      onPressed: () => actions
-          .voteOnPostWithPost(
-            context: context,
-            post: post,
-            isUpvote: false,
-            noUnvote: true,
-            updatePost: post is E6PostMutable,
-          )
-          .ignore(),
     );
   }
 
@@ -340,7 +342,11 @@ class WFabBuilder extends StatelessWidget {
     List<E6PostResponse>? selected,
   }) {
     return ActionButton(
-      icon: const Icon(Icons.edit),
+      icon: isSelected == null
+          ? const Icon(Icons.edit)
+          : isSelected
+              ? const Icon(Icons.check_box_outline_blank)
+              : const Icon(Icons.check_box),
       tooltip: tooltip ??
           (isSelected == null
               ? null
@@ -402,8 +408,6 @@ class WFabBuilder extends StatelessWidget {
     try {
       Provider.of<SearchResultsNotifier>(context, listen: false);
       canSelect = true;
-    } catch (e) {}
-    try {
       if (isSinglePost) {
         isSelected = isPostSelected?.call(post!.id) ??
             // selectedPosts?.getIsPostSelected(post!.id) ??
@@ -411,15 +415,18 @@ class WFabBuilder extends StatelessWidget {
             Provider.of<SearchResultsNotifier>(context, listen: false)
                 .getIsPostSelected(post!.id);
       }
-    } catch (e /* , s */) {
-      logger
-          .warning("Couldn't access SearchResultsNotifier in fab" /* , e, s */);
+    } catch (e, s) {
+      logger.warning("Couldn't access SearchResultsNotifier in fab", e, s);
     }
     Widget builder(
             BuildContext context,
-            ({bool useFab, List<E6PostResponse>? rs, E6PostResponse? r}) useFab,
+            ({
+              bool useFab,
+              List<E6PostResponse>? posts,
+              E6PostResponse? post
+            }) v,
             _) =>
-        (useFab.useFab ? ExpandableFab.new : WPullTab.new)(
+        (v.useFab ? ExpandableFab.new : WPullTab.new)(
           anchorAlignment: AnchorAlignment.right,
           openIcon: isMultiplePosts
               ? IconButton(
@@ -443,7 +450,7 @@ class WFabBuilder extends StatelessWidget {
                   icon: const Icon(Icons.create),
                 ),
           useDefaultHeroTag: false,
-          distance: useFab.useFab
+          distance: v.useFab
               ? Platform.isDesktop
                   ? 112
                   : 224
@@ -452,84 +459,129 @@ class WFabBuilder extends StatelessWidget {
           // disabledTooltip: (isSinglePost || (isMultiplePosts && posts!.isNotEmpty))
           //     ? ""
           //     : "Long-press to select posts and perform bulk actions.",
+          disabledTooltip:
+              "Long-press to select posts and perform bulk actions.",
           children: /* (isSinglePost ||
                 (isMultiplePosts && posts!.isNotEmpty) ||
                 (customActions?.isNotEmpty ?? false))
             ?  */
               [
             if (!isSinglePost)
-              WFabBuilder.getClearSelectionButton(
-                  context, onClearSelections /* , selectedPosts */),
-            if (!isSinglePost && isSelected != canSelect)
-              WFabBuilder.getChangePageSelectionButton(context, select: true),
-            if (!isSinglePost && isSelected != canSelect)
-              WFabBuilder.getChangePageSelectionButton(context, select: false),
-            if (!isSinglePost)
-              WFabBuilder.getMultiplePostsAddToSetAction(context, posts!),
+              getClearSelectionButton(
+                context,
+                onClearSelections, /* selectedPosts, */
+              ),
+            if (!isSinglePost && canSelect)
+              getChangePageSelectionButton(context, select: true),
+            if (!isSinglePost && canSelect)
+              getChangePageSelectionButton(context, select: false),
             if (isSinglePost)
-              WFabBuilder.getSinglePostAddToSetAction(context, post!),
+              getSinglePostAddToSetAction(context, post!)
+            else
+              getMultiplePostsAddToSetAction(context, posts!),
             if (!isSinglePost && posts!.indexWhere((p) => !p.isFavorited) != -1)
-              WFabBuilder.getMultiplePostsAddFavAction(context, posts!),
+              getMultiplePostsAddFavAction(context, posts!),
             if (isSinglePost && !post!.isFavorited)
-              WFabBuilder.getSinglePostAddFavAction(context, post!),
-            if (!isSinglePost)
+              getSinglePostAddFavAction(context, post!),
+            if (isSinglePost)
+              getSinglePostRemoveFromSetAction(context, post!)
+            else
               getMultiplePostsRemoveFromSetAction(context, posts!),
-            if (isSinglePost) getSinglePostRemoveFromSetAction(context, post!),
             if (!isSinglePost && posts!.indexWhere((p) => p.isFavorited) != -1)
               getMultiplePostsRemoveFavAction(context, posts!),
             if (isSinglePost && post!.isFavorited)
               getSinglePostRemoveFavAction(context, post!),
             if (isSinglePost)
-              useFab.useFab
+              v.useFab
                   ? getSinglePostUpvoteAction(context, post!)
-                  : getSinglePostDownvoteAction(context, post!),
-            if (isSinglePost)
-              useFab.useFab
-                  ? getSinglePostDownvoteAction(context, post!)
-                  : getSinglePostUpvoteAction(context, post!),
-            if (isMultiplePosts)
-              useFab.useFab
+                  : getSinglePostDownvoteAction(context, post!)
+            else
+              v.useFab
                   ? getMultiplePostsUpvoteAction(context, posts!)
                   : getMultiplePostsDownvoteAction(context, posts!),
-            if (isMultiplePosts)
-              useFab.useFab
+            if (isSinglePost)
+              v.useFab
+                  ? getSinglePostDownvoteAction(context, post!)
+                  : getSinglePostUpvoteAction(context, post!)
+            else
+              v.useFab
                   ? getMultiplePostsDownvoteAction(context, posts!)
                   : getMultiplePostsUpvoteAction(context, posts!),
             if (isSinglePost) getSinglePostEditAction(context, post!),
             if (isSinglePost && isSelected != null)
-              if (isSelected)
-                getSinglePostToggleSelectAction(
-                  context,
-                  post!,
-                  isSelected: isSelected,
-                  toggleSelection: toggleSelectionCallback,
-                  selected: selectedPosts,
+              getSinglePostToggleSelectAction(
+                context,
+                post!,
+                isSelected: isSelected,
+                toggleSelection: toggleSelectionCallback,
+                selected: selectedPosts,
+              ),
+            if (AppSettings.i?.enableDownloads ?? true)
+              if (isSinglePost)
+                ActionButton(
+                  icon: const Icon(Icons.download),
+                  tooltip: "Download",
+                  onPressed: () => actions
+                      .downloadPostWithPost(context: context, post: v.post!)
+                      .ignore(),
                 )
-              else
-                getSinglePostToggleSelectAction(
-                  context,
-                  post!,
-                  isSelected: isSelected,
-                  toggleSelection: toggleSelectionCallback,
-                  selected: selectedPosts,
+              else if (isMultiplePosts)
+                ActionButton(
+                  icon: const Icon(Icons.download),
+                  tooltip: "Download",
+                  onPressed: () => actions
+                      .downloadPostsWithPosts(context: context, posts: v.posts!)
+                      .ignore(),
+                ),
+            if (AppSettings.i?.enableDownloads ?? true)
+              if (isSinglePost && post!.description.isNotEmpty)
+                ActionButton(
+                  icon: const Icon(Icons.download),
+                  tooltip: "Download Description",
+                  onPressed: () => actions
+                      .downloadDescriptionWithPost(
+                          context: context, post: v.post!)
+                      .ignore(),
+                )
+              else if (isMultiplePosts &&
+                  posts!.any((e) => e.description.isNotEmpty))
+                ActionButton(
+                  icon: const Icon(Icons.download),
+                  tooltip: "Download Descriptions",
+                  onPressed: () => actions
+                      .downloadDescriptionsWithPosts(
+                          context: context, posts: v.posts!)
+                      .ignore(),
                 ),
             // getPrintSelectionsAction(context, post, posts),
             if (customActions != null) ...customActions!,
           ] /* : [] */,
         );
-    return /* (post ?? posts) is ChangeNotifier
+    return post is PostNotifier
         ? SelectorNotifier2(
             value1: useFab,
-            value2: (post ?? posts) as ChangeNotifier,
-            selector: (_, value, __) =>
-                (useFab: value.value, r: post, rs: posts),
+            value2: post as PostNotifier,
+            selector: (_, value, post) =>
+                (useFab: value.value, post: post, posts: posts),
             builder: builder,
           )
-        :  */SelectorNotifier(
-            value: useFab,
-            selector: (_, value) => (useFab: value.value, r: post, rs: posts),
-            builder: builder,
-          );
+        : builder(
+            context,
+            (
+              useFab: useFab.value,
+              post: post,
+              posts: posts,
+            ),
+            null);
+    // : SelectorNotifier(
+    //     value: useFab,
+    //     selector: (_, useFab) => (
+    //       useFab: useFab.value,
+    //       post: post,
+    //       posts: posts,
+    //     ),
+    //     builder: builder,
+    //   );
   }
 }
 
