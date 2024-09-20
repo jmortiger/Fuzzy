@@ -1866,7 +1866,7 @@ Future<String?> downloadPostRoot(E6PostResponse post) =>
     (Platform.isWeb
         ? saver.FileSaver.instance.saveFile
         : saver.FileSaver.instance.saveAs)(
-      name: "[${post.id}] ${post.file.url.split(RegExp(r"\\|/"))}",
+      name: "[${post.id}] ${post.file.url.split(RegExp(r"\\|/")).last}",
       link: saver.LinkDetails(
         link: post.file.url,
         headers: (E621AccessData.fallbackForced?.cred ?? e621.activeCredentials)
