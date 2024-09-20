@@ -55,6 +55,7 @@ T defaultOnError<T>(Object? error, StackTrace trace) {
 }
 
 // #region User Message
+const useSnackbar = true;
 ScaffoldFeatureController showUserMessage({
   required BuildContext context,
   required Widget content,
@@ -64,8 +65,7 @@ ScaffoldFeatureController showUserMessage({
   List<(String label, VoidCallback onTap)>? actions,
   bool addDismissOption = true,
 }) =>
-    // _showUserMessageSnackbar(
-    _showUserMessageBanner(
+    (useSnackbar ? _showUserMessageSnackbar : _showUserMessageBanner)(
       context: context,
       content: content,
       action: action,

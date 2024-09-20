@@ -286,7 +286,7 @@ class WImageResult extends StatelessWidget {
     String url;
     IImageInfo(width: w, height: h, url: url) = imageInfo;
     if (url == "") {
-      print("NO URL");
+      logger.info("NO URL $index");
     }
     var (width: sizeWidth, height: sizeHeight) =
         WImageResult.getGridSizeEstimate(ctx);

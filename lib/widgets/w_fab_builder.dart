@@ -26,6 +26,7 @@ class WFabBuilder extends StatelessWidget {
   final E6PostResponse? post;
   bool get isSinglePost => post != null;
   bool get isMultiplePosts => posts != null;
+  bool get hasMultiplePosts => posts?.isNotEmpty ?? false;
   final void Function()? onClearSelections;
   final bool Function(int)? toggleSelectionCallback;
   final bool Function(int)? isPostSelected;
@@ -466,20 +467,20 @@ class WFabBuilder extends StatelessWidget {
                 (customActions?.isNotEmpty ?? false))
             ?  */
               [
-            if (!isSinglePost)
+            if (hasMultiplePosts)
               getClearSelectionButton(
                 context,
                 onClearSelections, /* selectedPosts, */
               ),
-            if (!isSinglePost && canSelect)
+            if (isMultiplePosts && canSelect)
               getChangePageSelectionButton(context, select: true),
-            if (!isSinglePost && canSelect)
+            if (hasMultiplePosts && canSelect)
               getChangePageSelectionButton(context, select: false),
             if (isSinglePost)
               getSinglePostAddToSetAction(context, post!)
             else
               getMultiplePostsAddToSetAction(context, posts!),
-            if (!isSinglePost && posts!.indexWhere((p) => !p.isFavorited) != -1)
+            if (hasMultiplePosts && posts!.indexWhere((p) => !p.isFavorited) != -1)
               getMultiplePostsAddFavAction(context, posts!),
             if (isSinglePost && !post!.isFavorited)
               getSinglePostAddFavAction(context, post!),
@@ -487,7 +488,7 @@ class WFabBuilder extends StatelessWidget {
               getSinglePostRemoveFromSetAction(context, post!)
             else
               getMultiplePostsRemoveFromSetAction(context, posts!),
-            if (!isSinglePost && posts!.indexWhere((p) => p.isFavorited) != -1)
+            if (hasMultiplePosts && posts!.indexWhere((p) => p.isFavorited) != -1)
               getMultiplePostsRemoveFavAction(context, posts!),
             if (isSinglePost && post!.isFavorited)
               getSinglePostRemoveFavAction(context, post!),
@@ -525,7 +526,7 @@ class WFabBuilder extends StatelessWidget {
                       .downloadPostWithPost(context: context, post: v.post!)
                       .ignore(),
                 )
-              else if (isMultiplePosts)
+              else if (hasMultiplePosts)
                 ActionButton(
                   icon: const Icon(Icons.download),
                   tooltip: "Download",
