@@ -19,7 +19,8 @@ class PostSwipePage extends StatefulWidget
         e.sort(secondaryComparator);
       }
     }
-  } */IRoute<PostSwipePage> {
+  } */
+        IRoute<PostSwipePage> {
   static const routeNameString = "/";
 
   final bool startFullscreen;
@@ -167,7 +168,7 @@ class _PostSwipePageState extends State<PostSwipePage>
 }
 
 class PostSwipePageManaged extends StatefulWidget
-    implements /* IReturnsTags,  */IRoute<PostSwipePageManaged> {
+    implements /* IReturnsTags,  */ IRoute<PostSwipePageManaged> {
   static const routeNameString = "/";
 
   final bool startFullscreen;

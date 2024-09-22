@@ -218,7 +218,7 @@ class E6PostResponse implements PostListing, e621.Post {
 
   /// {@template createdAt}
   /// The time the post was created in the format of YYYY-MM-DDTHH:MM:SS.MS+00:00.
-  /// {@endtemplate} 
+  /// {@endtemplate}
   @override
   final DateTime createdAt;
 
@@ -230,7 +230,7 @@ class E6PostResponse implements PostListing, e621.Post {
 
   /// {@template file}
   /// (array group)
-  /// {@endtemplate} 
+  /// {@endtemplate}
   final E6FileResponse file;
 
   /// (array group)
@@ -249,7 +249,7 @@ class E6PostResponse implements PostListing, e621.Post {
 
   /// {@template lockedTags}
   /// A JSON array of tags that are locked on the post.
-  /// {@endtemplate} 
+  /// {@endtemplate}
   @override
   final List<String> lockedTags;
 
@@ -261,7 +261,7 @@ class E6PostResponse implements PostListing, e621.Post {
 
   /// {@template flags}
   /// (array group)
-  /// {@endtemplate} 
+  /// {@endtemplate}
   @override
   final E6Flags flags;
 
@@ -273,7 +273,7 @@ class E6PostResponse implements PostListing, e621.Post {
 
   /// {@template favCount}
   /// How many people have favorited the post.
-  /// {@endtemplate} 
+  /// {@endtemplate}
   @override
   final int favCount;
 
@@ -285,7 +285,7 @@ class E6PostResponse implements PostListing, e621.Post {
 
   /// {@template pools}
   /// An array of Pool IDs that the post is a part of.
-  /// {@endtemplate} 
+  /// {@endtemplate}
   @override
   final List<int> pools;
 

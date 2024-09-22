@@ -1,4 +1,5 @@
 import 'package:j_util/j_util_full.dart';
+
 /// TODO: Add date data
 class SearchData {
   final String searchString;

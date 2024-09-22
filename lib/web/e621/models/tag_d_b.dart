@@ -26,13 +26,14 @@ class TagDB {
         tagsByString.queue.indexWhere((e) => character[0] == e.name[0]),
         tagsByString.queue.lastIndexWhere((e) => character[0] == e.name[0])
       );
-  /// If there are no locations that perfectly match [query], 
+
+  /// If there are no locations that perfectly match [query],
   /// [allowedVariance] & [charactersToBacktrack] are fallbacks.
-  /// 
-  /// [charactersToBacktrack] searches for [query] without 
+  ///
+  /// [charactersToBacktrack] searches for [query] without
   /// the last [charactersToBacktrack] characters.
-  /// 
-  /// [allowedVariance] searches for the 1st and last string that has a 
+  ///
+  /// [allowedVariance] searches for the 1st and last string that has a
   /// [StringSimilarity.compareTwoStrings] value >= [allowedVariance].
   Iterable<TagDBEntry> getSublist(
     String query, {

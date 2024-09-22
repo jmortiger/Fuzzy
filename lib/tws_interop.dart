@@ -427,7 +427,7 @@ List<Widget> _buildParentedView(
   return /* ListView(
     children:  */
       parentedCollection.mapAsList(
-    (e, index, list) => ExpansionTile(
+    (e, index, _) => ExpansionTile(
       // key: PageStorageKey(e),
       // maintainState: true,
       title: Text.rich(
@@ -444,7 +444,7 @@ List<Widget> _buildParentedView(
       ),
       dense: true,
       children: e.mapAsList(
-        (e2, i2, l2) => _buildSavedEntry(
+        (e2, i2, _) => _buildSavedEntry(
           entry: e2,
           // index: (parentIndex: index, childIndex: i2),
         ),

@@ -480,7 +480,8 @@ class WFabBuilder extends StatelessWidget {
               getSinglePostAddToSetAction(context, post!)
             else
               getMultiplePostsAddToSetAction(context, posts!),
-            if (hasMultiplePosts && posts!.indexWhere((p) => !p.isFavorited) != -1)
+            if (hasMultiplePosts &&
+                posts!.indexWhere((p) => !p.isFavorited) != -1)
               getMultiplePostsAddFavAction(context, posts!),
             if (isSinglePost && !post!.isFavorited)
               getSinglePostAddFavAction(context, post!),
@@ -488,7 +489,8 @@ class WFabBuilder extends StatelessWidget {
               getSinglePostRemoveFromSetAction(context, post!)
             else
               getMultiplePostsRemoveFromSetAction(context, posts!),
-            if (hasMultiplePosts && posts!.indexWhere((p) => p.isFavorited) != -1)
+            if (hasMultiplePosts &&
+                posts!.indexWhere((p) => p.isFavorited) != -1)
               getMultiplePostsRemoveFavAction(context, posts!),
             if (isSinglePost && post!.isFavorited)
               getSinglePostRemoveFavAction(context, post!),

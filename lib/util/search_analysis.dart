@@ -40,6 +40,7 @@ bool isPotentialMatch(
     return false;
   }
 }
+
 /// TODO: Complete
 class SearchQueryMatchData {
   final String query;

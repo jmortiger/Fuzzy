@@ -1,17 +1,16 @@
-import 'dart:convert';
+import 'dart:convert' as dc;
 import 'dart:io' as io;
-import 'dart:ui';
+import 'dart:ui' show Color, FilterQuality;
 
 import 'package:flutter/material.dart';
-import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
-import 'package:fuzzy/web/e621/models/e6_models.dart';
-import 'package:fuzzy/widgets/w_image_result.dart';
+import 'package:fuzzy/widgets/w_image_result.dart' show PostInfoPaneItem;
 import 'package:e621/e621.dart' show TagCategory;
 import 'package:e621/e621.dart' as e621;
 import 'package:fuzzy/util/util.dart' as util;
-import 'package:j_util/j_util_full.dart';
+import 'package:j_util/j_util_full.dart' show LazyInitializer, Platform;
 
+/// TODO: Integrate ChangeNotifier?
 class AppSettingsRecord {
   final PostViewData postView;
   final Set<String> favoriteTags;
@@ -53,7 +52,8 @@ class AppSettingsRecord {
     enableDownloads: false,
     maxSearchesToSave: 200,
   );
-  factory AppSettingsRecord.fromJson(JsonOut json) => AppSettingsRecord(
+  factory AppSettingsRecord.fromJson(Map<String, dynamic> json) =>
+      AppSettingsRecord(
         postView: PostViewData.fromJson(
             json["postView"] ?? defaultSettings.postView.toJson()),
         searchView: SearchViewData.fromJson(
@@ -77,7 +77,7 @@ class AppSettingsRecord {
         maxSearchesToSave:
             json["maxSearchesToSave"] ?? defaultSettings.maxSearchesToSave,
       );
-  JsonOut toJson() => {
+  Map<String, dynamic> toJson() => {
         "postView": postView.toJson(),
         "searchView": searchView.toJson(),
         "favoriteTags": favoriteTags.toList(),
@@ -105,16 +105,16 @@ class AppSettings implements AppSettingsRecord {
               ? t
               : await (await t.create(recursive: true, exclusive: true))
                   .writeAsString(
-                      jsonEncode(AppSettings.defaultSettings.toJson()));
+                      dc.jsonEncode(AppSettings.defaultSettings.toJson()));
         });
   static LazyInitializer<io.File> get myFile => _file!;
   static Future<AppSettings> loadSettingsFromFile() async {
     return (Platform.isWeb)
-        ? ((await devData.getItem())["settings"] == null
+        ? ((await util.devData.getItem())["settings"] == null
             ? defaultSettings
-            : AppSettings.fromJson(devData.$["settings"]))
+            : AppSettings.fromJson(util.devData.$["settings"]))
         : AppSettings.fromJson(
-            jsonDecode(
+            dc.jsonDecode(
                 (await (await myFile.getItem()).readAsString()).printMe()),
           );
   }
@@ -127,7 +127,7 @@ class AppSettings implements AppSettingsRecord {
       Platform.web => this..overwriteWithRecord(defaultSettings),
       Platform.android || Platform.iOS => this
         ..overwriteWithRecord(AppSettings.fromJson(
-            jsonDecode(await (await myFile.getItem()).readAsString()))),
+            dc.jsonDecode(await (await myFile.getItem()).readAsString()))),
       _ => throw UnsupportedError("platform not supported"),
     };
   }
@@ -138,7 +138,7 @@ class AppSettings implements AppSettingsRecord {
         Platform.android ||
         Platform.iOS =>
           (await myFile.getItem()).writeAsString(
-            jsonEncode(a ?? i ?? defaultSettings)..printMe(),
+            dc.jsonEncode(a ?? i ?? defaultSettings)..printMe(),
             flush: true,
           ),
         _ => throw UnsupportedError("platform not supported"),
@@ -158,8 +158,8 @@ class AppSettings implements AppSettingsRecord {
   // #endregion Singleton
   // #region JSON (indirect, don't need updating w/ new fields)
   @override
-  JsonOut toJson() => toRecord().toJson();
-  factory AppSettings.fromJson(JsonOut json) =>
+  Map<String, dynamic> toJson() => toRecord().toJson();
+  factory AppSettings.fromJson(Map<String, dynamic> json) =>
       AppSettings.fromRecord(AppSettingsRecord.fromJson(json));
   // #endregion JSON (indirect, don't need updating w/ new fields)
 
@@ -367,9 +367,10 @@ class PostViewData {
     required this.useProgressiveImages,
     required this.imageFilterQuality,
   });
-  factory PostViewData.fromJson(JsonOut json) => PostViewData(
+  factory PostViewData.fromJson(Map<String, dynamic> json) => PostViewData(
         tagOrder: (json["tagOrder"] as List?)
-                ?.mapAsList((e, i, l) => TagCategory.fromJson(e)) ??
+                ?.map((e) => TagCategory.fromJson(e))
+                .toList() ??
             defaultData.tagOrder,
         tagColors: (json["tagColors"])?.map<TagCategory, Color>(
                 (k, v) => MapEntry(TagCategory.fromJson(k), Color(v))) ??
@@ -397,7 +398,7 @@ class PostViewData {
             (json["imageFilterQuality"] ??
                 defaultData.imageFilterQuality.name)),
       );
-  JsonOut toJson() => {
+  Map<String, dynamic> toJson() => {
         "tagOrder": tagOrder,
         "tagColors": tagColors.map((k, v) => MapEntry(k.toJson(), v.value)),
         "colorTags": colorTags,
@@ -567,8 +568,8 @@ class PostView implements PostViewData {
 
   // #region JSON (indirect, don't need updating w/ new fields)
   @override
-  JsonOut toJson() => toData().toJson();
-  factory PostView.fromJson(JsonOut json) =>
+  Map<String, dynamic> toJson() => toData().toJson();
+  factory PostView.fromJson(Map<String, dynamic> json) =>
       PostView.fromData(PostViewData.fromJson(json));
   // #endregion JSON (indirect, don't need updating w/ new fields)
   // #region Singleton
@@ -626,18 +627,18 @@ class SearchViewData {
     required this.tagDbPath,
     required this.maxCharsInPostInfo,
   });
-  factory SearchViewData.fromJson(JsonOut json) => SearchViewData(
+  factory SearchViewData.fromJson(Map<String, dynamic> json) => SearchViewData(
         postsPerPage: json["postsPerPage"] ?? defaultData.postsPerPage,
         postsPerRow: json["postsPerRow"] ?? defaultData.postsPerRow,
         horizontalGridSpace:
             json["horizontalGridSpace"] ?? defaultData.horizontalGridSpace,
         verticalGridSpace:
             json["verticalGridSpace"] ?? defaultData.verticalGridSpace,
-        postInfoBannerItems:
-            (json["postInfoBannerItems"] as String?)?.split(",").mapAsList(
-                      (e, i, l) => PostInfoPaneItem.fromJson(e),
-                    ) ??
-                defaultData.postInfoBannerItems,
+        postInfoBannerItems: (json["postInfoBannerItems"] as String?)
+                ?.split(",")
+                .map((e) => PostInfoPaneItem.fromJson(e))
+                .toList() ??
+            defaultData.postInfoBannerItems,
         widthToHeightRatio:
             json["widthToHeightRatio"] ?? defaultData.widthToHeightRatio,
         useProgressiveImages:
@@ -652,7 +653,7 @@ class SearchViewData {
         maxCharsInPostInfo:
             json["maxCharsInPostInfo"] ?? defaultData.maxCharsInPostInfo,
       );
-  JsonOut toJson() => {
+  Map<String, dynamic> toJson() => {
         "postsPerPage": postsPerPage,
         "postsPerRow": postsPerRow,
         "horizontalGridSpace": horizontalGridSpace,
@@ -674,7 +675,6 @@ class SearchViewData {
       };
 }
 
-/// TODO: Integrate ChangeNotifier?
 class SearchView implements SearchViewData {
   int _postsPerPage;
   @override
@@ -823,8 +823,8 @@ class SearchView implements SearchViewData {
 
   // #region JSON (indirect, don't need updating w/ new fields)
   @override
-  JsonOut toJson() => toData().toJson();
-  factory SearchView.fromJson(JsonOut json) =>
+  Map<String, dynamic> toJson() => toData().toJson();
+  factory SearchView.fromJson(Map<String, dynamic> json) =>
       SearchView.fromData(SearchViewData.fromJson(json));
   // #endregion JSON (indirect, don't need updating w/ new fields)
   // #region Singleton (don't need updating w/ new fields)

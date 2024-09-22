@@ -77,7 +77,9 @@ class SavedDataE6 extends ChangeNotifier {
   /// {@macro parentCount}
   static Map<String, int> get parentCount => _parentCount.$Safe ??=
           searches.fold<Map<String, int>>(<String, int>{}, (acc, e) {
-        acc[e.parent] == null ? acc[e.parent] = 1 : acc[e.parent] = acc[e.parent]! + 1;
+        acc[e.parent] == null
+            ? acc[e.parent] = 1
+            : acc[e.parent] = acc[e.parent]! + 1;
         return acc;
       });
 
