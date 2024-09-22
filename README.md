@@ -21,6 +21,7 @@ An (eventual) all-in-one mobile frontend for multiple image submission sites. Cu
 * DText parsing
 * Unified blacklist/fav tags
 * Warn about blacklist before loading parent/child w/ blacklisted tag
+* Downloading
 ##### TODO List
 * Comments
   * Viewing
@@ -28,7 +29,6 @@ An (eventual) all-in-one mobile frontend for multiple image submission sites. Cu
   * Voting
 * Notes
 * Improve loading shared urls
-* Downloading
 * Ordering
 * Subscriptions
 * Combining (at least 2) searches (e.g. (a or b) and (c or d))

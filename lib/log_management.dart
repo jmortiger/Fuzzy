@@ -132,45 +132,47 @@ Future<void> init() async {
 class FileLogger implements Logger {
   final Logger $;
   final file = LateFinal<File?>();
+  static const defaultLevel = Level.FINE;
   FileLogger(
     String name,
     String? fileName, [
-    Level level = Level.FINE,
-  ]) : $ = Logger(name) /* ,
-        _levelOverride = level */
-  {
-    $.level = Platform.isAndroid ? Level.ALL : level;
-    _init(name, fileName);
-    $.onRecord.listen(onRecordEvent);
-  }
+    Level level = defaultLevel,
+  ]) : this._root(Logger(name), name, fileName, level);
   FileLogger.detached(
     String name, [
     String? fileName,
-    Level level = Level.FINE,
-  ]) : $ = Logger.detached(name) /* ,
-        _levelOverride = level */
+    Level level = defaultLevel,
+  ]) : this._root(Logger.detached(name), name, fileName, level);
+  FileLogger._root(
+    this.$,
+    String name,
+    String? fileName,
+    Level level,
+  ) /* : _levelOverride = level */
   {
-    $.level = Platform.isAndroid ? Level.ALL : level;
-    _init(name, fileName);
-    $.onRecord.listen(onRecordEvent);
+    // $.level = Platform.isAndroid ? Level.ALL : level;
+    $.level = level;
+    _init(name, fileName).then(
+      (v) => v != null ? $.onRecord.listen(onRecordEvent) : "",
+    );
   }
-  Future<File?> _init(String name, [String? fileName]) =>
-      logPath.getItemAsync().then((String v) => Platform.isWeb
-          ? null
-          : Storable.handleInitStorageAsync("$v${fileName ?? "$name.txt"}")
-        ?..then((v2) {
-          file.$ = v2;
-          return v2?.writeAsString(
-                "\n${DateTime.timestamp().toIso8601String()}",
-                mode: FileMode.append,
-              ) ??
-              Future.sync(() => null);
-        }).onError((error, stackTrace) => file.$ = null));
+  Future<File?> _init(String name, [String? fileName]) async => Platform.isWeb
+      ? null
+      : logPath.getItemAsync().then((String v) =>
+          Storable.handleInitStorageAsync("$v${fileName ?? "$name.txt"}")
+            ..then((v2) {
+              return (file.$ = v2)?.writeAsString(
+                    "\n${DateTime.timestamp().toLocal().toIso8601String()}",
+                    mode: FileMode.append,
+                  ) ??
+                  Future.sync(() => null);
+            }).onError((error, stackTrace) => file.$ = null));
   void onRecordEvent(LogRecord e) {
     file.$Safe?.writeAsString(
-      "${e.time.toLocal().toIso8601String()} "
-      "[${e.level.toString().toUpperCase()}]: "
-      "${e.message}\n",
+      // "${e.time.toLocal().toIso8601String()} "
+      // "[${e.level.toString().toUpperCase()}]: "
+      // "${e.message}\n",
+      "\n${e.toStringAdvanced()}",
       mode: FileMode.append,
     );
     // dev.log(
@@ -225,23 +227,23 @@ class FileLogger implements Logger {
 
   @override
   void config(Object? message, [Object? error, StackTrace? stackTrace]) =>
-      $.config(message, error, stackTrace);
+      log(Level.CONFIG, message, error, stackTrace);
 
   @override
   void fine(Object? message, [Object? error, StackTrace? stackTrace]) =>
-      $.fine(message, error, stackTrace);
+      log(Level.FINE, message, error, stackTrace);
 
   @override
   void finer(Object? message, [Object? error, StackTrace? stackTrace]) =>
-      $.finer(message, error, stackTrace);
+      log(Level.FINER, message, error, stackTrace);
 
   @override
   void finest(Object? message, [Object? error, StackTrace? stackTrace]) =>
-      $.finest(message, error, stackTrace);
+      log(Level.FINEST, message, error, stackTrace);
 
   @override
   void info(Object? message, [Object? error, StackTrace? stackTrace]) =>
-      $.info(message, error, stackTrace);
+      log(Level.INFO, message, error, stackTrace);
 
   @override
   void log(
@@ -251,27 +253,54 @@ class FileLogger implements Logger {
     StackTrace? stackTrace,
     Zone? zone,
   ]) =>
-      $.log(logLevel, message, error, stackTrace, zone);
-  // isLoggable(logLevel)
-  //     ? $.log(logLevel, message, error, stackTrace, zone)
-  //     : onRecordEvent(LogRecord(
-  //         logLevel,
-  //         message?.toString() ?? "",
-  //         name,
-  //       ));
+      // $.log(logLevel, message, error, stackTrace, zone);
+      isLoggable(logLevel) || Platform.isWeb
+          ? $.log(logLevel, message, error, stackTrace, zone)
+          : onRecordEvent(
+              buildLogRecord(logLevel, message, error, stackTrace, zone),
+            );
 
   @override
   void severe(Object? message, [Object? error, StackTrace? stackTrace]) =>
-      $.severe(message, error, stackTrace);
+      log(Level.SEVERE, message, error, stackTrace);
 
   @override
   void shout(Object? message, [Object? error, StackTrace? stackTrace]) =>
-      $.shout(message, error, stackTrace);
+      log(Level.SHOUT, message, error, stackTrace);
 
   @override
   void warning(Object? message, [Object? error, StackTrace? stackTrace]) =>
-      $.warning(message, error, stackTrace);
+      log(Level.WARNING, message, error, stackTrace);
   // #endregion Overrides
+
+  LogRecord buildLogRecord(
+    Level logLevel,
+    Object? message, [
+    Object? error,
+    StackTrace? stackTrace,
+    Zone? zone,
+  ]) {
+    Object? object;
+    if (message is Function) {
+      message = (message as Object? Function())();
+    }
+
+    String msg;
+    if (message is String) {
+      msg = message;
+    } else {
+      msg = message.toString();
+      object = message;
+    }
+
+    if (stackTrace == null && logLevel >= recordStackTraceAtLevel) {
+      stackTrace = StackTrace.current;
+      error ??= 'autogenerated stack trace for $logLevel $msg';
+    }
+    zone ??= Zone.current;
+
+    return LogRecord(logLevel, msg, fullName, error, stackTrace, zone, object);
+  }
 }
 
 // #region Logging Helpers
@@ -394,5 +423,41 @@ extension LogRes on http.BaseResponse {
       "\n\t$headers",
     );
   }
+}
+
+enum LogRecordField {
+  time,
+  level,
+  loggerName,
+  message,
+  sequenceNumber,
+  ;
+
+  String format(LogRecord record) => switch (this) {
+        time => record.time.toLocal().toIso8601String(),
+        level => "[${record.level}]".toUpperCase(),
+        loggerName => "{${record.loggerName}}",
+        message => record.message,
+        sequenceNumber => "(Seq #${record.sequenceNumber})",
+      };
+}
+
+extension LogRecordExt on LogRecord {
+  String toStringAdvanced({
+    /* bool showDateTime = true,
+    bool showLevel = true,
+    bool showLoggerName = true, */
+    Set<LogRecordField> order = const {
+      LogRecordField.time,
+      LogRecordField.level,
+      LogRecordField.message
+    },
+  }) =>
+      order.isEmpty
+          ? message
+          : order.fold(
+              null,
+              (p, e) => p == null ? e.format(this) : "$p ${e.format(this)}",
+            )!;
 }
 // #endregion Logging Helpers

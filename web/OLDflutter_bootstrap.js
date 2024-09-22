@@ -14,6 +14,11 @@ _flutter.buildConfig.builds.push({
 	"renderer": "canvaskit",
 	"mainJsPath": "main.dart.js"
 });
+_flutter.buildConfig.builds.push({
+	"compileTarget": "dartdevc",
+	"renderer": "skwasm",
+	"mainJsPath": "main.dart.js"
+});
 _flutter.loader.load({
   config: {"renderer": "html"},
 });

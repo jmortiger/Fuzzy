@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_sharing_intent/flutter_sharing_intent.dart';
 import 'package:flutter_sharing_intent/model/sharing_file.dart';
+import 'package:j_util/collections.dart';
 import 'package:j_util/platform_finder.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/util/util.dart' as util;
@@ -13,24 +14,12 @@ lm.FileLogger get _logger => _lRecord.logger;
 // ignore: unnecessary_late
 late final _lRecord = lm.generateLogger("Intent");
 // #endregion Logger
-// import 'package:app_links/app_links.dart';
 
-// final _appLinks = AppLinks(); // AppLinks is singleton
-// late StreamSubscription<Uri> linkSubscription;
 late StreamSubscription<List<SharedFile>> intentDataStreamSubscription;
-final List<Uri> requestedUrls = [];
+final requestedUrls = ListNotifier<Uri>.empty(true);
 
 Future<void> initIntentHandling() async {
   if (Platform.isAndroid) {
-    // final _navigatorKey = GlobalKey<NavigatorState>();
-
-    // Subscribe to all events (initial link and further)
-    // linkSubscription = _appLinks.uriLinkStream.listen((uri) {
-    //   // Do something (navigation, ...)
-    //   // _navigatorKey.currentState?.pushNamed(uri.fragment);
-    //   requestedUrls.add(uri);
-    //   print(uri);
-    // });
     handleShareIntent(await FlutterSharingIntent.instance.getInitialSharing());
     intentDataStreamSubscription = FlutterSharingIntent.instance
         .getMediaStream()
@@ -45,12 +34,15 @@ void handleShareIntent(List<SharedFile> f) {
     case SharedMediaType.TEXT:
       _print("Share intent received: ${t!.value}");
       final u = Uri.tryParse(t.value!);
-      if (u != null) requestedUrls.add(u);
-      _print("Failed parsing");
+      if (u != null) {
+        requestedUrls.add(u);
+      } else {
+        _logger.warning("Failed parsing: ${t.value} failed to parse");
+      }
       break;
     case null:
     default:
-      _print("Share not handled");
+      _logger.info("Share not handled ${t?.type} $t");
   }
 }
 
@@ -58,8 +50,8 @@ bool checkAndLaunch(BuildContext context) {
   if (requestedUrls.isNotEmpty) {
     final u = requestedUrls.removeAt(0);
     final uFormatted = Uri(path: u.path, query: u.query);
-    final message = "navigating to ${u.toString()} (${uFormatted.toString()})";
-    _print(message);
+    final message = "Navigating to ${u.toString()} (${uFormatted.toString()})";
+    _logger.info(message);
     util.showUserMessage(context: context, content: Text(message));
     Navigator.pushNamed(context, uFormatted.toString());
     // showDialog(
