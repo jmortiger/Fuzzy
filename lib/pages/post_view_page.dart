@@ -9,6 +9,7 @@ import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/main.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/saved_data.dart';
+import 'package:fuzzy/models/tag_subscription.dart';
 import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/pages/wiki_page.dart';
@@ -771,12 +772,9 @@ class _PostViewPageState
                       Navigator.pop(context);
                     },
                   ),
-                if (!SavedDataE6.all.any((e) =>
-                    e.searchString.replaceAll(
-                      RegExp(r"\s"),
-                      "",
-                    ) ==
-                    tag))
+                if (!SavedDataE6.all.any(
+                  (e) => e.searchString.replaceAll(RegExp(r"\s"), "") == tag,
+                ))
                   ListTile(
                     title: const Text("Add to saved searches"),
                     onTap: () {
@@ -943,6 +941,31 @@ class _PostViewPageState
                     );
                   },
                 ),
+                if (SubscriptionManager.isInit &&
+                    !SubscriptionManager.subscriptions.any((e) => e.tag == tag))
+                  ListTile(
+                    title: const Text("Add Subscription"),
+                    onTap: () {
+                      SubscriptionManager.subscriptions.add(
+                        TagSubscription(
+                            tag: tag, lastId: widget.postListing.id),
+                      );
+                      SubscriptionManager.writeToStorage();
+                      Navigator.pop(context);
+                    },
+                  ),
+                if (SubscriptionManager.isInit &&
+                    SubscriptionManager.subscriptions.any((e) => e.tag == tag))
+                  ListTile(
+                    title: const Text("Remove Subscription"),
+                    onTap: () {
+                      SubscriptionManager.subscriptions.remove(
+                          SubscriptionManager.subscriptions
+                              .firstWhere((e) => e.tag == tag));
+                      SubscriptionManager.writeToStorage();
+                      Navigator.pop(context);
+                    },
+                  ),
               ],
             ),
           ),

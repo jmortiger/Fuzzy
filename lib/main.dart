@@ -9,6 +9,7 @@ import 'package:fuzzy/models/cached_searches.dart';
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/models/search_results.dart';
 import 'package:fuzzy/models/search_view_model.dart';
+import 'package:fuzzy/models/tag_subscription.dart';
 import 'package:fuzzy/pages/edit_post_page.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
 import 'package:fuzzy/pages/post_view_page.dart';
@@ -60,6 +61,7 @@ void main(List<String> args) async {
   e621.activeCredentials = E621AccessData.fallbackForced?.cred;
   CachedFavorites.fileFullPath.getItemAsync().ignore();
   SavedDataE6.init();
+  SubscriptionManager.initAndCheckSubscriptions();
   try {
     runApp(
       MaterialApp(

@@ -174,7 +174,6 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
                       : SubscriptionManager.storageSync ?? [])
                   .map((e) => e.tag)
                   .toSet(),
-              subtitle: null,
               name: "Subscribed Tags",
               setVal: (Set<String> v) {
                 final toRemove = (SubscriptionManager.isInit
