@@ -234,15 +234,12 @@ enum Rating with SearchableEnum /* <Rating> */ {
         "questionable" => questionable,
         "s" => safe,
         "safe" => safe,
-        _ => throw UnsupportedError("type not supported"),
+        _ => throw UnsupportedError("type not supported: $str"),
       };
   factory Rating.fromText(String str) => switch (str) {
-        "$prefix:e" => explicit,
-        "$prefix:explicit" => explicit,
-        "$prefix:q" => questionable,
-        "$prefix:questionable" => questionable,
-        "$prefix:s" => safe,
-        "$prefix:safe" => safe,
+        "${prefix}e" || "${prefix}explicit" => explicit,
+        "${prefix}q" || "${prefix}questionable" => questionable,
+        "${prefix}s" || "${prefix}safe" => safe,
         _ => Rating.fromTagText(str),
       };
 
@@ -269,7 +266,7 @@ enum Rating with SearchableEnum /* <Rating> */ {
         ..add(
           (
             Modifier.fromString(e.group(1) ?? ""),
-            Rating.fromTagText(e.group(2)!)
+            Rating.fromTagText(e.group(3)!)
           ),
         ),
     );

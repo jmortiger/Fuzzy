@@ -6,6 +6,8 @@ import 'package:file_saver/file_saver.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/util/string_comparator.dart';
+import 'package:fuzzy/util/tag_db_import.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:j_util/platform_finder.dart';
@@ -24,21 +26,36 @@ class _TagDbEditorPageState extends State<TagDbEditorPage> {
   static late final logger = lm.generateLogger("TagDbEditorPage").logger;
   String? data;
   List<MyEntry>? parsedData;
+  // List<MyEntry> protectedTags = [];
   Future<String?>? futureData;
   @override
   Widget build(BuildContext context) {
     Widget root;
     if (parsedData == null && data == null && futureData == null) {
-      root = TextButton(
-          onPressed: () => setState(() {
-                futureData = tryLoadFile(logger: logger)
-                  ..then((v) => setState(() {
-                        data = v;
-                        futureData = null;
-                        if (v != null) parseAndAssign(v).ignore();
-                      })).ignore();
-              }),
-          child: const Text("Load File"));
+      root = Row(
+        children: [
+          TextButton(
+              onPressed: () => setState(() {
+                    futureData = tryLoadFile(logger: logger)
+                      ..then((v) => setState(() {
+                            data = v;
+                            futureData = null;
+                            if (v != null) parseAndAssign(v).ignore();
+                          })).ignore();
+                  }),
+              child: const Text("Load File")),
+          TextButton(
+              onPressed: () => setState(() {
+                    futureData = getDatabaseFileFromServer()
+                      ..then((v) => setState(() {
+                            data = v;
+                            futureData = null;
+                            parseAndAssign(v).ignore();
+                          })).ignore();
+                  }),
+              child: const Text("Download Up To Date Tag Archive")),
+        ],
+      );
     } else {
       if (parsedData == null && data == null) {
         root = const CircularProgressIndicator();
@@ -150,6 +167,8 @@ class _TagDbEditorPageState extends State<TagDbEditorPage> {
                     onPressed: () {
                       int? n;
                       bool andLt = true;
+                      // TODO: Add protectedTags
+                      // Set<String> protectedTags = {};
                       showDialog(
                           context: context,
                           builder: (context) => AlertDialog(
@@ -395,6 +414,79 @@ class _TagDbEditorPageState extends State<TagDbEditorPage> {
                                 mimeType: MimeType.other)
                             .then((v) => Navigator.pop(context))),
                     child: const Text("Save as CSV"),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      parsedData!.sort((a, b) => a.name.compareTo(b.name));
+                      var curr = "",
+                          last = "",
+                          s = 0,
+                          e = parsedData!.length - 1;
+                      final control = SearchController();
+                      control.addListener(() {
+                        last = curr;
+                        curr = control.text;
+                      });
+                      showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                                title: const Text("Find tags"),
+                                content: SizedBox(
+                                  width: double.maxFinite,
+                                  height: double.maxFinite,
+                                  child: SafeArea(
+                                    child: SearchAnchor(
+                                      builder: (context, controller) =>
+                                          const IconButton(
+                                              onPressed: null,
+                                              icon: Icon(Icons.search)),
+                                      suggestionsBuilder:
+                                          (context, controller) {
+                                        final t = controller.text;
+                                        if (t.isEmpty) {
+                                          return const Iterable.empty();
+                                        }
+                                        bool con(MyEntry e) => e.name.startsWith(t);
+
+                                        s = parsedData!.indexWhere(
+                                            con, t.startsWith(last) ? s : 0);
+                                        if (s < 0) {
+                                          return const Iterable.empty();
+                                        } else {
+                                          e = parsedData!.lastIndexWhere(con,
+                                              t.startsWith(last) ? e : null);
+                                          final c =
+                                              getFineInverseSimilarityComparator(
+                                                  t);
+                                          return (parsedData!
+                                                  .getRange(s, e + 1)
+                                                  .toList()
+                                                ..sort((a, b) =>
+                                                    c(a.name, b.name)))
+                                              .take(15)
+                                              .map((e) => ListTile(
+                                                    title: Text(e.name),
+                                                    subtitle:
+                                                        Text(e.category.name),
+                                                    leading:
+                                                        Text("id: ${e.id}"),
+                                                    trailing: Text(
+                                                        "Count: ${e.postCount}"),
+                                                  ));
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                // actions: [
+                                //   TextButton(
+                                //     child: const Text("Search"),
+                                //     onPressed: () => Navigator.pop(context, n),
+                                //   )
+                                // ],
+                              ));
+                    },
+                    child: const Text("Find Tags"),
                   ),
                 ],
               ),

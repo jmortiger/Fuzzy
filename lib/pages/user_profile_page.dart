@@ -8,6 +8,7 @@ import 'package:e621/e621.dart'
     show User, UserDetailed, UserLoggedIn, UserLoggedInDetail;
 
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/widgets/w_post_thumbnail.dart';
 
 import '../web/e621/e621_access_data.dart';
 
@@ -102,28 +103,30 @@ class UserProfilePage extends StatelessWidget
           "User ${user.id}: ${user.name}${user is UserLoggedIn ? " (You)" : ""}",
         ),
       ),
-      body: Column(children: [
-        // TODO: avatarId
-        Text("Created At: ${user.createdAt}"),
-        Text("Level: ${user.levelString}(${user.level})"),
-        Text("Post Update Count: ${user.postUpdateCount}"),
-        Text("Post Upload Count: ${user.postUploadCount}"),
-        Text("Note Update Count: ${user.noteUpdateCount}"),
-        Text("Is Banned: ${user.isBanned}"),
-        Text("Can Approve Posts: ${user.canApprovePosts}"),
-        Text("Can Upload Free: ${user.canUploadFree}"),
-        Text("Base Upload Limit: ${user.baseUploadLimit}"),
-        if (userL != null) generateFavStatsFull(userL!),
-        if (userL != null) Text("Tag Query Limit: ${userL!.tagQueryLimit}"),
-        if (userL != null) Text("Blacklist Users: ${userL!.blacklistUsers}"),
-        if (userL != null) Text("Blacklisted Tags: ${userL!.blacklistedTags}"),
-        if (userL != null) Text("Favorite Tags: ${userL!.favoriteTags}"),
-        if (userL != null) Text("Api Burst Limit: ${userL!.apiBurstLimit}"),
-        if (userL != null)
-          Text("API Regen Multiplier: ${userL!.apiRegenMultiplier}"),
-        if (userL != null)
-          Text("Remaining API Limit: ${userL!.remainingApiLimit}"),
-      ]),
+      body: SingleChildScrollView(
+        child: Column(children: [
+          if (user.avatarId != null) WPostThumbnail.withId(id: user.avatarId!),
+          Text("Created At: ${user.createdAt}"),
+          Text("Level: ${user.levelString}(${user.level})"),
+          Text("Post Update Count: ${user.postUpdateCount}"),
+          Text("Post Upload Count: ${user.postUploadCount}"),
+          Text("Note Update Count: ${user.noteUpdateCount}"),
+          Text("Is Banned: ${user.isBanned}"),
+          Text("Can Approve Posts: ${user.canApprovePosts}"),
+          Text("Can Upload Free: ${user.canUploadFree}"),
+          Text("Base Upload Limit: ${user.baseUploadLimit}"),
+          if (userL != null) generateFavStatsFull(userL!),
+          if (userL != null) Text("Tag Query Limit: ${userL!.tagQueryLimit}"),
+          if (userL != null) Text("Blacklist Users: ${userL!.blacklistUsers}"),
+          if (userL != null) Text("Blacklisted Tags: ${userL!.blacklistedTags}"),
+          if (userL != null) Text("Favorite Tags: ${userL!.favoriteTags}"),
+          if (userL != null) Text("Api Burst Limit: ${userL!.apiBurstLimit}"),
+          if (userL != null)
+            Text("API Regen Multiplier: ${userL!.apiRegenMultiplier}"),
+          if (userL != null)
+            Text("Remaining API Limit: ${userL!.remainingApiLimit}"),
+        ]),
+      ),
     );
   }
 }

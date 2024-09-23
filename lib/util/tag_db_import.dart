@@ -37,7 +37,7 @@ Future<TagDB> _fromUint8ListCallback(Uint8List value) {
 
 Future<TagDB> _decodeFromServerCallback(http.StreamedResponse value) {
   // return decompressGzPlainTextStream(value).then(_core);
-  return value.stream.toBytes().then((v) => _fromUint8ListCallback(v));
+  return value.stream.toBytes().then((v) => _decodeFromUint8ListCallback(v));
 }
 
 Future<TagDB> _decodeFromUint8ListCallback(Uint8List value) {
@@ -103,3 +103,23 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
     //     .then((value) => compute(_decodeFromServerCallback, value));
   }
 });
+
+Future<String> getDatabaseFileFromServer() {
+  return compute(_getDatabaseFileFromServer, null);
+}
+
+Future<String> getDatabaseFileFromCompressedFileIo(File f) =>
+    compute(_getDatabaseFileFromCompressedFileIo, f);
+Future<String> _getDatabaseFileFromServer(Null _) => E621.sendRequest(e621.initDbExportRequest()).then((value) =>
+      value.stream.toBytes().then((v) => http.ByteStream.fromBytes(
+              a.GZipDecoder().decodeBytes(v.toList(growable: false)))
+          .bytesToString()));
+
+Future<String> _getDatabaseFileFromCompressedFileIo(File f) =>
+    f.readAsBytes().then((v) => http.ByteStream.fromBytes(
+            a.GZipDecoder().decodeBytes(v.toList(growable: false)))
+        .bytesToString());
+// Future<String> getDatabaseFileFromCompressedFileBundle(ByteData f) =>
+//     f.readAsBytes().then((v) => http.ByteStream.fromBytes(
+//             a.GZipDecoder().decodeBytes(v.toList(growable: false)))
+//         .bytesToString());

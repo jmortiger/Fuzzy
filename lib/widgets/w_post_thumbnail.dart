@@ -51,6 +51,13 @@ class _WPostThumbnailState extends State<WPostThumbnail> {
     super.initState();
     if (widget.post != null) {
       info = retrieveImageInfo(widget.post!);
+      renderData = determineResolution(
+        info!.width,
+        info!.height,
+        widget.maxWidth,
+        widget.maxHeight,
+        widget.fit,
+      );
     } else {
       future = e621.sendRequest(e621.initGetPostRequest(widget.id!)).then((v) {
         return v.statusCode >= 300

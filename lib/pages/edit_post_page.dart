@@ -3,13 +3,18 @@ import 'package:flutter/services.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/settings_page.dart';
+import 'package:fuzzy/util/string_comparator.dart';
 import 'package:fuzzy/util/util.dart' as util;
+import 'package:fuzzy/util/tag_db_import.dart' as tag_d_b;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:e621/e621.dart' as e621;
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/widgets/w_post_thumbnail.dart';
 import 'package:j_util/j_util_full.dart';
+
+const bool useAdvancedEditor = false;
 
 /// TODO: separate tags by category
 /// TODO: improve Performance
@@ -31,9 +36,15 @@ class _EditPostPageState extends State<EditPostPage> {
   E6PostResponse get post => widget.post;
   late List<String> editedTags;
   late List<String> editedSources;
+  late String editedTagsString;
+  late String editedSourcesString;
+  late SearchController editedTagsStringController;
+  late SearchController editedSourcesStringController;
   String? get postTagStringDiff {
     final origTags = post.tags.allTags.toSet();
-    final editedTagSet = editedTags.toSet();
+    final editedTagSet = useAdvancedEditor
+        ? editedTags.toSet()
+        : editedTagsString.split(RegExp(r"\s")).toSet();
     final newTags = editedTagSet.difference(origTags).fold("", _folder);
     final removedTags =
         origTags.difference(editedTagSet).fold("", _minusFolder);
@@ -46,7 +57,9 @@ class _EditPostPageState extends State<EditPostPage> {
   //     _postTagStringDiff = v?.isEmpty ?? true ? null : v;
   String? get postSourceDiff {
     final origSources = post.sources.toSet();
-    final editedSourcesSet = editedSources.toSet();
+    final editedSourcesSet = useAdvancedEditor
+        ? editedSources.toSet()
+        : editedSourcesString.split(RegExp(r"\s")).toSet();
     final newSources =
         editedSourcesSet.difference(origSources).fold("", _folder);
     final removedSources =
@@ -75,25 +88,63 @@ class _EditPostPageState extends State<EditPostPage> {
   @override
   void initState() {
     super.initState();
-    // _postParentId = postOldParentId;
-    // postTagStringDiff = postTagStringDiff;
-    // postSourceDiff = postSourceDiff;
     postParentId = postOldParentId;
     postDescription = postOldDescription;
     postRating = postOldRating;
-    editedTags = post.tags.allTags;
-    editedSources = post.sources;
+    if (useAdvancedEditor) {
+      editedTags = post.tags.allTags;
+      editedSources = post.sources;
+    } else {
+      editedTagsString =
+          post.tags.allTags.fold("", (p, e) => p.isEmpty ? e : "$p\n$e");
+      editedSourcesString =
+          post.sources.fold("", (p, e) => p.isEmpty ? e : "$p\n$e");
+      editedTagsStringController = SearchController()
+          /* ..addListener(() => setState(() {
+              editedTagsString = editedTagsStringController.text;
+            })) */
+          ;
+      editedSourcesStringController = SearchController()
+          /* ..addListener(() => setState(() {
+              editedSourcesString = editedSourcesStringController.text;
+            })) */
+          ;
+    }
     controllerDescription = TextEditingController(text: post.description);
     controllerParentId = post.relationships.parentId != null
         ? TextEditingController(text: post.relationships.parentId!.toString())
         : TextEditingController();
   }
 
+  @override
+  void dispose() {
+    if (!useAdvancedEditor) {
+      editedTagsStringController.dispose();
+      editedSourcesStringController.dispose();
+    }
+    controllerDescription.dispose();
+    controllerParentId.dispose();
+    super.dispose();
+  }
+
   void validate() {
-    setState(() {
-      editedTags = editedTags.toSet().toList();
-      editedSources = editedSources.toSet().toList();
-    });
+    if (useAdvancedEditor) {
+      setState(() {
+        editedTags = editedTags.toSet().toList();
+        editedSources = editedSources.toSet().toList();
+      });
+    } else {
+      setState(() {
+        editedTagsString = editedTagsString
+            .split(RegExp(r"\s"))
+            .toSet()
+            .fold("", (p, e) => p.isEmpty ? e : "$p\n$e");
+        editedSourcesString = editedSourcesString
+            .split(RegExp(r"\s"))
+            .toSet()
+            .fold("", (p, e) => p.isEmpty ? e : "$p\n$e");
+      });
+    }
   }
 
   static String _folder(acc, e) => "$acc${acc.isEmpty ? "" : " "}$e";
@@ -186,6 +237,11 @@ class _EditPostPageState extends State<EditPostPage> {
       body: SafeArea(
         child: ListView(
           children: [
+            WPostThumbnail.withPost(
+              post: widget.post,
+              maxWidth: MediaQuery.sizeOf(context).width,
+              // fit: BoxFit.fitWidth,
+            ),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
@@ -234,42 +290,167 @@ class _EditPostPageState extends State<EditPostPage> {
             ExpansionTile(
               title: const Text("Tags"),
               initiallyExpanded: false,
-              children: [
-                ListTile(
-                  title: const Text("Revert Changes"),
-                  onTap: () => setState(() {
-                    editedTags = post.tags.allTags;
-                  }),
-                ),
-                ListTile(
-                  title: const Text("Add tag"),
-                  // onTap: () => editedTags.insert(0, ""),
-                  onTap: () => setState(() {
-                    editedTags.insert(0, "");
-                  }),
-                ),
-                ...editedTags.mapAsList(tagMapper),
-              ],
+              children: useAdvancedEditor
+                  ? ([
+                      ListTile(
+                        title: const Text("Revert Changes"),
+                        onTap: () => setState(() {
+                          editedTags = post.tags.allTags;
+                        }),
+                      ),
+                      ListTile(
+                        title: const Text("Add tag"),
+                        // onTap: () => editedTags.insert(0, ""),
+                        onTap: () => setState(() {
+                          editedTags.insert(0, "");
+                        }),
+                      ),
+                      ...editedTags.mapAsList(tagMapper),
+                    ])
+                  : [
+                      // TextField(
+                      //   controller: TextEditingController(
+                      //     text: editedTagsString,
+                      //   ),
+                      //   onChanged: (value) => setState(() {
+                      //     editedTagsString = value;
+                      //   }),
+                      // )
+                      Text(editedTagsString),
+                      SearchAnchor(
+                        // builder: (context, controller) => TextButton(
+                        //   onPressed: () => controller.openView(),
+                        //   child: const Text("Edit"),
+                        // ),
+                        builder: (context, controller) =>
+                            SearchBar(onTap: controller.openView),
+                        searchController: editedTagsStringController,
+                        viewTrailing: [
+                          SelectorNotifier(
+                              selector: (context, value) => value.text,
+                              builder: (context, value, child) =>
+                                  editedTagsString.contains(
+                                          RegExp(r"(^|\s)" "$value" r"(\s|$)"))
+                                      ? IconButton(
+                                          onPressed: () => setState(() {
+                                            editedTagsString =
+                                                editedTagsString.replaceFirst(
+                                                    RegExp(r"(^|\s)"
+                                                        "$value"
+                                                        r"(\s|$)"),
+                                                    "\n");
+                                            editedTagsStringController.text =
+                                                "";
+                                          }),
+                                          icon: const Icon(Icons.remove),
+                                        )
+                                      : IconButton(
+                                          onPressed: () => setState(() {
+                                            editedTagsString += "\n$value";
+                                            editedTagsStringController.text =
+                                                "";
+                                          }),
+                                          icon: const Icon(Icons.add),
+                                        ),
+                              value: editedTagsStringController)
+                        ],
+                        suggestionsBuilder: (context, controller) {
+                          final c = getFineInverseSimilarityComparator(
+                              controller.text);
+                          return (tag_d_b.tagDbLazy.$Safe
+                                  ?.getSublist(controller.text,
+                                      allowedVariance: .6)
+                                  .take(50)
+                                  .map((e) => ListTile(
+                                        title: Text(e.name),
+                                        subtitle: Text(e.category.name),
+                                        onTap: () => controller.text = e.name,
+                                      ))
+                                  .toList()
+                                ?..sort((a, b) => c((a.title as Text).data!,
+                                    (b.title as Text).data!))) ??
+                              const Iterable<ListTile>.empty();
+                        },
+                      )
+                    ],
             ),
             ExpansionTile(
               title: const Text("Sources"),
               initiallyExpanded: false,
-              children: [
-                ListTile(
-                  title: const Text("Revert Changes"),
-                  onTap: () => setState(() {
-                    editedSources = post.sources;
-                  }),
-                ),
-                ListTile(
-                  title: const Text("Add Source"),
-                  // onTap: () => editedSources.insert(0, ""),
-                  onTap: () => setState(() {
-                    editedSources.insert(0, "");
-                  }),
-                ),
-                ...editedSources.mapAsList(sourceMapper),
-              ],
+              children: useAdvancedEditor
+                  ? ([
+                      ListTile(
+                        title: const Text("Revert Changes"),
+                        onTap: () => setState(() {
+                          editedSources = post.sources;
+                        }),
+                      ),
+                      ListTile(
+                        title: const Text("Add Source"),
+                        // onTap: () => editedSources.insert(0, ""),
+                        onTap: () => setState(() {
+                          editedSources.insert(0, "");
+                        }),
+                      ),
+                      ...editedSources.mapAsList(sourceMapper),
+                    ])
+                  : [
+                      // TextField(
+                      //   controller: TextEditingController(
+                      //     text: editedSourcesString,
+                      //   ),
+                      //   onChanged: (value) => setState(() {
+                      //     editedSourcesString = value;
+                      //   }),
+                      // )
+                      Text(editedSourcesString),
+                      SearchAnchor(
+                        builder: (context, controller) =>
+                            SearchBar(onTap: controller.openView),
+                        searchController: editedSourcesStringController,
+                        viewTrailing: [
+                          SelectorNotifier(
+                              selector: (context, value) => value.text,
+                              builder: (context, value, child) =>
+                                  editedSourcesString.contains(
+                                          RegExp(r"(^|\s)" "$value" r"(\s|$)"))
+                                      ? IconButton(
+                                          onPressed: () => setState(() {
+                                            editedSourcesString =
+                                                editedSourcesString
+                                                    .replaceFirst(
+                                                        RegExp(r"(^|\s)"
+                                                            "$value"
+                                                            r"(\s|$)"),
+                                                        "\n");
+                                            editedSourcesStringController.text =
+                                                "";
+                                          }),
+                                          icon: const Icon(Icons.remove),
+                                        )
+                                      : IconButton(
+                                          onPressed: () => setState(() {
+                                            editedSourcesString += "\n$value";
+                                            editedSourcesStringController.text =
+                                                "";
+                                          }),
+                                          icon: const Icon(Icons.add),
+                                        ),
+                              value: editedSourcesStringController)
+                        ],
+                        suggestionsBuilder: (context, controller) {
+                          final c = getFineInverseSimilarityComparator(
+                              controller.text);
+                          return (editedSourcesString.split(RegExp("\\s"))
+                                ..sort(c))
+                              .take(50)
+                              .map((e) => ListTile(
+                                    title: Text(e),
+                                    onTap: () => controller.text = e,
+                                  ));
+                        },
+                      )
+                    ],
             ),
           ],
         ),

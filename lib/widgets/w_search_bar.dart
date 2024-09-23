@@ -614,16 +614,6 @@ class _WSearchBarState extends State<WSearchBar> {
     ]..sort(compListTile);
   }
 
-  VoidCallback? _genCallback(
-    String output,
-    void Function()? onTap,
-    SearchController? controller,
-  ) =>
-      onTap ??
-      () {
-        if (controller?.isAttached ?? false) controller!.closeView(output);
-      };
-
   ListTile _genTagDbTile(
     TagDBEntry element, {
     required String currPrefix,
@@ -671,6 +661,16 @@ class _WSearchBarState extends State<WSearchBar> {
   }
 
   // #region Search Bar Callbacks
+  VoidCallback? _genCallback(
+    String output,
+    void Function()? onTap,
+    SearchController? controller,
+  ) =>
+      onTap ??
+      (controller != null
+          ? () => controller.isAttached ? controller.closeView(output) : ""
+          : null);
+
   void _sbcCloseAndUnfocus() {
     if (searchController.isAttached && searchController.isOpen) {
       searchController.closeView(currentText);
