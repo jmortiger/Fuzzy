@@ -20,6 +20,7 @@ lm.FileLogger get _logger => lRecord.logger;
 // ignore: unnecessary_late
 late final lRecord = lm.generateLogger("TagDbImport");
 // #endregion Logger
+// ignore: constant_identifier_names
 const bool DO_NOT_USE_TAG_DB = false;
 final tagDb = LateFinal<TagDB>();
 Future<TagDB> _core(String vf) {
@@ -41,9 +42,11 @@ Future<TagDB> _decodeFromServerCallback(http.StreamedResponse value) {
 }
 
 Future<TagDB> _decodeFromUint8ListCallback(Uint8List value) {
-  return _fromListCallback(
-    a.GZipDecoder().decodeBytes(value.toList(growable: false)),
-  );
+  return _decodeFromListCallback(value.toList(growable: false));
+}
+
+Future<TagDB> _decodeFromListCallback(List<int> value) {
+  return _fromListCallback(a.GZipDecoder().decodeBytes(value));
 }
 
 Future<TagDB> _decodeFromLocalCallback(ByteData data) {
@@ -98,9 +101,6 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
       _print("Tag Database Loaded!");
       return compute(_decodeFromLocalCallback, data);
     }
-    // return E621
-    //     .sendRequest(e621.initDbExportRequest())
-    //     .then((value) => compute(_decodeFromServerCallback, value));
   }
 });
 
@@ -110,15 +110,34 @@ Future<String> getDatabaseFileFromServer() {
 
 Future<String> getDatabaseFileFromCompressedFileIo(File f) =>
     compute(_getDatabaseFileFromCompressedFileIo, f);
-Future<String> _getDatabaseFileFromServer(Null _) => E621.sendRequest(e621.initDbExportRequest()).then((value) =>
-      value.stream.toBytes().then((v) => http.ByteStream.fromBytes(
-              a.GZipDecoder().decodeBytes(v.toList(growable: false)))
-          .bytesToString()));
+
+/// TODO: TEST
+Future<String> getDatabaseFileFromCompressedStream(Stream<List<int>> f) =>
+    compute(_getDatabaseFileFromCompressedStream, f);
+
+/// TODO: TEST
+Future<String> getDatabaseFileFromCompressedBytes(Uint8List f) =>
+    compute(_getDatabaseFileFromCompressedBytes, f);
+
+Future<String> _getDatabaseFileFromCompressedBytes(Uint8List f) =>
+    http.ByteStream.fromBytes(
+            a.GZipDecoder().decodeBytes(f.toList(growable: false)))
+        .bytesToString();
+Future<String> _getDatabaseFileFromServer(Null _) =>
+    E621.sendRequest(e621.initDbExportRequest()).then((value) => value.stream
+        .toBytes()
+        .then((v) => http.ByteStream.fromBytes(
+                a.GZipDecoder().decodeBytes(v.toList(growable: false)))
+            .bytesToString()));
 
 Future<String> _getDatabaseFileFromCompressedFileIo(File f) =>
     f.readAsBytes().then((v) => http.ByteStream.fromBytes(
             a.GZipDecoder().decodeBytes(v.toList(growable: false)))
         .bytesToString());
+Future<String> _getDatabaseFileFromCompressedStream(Stream<List<int>> f) =>
+    f.fold(<int>[], (p, e) => p..addAll(e)).then((v) =>
+        http.ByteStream.fromBytes(a.GZipDecoder().decodeBytes(v))
+            .bytesToString());
 // Future<String> getDatabaseFileFromCompressedFileBundle(ByteData f) =>
 //     f.readAsBytes().then((v) => http.ByteStream.fromBytes(
 //             a.GZipDecoder().decodeBytes(v.toList(growable: false)))

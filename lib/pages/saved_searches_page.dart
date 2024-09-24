@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/saved_data.dart';
 import 'package:fuzzy/tws_interop.dart' as tws;
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart' as mye6;
 import 'package:j_util/j_util_full.dart';
-import 'package:fuzzy/util/util.dart' as util;
-import 'package:fuzzy/log_management.dart' as lm;
 
 class SavedSearchesPageProvider extends StatelessWidget {
   const SavedSearchesPageProvider({super.key});
@@ -42,69 +42,7 @@ class _SavedSearchesPageSingletonState
       LateInstance<ListNotifier<ListNotifier<SavedEntry>>>();
   // var selected = <({int parentIndex, int childIndex, SavedEntry entry})>{};
   var selected = SetNotifier<SavedEntry>();
-  @override
-  void initState() {
-    super.initState();
-    if (widget.data != null) {
-      data.$ = widget.data!;
-      parentedCollection.$ = widget.data!.$parented;
-    } else {
-      switch (SavedDataE6.loadOrRecycle()) {
-        case Future<SavedDataE6> t:
-          logger.finer("async");
-          t.then(
-            (v) {
-              setState(() {
-                data.$ = v;
-                parentedCollection.$ = v.$parented;
-              });
-            },
-          ).onError(util.defaultOnError);
-          break;
-        case SavedDataE6 t:
-          logger.finer("sync");
-          data.$ = t;
-          parentedCollection.$ = t.$parented;
-          break;
-      }
-    }
-  }
-
-  void _addSearchDirect(SavedElementRecord value) {
-    data.$ /* SavedDataE6 */ .addAndSaveSearch(
-      SavedSearchData.fromTagsString(
-        searchString: value.mainData,
-        title: value.title,
-        uniqueId: value.uniqueId ?? "",
-        parent: value.parent ?? "",
-      ),
-    );
-    setState(() {
-      parentedCollection.$ = data.$.$parented;
-    });
-  }
-
-  void _addSearchesDirect(Iterable<SavedElementRecord> values) {
-    data.$ /* SavedDataE6 */ .addAndSaveSearches(
-      values.map((value) => SavedSearchData.fromTagsString(
-            searchString: value.mainData,
-            title: value.title,
-            uniqueId: value.uniqueId ?? "",
-            parent: value.parent ?? "",
-          )),
-    );
-    setState(() {
-      parentedCollection.$ = data.$.$parented;
-    });
-  }
-
-  void _addSearch() => showSavedElementEditDialogue(
-        context,
-      ).then((value) {
-        if (value != null) {
-          _addSearchDirect(value);
-        }
-      });
+  var useParentedView = false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,40 +50,33 @@ class _SavedSearchesPageSingletonState
         title: const Text("Saved Searches"),
         actions: [
           IconButton(
-            onPressed: _addSearch,
             icon: const Icon(Icons.add),
             tooltip: "Add",
+            onPressed: _addSearch,
           ),
           TextButton.icon(
-            onPressed: data.$Safe?.$searches.clear,
-            icon: const Icon(Icons.clear),
             label: const Text("Clear"),
+            icon: const Icon(Icons.clear),
+            onPressed: data.$Safe?.$searches.clear,
           ),
           TextButton.icon(
-            onPressed: () {
-              tws.showBestImportElementEditDialogue(context).then((v) {
-                if (v != null) {
-                  // for (var e in v) {
-                  //   _addSearchDirect(e.toSer());
-                  // }
-                  // for (var e in v) {
-                  //   _addSearchDirect(e);
-                  // }
-                  _addSearchesDirect(v);
-                }
-              });
-            },
+            label: const Text("Import"),
             icon: const Icon(Icons.import_export),
-            label: const Text("Import from TWS"),
+            onPressed: () {
+              tws
+                  .showBestImportElementEditDialogue(context)
+                  .then((v) => v != null ? _addSearchesDirect(v) : "");
+            },
           ),
         ],
       ),
-      // endDrawer: _buildDrawer(),
+      endDrawer: _buildDrawer(),
       body: SafeArea(
         child: !data.isAssigned
             ? const CircularProgressIndicator()
-            : _buildParentedView(),
-        // : _buildSingleLevelView(),
+            : useParentedView
+                ? _buildParentedView()
+                : _buildSingleLevelView(),
       ),
       floatingActionButton: StatefulBuilder(
         builder: (context, setState) {
@@ -189,159 +120,132 @@ class _SavedSearchesPageSingletonState
     );
   }
 
-  void _deleteSelected() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title:
-            Text("Are you sure you want to delete ${selected.length} entries?"),
-        content: Text(selected.fold(
-          "Entries include: ",
-          (previousValue, element) => "$previousValue\n${element.searchString}",
-        )),
-        actions: [
-          TextButton.icon(
-            onPressed: () => Navigator.pop(context, true),
-            icon: const Icon(Icons.check),
-            label: const Text("Confirm"),
+  @override
+  void initState() {
+    super.initState();
+    if (widget.data != null) {
+      data.$ = widget.data!;
+      parentedCollection.$ = widget.data!.$parented;
+    } else {
+      switch (SavedDataE6.loadOrRecycle()) {
+        case Future<SavedDataE6> t:
+          logger.finer("async");
+          t.then(
+            (v) {
+              setState(() {
+                data.$ = v;
+                parentedCollection.$ = v.$parented;
+              });
+            },
+          ).onError(util.defaultOnError);
+          break;
+        case SavedDataE6 t:
+          logger.finer("sync");
+          data.$ = t;
+          parentedCollection.$ = t.$parented;
+          break;
+      }
+    }
+  }
+
+  void _addSearch() => showSavedElementEditDialogue(
+        context,
+      ).then((value) {
+        if (value != null) {
+          _addSearchDirect(value);
+        }
+      });
+
+  void _addSearchDirect(SavedElementRecord value) {
+    data.$ /* SavedDataE6 */ .addAndSaveSearch(
+      SavedSearchData.fromTagsString(
+        searchString: value.mainData,
+        title: value.title,
+        uniqueId: value.uniqueId ?? "",
+        parent: value.parent ?? "",
+      ),
+    );
+    setState(() {
+      parentedCollection.$ = data.$.$parented;
+    });
+  }
+
+  void _addSearchesDirect(Iterable<SavedElementRecord> values) {
+    data.$ /* SavedDataE6 */ .addAndSaveSearches(
+      values.map((value) => SavedSearchData.fromTagsString(
+            searchString: value.mainData,
+            title: value.title,
+            uniqueId: value.uniqueId ?? "",
+            parent: value.parent ?? "",
+          )),
+    );
+    setState(() {
+      parentedCollection.$ = data.$.$parented;
+    });
+  }
+
+  Drawer _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        children: [
+          // const DrawerHeader(
+          //   child: Text("TGH"),
+          // ),
+          ListTile(
+            title: const Text("Use Parented View"),
+            leading: Switch(
+              value: useParentedView,
+              onChanged: (value) => setState(() => useParentedView = value),
+            ),
+            subtitle: const Text("Parented view is slower"),
+            onTap: () => setState(() {
+              useParentedView = !useParentedView;
+            }),
           ),
-          TextButton.icon(
-            onPressed: () => Navigator.pop(context, false),
-            icon: const Icon(Icons.cancel),
-            label: const Text("Confirm"),
+          ListTile(
+            title: const Text("Add Saved Search"),
+            onTap: _addSearch,
           ),
+          // ListTile(
+          //   title: const Text("Add Saved Pool"),
+          //   onTap: () {
+          //     showSavedElementEditDialogue(
+          //       context,
+          //       mainDataName: "Pool Id",
+          //       isNumeric: true,
+          //     ).then((value) {
+          //       if (value != null) {
+          //         data.$.addAndSavePool(
+          //           SavedPoolData(
+          //             id: int.parse(value.mainData),
+          //             title: value.title,
+          //           ),
+          //         );
+          //       }
+          //     });
+          //   },
+          // ),
+          // ListTile(
+          //   title: const Text("Add Saved Set"),
+          //   onTap: () {
+          //     showSavedElementEditDialogue(
+          //       context,
+          //       mainDataName: "Set Id",
+          //       isNumeric: true,
+          //     ).then((value) {
+          //       if (value != null) {
+          //         data.$.addAndSaveSet(
+          //           SavedSetData(
+          //             id: int.parse(value.mainData),
+          //             title: value.title,
+          //           ),
+          //         );
+          //       }
+          //     });
+          //   },
+          // ),
         ],
       ),
-    ).then(
-      (value) {
-        if (value ?? false) {
-          data.$.removeEntries(selected);
-          setState(() {
-            selected.clear();
-          });
-          setState(() {
-            parentedCollection.$ = data.$.$parented;
-          });
-        }
-      },
-    );
-  }
-
-  void _changeParentsOfSelected() {
-    showDialog<String>(
-      context: context,
-      builder: (context) {
-        String newParent = "";
-        return AlertDialog(
-          title: const Text("Change Parent Names"),
-          content: SizedBox(
-            height: double.maxFinite,
-            width: double.maxFinite,
-            child: buildParentSuggestionsEntry(
-              context,
-              // initialParent: selected.fold(<({int count, String parent})>[], ),
-              onChanged: (p) => newParent = p,
-            ),
-          ),
-          actions: [
-            TextButton.icon(
-              onPressed: () => Navigator.pop(context, newParent),
-              icon: const Icon(Icons.check),
-              label: const Text("Confirm"),
-            ),
-            TextButton.icon(
-              onPressed: () => Navigator.pop(context, false),
-              icon: const Icon(Icons.cancel),
-              label: const Text("Confirm"),
-            ),
-          ],
-        );
-      },
-    ).then(
-      (value) {
-        if (value != null) {
-          setState(() {
-            for (var e in selected) {
-              data.$.editAndSave(
-                original: e,
-                edited: e.copyWith(parent: value),
-              );
-            }
-          });
-          setState(() {
-            parentedCollection.$ = data.$.$parented;
-          });
-          // data.$.removeEntries(selected.map((e) => e.entry));
-          setState(() {
-            selected.clear();
-          });
-        }
-      },
-    );
-  }
-
-  // Drawer _buildDrawer() {
-  //   return Drawer(
-  //     child: ListView(
-  //       children: [
-  //         const DrawerHeader(
-  //           child: Text("TGH"),
-  //         ),
-  //         ListTile(
-  //           title: const Text("Add Saved Search"),
-  //           onTap: _addSearch,
-  //         ),
-  //         // ListTile(
-  //         //   title: const Text("Add Saved Pool"),
-  //         //   onTap: () {
-  //         //     showSavedElementEditDialogue(
-  //         //       context,
-  //         //       mainDataName: "Pool Id",
-  //         //       isNumeric: true,
-  //         //     ).then((value) {
-  //         //       if (value != null) {
-  //         //         data.$.addAndSavePool(
-  //         //           SavedPoolData(
-  //         //             id: int.parse(value.mainData),
-  //         //             title: value.title,
-  //         //           ),
-  //         //         );
-  //         //       }
-  //         //     });
-  //         //   },
-  //         // ),
-  //         // ListTile(
-  //         //   title: const Text("Add Saved Set"),
-  //         //   onTap: () {
-  //         //     showSavedElementEditDialogue(
-  //         //       context,
-  //         //       mainDataName: "Set Id",
-  //         //       isNumeric: true,
-  //         //     ).then((value) {
-  //         //       if (value != null) {
-  //         //         data.$.addAndSaveSet(
-  //         //           SavedSetData(
-  //         //             id: int.parse(value.mainData),
-  //         //             title: value.title,
-  //         //           ),
-  //         //         );
-  //         //       }
-  //         //     });
-  //         //   },
-  //         // ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  ListView _buildSingleLevelView() {
-    return ListView.builder(
-      itemCount: data.$.$searches.length,
-      itemBuilder: (context, index) {
-        return index >= 0 && data.$.$searches.length > index
-            ? _buildSavedEntry(entry: data.$.$searches[index])
-            : null;
-      },
     );
   }
 
@@ -413,34 +317,116 @@ class _SavedSearchesPageSingletonState
               ? () =>
                   selected.contains(r) ? selected.remove(r) : selected.add(r)
               : null,
-          onTap: () => showEntryDialog(context: context, entry: entry)
-              .then((v) => processEntryDialogSelection(entry, v)),
+          onTap: () => _showEntryDialog(context: context, entry: entry)
+              .then((v) => _processEntryDialogSelection(entry, v)),
         );
       },
     );
   }
 
-  Future<SavedEntryDialogOptions?> showEntryDialog<T extends SavedEntry>({
-    required BuildContext context,
-    required T entry,
-    List<SavedEntryDialogOptions> options = SavedEntryDialogOptions.values,
-  }) =>
-      showDialog<SavedEntryDialogOptions>(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text(entry.title),
-            content: Text(
-              "Parent: ${entry.parent}\n"
-              "Search String: ${entry.searchString}\n"
-              "Unique Id: ${entry.uniqueId}\n",
-            ),
-            actions: options.map((e) => e.buttonWidget(context)).toList(),
-          );
-        },
-      );
+  ListView _buildSingleLevelView() {
+    return ListView.builder(
+      itemCount: data.$.$searches.length,
+      itemBuilder: (context, index) {
+        return index >= 0 && data.$.$searches.length > index
+            ? _buildSavedEntry(entry: data.$.$searches[index])
+            : null;
+      },
+    );
+  }
 
-  processEntryDialogSelection<T extends SavedEntry>(
+  void _changeParentsOfSelected() {
+    showDialog<String>(
+      context: context,
+      builder: (context) {
+        String newParent = "";
+        return AlertDialog(
+          title: const Text("Change Parent Names"),
+          content: SizedBox(
+            height: double.maxFinite,
+            width: double.maxFinite,
+            child: buildParentSuggestionsEntry(
+              context,
+              // initialParent: selected.fold(<({int count, String parent})>[], ),
+              onChanged: (p) => newParent = p,
+            ),
+          ),
+          actions: [
+            TextButton.icon(
+              onPressed: () => Navigator.pop(context, newParent),
+              icon: const Icon(Icons.check),
+              label: const Text("Confirm"),
+            ),
+            TextButton.icon(
+              onPressed: () => Navigator.pop(context, false),
+              icon: const Icon(Icons.cancel),
+              label: const Text("Confirm"),
+            ),
+          ],
+        );
+      },
+    ).then(
+      (value) {
+        if (value != null) {
+          setState(() {
+            for (var e in selected) {
+              data.$.editAndSave(
+                original: e,
+                edited: e.copyWith(parent: value),
+              );
+            }
+          });
+          setState(() {
+            parentedCollection.$ = data.$.$parented;
+          });
+          // data.$.removeEntries(selected.map((e) => e.entry));
+          setState(() {
+            selected.clear();
+          });
+        }
+      },
+    );
+  }
+
+  void _deleteSelected() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title:
+            Text("Are you sure you want to delete ${selected.length} entries?"),
+        content: Text(selected.fold(
+          "Entries include: ",
+          (previousValue, element) => "$previousValue\n${element.searchString}",
+        )),
+        actions: [
+          TextButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.check),
+            label: const Text("Confirm"),
+          ),
+          TextButton.icon(
+            onPressed: () => Navigator.pop(context, false),
+            icon: const Icon(Icons.cancel),
+            label: const Text("Confirm"),
+          ),
+        ],
+      ),
+    ).then(
+      (value) {
+        if (value ?? false) {
+          data.$.removeEntries(selected);
+          setState(() {
+            selected.clear();
+          });
+          setState(() {
+            parentedCollection.$ = data.$.$parented;
+          });
+        }
+      },
+    );
+  }
+
+  _processEntryDialogSelection<T extends SavedEntry>(
     T entry,
     SavedEntryDialogOptions? v,
   ) =>
@@ -501,7 +487,7 @@ class _SavedSearchesPageSingletonState
                   //     searchString: value.mainData,
                   //     title: value.title,
                   //   ),
-                  SavedSearchData _ => SavedSearchData.fromSearchString(
+                  SavedSearchData _ => SavedSearchData.fromTagsString(
                       searchString: value.mainData,
                       title: value.title,
                       parent: value.parent ?? "",
@@ -515,6 +501,26 @@ class _SavedSearchesPageSingletonState
           }),
         null => null,
       };
+
+  Future<SavedEntryDialogOptions?> _showEntryDialog<T extends SavedEntry>({
+    required BuildContext context,
+    required T entry,
+    List<SavedEntryDialogOptions> options = SavedEntryDialogOptions.values,
+  }) =>
+      showDialog<SavedEntryDialogOptions>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text(entry.title),
+            content: Text(
+              "Parent: ${entry.parent}\n"
+              "Search String: ${entry.searchString}\n"
+              "Unique Id: ${entry.uniqueId}\n",
+            ),
+            actions: options.map((e) => e.buttonWidget(context)).toList(),
+          );
+        },
+      );
 }
 
 enum SavedEntryDialogOptions {

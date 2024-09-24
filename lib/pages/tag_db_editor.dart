@@ -446,7 +446,8 @@ class _TagDbEditorPageState extends State<TagDbEditorPage> {
                                         if (t.isEmpty) {
                                           return const Iterable.empty();
                                         }
-                                        bool con(MyEntry e) => e.name.startsWith(t);
+                                        bool con(MyEntry e) =>
+                                            e.name.startsWith(t);
 
                                         s = parsedData!.indexWhere(
                                             con, t.startsWith(last) ? s : 0);
@@ -551,8 +552,8 @@ Future<String?> tryLoadFile({
 }) =>
     FilePicker.platform
         .pickFiles(
-      dialogTitle: "Select .csv or .txt file",
-      allowedExtensions: ["csv", "txt"],
+      dialogTitle: "Select .csv, .csv.gz, or .txt file",
+      allowedExtensions: ["csv", "txt", "gz"],
       type: FileType.custom,
     )
         .then((result) {
@@ -562,15 +563,22 @@ Future<String?> tryLoadFile({
         // User canceled the picker
         return null;
       } else {
-        if (result.files.single.readStream != null) {
-          f = utf8.decodeStream(result.files.single.readStream!);
-        } else if (result.files.single.bytes != null) {
-          f = Future.sync(
-              () => utf8.decode(result.files.single.bytes!.toList()));
+        final file = result.files.single;
+        if (file.readStream != null) {
+          f = file.extension == "gz"
+              ? getDatabaseFileFromCompressedStream(file.readStream!)
+              : utf8.decodeStream(file.readStream!);
+        } else if (file.bytes != null) {
+          f = file.extension == "gz"
+              ? getDatabaseFileFromCompressedBytes(file.bytes!)
+              : Future.sync(() => utf8.decode(file.bytes!.toList()));
         } else {
           try {
-            f = (File(result.files.single.path!).readAsString()
-                    as Future<String?>)
+            f = ((file.path!.endsWith("gz")
+                    ? File(file.path!)
+                        .readAsBytes()
+                        .then((v) => getDatabaseFileFromCompressedBytes(v))
+                    : File(file.path!).readAsString()) as Future<String?>)
                 .onError((e, s) {
               logger?.severe("Failed import", e, s);
               return null;

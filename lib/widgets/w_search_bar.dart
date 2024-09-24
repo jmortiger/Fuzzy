@@ -12,6 +12,7 @@ import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/web/e621/search_helper.dart' as sh;
 import 'package:j_util/j_util_full.dart';
+import 'package:e621/middleware.dart' as sh;
 import 'package:provider/provider.dart';
 
 class WSearchBar extends StatefulWidget {
@@ -435,7 +436,7 @@ class _WSearchBarState extends State<WSearchBar> {
     // const double allegedWidth = 9.8;
     return MenuItemButton(
       leadingIcon: DropdownMenu(
-        dropdownMenuEntries: sh.Modifier.dropdownEntriesFull,
+        dropdownMenuEntries: _modifierDropdownEntriesFull,
         onSelected: (value) => setState(() =>
             value != null ? map[enumValue] = value : map.remove(enumValue)),
         initialSelection: map[enumValue],
@@ -694,3 +695,74 @@ class _WSearchBarState extends State<WSearchBar> {
   }
   // #endregion Search Bar Callbacks
 }
+
+// const _modifierDropdownItems = <DropdownMenuItem<sh.Modifier>>[
+//   DropdownMenuItem(value: sh.Modifier.add, child: Text("+")),
+//   DropdownMenuItem(value: sh.Modifier.remove, child: Text("-")),
+//   DropdownMenuItem(value: sh.Modifier.or, child: Text("~")),
+// ];
+// const _modifierDropdownItemsFull = <DropdownMenuItem<sh.Modifier?>>[
+//   DropdownMenuItem(value: sh.Modifier.add, child: Text("+")),
+//   DropdownMenuItem(value: sh.Modifier.remove, child: Text("-")),
+//   DropdownMenuItem(value: sh.Modifier.or, child: Text("~")),
+//   DropdownMenuItem(value: null, child: Icon(Icons.close)),
+// ];
+// const _modifierDropdownEntries = <DropdownMenuEntry<sh.Modifier>>[
+//   DropdownMenuEntry(value: sh.Modifier.add, label: "+"),
+//   DropdownMenuEntry(value: sh.Modifier.remove, label: "-"),
+//   DropdownMenuEntry(value: sh.Modifier.or, label: "~"),
+// ];
+const _modifierDropdownEntriesFull = <DropdownMenuEntry<sh.Modifier?>>[
+  DropdownMenuEntry(
+    value: sh.Modifier.add,
+    label: "+",
+    labelWidget: SizedBox(
+      width: 12,
+      child: Text(
+        "+",
+        textWidthBasis: TextWidthBasis.parent,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    ),
+  ),
+  DropdownMenuEntry(
+    value: sh.Modifier.remove,
+    label: "-",
+    labelWidget: SizedBox(
+      width: 12,
+      child: Text(
+        "-",
+        textWidthBasis: TextWidthBasis.parent,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    ),
+  ),
+  DropdownMenuEntry(
+    value: sh.Modifier.or,
+    label: "~",
+    labelWidget: SizedBox(
+      width: 12,
+      child: Text(
+        "~",
+        textWidthBasis: TextWidthBasis.parent,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    ),
+  ),
+  DropdownMenuEntry(
+    value: null,
+    label: "X",
+    labelWidget: SizedBox(
+      width: 12,
+      child: Text(
+        "X",
+        textWidthBasis: TextWidthBasis.parent,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    ),
+  ),
+];

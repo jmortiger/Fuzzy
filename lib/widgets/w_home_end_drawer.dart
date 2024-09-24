@@ -16,7 +16,7 @@ import 'package:fuzzy/widgets/w_back_button.dart';
 import 'package:fuzzy/widgets/w_d_text_preview.dart';
 import 'package:fuzzy/widgets/w_fab_builder.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart' as psr;
-import 'package:fuzzy/widgets/w_post_thumbnail.dart';
+// import 'package:fuzzy/widgets/w_post_thumbnail.dart';
 import 'package:fuzzy/widgets/w_update_set.dart';
 import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:fuzzy/widgets/w_search_pool.dart';

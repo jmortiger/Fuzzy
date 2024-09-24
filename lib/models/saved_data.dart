@@ -16,12 +16,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// "searches": searches,
 /// TODO: Sort parents after each modification and rely on that to build [parented].
 class SavedDataE6 extends ChangeNotifier {
-  // #region Logger
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("SavedData");
-  // #endregion Logger
+  static late final logger = lm.generateLogger("SavedData").logger;
   static const fileName = "savedSearches.json";
   static final fileFullPath = LazyInitializer.immediate(() async {
     logger.finest("fileFullPathInit called");
@@ -255,7 +251,7 @@ class SavedDataE6 extends ChangeNotifier {
         var data = ListNotifier<SavedSearchData>();
         for (var i = 0; i < length; i++) {
           data.add(
-            SavedSearchData.fromSearchString(
+            SavedSearchData.fromTagsString(
               searchString:
                   v.getString("$localStoragePrefix.$i.searchString") ??
                       "FAILURE",
@@ -277,7 +273,7 @@ class SavedDataE6 extends ChangeNotifier {
     var data = ListNotifier<SavedSearchData>();
     for (var i = 0; i < length; i++) {
       data.add(
-        SavedSearchData.fromSearchString(
+        SavedSearchData.fromTagsString(
           searchString:
               pref.$.getString("$localStoragePrefix.$i.searchString") ??
                   "FAILURE",
@@ -773,8 +769,11 @@ final class SavedPoolData extends SavedListData {
 
 @immutable
 final class SavedSearchData extends SavedEntry {
-  static String tagListToString(Iterable<String> tags, String delimiter) =>
-      tags.reduce((acc, e) => "$acc$delimiter$e");
+  static String tagListToString(
+    Iterable<String> tags, [
+    String delimiter = e621Delimiter,
+  ]) =>
+      tags.isEmpty ? "" : tags.reduce((acc, e) => "$acc$delimiter$e");
   static const e621Delimiter = " ";
   final String delimiter;
   @override
@@ -805,7 +804,7 @@ final class SavedSearchData extends SavedEntry {
     this.uniqueId = "",
     this.isFavorite = false,
     this.delimiter = e621Delimiter,
-  }) : searchString = tags.reduce((acc, e) => "$acc$delimiter$e");
+  }) : searchString = tagListToString(tags, delimiter);
   SavedSearchData.withDefaults({
     required this.tags,
     String title = "",
@@ -814,7 +813,7 @@ final class SavedSearchData extends SavedEntry {
     this.isFavorite = false,
     this.delimiter = e621Delimiter,
   })  : title = title.isEmpty ? tagListToString(tags, delimiter) : title,
-        searchString = tags.reduce((acc, e) => "$acc$delimiter$e");
+        searchString = tagListToString(tags, delimiter);
 
   SavedSearchData.fromTagsString({
     required this.searchString,
@@ -825,7 +824,7 @@ final class SavedSearchData extends SavedEntry {
     this.delimiter = e621Delimiter,
   })  : title = title.isNotEmpty ? title : searchString,
         tags = searchString.split(delimiter).toSet();
-
+  @Deprecated("Use fromTagsString")
   SavedSearchData.fromSearchString({
     required String searchString,
     String title = "",
@@ -834,12 +833,13 @@ final class SavedSearchData extends SavedEntry {
     String delimiter = e621Delimiter,
     bool isFavorite = false,
   }) : this.fromTagsString(
-            searchString: searchString,
-            delimiter: delimiter,
-            isFavorite: isFavorite,
-            parent: parent,
-            uniqueId: uniqueId,
-            title: title);
+          searchString: searchString,
+          delimiter: delimiter,
+          isFavorite: isFavorite,
+          parent: parent,
+          uniqueId: uniqueId,
+          title: title,
+        );
 
   @override
   SavedSearchData copyWith({
@@ -892,14 +892,23 @@ final class SavedSearchData extends SavedEntry {
   }
 
   factory SavedSearchData.fromJson(Map<String, dynamic> json) =>
-      SavedSearchData(
-        title: json["title"],
-        parent: json["parent"],
-        uniqueId: json["uniqueId"],
-        isFavorite: json["isFavorite"],
-        delimiter: json["delimiter"],
-        tags: (json["tags"] as List).cast<String>().toSet(),
-      );
+      json["tags"] != null
+          ? SavedSearchData(
+              title: json["title"],
+              parent: json["parent"],
+              uniqueId: json["uniqueId"],
+              isFavorite: json["isFavorite"],
+              delimiter: json["delimiter"],
+              tags: (json["tags"] as List).cast<String>().toSet(),
+            )
+          : SavedSearchData.fromTagsString(
+              searchString: json["searchString"],
+              title: json["title"],
+              parent: json["parent"],
+              uniqueId: json["uniqueId"],
+              isFavorite: json["isFavorite"],
+              delimiter: json["delimiter"],
+            );
   Map<String, dynamic> toJson() => {
         "tags": tags.toList(),
         "title": title,
@@ -909,9 +918,11 @@ final class SavedSearchData extends SavedEntry {
         "delimiter": delimiter,
       };
   static const localStoragePrefix = SavedDataE6.localStoragePrefix;
-  factory SavedSearchData.readFromPrefSync(SharedPreferences v,
-          [String? instancePrefix]) =>
-      SavedSearchData.fromSearchString(
+  factory SavedSearchData.readFromPrefSync(
+    SharedPreferences v, [
+    String? instancePrefix,
+  ]) =>
+      SavedSearchData.fromTagsString(
         searchString: v.getString(
                 "$localStoragePrefix${instancePrefix != null ? ".$instancePrefix" : ""}.searchString") ??
             "FAILURE",
