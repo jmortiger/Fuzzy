@@ -1082,13 +1082,13 @@ sealed class E621 extends Site {
       context: context,
       builder: (context) {
         return AlertDialog(
-          content: WSearchSet(
-            initialLimit: 10,
-            initialPage: null,
-            initialSearchCreatorName: E621AccessData.fallback?.username,
-            initialSearchOrder: e621.SetOrder.updatedAt,
-            initialSearchName: null,
-            initialSearchShortname: null,
+          content: WSearchSet.showEditableSets(
+            // initialLimit: 10,
+            // initialPage: null,
+            // initialSearchCreatorName: E621AccessData.fallback?.username,
+            // initialSearchOrder: e621.SetOrder.updatedAt,
+            // initialSearchName: null,
+            // initialSearchShortname: null,
             onSelected: (e621.PostSet set) => Navigator.pop(context, set),
             showCreateSetButton: true,
           ),

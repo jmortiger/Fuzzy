@@ -107,9 +107,13 @@ class TagDB {
       (a.postCount - a.postCount % 5);
   factory TagDB.fromCsvString(String csv) =>
       TagDB.fromEntries(fromCsvStringFull(csv));
-  static Future<TagDB> makeFromCsvString(String csv) async =>
-      compute((String csv) => TagDB.fromCsvString(csv), csv,
-          debugLabel: "Make TagDB From CSV String");
+  static Future<TagDB> makeFromCsvString(String csv) async => compute(
+      (csv) async => TagDB.fromEntries(await fromCsvStringFullChunked(csv)),
+      csv,
+      debugLabel: "Make TagDB From CSV String");
+  // static Future<TagDB> makeFromCsvString(String csv) async =>
+  //     compute((String csv) => TagDB.fromCsvString(csv), csv,
+  //         debugLabel: "Make TagDB From CSV String");
 }
 
 // #region Parse Direct
@@ -193,16 +197,48 @@ List<TagDBEntryFull> fromCsvStringFull(String csv) => (csv.split("\n")
     // .map((e) => /* TagDBEntryFull._fromRecord( */
     //     parseTagEntryFullCsvString(e)) //)
     .toList();
+
+/// [fromCsvStringFull] but [breaking up the task][1] by inserting awaits in the mapper
+///
+/// [1]: <https://github.com/dart-lang/language/issues/808#issuecomment-580652828>
+Future<List<TagDBEntryFull>> fromCsvStringFullChunked(String csv) async {
+  final r = <TagDBEntryFull>[];
+  for (final e in csv.split("\n")
+    ..removeAt(0)
+    ..removeLast()) {
+    r.add(parseTagEntryFullCsvString(e));
+    await null;
+  }
+  return r;
+}
+
 Future<List<TagDBEntryFull>> makeFromCsvStringFull(String csv) async =>
-    compute(fromCsvStringFull, csv,
+    // compute(fromCsvStringFull, csv,
+    compute(fromCsvStringFullChunked, csv,
         debugLabel: "Make List Full From CSV String");
 List<TagDBEntry> fromCsvString(String csv) => (csv.split("\n")
       ..removeAt(0)
       ..removeLast())
     .map((e) => parseTagEntryCsvString(e))
     .toList();
+
+/// [fromCsvString] but [breaking up the task][1] by inserting awaits in the mapper
+///
+/// [1]: <https://github.com/dart-lang/language/issues/808#issuecomment-580652828>
+Future<List<TagDBEntry>> fromCsvStringChunked(String csv) async {
+  final r = <TagDBEntry>[];
+  for (final e in csv.split("\n")
+    ..removeAt(0)
+    ..removeLast()) {
+    r.add(parseTagEntryCsvString(e));
+    await null;
+  }
+  return r;
+}
+
 Future<List<TagDBEntry>> makeFromCsvString(String csv) async =>
-    compute(fromCsvString, csv, debugLabel: "Make List From CSV String");
+    // compute(fromCsvString, csv, debugLabel: "Make List From CSV String");
+    compute(fromCsvStringChunked, csv, debugLabel: "Make List From CSV String");
 Future<List<T>> makeTypeFromCsvString<T extends TagDBEntry>(String csv) =>
     switch (T) {
       const (TagDBEntryFull) => makeFromCsvStringFull(csv),
@@ -211,7 +247,9 @@ Future<List<T>> makeTypeFromCsvString<T extends TagDBEntry>(String csv) =>
     } as Future<List<T>>;
 List<T> typeFromCsvString<T extends TagDBEntry>(String csv) => switch (T) {
       const (TagDBEntryFull) => fromCsvStringFull(csv),
+      // const (TagDBEntryFull) => fromCsvStringFullChunked(csv),
       const (TagDBEntry) => fromCsvString(csv),
+      // const (TagDBEntry) => fromCsvStringChunked(csv),
       Type() => throw UnimplementedError(),
     } as List<T>;
 

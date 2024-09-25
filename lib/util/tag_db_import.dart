@@ -1,125 +1,215 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:archive/archive.dart'
     if (dart.library.io) 'package:archive/archive_io.dart' as a;
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show ByteData, Uint8List, rootBundle;
 import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:http/http.dart' as http;
 import 'package:e621/e621.dart' as e621;
 import 'package:fuzzy/log_management.dart' as lm;
-import 'package:j_util/j_util_full.dart'
-    show LateFinal, LateInstance, LazyInitializer, Platform;
+import 'package:j_util/j_util_full.dart' show LazyInitializer, Platform;
 import 'package:flutter/foundation.dart';
 
-// #region Logger
-lm.Printer get _print => lRecord.print;
-lm.FileLogger get _logger => lRecord.logger;
 // ignore: unnecessary_late
-late final lRecord = lm.generateLogger("TagDbImport");
-// #endregion Logger
+late final _logger = lm.generateLogger("TagDbImport").logger;
 // ignore: constant_identifier_names
 const bool DO_NOT_USE_TAG_DB = false;
-final tagDb = LateFinal<TagDB>();
 Future<TagDB> _core(String vf) {
-  _print("Tag Database Decompressed!");
-  return TagDB.makeFromCsvString(vf);
+  _logger.finest("Tag Database Decompressed!");
+  return compute(TagDB.makeFromCsvString, vf);
 }
 
-Future<TagDB> _fromListCallback(List<int> value) {
-  return http.ByteStream.fromBytes(value).bytesToString().then(_core);
+// #region TagDB
+// Future<TagDB> _dbFromList(List<int> value) {
+//   return http.ByteStream.fromBytes(value).bytesToString().then(_core);
+// }
+
+// Future<TagDB> _decodeDbFromServer(http.StreamedResponse value) {
+//   return value.stream.toBytes().then((v) => _decodeDbFromList(v));
+// }
+
+// Future<TagDB> _decodeDbFromList(List<int> value) {
+//   return _dbFromList(a.GZipDecoder().decodeBytes(value));
+// }
+
+// Future<TagDB> _decodeDbFromLocal(ByteData data) {
+//   return _dbFromList(a.GZipDecoder().decodeBuffer(a.InputStream(data)));
+// }
+// #endregion TagDB
+
+// #region String
+Future<String> _fromList(List<int> data) {
+  return http.ByteStream.fromBytes(data).bytesToString();
 }
 
-Future<TagDB> _fromUint8ListCallback(Uint8List value) {
-  return _fromListCallback(value.toList(growable: false));
+Future<String> _decodeFromServer(http.StreamedResponse data) {
+  return data.stream.toBytes().then((v) => _decodeFromList(v));
 }
 
-Future<TagDB> _decodeFromServerCallback(http.StreamedResponse value) {
-  // return decompressGzPlainTextStream(value).then(_core);
-  return value.stream.toBytes().then((v) => _decodeFromUint8ListCallback(v));
+Future<String> _decodeFromList(List<int> data) {
+  return _fromList(a.GZipDecoder().decodeBytes(data));
 }
 
-Future<TagDB> _decodeFromUint8ListCallback(Uint8List value) {
-  return _decodeFromListCallback(value.toList(growable: false));
+Future<String> _decodeFromFileIo(File data) {
+  return data.readAsBytes().then(_decodeFromList);
 }
 
-Future<TagDB> _decodeFromListCallback(List<int> value) {
-  return _fromListCallback(a.GZipDecoder().decodeBytes(value));
+Future<String> _decodeFromLocal(ByteData data) {
+  return _fromList(a.GZipDecoder().decodeBuffer(a.InputStream(data)));
 }
 
-Future<TagDB> _decodeFromLocalCallback(ByteData data) {
-  return _fromListCallback(a.GZipDecoder().decodeBuffer(a.InputStream(data)));
-}
+/// TODO: TEST
+Future<String> _decodeFromListStream(Stream<List<int>> data) =>
+    data.fold(<int>[], (p, e) => p..addAll(e)).then((v) => _decodeFromList(v));
 
-final LateInstance<String> tagDbPathInst = LateInstance();
-// String get tagDbPath => tagDbPathInst.isAssigned ? tagDbPathInst.$ : tagDbPathInst.$ = Platform.isWeb ? "assets/tags-2024-06-05.csv.gz" :
+/// Supports `FutureOr`:
+/// * Compressed `Stream<List<int>>`
+/// * Compressed `ByteData`
+/// * Compressed `StreamedResponse`
+/// * Compressed & uncompressed `List<int>`/`Uint8List`
+/// * Compressed & uncompressed `File`
+Future<String> processPlaintextData<T>(
+        // T data, bool isCompressed) async =>
+        //     T data, bool isCompressed) =>
+        // switch (data) {
+        T data,
+        bool isCompressed) async =>
+    switch (data) {
+      Stream<List<int>> f => isCompressed
+          ? _decodeFromListStream(f)
+          : throw UnsupportedError(
+              "Uncompressed Stream<List<int>> not supported"),
+      ByteData d => isCompressed
+          ? _decodeFromLocal(d)
+          : throw UnsupportedError("Uncompressed ByteData not supported"),
+      Future<http.StreamedResponse> d => isCompressed
+          ? d.then((v) => _decodeFromServer(v)) //_decodeFromServer(await d)
+          : throw UnsupportedError(
+              "Uncompressed Future<StreamedResponse> not supported"),
+      http.StreamedResponse d => isCompressed
+          ? _decodeFromServer(d)
+          : throw UnsupportedError(
+              "Uncompressed StreamedResponse not supported"),
+      List<int> d => isCompressed ? _decodeFromList(d) : _fromList(d),
+      File d => isCompressed ? _decodeFromFileIo(d) : d.readAsString(),
+      dynamic f =>
+        throw UnsupportedError("type ${f.runtimeType} not supported"),
+    };
+
+Future<String> processCompressedPlaintextData<T>(T data) =>
+    processPlaintextData(data, true).onError((e, s) {
+      _logger.severe(e, e, s);
+      return "";
+    });
+Future<String> processUncompressedPlaintextData<T>(T data) =>
+    processPlaintextData(data, false).onError((e, s) {
+      _logger.severe(e, e, s);
+      return "";
+    });
+
+Future<TagDB> processTagDbData<T>(T data, bool isCompressed) =>
+    compute((_) => processPlaintextData(data, isCompressed), null).then(_core);
+Future<TagDB> processCompressedTagDbData<T>(T data) =>
+    processTagDbData(data, true);
+Future<TagDB> processUncompressedTagDbData<T>(T data) =>
+    processTagDbData(data, false);
+// #endregion String
+
 const defaultPath = "assets/tags-2024-06-05.csv.gz";
 final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
-  if (Platform.isWeb) {
-    final r = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ["csv", "csv.gz", "txt"],
-    );
-    if (r == null) {
-      var data = await rootBundle.load(defaultPath);
-      _print("Tag Database Loaded!");
-      return compute(_decodeFromLocalCallback, data);
-    } else {
-      _print("Tag Database Loaded!");
-      // if (r.names.firstOrNull!.endsWith(".gz")) {
-      if (r.files.first.extension == "gz") {
-        return compute(_decodeFromUint8ListCallback, r.files.first.bytes!);
+  try {
+    if (Platform.isWeb) {
+      final r = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ["csv", "csv.gz", "txt"],
+      );
+      if (r == null) {
+        var data = await rootBundle.load(defaultPath);
+        _logger.finest("Tag Database Loaded!");
+        return await compute(processCompressedTagDbData, data);
       } else {
-        _print("Tag Database Decompressed!");
-        return compute(_fromUint8ListCallback, r.files.first.bytes!);
-      }
-    }
-  } else {
-    if (SearchView.i.tagDbPath != defaultPath) {
-      try {
-        final f = File(SearchView.i.tagDbPath);
-        return await (f.uri.toFilePath().endsWith(".gz")
-            ? _decodeFromUint8ListCallback(await f.readAsBytes())
-            : _fromListCallback(await f.readAsBytes()));
-      } catch (e, s) {
-        _logger.severe(e, e, s);
-        try {
-          var data = await rootBundle.load(defaultPath);
-          _print("Tag Database Loaded!");
-          return compute(_decodeFromLocalCallback, data);
-        } catch (e, s) {
-          _logger.severe(e, e, s);
-          return E621
-              .sendRequest(e621.initDbExportRequest())
-              .then((value) => compute(_decodeFromServerCallback, value));
+        _logger.finest("Tag Database Loaded!");
+        // if (r.names.firstOrNull!.endsWith(".gz")) {
+        if (r.files.first.extension == "gz") {
+          return await compute(
+              processCompressedTagDbData, r.files.first.bytes!);
+        } else {
+          _logger.finest("Tag Database Decompressed!");
+          return await compute(
+              processUncompressedTagDbData, r.files.first.bytes!);
         }
       }
     } else {
-      var data = await rootBundle.load(defaultPath);
-      _print("Tag Database Loaded!");
-      return compute(_decodeFromLocalCallback, data);
+      if (SearchView.i.tagDbPath != defaultPath) {
+        try {
+          final f = File(SearchView.i.tagDbPath), t = await f.readAsBytes();
+          _logger.finest("Tag Database Loaded!");
+          if (f.uri.toFilePath().endsWith(".gz")) {
+            return await compute(processCompressedTagDbData, t);
+          } else {
+            _logger.finest("Tag Database Decompressed!");
+            return await compute(processUncompressedTagDbData, t);
+          }
+        } catch (e, s) {
+          _logger.severe(e, e, s);
+          try {
+            final data = await rootBundle.load(defaultPath);
+            _logger.finest("Tag Database Loaded!");
+            return await compute(processCompressedTagDbData, data);
+          } catch (e, s) {
+            _logger.severe(e, e, s);
+            return await compute(
+              processCompressedTagDbData,
+              await E621.sendRequest(e621.initDbExportRequest()),
+            );
+          }
+        }
+      } else {
+        final data = await rootBundle.load(defaultPath);
+        _logger.finest("Tag Database Loaded!");
+        return await compute(processCompressedTagDbData, data);
+      }
+    }
+  } catch (e, s) {
+    _logger.severe(e, e, s);
+    try {
+      final data = await rootBundle.load(defaultPath);
+      _logger.finest("Tag Database Loaded!");
+      return await compute(processCompressedTagDbData, data);
+    } catch (e, s) {
+      _logger.severe(e, e, s);
+      return await compute(
+        processCompressedTagDbData,
+        await E621.sendRequest(e621.initDbExportRequest()),
+      );
     }
   }
 });
 
-Future<String> getDatabaseFileFromServer() {
-  return compute(_getDatabaseFileFromServer, null);
-}
+Future<String> getDatabaseFileFromServer() async =>
+    processCompressedPlaintextData(
+        await E621.sendRequest(e621.initDbExportRequest()));
+// Future<String> getDatabaseFileFromServer() async => compute(
+//     processCompressedPlaintextData,
+//     await E621.sendRequest(e621.initDbExportRequest()));
 
 Future<String> getDatabaseFileFromCompressedFileIo(File f) =>
-    compute(_getDatabaseFileFromCompressedFileIo, f);
+    compute(processCompressedPlaintextData, f);
 
 /// TODO: TEST
 Future<String> getDatabaseFileFromCompressedStream(Stream<List<int>> f) =>
-    compute(_getDatabaseFileFromCompressedStream, f);
+    compute(processCompressedPlaintextData, f);
 
 /// TODO: TEST
 Future<String> getDatabaseFileFromCompressedBytes(Uint8List f) =>
-    compute(_getDatabaseFileFromCompressedBytes, f);
+    compute(processCompressedPlaintextData, f);
 
-Future<String> _getDatabaseFileFromCompressedBytes(Uint8List f) =>
+/* Future<String> _getDatabaseFileFromCompressedBytes(Uint8List f) =>
     http.ByteStream.fromBytes(
             a.GZipDecoder().decodeBytes(f.toList(growable: false)))
         .bytesToString();
@@ -137,8 +227,4 @@ Future<String> _getDatabaseFileFromCompressedFileIo(File f) =>
 Future<String> _getDatabaseFileFromCompressedStream(Stream<List<int>> f) =>
     f.fold(<int>[], (p, e) => p..addAll(e)).then((v) =>
         http.ByteStream.fromBytes(a.GZipDecoder().decodeBytes(v))
-            .bytesToString());
-// Future<String> getDatabaseFileFromCompressedFileBundle(ByteData f) =>
-//     f.readAsBytes().then((v) => http.ByteStream.fromBytes(
-//             a.GZipDecoder().decodeBytes(v.toList(growable: false)))
-//         .bytesToString());
+            .bytesToString()); */

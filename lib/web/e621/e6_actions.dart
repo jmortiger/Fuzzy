@@ -675,14 +675,14 @@ Future<e621.PostSet?> removeFromSetWithPosts({
     context: context,
     builder: (context) {
       return AlertDialog(
-        content: WSearchSet(
-          initialLimit: 10,
-          initialPage: null,
-          initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
-              E621AccessData.fallbackForced?.username,
-          initialSearchOrder: e621.SetOrder.updatedAt,
-          initialSearchName: null,
-          initialSearchShortname: null,
+        content: WSearchSet.showEditableSets(
+          // initialLimit: 10,
+          // initialPage: null,
+          // initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
+          //     E621AccessData.fallbackForced?.username,
+          // initialSearchOrder: e621.SetOrder.updatedAt,
+          // initialSearchName: null,
+          // initialSearchShortname: null,
           onSelected: (e621.PostSet set) => Navigator.pop(context, set),
           filterResults: (set) => posts.reduceUntilTrue(
               (accumulator, elem, index, list) => set.postIds.contains(elem.id)
@@ -801,14 +801,14 @@ Future<e621.PostSet?> addToSetWithPosts({
     context: context,
     builder: (context) {
       return AlertDialog(
-        content: WSearchSet(
-          initialLimit: 10,
-          initialPage: null,
-          initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
-              E621AccessData.fallbackForced?.username,
-          initialSearchOrder: e621.SetOrder.updatedAt,
-          initialSearchName: null,
-          initialSearchShortname: null,
+        content: WSearchSet.showEditableSets(
+          // initialLimit: 10,
+          // initialPage: null,
+          // initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
+          //     E621AccessData.fallbackForced?.username,
+          // initialSearchOrder: e621.SetOrder.updatedAt,
+          // initialSearchName: null,
+          // initialSearchShortname: null,
           onSelected: (e621.PostSet set) => Navigator.pop(context, set),
           filterResults: (set) => posts.reduceUntilTrue(
               (accumulator, elem, index, list) => !set.postIds.contains(elem.id)
@@ -927,14 +927,14 @@ Future<e621.PostSet?> removeFromSetWithIds({
     context: context,
     builder: (context) {
       return AlertDialog(
-        content: WSearchSet(
-          initialLimit: 10,
-          initialPage: null,
-          initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
-              E621AccessData.fallbackForced?.username,
-          initialSearchOrder: e621.SetOrder.updatedAt,
-          initialSearchName: null,
-          initialSearchShortname: null,
+        content: WSearchSet.showEditableSets(
+          // initialLimit: 10,
+          // initialPage: null,
+          // initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
+          //     E621AccessData.fallbackForced?.username,
+          // initialSearchOrder: e621.SetOrder.updatedAt,
+          // initialSearchName: null,
+          // initialSearchShortname: null,
           onSelected: (e621.PostSet set) => Navigator.pop(context, set),
           filterResults: (set) => postIds.reduceUntilTrue(
               (accumulator, elem, index, list) => set.postIds.contains(elem)
@@ -1052,14 +1052,14 @@ Future<e621.PostSet?> addToSetWithIds({
     context: context,
     builder: (context) {
       return AlertDialog(
-        content: WSearchSet(
-          initialLimit: 10,
-          initialPage: null,
-          initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
-              E621AccessData.fallbackForced?.username,
-          initialSearchOrder: e621.SetOrder.updatedAt,
-          initialSearchName: null,
-          initialSearchShortname: null,
+        content: WSearchSet.showEditableSets(
+          // initialLimit: 10,
+          // initialPage: null,
+          // initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
+          //     E621AccessData.fallbackForced?.username,
+          // initialSearchOrder: e621.SetOrder.updatedAt,
+          // initialSearchName: null,
+          // initialSearchShortname: null,
           onSelected: (e621.PostSet set) => Navigator.pop(context, set),
           filterResults: (set) => postIds.reduceUntilTrue(
               (accumulator, elem, index, list) => !set.postIds.contains(elem)
@@ -1176,14 +1176,14 @@ Future<e621.PostSet?> removeFromSetWithPost({
     context: context,
     builder: (context) {
       return AlertDialog(
-        content: WSearchSet(
-          initialLimit: 10,
-          initialPage: null,
-          initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
-              E621AccessData.fallbackForced?.username,
-          initialSearchOrder: e621.SetOrder.updatedAt,
-          initialSearchName: null,
-          initialSearchShortname: null,
+        content: WSearchSet.showEditableSets(
+          // initialLimit: 10,
+          // initialPage: null,
+          // initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
+          //     E621AccessData.fallbackForced?.username,
+          // initialSearchOrder: e621.SetOrder.updatedAt,
+          // initialSearchName: null,
+          // initialSearchShortname: null,
           onSelected: (e621.PostSet set) => Navigator.pop(context, set),
           filterResults: (set) => set.postIds.contains(post.id),
         ),
@@ -1289,14 +1289,14 @@ Future<e621.PostSet?> addToSetWithPost({
     context: context,
     builder: (context) {
       return AlertDialog(
-        content: WSearchSet(
-          initialLimit: 10,
-          initialPage: null,
-          initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
-              E621AccessData.fallbackForced?.username,
-          initialSearchOrder: e621.SetOrder.updatedAt,
-          initialSearchName: null,
-          initialSearchShortname: null,
+        content: WSearchSet.showEditableSets(
+          // initialLimit: 10,
+          // initialPage: null,
+          // initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
+          //     E621AccessData.fallbackForced?.username,
+          // initialSearchOrder: e621.SetOrder.updatedAt,
+          // initialSearchName: null,
+          // initialSearchShortname: null,
           onSelected: (e621.PostSet set) => Navigator.pop(context, set),
           filterResults: (set) => !set.postIds.contains(post.id),
           showCreateSetButton: true,
@@ -1404,14 +1404,14 @@ Future<e621.PostSet?> removeFromSetWithId({
     context: context,
     builder: (context) {
       return AlertDialog(
-        content: WSearchSet(
-          initialLimit: 10,
-          initialPage: null,
-          initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
-              E621AccessData.fallbackForced?.username,
-          initialSearchOrder: e621.SetOrder.updatedAt,
-          initialSearchName: null,
-          initialSearchShortname: null,
+        content: WSearchSet.showEditableSets(
+          // initialLimit: 10,
+          // initialPage: null,
+          // initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
+          //     E621AccessData.fallbackForced?.username,
+          // initialSearchOrder: e621.SetOrder.updatedAt,
+          // initialSearchName: null,
+          // initialSearchShortname: null,
           onSelected: (e621.PostSet set) => Navigator.pop(context, set),
           filterResults: (set) => set.postIds.contains(postId),
         ),
@@ -1518,14 +1518,14 @@ Future<e621.PostSet?> addToSetWithId({
     context: context,
     builder: (context) {
       return AlertDialog(
-        content: WSearchSet(
-          initialLimit: 10,
-          initialPage: null,
-          initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
-              E621AccessData.fallbackForced?.username,
-          initialSearchOrder: e621.SetOrder.updatedAt,
-          initialSearchName: null,
-          initialSearchShortname: null,
+        content: WSearchSet.showEditableSets(
+          // initialLimit: 10,
+          // initialPage: null,
+          // initialSearchCreatorName: E621.loggedInUser.$Safe?.name ??
+          //     E621AccessData.fallbackForced?.username,
+          // initialSearchOrder: e621.SetOrder.updatedAt,
+          // initialSearchName: null,
+          // initialSearchShortname: null,
           onSelected: (e621.PostSet set) => Navigator.pop(context, set),
           filterResults: (set) => !set.postIds.contains(postId),
           showCreateSetButton: true,
