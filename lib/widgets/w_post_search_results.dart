@@ -240,7 +240,9 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
   int? get blacklistedPostCount => widget
       .posts(context, filterBlacklist: false)
       .posts
-      .where((e) => (SearchView.i.blacklistFavs || !e.isFavorited) && hasBlacklistedTag(e.tagList))
+      .where((e) =>
+          (SearchView.i.blacklistFavs || !e.isFavorited) &&
+          hasBlacklistedTag(e.tagList))
       .length;
 
   @override
@@ -730,11 +732,13 @@ class _WPostSearchResultsSwiperState extends State<
 
   void _updateCurrentPageIndex(int index) {
     // if (Platform.isDesktop) _tabController.index = index;
-    _pageViewController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOut,
-    );
+    (_currentPageIndex - index).abs() > 1
+        ? _pageViewController.jumpToPage(index)
+        : _pageViewController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+          );
   }
 
   void _updateCurrentPageIndexWrapper(int index, int old) =>

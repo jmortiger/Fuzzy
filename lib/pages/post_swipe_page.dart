@@ -541,11 +541,13 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
 
   void _updateCurrentPageIndex(int newPageViewIndex) {
     // _tabController.index = newPageViewIndex;
-    _pageViewController.animateToPage(
-      newPageViewIndex,
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOut,
-    );
+    (_currentPostPageIndex - newPageViewIndex).abs() > 1
+        ? _pageViewController.jumpToPage(newPageViewIndex)
+        : _pageViewController.animateToPage(
+            newPageViewIndex,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+          ).ignore();
   }
 
   void _updateCurrentPageIndexWrapper(int newIndex, int old) =>
