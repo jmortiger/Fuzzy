@@ -213,10 +213,9 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
   // late int _currentResultsPageIndex;
   String toReturn = "";
   bool isFullscreen = false;
-  late final List<ActionButton> _extras;
-  List<ActionButton> get extras =>
-      (loopy ?? onFinished) != null ? [cancel] : _extras;
-  late final ActionButton cancel;
+  late final List<Widget> _extras;
+  List<Widget> get extras => (loopy ?? onFinished) != null ? [cancel] : _extras;
+  late final Widget cancel;
   final tagsToAddToSearch = <String>[];
   @override
   void initState() {
@@ -375,7 +374,7 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
   }
 
   // #region Slideshow
-  ActionButton makeSlideshow(BuildContext context) {
+  Widget makeSlideshow(BuildContext context) {
     return ActionButton(
       icon: const Icon(Icons.timelapse),
       tooltip: "Slideshow",

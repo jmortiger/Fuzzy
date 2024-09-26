@@ -21,7 +21,7 @@ class WFabBuilder extends StatelessWidget {
   // ignore: unnecessary_late
   static late final lRecord = lm.generateLogger("WFabBuilder");
   // #endregion Logger
-  final List<ActionButton>? customActions;
+  final List<Widget>? customActions;
   final List<E6PostResponse>? posts;
   final E6PostResponse? post;
   bool get isSinglePost => post != null;
