@@ -1,1 +1,7 @@
 include: package:flutter_lints/flutter.yaml
+# linter:
+#   rules:
+#    - prefer_final_parameters
+#    - prefer_final_locals
+#    - avoid_final_parameters
+#    - unnecessary_final

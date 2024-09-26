@@ -594,6 +594,7 @@ class SearchViewData {
         useProgressiveImages: true,
         numSavedSearchesInSearchBar: 5,
         lazyLoad: false,
+        blacklistFavs: false,
         lazyBuilding: false,
         preferSetShortname: true,
         tagDbPath: "",
@@ -609,6 +610,16 @@ class SearchViewData {
   final int numSavedSearchesInSearchBar;
   final bool lazyLoad;
   final bool lazyBuilding;
+
+  /// {@template blacklistFavs}
+  /// Apply blacklist to favorited posts.
+  ///
+  /// If you've favorited it, you're likely view it as an exception to your
+  /// blacklist.
+  ///
+  /// Defaults to false.
+  /// {@endtemplate}
+  final bool blacklistFavs;
   final bool preferSetShortname;
   final String tagDbPath;
   final int maxCharsInPostInfo;
@@ -622,6 +633,7 @@ class SearchViewData {
     required this.useProgressiveImages,
     required this.numSavedSearchesInSearchBar,
     required this.lazyLoad,
+    required this.blacklistFavs,
     required this.lazyBuilding,
     required this.preferSetShortname,
     required this.tagDbPath,
@@ -647,6 +659,7 @@ class SearchViewData {
             defaultData.numSavedSearchesInSearchBar,
         lazyLoad: json["lazyLoad"] ?? defaultData.lazyLoad,
         lazyBuilding: json["lazyBuilding"] ?? defaultData.lazyBuilding,
+        blacklistFavs: json["blacklistFavs"] ?? defaultData.blacklistFavs,
         preferSetShortname:
             json["preferSetShortname"] ?? defaultData.preferSetShortname,
         tagDbPath: json["tagDbPath"] ?? defaultData.tagDbPath,
@@ -669,6 +682,7 @@ class SearchViewData {
         "numSavedSearchesInSearchBar": numSavedSearchesInSearchBar,
         "lazyLoad": lazyLoad,
         "lazyBuilding": lazyBuilding,
+        "blacklistFavs": blacklistFavs,
         "preferSetShortname": preferSetShortname,
         "tagDbPath": tagDbPath,
         "maxCharsInPostInfo": maxCharsInPostInfo,
@@ -734,6 +748,12 @@ class SearchView implements SearchViewData {
   @override
   bool get lazyBuilding => _lazyBuilding;
   set lazyBuilding(bool v) => _lazyBuilding = v;
+  /// {@macro blacklistFavs}
+  bool _blacklistFavs;
+  /// {@macro blacklistFavs}
+  @override
+  bool get blacklistFavs => _blacklistFavs;
+  set blacklistFavs(bool v) => _blacklistFavs = v;
   bool _preferSetShortname;
   @override
   bool get preferSetShortname => _preferSetShortname;
@@ -757,6 +777,7 @@ class SearchView implements SearchViewData {
     required bool useProgressiveImages,
     required int numSavedSearchesInSearchBar,
     required bool lazyLoad,
+    required bool blacklistFavs,
     required bool lazyBuilding,
     required bool preferSetShortname,
     required String tagDbPath,
@@ -769,6 +790,7 @@ class SearchView implements SearchViewData {
         _useProgressiveImages = useProgressiveImages,
         _numSavedSearchesInSearchBar = numSavedSearchesInSearchBar,
         _lazyLoad = lazyLoad,
+        _blacklistFavs = blacklistFavs,
         _lazyBuilding = lazyBuilding,
         _preferSetShortname = preferSetShortname,
         _tagDbPath = tagDbPath,
@@ -784,6 +806,7 @@ class SearchView implements SearchViewData {
         useProgressiveImages: searchView.useProgressiveImages,
         numSavedSearchesInSearchBar: searchView.numSavedSearchesInSearchBar,
         lazyLoad: searchView.lazyLoad,
+        blacklistFavs: searchView.blacklistFavs,
         lazyBuilding: searchView.lazyBuilding,
         preferSetShortname: searchView.preferSetShortname,
         tagDbPath: searchView.tagDbPath,
@@ -799,6 +822,7 @@ class SearchView implements SearchViewData {
     _useProgressiveImages = searchView.useProgressiveImages;
     _numSavedSearchesInSearchBar = searchView.numSavedSearchesInSearchBar;
     _lazyLoad = searchView.lazyLoad;
+    _blacklistFavs = searchView.blacklistFavs;
     _lazyBuilding = searchView.lazyBuilding;
     _preferSetShortname = searchView.preferSetShortname;
     _tagDbPath = searchView.tagDbPath;
@@ -815,6 +839,7 @@ class SearchView implements SearchViewData {
         useProgressiveImages: useProgressiveImages,
         numSavedSearchesInSearchBar: numSavedSearchesInSearchBar,
         lazyLoad: lazyLoad,
+        blacklistFavs: blacklistFavs,
         lazyBuilding: lazyBuilding,
         preferSetShortname: preferSetShortname,
         tagDbPath: tagDbPath,

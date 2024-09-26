@@ -240,7 +240,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
   int? get blacklistedPostCount => widget
       .posts(context, filterBlacklist: false)
       .posts
-      .where((e) => hasBlacklistedTag(e.tagList))
+      .where((e) => (SearchView.i.blacklistFavs || !e.isFavorited) && hasBlacklistedTag(e.tagList))
       .length;
 
   @override

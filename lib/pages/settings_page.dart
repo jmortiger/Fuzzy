@@ -446,6 +446,12 @@ class _WFoldoutSettingsState extends State<WFoldoutSettings> {
               setVal: (bool val) => SearchView.i.lazyBuilding = val,
             ),
             WBooleanField(
+              getVal: () => SearchView.i.blacklistFavs,
+              name: "Blacklist favorited posts",
+              // subtitle: 'Apply blacklist to favorited posts.',
+              setVal: (bool val) => SearchView.i.blacklistFavs = val,
+            ),
+            WBooleanField(
               getVal: () => SearchView.i.preferSetShortname,
               name: "Prefer set shortname",
               subtitle:
@@ -561,12 +567,10 @@ class WBooleanField extends StatefulWidget {
   final String name;
   final String? subtitle;
   final String Function()? subtitleBuilder;
-
   final bool Function() getVal;
-
   final void Function(bool p1) setVal;
-
   final bool Function(bool? p1)? validateVal;
+  final bool useSwitch;
 
   const WBooleanField({
     super.key,
@@ -576,6 +580,7 @@ class WBooleanField extends StatefulWidget {
     required this.setVal,
     // required this.settings,
     this.validateVal,
+    this.useSwitch = true,
   }) : subtitleBuilder = null;
   const WBooleanField.subtitleBuilder({
     super.key,
@@ -585,6 +590,7 @@ class WBooleanField extends StatefulWidget {
     required this.setVal,
     // required this.settings,
     this.validateVal,
+    this.useSwitch = true,
   }) : subtitle = null;
 
   // final AppSettings settings;
@@ -608,10 +614,15 @@ class _WBooleanFieldState extends State<WBooleanField> {
           ? Text(widget.subtitle ?? widget.subtitleBuilder!())
           : null,
       onTap: onChanged,
-      trailing: Checkbox(
-        onChanged: onChanged,
-        value: widget.getVal(),
-      ),
+      trailing: widget.useSwitch
+          ? Switch(
+              value: widget.getVal(),
+              onChanged: onChanged,
+            )
+          : Checkbox(
+              onChanged: onChanged,
+              value: widget.getVal(),
+            ),
     );
   }
 }

@@ -82,7 +82,9 @@ final class E6PostsLazy extends E6Posts {
             .length;
         iterate();
       }
-      while (filterBlacklist && hasBlacklistedTag(this[index].tagList)) {
+      while (filterBlacklist &&
+          (SearchView.i.blacklistFavs || !this[index].isFavorited) &&
+          hasBlacklistedTag(this[index].tagList)) {
         ++index;
         iterate();
       }
@@ -155,7 +157,8 @@ final class E6PostsSync extends E6Posts {
       }
       while (filterBlacklist &&
           (filterSet.contains(index) ||
-              hasBlacklistedTag(this[index].tagList))) {
+              ((SearchView.i.blacklistFavs || !this[index].isFavorited) &&
+                  hasBlacklistedTag(this[index].tagList)))) {
         ++index;
       }
       return this[index];

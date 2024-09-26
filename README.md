@@ -22,6 +22,7 @@ An (eventual) all-in-one mobile frontend for multiple image submission sites. Cu
 * Unified blacklist/fav tags
 * Warn about blacklist before loading parent/child w/ blacklisted tag
 * Downloading
+* Option to exempt favorited posts from blacklist
 ##### TODO List
 * Comments
   * Viewing
@@ -33,3 +34,4 @@ An (eventual) all-in-one mobile frontend for multiple image submission sites. Cu
 * Subscriptions
 * Combining (at least 2) searches (e.g. (a or b) and (c or d))
 * FurAffinity
+* Allow deleting saved searches from settings

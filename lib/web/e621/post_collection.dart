@@ -171,16 +171,16 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
 
   /// The index in [collection] of the 1st post of the [currentPageIndex].
   int get currentPageFirstPostIndex =>
-      (_startingPage + _currentPageOffset) * SearchView.i.postsPerPage;
+      (_startingPage + _currentPageOffset) * postsPerPage;
 
   /// The last page of results currently in [collection].
   ///
-  /// Defined by [SearchView.postsPerPage].
+  /// Defined by [postsPerPage].
   int get lastStoredPageIndex => numStoredPages + _startingPage - 1;
 
   /// The last page of results currently in [collection].
   ///
-  /// Defined by [SearchView.postsPerPage].
+  /// Defined by [postsPerPage].
   int get lastStoredPageNumber => lastStoredPageIndex + 1;
 
   ({
@@ -195,13 +195,13 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
 
   /// How many pages of results are currently in [collection]?
   ///
-  /// Defined by [SearchView.postsPerPage].
-  int get numStoredPages =>
-      (collection._posts.length / SearchView.i.postsPerPage).ceil();
+  /// Defined by [postsPerPage].
+  int get numStoredPages => (collection._posts.length / postsPerPage).ceil();
 
   /// How many results are currently in [collection]?
   int get numStoredPosts => collection._posts.length;
 
+  //// Currently [SearchView.i.postsPerPage]
   int get postsPerPage => SearchView.i.postsPerPage;
 
   PostSearchQueryRecord get parameters => _parameters;
@@ -264,7 +264,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           ? _e6posts
           : _e6posts = _genFromStartAndCount(
               start: currentPageFirstPostIndex,
-              count: SearchView.i.postsPerPage,
+              count: postsPerPage,
             );
 
   @override
@@ -286,7 +286,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     var unlinkIndices = <int>[];
     var subset = _getFromStartAndCount(
       start: currentPageFirstPostIndex,
-      count: SearchView.i.postsPerPage,
+      count: postsPerPage,
+      ensureCount: false,
     );
     for (var i = 0; v.tryGet(i) != null; i++) {
       var element = subset.elementAtOrNull(i);
@@ -306,7 +307,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     for (var element in unlinkIndices) {
       _getFromStartAndCount(
         start: currentPageFirstPostIndex,
-        count: SearchView.i.postsPerPage,
+        count: postsPerPage,
+        ensureCount: false,
       ).elementAt(element).unlink();
     }
   }
@@ -391,7 +393,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     bool? filterBlacklist,
   ]) =>
       (isPageLoaded(index))
-          ? _getRawPostFromStartAndCount(
+          ? _getRawPostFromRange(
               start: getPageFirstPostIndex(index),
               filterBlacklist: filterBlacklist,
             )
@@ -405,14 +407,14 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     final s = checkLoading(parameters.copyWith(pageIndex: index + 1));
     if (s != null) {
       return s.then((v) => v != null
-          ? _getRawPostFromStartAndCount(
+          ? _getRawPostFromRange(
               start: getPageFirstPostIndex(index),
               filterBlacklist: filterBlacklist,
             )
           : null);
     }
     return await tryRetrievePage(index)
-        ? _getRawPostFromStartAndCount(
+        ? _getRawPostFromRange(
             start: getPageFirstPostIndex(index),
             filterBlacklist: filterBlacklist,
           )
@@ -466,10 +468,9 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   ///
   /// If null, [postIndexOverall] defaults to [currentPostIndex].
   int getPageOfGivenPostIndexOnPage([int? postIndexOverall]) =>
-      // ((postIndexOverall ?? currentPostIndex) - (_startingPage * SearchView.i.postsPerPage)) ~/
-      //     SearchView.i.postsPerPage;
-      ((postIndexOverall ?? currentPostIndex) / SearchView.i.postsPerPage -
-              _startingPage)
+      // ((postIndexOverall ?? currentPostIndex) - (_startingPage * postsPerPage)) ~/
+      //     postsPerPage;
+      ((postIndexOverall ?? currentPostIndex) / postsPerPage - _startingPage)
           .toInt();
 
   /// Takes the given [postIndexOverall] in [collection] and returns the index
@@ -482,8 +483,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   /// If null, [postIndexOverall] defaults to [currentPostIndex].
   int getPostIndexOnPage([int? postIndexOverall, int? pageIndexOverall]) =>
       (postIndexOverall ?? currentPostIndex) -
-      ((pageIndexOverall ?? currentPageIndex) - _startingPage) *
-          SearchView.i.postsPerPage;
+      ((pageIndexOverall ?? currentPageIndex) - _startingPage) * postsPerPage;
 
   FutureOr<bool> goToNextPage({
     String? username,
@@ -588,7 +588,6 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
             "No next page from server\n"
             "\tvalidLimit: ${p.validLimit}\n"
             "\tpageNumber: ${p.pageNumber}\n"
-            // "\tpageNumber: ${_currentPageOffset + 1 + _startingPage + 1}\n"
             "\ttags: ${p.tags}",
           );
           return false;
@@ -597,7 +596,6 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           "Got next page from server\n"
           "\tvalidLimit: ${p.validLimit}\n"
           "\tpageNumber: ${p.pageNumber}\n"
-          // "\tpageNumber: ${_currentPageOffset + 1 + _startingPage + 1}\n"
           "\ttags: ${p.tags}"
           "Result length: ${v?.length}",
         );
@@ -895,7 +893,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
 
   /// Doesn't add posts if blacklist is filtered.
   ///
-  /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
+  /// If null, [end] defaults to [postsPerPage] + [start].
   E6Posts _genFromRange({
     int start = 0,
     int? end,
@@ -909,25 +907,27 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         ).toList(),
       );
 
-  /// Adds posts if blacklist is filtered.
+  /// If [ensureCount] is true, adds posts if blacklist is filtered.
   ///
-  /// If null, [count] defaults to [SearchView.i.postsPerPage].
+  /// If null, [count] defaults to [postsPerPage].
   E6Posts _genFromStartAndCount({
     int start = 0,
     int? count,
     bool? filterBlacklist,
+    bool ensureCount = true,
   }) =>
       E6PostsSync(
         posts: _getRawPostFromStartAndCount(
           start: start,
           count: count,
           filterBlacklist: filterBlacklist,
+          ensureCount: ensureCount,
         ).toList(),
       );
 
   /// Doesn't add posts if blacklist is filtered.
   ///
-  /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
+  /// If null, [end] defaults to [postsPerPage] + [start].
   Iterable<E6PostResponse> _getRawPostFromRange({
     int start = 0,
     int? end,
@@ -939,56 +939,70 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         filterBlacklist: filterBlacklist,
       ).map((e) => e.$);
 
-  /// Adds posts if blacklist is filtered.
+  /// If [ensureCount] is true, adds posts if blacklist is filtered.
   ///
-  /// If null, [count] defaults to [SearchView.i.postsPerPage].
+  /// If null, [count] defaults to [postsPerPage].
   Iterable<E6PostResponse> _getRawPostFromStartAndCount({
     int start = 0,
     int? count,
     bool? filterBlacklist,
+    bool ensureCount = true,
   }) =>
       _getFromStartAndCount(
         start: start,
         count: count,
         filterBlacklist: filterBlacklist,
+        ensureCount: ensureCount,
       ).map((e) => e.$);
 
   /// Doesn't add posts if blacklist is filtered.
   ///
-  /// If null, [end] defaults to [SearchView.i.postsPerPage] + [start].
+  /// If null, [end] defaults to [postsPerPage] + [start].
   Iterable<E6PostEntrySync> _getFromRange({
     int start = 0,
     int? end,
     bool? filterBlacklist,
   }) {
-    final count = (end ?? (SearchView.i.postsPerPage + start)) - start;
+    final count = (end ?? (postsPerPage + start)) - start;
     return (filterBlacklist ?? _filterBlacklist)
-        ? collection._posts.skip(start).reduceUntilTrue((acc, e, i, __) {
-            !hasBlacklistedTag(e.$.tagList) ? (acc as List).add(e) : "";
-            return (acc, i + start >= count + start);
-          }, [])
+        ? collection._posts.skip(start).foldTo<List<E6PostEntrySync>>(
+            [],
+            (acc, e, _, __) =>
+                (!SearchView.i.blacklistFavs && e.$.isFavorited) ||
+                        !hasBlacklistedTag(e.$.tagList)
+                    ? (acc..add(e))
+                    : acc,
+            breakIfTrue: (_, __, i, ___) => i + start >= count + start,
+          )
         : collection._posts.skip(start).take(count);
   }
 
-  /// Adds posts if blacklist is filtered.
+  /// If [ensureCount] is true, adds posts if blacklist is filtered.
   ///
-  /// If null, [count] defaults to [SearchView.i.postsPerPage].
+  /// If null, [count] defaults to [postsPerPage].
   Iterable<E6PostEntrySync> _getFromStartAndCount({
     int start = 0,
     int? count,
     bool? filterBlacklist,
+    bool ensureCount = true,
   }) {
     return (filterBlacklist ?? _filterBlacklist)
-        ? collection._posts
-            .skip(start)
-            .take(count ?? SearchView.i.postsPerPage)
-            .fold<List<E6PostEntrySync>>(
+        ? ensureCount
+            ? collection._posts.skip(start).foldTo<List<E6PostEntrySync>>(
                 [],
-                (acc, e) =>
-                    hasBlacklistedTag(e.$.tagList) ? acc : (acc..add(e)))
-        : collection._posts
-            .skip(start)
-            .take(count ?? SearchView.i.postsPerPage);
+                (acc, e, _, __) =>
+                    !SearchView.i.blacklistFavs && e.$.isFavorited ||
+                            !hasBlacklistedTag(e.$.tagList)
+                        ? (acc..add(e))
+                        : acc,
+                breakIfTrue: (acc, _, __, ___) =>
+                    acc.length >= (count ?? postsPerPage),
+              )
+            : collection._posts.skip(start).take(count ?? postsPerPage).where(
+                (e) =>
+                    !SearchView.i.blacklistFavs && e.$.isFavorited ||
+                    !hasBlacklistedTag(e.$.tagList))
+        : collection._posts.skip(start).take(count ?? postsPerPage);
   }
 
   // void _onUserSearchBegan(SearchArgs e) {
