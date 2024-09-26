@@ -451,14 +451,98 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   /// and will fail if attempted to reach before loading.
   /// {@endtemplate}
   int getPageFirstPostIndex(int pageIndex) =>
-      (pageIndex - _startingPage) * SearchView.i.postsPerPage;
+      (pageIndex - _startingPage) * postsPerPage;
+
+  /// The index in [collection] of the 1st post of the [pageIndex]th overall
+  /// page that isn't blacklisted.
+  ///
+  /// If `getPageFirstPostIndex(pageIndex)`
+  /// is negative, the page is not loaded, and this will throw an error if
+  /// [forceApplyBlacklist] is true or it's null and [filterBlacklist] is true.
+  ///
+  /// TODO: Add support for checking deleted/restricted posts
+  int getPageFirstVisiblePostIndex(
+    int pageIndex, {
+    bool? forceApplyBlacklist,
+  }) {
+    final start = getPageFirstPostIndex(pageIndex);
+    if (start < 0 || pageIndex > lastStoredPageIndex) return -1;
+    if (!(forceApplyBlacklist ?? _filterBlacklist)) {
+      return start;
+    } else {
+      final value = collection
+          .getRange(start, getPageLastPostIndex(pageIndex, validate: true))
+          .indexed
+          .firstWhere(
+            (e) =>
+                !SearchView.i.blacklistFavs && e.$2.$.isFavorited ||
+                !hasBlacklistedTag(e.$2.$.tagList),
+            orElse: () => (-1, E6PostEntrySync(value: E6PostResponse.error)),
+          )
+          .$1;
+      return value < 0 ? value : value + start;
+    }
+  }
 
   /// The index in [collection] of the last post of the [pageIndex]th overall page.
   ///
   /// If the value
   /// {@macro negativePageIndexWarn}
-  int getPageLastPostIndex(int pageIndex) =>
-      getPageFirstPostIndex(pageIndex + 1) - 1;
+  ///
+  /// If [validate] is true, will return the index bounded by the loaded posts.
+  /// If [pageIndex] exceeds the bounds in either direction, will return `-1`.
+  int getPageLastPostIndex(int pageIndex, {bool validate = false}) {
+    if (!validate) return getPageFirstPostIndex(pageIndex + 1) - 1;
+    final start = getPageFirstPostIndex(pageIndex);
+    if (start < 0 || pageIndex > lastStoredPageIndex) return -1;
+    var end = getPageFirstPostIndex(pageIndex + 1) - 1;
+    if (end < 0) {
+      try {
+        throw StateError("Something's wrong; pageIndex <= lastStoredPageIndex, "
+            "but getPageFirstPostIndex(pageIndex + 1) - 1 = $end:"
+            "\n\tpageIndex: $pageIndex"
+            "\n\tgetPageFirstPostIndex(pageIndex): $start"
+            "\n\tlastStoredPageIndex: $lastStoredPageIndex"
+            "\n\tgetPageFirstPostIndex(pageIndex + 1) - 1 = $end");
+      } catch (e, s) {
+        logger.severe(e, e, s);
+        rethrow;
+      }
+    }
+    assert(
+        lastStoredPageIndex == pageIndex || end < collection.length,
+        "end is out of bounds despite pageIndex not being "
+        "on or past the last loaded page"
+        "\n\tpageIndex: $pageIndex"
+        "\n\tlastStoredPageIndex: $lastStoredPageIndex"
+        "\n\tgetPageFirstPostIndex(pageIndex): $start"
+        "\n\tend = getPageFirstPostIndex(pageIndex + 1) - 1 = $end");
+    return lastStoredPageIndex == pageIndex ? collection.length - 1 : end;
+  }
+
+  /// The index in [collection] of the last post of the [pageIndex]th overall
+  /// page that isn't blacklisted.
+  ///
+  /// If `getPageLastPostIndex(pageIndex, validate: true)` is negative, the page is
+  /// not loaded, and this will throw an error if either
+  /// [forceApplyBlacklist] is true or it's null and [filterBlacklist] is true.
+  ///
+  /// TODO: Add support for checking deleted/restricted posts
+  int getPageLastVisiblePostIndex(
+    int pageIndex, {
+    bool? forceApplyBlacklist,
+  }) {
+    final end = getPageLastPostIndex(pageIndex, validate: true);
+    if (!(forceApplyBlacklist ?? _filterBlacklist)) {
+      return end;
+    } else {
+      final value = collection.reversed.indexed
+          .take(end - getPageFirstPostIndex(pageIndex) + 1)
+          .firstWhere((e) => !isBlacklisted(e.$2.$))
+          .$1;
+      return value < 0 ? value : collection.length - 1 - value;
+    }
+  }
 
   /// Takes the given [postIndexOverall] in [collection] and returns the page index
   /// it's on.

@@ -468,12 +468,16 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
             isFullscreen = value.fullscreen;
             final delta = value.backwards ? -1 : 1;
             onFinished = () {
-              final last = widget.postsObj.getPageLastPostIndex(widget.postsObj
-                      .currentPageIndex /* _currentResultsPageIndex */),
-                  first = widget.postsObj.getPageFirstPostIndex(widget.postsObj
-                      .currentPageIndex /* _currentResultsPageIndex */);
               var newIndex = _currentPostPageIndex + delta;
+
+              /// TODO: Still has problems
               if (value.repeatPage) {
+                final last = widget.postsObj.getPageLastVisiblePostIndex(widget
+                        .postsObj
+                        .currentPageIndex /* _currentResultsPageIndex */),
+                    first = widget.postsObj.getPageFirstVisiblePostIndex(widget
+                        .postsObj
+                        .currentPageIndex /* _currentResultsPageIndex */);
                 // int safety = 0;
                 // while ((newIndex > last || newIndex < first) &&
                 //     safety < safetyBounds) {
@@ -493,7 +497,13 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
                   int n when n < first => last,
                   _ => newIndex,
                 };
-                assert(newIndex > last || newIndex < first);
+                assert(
+                  newIndex <= last && newIndex >= first,
+                  "newIndex out of bounds"
+                  "\n\tnewIndex: $newIndex"
+                  "\n\tfirst: $first"
+                  "\n\tlast: $last",
+                );
               }
               _updateCurrentPageIndex(newIndex);
             };

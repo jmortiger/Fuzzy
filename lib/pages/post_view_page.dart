@@ -58,7 +58,7 @@ class PostViewPage extends StatefulWidget
   final bool? startFullscreen;
   final bool Function()? getFullscreen;
   final void Function(bool)? setFullscreen;
-  final List<ActionButton>? extraActions;
+  final List<Widget>? extraActions;
   // @override
   // final List<String>? tagsToAdd;
   final List<E6PostResponse>? selectedPosts;
