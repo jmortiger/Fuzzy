@@ -707,6 +707,28 @@ class PostSearchQueryRecordNullable
         page == other.page;
   }
 
+  bool isSameSearch(Object other) =>
+      other is PostSearchQueryRecordNullable &&
+      tags == other.tags &&
+      limit == other.limit;
+
+  bool hasGreaterPageNumber(PostSearchQueryRecordNullable other,
+          {bool orEqual = false}) =>
+      tags == other.tags &&
+      limit == other.limit &&
+      pageNumber != null &&
+      other.pageNumber != null &&
+      (pageNumber! > other.pageNumber! ||
+          (orEqual && pageNumber! == other.pageNumber!));
+  bool hasLesserPageNumber(PostSearchQueryRecordNullable other,
+          {bool orEqual = false}) =>
+      tags == other.tags &&
+      limit == other.limit &&
+      pageNumber != null &&
+      other.pageNumber != null &&
+      (pageNumber! < other.pageNumber! ||
+          (orEqual && pageNumber! == other.pageNumber!));
+
   @override
   int get hashCode => Object.hash(tags, limit, page);
 }

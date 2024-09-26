@@ -63,6 +63,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     notifyListeners();
   }
 
+  PostSearchQueryRecord? lastPage;
+
   bool tryValidatingSearches = false;
   final PostCollectionSync collection;
   final onPageRetrievalFailure = JEvent<PostCollectionEvent>();
@@ -227,6 +229,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     _numPagesInSearch = null;
     _totalPostsInSearch = LazyInitializer<int>(_numSearchPostsInit)
       ..getItemAsync().ignore();
+    lastPage = null;
     notifyListeners();
   }
 
@@ -959,20 +962,28 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     parameters ??= _parameters;
     logger.info("Getting page ${parameters.page}");
     return _loading[parameters] ??
-        (_loading[parameters] = E621
-            .performUserPostSearch(
-          limit: parameters.validLimit,
-          pageNumber: (parameters.pageNumber ?? 1),
-          tags: parameters.tags,
-        )
-            .then((v) {
-          if (v.results == null) {
-            onPageRetrievalFailure.invoke(PostCollectionEvent(
-                parameters: parameters!, posts: collection));
-          }
-          return v.results?.posts;
-        }))
-      ..then((v) => _loading.remove(parameters!));
+        (!(lastPage?.hasLesserPageNumber(parameters, orEqual: true) ?? false)
+            ? ((_loading[parameters] = E621
+                .performUserPostSearch(
+                limit: parameters.validLimit,
+                pageNumber: (parameters.pageNumber ?? 1),
+                tags: parameters.tags,
+              )
+                .then((v) {
+                if (v.results == null) {
+                  if (lastPage == null ||
+                      (lastPage?.tags == parameters!.tags &&
+                          lastPage!.limit == parameters.limit &&
+                          lastPage!.pageNumber! > parameters.pageNumber!)) {
+                    lastPage = parameters;
+                  }
+                  onPageRetrievalFailure.invoke(PostCollectionEvent(
+                      parameters: parameters!, posts: collection));
+                }
+                return v.results?.posts;
+              }))
+              ..then((v) => _loading.remove(parameters!)))
+            : Future.sync(() => null));
   }
 
   /// Doesn't add posts if blacklist is filtered.
