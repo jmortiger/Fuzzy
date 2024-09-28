@@ -267,7 +267,7 @@ enum DTextMatchers {
   ),
   // bareLink
   escapedLink(r"<(?<main>" "${util.urlMatcherStr}" r".*?)>", linkStyle),
-  namedLink('"(?<main>.+?)":(?<url>${util.urlMatcherStr}){1}', linkStyle),
+  namedLink('"(?<main>.+?)":(?<url>${util.urlMatcherStr}|/\\S+){1}', linkStyle),
   tagLink(r"\[\[(?:(?<tag>.*?)\|){0,1}(?<main>.+?)\]\]", linkStyle),
   anchor(r"\[(?<data>#.+?)\](?<main>(?<=\]))", incorrectlyParsedStyle),
   searchLink(r"{{(?<main>(?<data>.+?))}}", linkStyle),
@@ -625,6 +625,7 @@ enum DTextMatchers {
         ),
       code when renderDTextSectionBg || renderDTextSectionLeftBorder =>
         WidgetSpan(
+          // alignment: PlaceholderAlignment.top,
           child: DecoratedBox(
             decoration: BoxDecoration(
               border: renderDTextSectionLeftBorder
@@ -640,7 +641,7 @@ enum DTextMatchers {
             ),
             child: Padding(
               padding:
-                  const EdgeInsets.fromLTRB(leftBorderPadding + 10, 0, 0, 0),
+                  const EdgeInsets.fromLTRB(leftBorderPadding + 10, 10, 10, 10),
               child: Text.rich(
                 TextSpan(
                     children: rawParse(
@@ -650,12 +651,15 @@ enum DTextMatchers {
                   anchorTriggerScrolls: anchorTriggerScrolls,
                 )),
                 style: style,
+                softWrap: true,
+                maxLines: null,
               ),
             ),
           ),
         ),
       quote when renderDTextSectionBg || renderDTextSectionLeftBorder =>
         WidgetSpan(
+          // alignment: PlaceholderAlignment.top,
           child: DecoratedBox(
             decoration: BoxDecoration(
               border: renderDTextSectionLeftBorder
@@ -671,7 +675,7 @@ enum DTextMatchers {
             ),
             child: Padding(
               padding:
-                  const EdgeInsets.fromLTRB(leftBorderPadding + 10, 0, 0, 0),
+                  const EdgeInsets.fromLTRB(leftBorderPadding + 10, 10, 10, 10),
               child: Text.rich(
                 TextSpan(
                     children: rawParse(
@@ -681,11 +685,14 @@ enum DTextMatchers {
                   anchorTriggerScrolls: anchorTriggerScrolls,
                 )),
                 style: style,
+                softWrap: true,
+                maxLines: null,
               ),
             ),
           ),
         ),
       section => WidgetSpan(
+          // alignment: PlaceholderAlignment.top,
           child: ExpansionTile(
             visualDensity: VisualDensity(
               vertical: VisualDensity.minimumDensity,
@@ -710,22 +717,26 @@ enum DTextMatchers {
             ),
             initiallyExpanded: m.namedGroup("expanded") != null,
             children: [
-              Text.rich(TextSpan(
-                text: isChildless ? text : null,
-                children: isChildless
-                    ? null
-                    : buildChildrenFromMatch(
-                        m: m,
-                        ctx: ctx,
-                        anchorKeys: anchorKeys,
-                        anchorTriggerScrolls: anchorTriggerScrolls,
-                      ),
-                style: style,
-              ))
+              Flexible(
+                flex: 0,
+                child: Text.rich(TextSpan(
+                  text: isChildless ? text : null,
+                  children: isChildless
+                      ? null
+                      : buildChildrenFromMatch(
+                          m: m,
+                          ctx: ctx,
+                          anchorKeys: anchorKeys,
+                          anchorTriggerScrolls: anchorTriggerScrolls,
+                        ),
+                  style: style,
+                )),
+              )
             ],
           ),
         ),
       postThumbnail => WidgetSpan(
+          // alignment: PlaceholderAlignment.top,
           child: WPostThumbnail.withId(
             key: ValueKey((int.parse(m.namedGroup("data")!))),
             id: int.parse(m.namedGroup("data")!),
@@ -737,6 +748,7 @@ enum DTextMatchers {
       list => defaultParser(
           "${List.generate(m.namedGroup("data")!.length, (index) => tabText).reduce((p, c) => "$p$c")} • $text"),
       superscript => WidgetSpan(
+          // alignment: PlaceholderAlignment.top,
           child: Transform.translate(
               offset: const Offset(0, -4),
               child: Text.rich(
@@ -744,6 +756,7 @@ enum DTextMatchers {
                 textScaler: const TextScaler.linear(.7),
               ))),
       subscript => WidgetSpan(
+          // alignment: PlaceholderAlignment.top,
           child: Transform.translate(
               offset: const Offset(0, 2),
               child: Text.rich(
@@ -751,6 +764,7 @@ enum DTextMatchers {
                 textScaler: const TextScaler.linear(.7),
               ))),
       spoiler => WidgetSpan(
+          // alignment: PlaceholderAlignment.top,
           child: (() {
             bool isRevealed = false;
             return StatefulBuilder(
