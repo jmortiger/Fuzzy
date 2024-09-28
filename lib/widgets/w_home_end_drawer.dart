@@ -13,6 +13,7 @@ import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/e621/search_helper.dart' as sh;
 import 'package:fuzzy/widgets/w_back_button.dart';
+import 'package:fuzzy/widgets/w_comments_pane.dart';
 import 'package:fuzzy/widgets/w_d_text_preview.dart';
 import 'package:fuzzy/widgets/w_fab_builder.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart' as psr;
@@ -398,6 +399,110 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                           )),
                         ),
                       ));
+            },
+          ),
+          ListTile(
+            title: const Text("Test Comment"),
+            leading: const Icon(Icons.question_mark),
+            onTap: () {
+              Navigator.pop(context);
+              showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                        content: SizedBox(
+                          width: double.maxFinite,
+                          height: double.maxFinite,
+                          child: WBackButton.noOverlay(
+                              child: FutureBuilder(
+                                  future: e621.sendRequest(
+                                      util.devData.isAssigned
+                                          ? e621.initGetCommentRequest(
+                                              id: util.devData
+                                                  .$["e621"]["comments"].first)
+                                          : e621.initSearchCommentsRequest(
+                                              limit: 1)),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.hasData) {
+                                      return WComment(
+                                        comment: e621.Comment.fromRawJson(
+                                          snapshot.data!.body,
+                                        ),
+                                      );
+                                    } else {
+                                      return const AspectRatio(
+                                        aspectRatio: 1,
+                                        child: CircularProgressIndicator(),
+                                      );
+                                    }
+                                  })),
+                        ),
+                      ));
+            },
+          ),
+          ListTile(
+            title: const Text("Test Comments"),
+            leading: const Icon(Icons.question_mark),
+            onTap: () {
+              Navigator.pop(context);
+              showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                        content: SizedBox(
+                          width: double.maxFinite,
+                          height: double.maxFinite,
+                          child: WBackButton.noOverlay(
+                              child: FutureBuilder(
+                                  future: e621
+                                      .sendRequest(
+                                        util.devData.isAssigned
+                                            ? e621.initSearchCommentsRequest(
+                                                searchPostId:
+                                                    util.devData.$["e621"]
+                                                        ["posts"]["comments"],
+                                              )
+                                            : e621.initSearchCommentsRequest(
+                                                searchPostId: 1699321,
+                                              ),
+                                      )
+                                      .then((v) => v.body),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.hasData) {
+                                      return WCommentsPane(
+                                        comments:
+                                            e621.Comment.fromRawJsonResults(
+                                                snapshot.data!),
+                                      );
+                                    } else {
+                                      return const AspectRatio(
+                                        aspectRatio: 1,
+                                        child: CircularProgressIndicator(),
+                                      );
+                                    }
+                                  })),
+                        ),
+                      ));
+            },
+          ),
+          ListTile(
+            title: const Text("Test Comments Loader"),
+            leading: const Icon(Icons.question_mark),
+            onTap: () {
+              Navigator.pop(context);
+              showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                          content: SizedBox(
+                        width: double.maxFinite,
+                        height: double.maxFinite,
+                        child: WBackButton.noOverlay(
+                            child: SingleChildScrollView(
+                              child: WCommentsLoader(
+                                                        postId: util.devData.isAssigned
+                                ? util.devData.$["e621"]["posts"]["comments2"]
+                                : 1699321,
+                                                      ),
+                            )),
+                      )));
             },
           ),
           ListTile(
