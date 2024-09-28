@@ -242,7 +242,7 @@ enum DTextMatchers {
     dotAll: true,
   ),
   spoiler(
-    r"\[spoiler\](?<main>.*?)\[\/spoiler\]",
+    r"\[spoilers*\](?<main>.*?)\[\/spoilers*\]",
     unimplementedStyle,
     dotAll: true,
   ),
