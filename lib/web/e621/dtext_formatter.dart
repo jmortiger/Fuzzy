@@ -158,8 +158,8 @@ class NamedLinkifier extends UrlLinkifier {
         options);
   }
 }
-
 // #endregion Linkifiers
+
 class _Empty extends StatefulWidget {
   final void Function(BuildContext ctx)? onScroll;
   const _Empty({super.key, this.onScroll});

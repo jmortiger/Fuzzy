@@ -1,12 +1,12 @@
 import 'dart:convert';
 
+import 'package:e621/e621.dart' as e621;
 import 'package:flutter/material.dart';
 import 'package:fuzzy/pages/settings_page.dart';
-import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:http/http.dart';
-import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
+import 'package:fuzzy/log_management.dart' as lm;
 
 import '../web/e621/e621_access_data.dart';
 
@@ -71,6 +71,8 @@ class WSearchPool extends StatefulWidget {
 }
 
 class _WSearchPoolState extends State<WSearchPool> {
+  // ignore: unnecessary_late
+  static late final logger = lm.generateLogger("WSearchPoolState").logger;
   late PoolSearchParameterModel p;
 
   late ExpansionTileController _control;
@@ -120,7 +122,7 @@ class _WSearchPoolState extends State<WSearchPool> {
       loadingPools = e621
           .initSearchPoolsRequest(
             searchNameMatches: searchNameMatches,
-            searchId: searchId,
+            searchIds: searchId,
             searchDescriptionMatches: searchDescriptionMatches,
             searchCreatorName: searchCreatorName,
             searchCreatorId: searchCreatorId,
@@ -128,36 +130,52 @@ class _WSearchPoolState extends State<WSearchPool> {
             searchCategory: searchCategory,
             searchOrder: searchOrder,
             limit: limit,
-            credentials: E621AccessData.devAccessData.$.cred,
+            credentials: E621AccessData.userData.$Safe?.cred,
           )
           .send()
           .then((v) async {
-        var t = await ByteStream(v.stream.asBroadcastStream()).bytesToString();
-        var step = jsonDecode(t);
-        try {
-          return (step as List).mapAsList(
-            (e, index, list) => e621.Pool.fromJson(e),
-          );
-        } catch (e) {
-          return <e621.Pool>[];
-        }
-      })
-        ..then((v) async {
-          if (widget.filterResultsAsync == null) return v;
-          final r = <e621.Pool>[];
-          for (var e in v) {
-            if (await widget.filterResultsAsync!(e)) r.add(e);
-          }
-          return r;
-        })
+            var t =
+                await ByteStream(v.stream.asBroadcastStream()).bytesToString();
+            var step = jsonDecode(t);
+            try {
+              return (step as List).mapAsList(
+                (e, index, list) => e621.Pool.fromJson(e),
+              );
+            } catch (e) {
+              return <e621.Pool>[];
+            }
+          })
+          .onError((e, s) {
+            logger.severe(e, e, s);
+            return <e621.Pool>[];
+          })
+          .then((v) => widget.filterResults == null
+              ? v
+              : v.where(widget.filterResults!).toList())
+          .then((v) async {
+            if (widget.filterResultsAsync == null) return v;
+            // final f =
+            //     await Future.wait(v.map((e) => widget.filterResultsAsync!(e)));
+            // // for (var i = 0; i < v.length; i++) {
+            // //   if (f[i]) 
+            // // }
+            // return f.indexed.where((e)=> e.$2).map((e)=>v[e.$1]).toList();
+            final r = <e621.Pool>[];
+            for (var e in v) {
+              if (await widget.filterResultsAsync!(e)) r.add(e);
+            }
+            return r;
+          })
+          .onError((e, s) {
+            logger.severe(e, e, s);
+            return <e621.Pool>[];
+          })
         ..then((v) {
           setState(() {
-            pools = widget.filterResults == null
-                ? v
-                : v.where(widget.filterResults!).toList();
+            pools = v;
             loadingPools = null;
           });
-        });
+        }).ignore();
       if (collapse) _control.collapse();
     });
   }
@@ -309,39 +327,6 @@ class _WSearchPoolState extends State<WSearchPool> {
       ),
     );
   }
-
-  Future<List<e621.Pool>> sendSearch() => loadingPools = e621
-          .initSearchPoolsRequest(
-            searchNameMatches: searchNameMatches,
-            searchId: searchId,
-            searchDescriptionMatches: searchDescriptionMatches,
-            searchCreatorName: searchCreatorName,
-            searchCreatorId: searchCreatorId,
-            searchIsActive: searchIsActive,
-            searchCategory: searchCategory,
-            searchOrder: searchOrder,
-            limit: limit,
-          )
-          .send()
-          .onError(onErrorPrintAndRethrow)
-          .then((v) async {
-        var t = await ByteStream(v.stream.asBroadcastStream())
-            .bytesToString()
-            .onError(onErrorPrintAndRethrow);
-        // return Response(
-        //   t,
-        //   v.statusCode,
-        //   headers: v.headers,
-        //   isRedirect: v.isRedirect,
-        //   persistentConnection: v.persistentConnection,
-        //   reasonPhrase: v.reasonPhrase,
-        //   request: v.request,
-        // );
-        loadingPools = null;
-        return pools = (jsonDecode(t) as List).mapAsList(
-          (e, index, list) => e621.Pool.fromJson(e),
-        );
-      }).onError(onErrorPrintAndRethrow);
 }
 
 class WPoolTile extends StatelessWidget {

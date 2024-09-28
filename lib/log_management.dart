@@ -11,6 +11,13 @@ import 'package:logging/logging.dart';
 import 'util/util.dart' as f_util;
 import 'package:http/http.dart' as http;
 
+extension SymbolName on Symbol {
+  String get name {
+    final s = toString();
+    return s.substring(8, s.length - 2);
+  }
+}
+
 typedef LogLevel = Level;
 typedef Printer = void Function(Object? message,
     [LogLevel logLevel, Object? error, StackTrace? stackTrace, Zone? zone]);

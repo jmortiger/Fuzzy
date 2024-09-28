@@ -9,7 +9,7 @@ import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/widgets/w_update_set.dart';
-import 'package:http/http.dart';
+// import 'package:http/http.dart';
 import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
@@ -173,18 +173,31 @@ class _WSearchSetState extends State<WSearchSet> {
                     credentials: E621AccessData.devAccessData.$.cred,
                   ))
                   .then(
-                    (value) => Future.wait(
-                      e621.ModifiablePostSets.fromRawJson(value.body).all.map(
-                            (e) => e621
-                                .sendRequest(e621.initGetSetRequest(e.id))
-                                .then((e1) => e1.body),
-                          ),
-                    ).then(
-                      (value) => "[${value.fold(
-                            "",
-                            (p, e) => "$p, $e",
-                          ).substring(2)}]",
-                    ),
+                    (value) => e621
+                        .sendRequest(e621.initSearchSetsRequest(
+                          searchIds:
+                              e621.ModifiablePostSets.fromRawJson(value.body)
+                                  .all
+                                  .map((e) => e.id),
+                          limit: limit,
+                          page: page,
+                          credentials: E621AccessData.devAccessData.$.cred,
+                        ))
+                        .then(
+                          (value) => value.body,
+                        ),
+                    // (value) => Future.wait(
+                    //   e621.ModifiablePostSets.fromRawJson(value.body).all.map(
+                    //         (e) => e621
+                    //             .sendRequest(e621.initGetSetRequest(e.id))
+                    //             .then((e1) => e1.body),
+                    //       ),
+                    // ).then(
+                    //   (value) => "[${value.fold(
+                    //         "",
+                    //         (p, e) => "$p, $e",
+                    //       ).substring(2)}]",
+                    // ),
                   ))
           .then((t) async {
         // var t = await ByteStream(v.stream.asBroadcastStream()).bytesToString();

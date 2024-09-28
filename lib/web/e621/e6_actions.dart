@@ -13,6 +13,7 @@ import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:fuzzy/widgets/w_search_set.dart';
 import 'package:file_saver/file_saver.dart' as saver;
+import 'package:http/http.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:provider/provider.dart';
 
@@ -31,116 +32,12 @@ Future<E6PostResponse> addPostToFavoritesWithPost({
 }) =>
     _addPostToFavorites(context: context, post: post, updatePost: updatePost)
         .then((v) => v!);
-/* }) {
-  final out = "Adding ${post.id} to favorites...";
-  _logger.finer(out);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(
-      context: context!,
-      content: Text(out),
-    );
-  }
-  if (AppSettings.i!.upvoteOnFavorite) {
-    voteOnPostWithPost(isUpvote: true, post: post).ignore();
-  }
-  return E621
-      // .sendRequest(
-      //   E621.initAddFavoriteRequest(
-      //     postId,
-      //     username: E621AccessData.fallback?.username,
-      //     apiKey: E621AccessData.fallback?.apiKey,
-      //   ),
-      // )
-      // .toResponse()
-      .sendAddFavoriteRequest(
-    post.id,
-    username: E621AccessData.fallback?.username,
-    apiKey: E621AccessData.fallback?.apiKey,
-  )
-      .then(
-    (v) {
-      lm.logResponseSmart(v, _logger);
-      E6PostResponse postRet = v.statusCodeInfo.isSuccessful
-          ? E6PostResponse.fromRawJson(v.body)
-          : post;
-      if (context?.mounted ?? false) {
-        !v.statusCodeInfo.isSuccessful
-            ? util.showUserMessage(
-                context: context!,
-                content: Text("${v.statusCode}: ${v.reasonPhrase}"))
-            : util.showUserMessage(
-                context: context!,
-                content: Text("${post.id} added to favorites"),
-                action: (
-                    "Undo",
-                    () => removePostFromFavoritesWithPost(
-                          post: post,
-                          updatePost: updatePost,
-                          context: context,
-                        )
-                  ));
-      }
-      return updatePost && post is E6PostMutable
-          ? (post..overwriteFrom(postRet))
-          : postRet;
-    },
-  );
-} */
 
 Future<E6PostResponse?> addPostToFavoritesWithId({
   BuildContext? context,
   required int postId,
 }) =>
     _addPostToFavorites(context: context, postId: postId);
-/* }) {
-  final out = "Adding $postId to favorites...";
-  _logger.finer(out);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(out));
-  }
-  if (AppSettings.i!.upvoteOnFavorite) {
-    voteOnPostWithId(isUpvote: true, postId: postId).ignore();
-  }
-  return E621
-      // .sendRequest(
-      //   E621.initAddFavoriteRequest(
-      //     postId,
-      //     username: E621AccessData.fallback?.username,
-      //     apiKey: E621AccessData.fallback?.apiKey,
-      //   ),
-      // )
-      // .toResponse()
-      .sendAddFavoriteRequest(
-    postId,
-    username: E621AccessData.fallback?.username,
-    apiKey: E621AccessData.fallback?.apiKey,
-  )
-      .then(
-    (v) {
-      lm.logResponseSmart(v, _logger);
-      final postRet = v.statusCodeInfo.isSuccessful
-          ? E6PostResponse.fromRawJson(v.body)
-          : null;
-      if (context?.mounted ?? false) {
-        !v.statusCodeInfo.isSuccessful
-            ? util.showUserMessage(
-                context: context!,
-                content: Text("${v.statusCode}: ${v.reasonPhrase}"))
-            : util.showUserMessage(
-                context: context!,
-                content: Text("$postId added to favorites"),
-                action: (
-                    "Undo",
-                    () => removePostFromFavoritesWithId(
-                          postId: postId,
-                          context: context,
-                        )
-                  ));
-      }
-      return postRet;
-    },
-  );
-} */
 
 Future<E6PostResponse?> _addPostToFavorites({
   BuildContext? context,
@@ -162,14 +59,6 @@ Future<E6PostResponse?> _addPostToFavorites({
         .ignore();
   }
   return E621
-      // .sendRequest(
-      //   E621.initAddFavoriteRequest(
-      //     id,
-      //     username: E621AccessData.fallback?.username,
-      //     apiKey: E621AccessData.fallback?.apiKey,
-      //   ),
-      // )
-      // .toResponse()
       .sendAddFavoriteRequest(
     id,
     username: E621AccessData.fallback?.username,
@@ -188,7 +77,7 @@ Future<E6PostResponse?> _addPostToFavorites({
                 content: Text("${v.statusCode}: ${v.reasonPhrase}"))
             : util.showUserMessage(
                 context: context!,
-                content: Text("$id removed from favorites"),
+                content: Text("$id added from favorites"),
                 action: (
                     "Undo",
                     () => _removePostFromFavorites(
@@ -243,39 +132,37 @@ Future<E6PostResponse?> _removePostFromFavorites({
         ),
       )
       .toResponse()
-      .then(
-    (v) {
-      lm.logResponseSmart(v, _logger);
-      var postRet = v.statusCodeInfo.isSuccessful
-          ? E6PostMutable.fromRawJson(v.body)
-          : post;
-      if (context?.mounted ?? false) {
-        !v.statusCodeInfo.isSuccessful
-            ? util.showUserMessage(
-                context: context!,
-                content: Text("${v.statusCode}: ${v.reasonPhrase}"))
-            : util.showUserMessage(
-                context: context!,
-                content: Text("$id removed from favorites"),
-                action: (
-                    "Undo",
-                    post != null
-                        ? () => addPostToFavoritesWithPost(
-                              post: post,
-                              updatePost: updatePost,
-                              context: context,
-                            )
-                        : () => addPostToFavoritesWithId(
-                              postId: id,
-                              context: context,
-                            )
-                  ));
-      }
-      return updatePost && post is E6PostMutable
-          ? (post..overwriteFrom(postRet!))
-          : postRet;
-    },
-  );
+      .then((v) {
+    lm.logResponseSmart(v, _logger);
+    var postRet = v.statusCodeInfo.isSuccessful
+        ? E6PostMutable.fromRawJson(v.body)
+        : post;
+    if (context?.mounted ?? false) {
+      !v.statusCodeInfo.isSuccessful
+          ? util.showUserMessage(
+              context: context!,
+              content: Text("${v.statusCode}: ${v.reasonPhrase}"))
+          : util.showUserMessage(
+              context: context!,
+              content: Text("$id removed from favorites"),
+              action: (
+                  "Undo",
+                  post != null
+                      ? () => addPostToFavoritesWithPost(
+                            post: post,
+                            updatePost: updatePost,
+                            context: context,
+                          )
+                      : () => addPostToFavoritesWithId(
+                            postId: id,
+                            context: context,
+                          )
+                ));
+    }
+    return updatePost && post is E6PostMutable
+        ? (post..overwriteFrom(postRet!))
+        : postRet;
+  });
 }
 
 Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithPosts({
@@ -1855,6 +1742,7 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
 }
 
 // #endregion Vote
+// #region Downloads
 Future<String?> downloadPostRoot(E6PostResponse post) =>
     /* e621.client
       .get(
@@ -2145,7 +2033,10 @@ Future<List<String>> downloadDescriptionsWithIds({
       }
       return v;
     });
+// #endregion Downloads
+// #region Comments
 
+// #endregion Comments
 // #region Helpers
 /// TODO: FIX
 String createPostVoteString({

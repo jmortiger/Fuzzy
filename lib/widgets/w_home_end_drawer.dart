@@ -311,7 +311,10 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                                   title: Text(
                                       "${E621.loggedInUser.$Safe?.name}'s Favorites"),
                                 ),
-                                body: Column(
+                                body: SafeArea(
+                                    child: psr.WPostSearchResultsSwiper
+                                        .buildItFull(context)),
+                                /* body: Column(
                                   children: [
                                     Selector<ManagedPostCollectionSync, String>(
                                       builder: (_, value, __) => Expanded(
@@ -323,7 +326,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                                       selector: (ctx, p1) => p1.parameters.tags,
                                     ),
                                   ],
-                                ),
+                                ), */
                                 floatingActionButton:
                                     WFabBuilder.buildItFull(context),
                               ),
