@@ -65,16 +65,15 @@ sealed class E621 extends Site {
       loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username;
   static final loggedInUser = LateInstance<e621.UserLoggedIn>();
 
-  /// Won't update unless [user] is non-null and of type [e621.UserLoggedIn].
-  static bool tryUpdateLoggedInUser(e621.User? user) {
-    if (user is e621.UserLoggedIn) {
-      if (user is! e621.UserLoggedInDetail &&
-          loggedInUser.$Safe is e621.UserLoggedInDetail) {
-        loggedInUser.$ =
-            (loggedInUser.$ as e621.UserLoggedInDetail).copyWithInstance(user);
-      } else {
-        loggedInUser.$ = user;
-      }
+  /// Won't update unless [user] is non-null and of type [e621.UserLoggedIn] or (if [alwaysUpdateMatchingUser] is `true`) if [loggedInUser] is assigned and is the same user (i.e. have matching [e621.User.id]s).
+  static bool tryUpdateLoggedInUser(
+    e621.User? user, {
+    bool alwaysUpdateMatchingUser = true,
+  }) {
+    if (user is e621.UserLoggedIn ||
+        (loggedInUser.isAssigned && loggedInUser.$.id == user?.id)) {
+      loggedInUser.$ = (loggedInUser.$Safe?.copyWithInstance(user) ??
+          user as e621.UserLoggedIn);
       return true;
     } else {
       return false;
@@ -85,12 +84,12 @@ sealed class E621 extends Site {
       loggedInUser.isAssigned ? loggedInUser.$.tagQueryLimit : 40;
   static int get favoriteLimit =>
       loggedInUser.isAssigned ? loggedInUser.$.favoriteLimit : 80000;
-  static bool get blacklistUsers =>
+  /* static bool get blacklistUsers =>
       loggedInUser.isAssigned ? loggedInUser.$.blacklistUsers : false;
   static String get blacklistedTags =>
       loggedInUser.isAssigned ? loggedInUser.$.blacklistedTags : "";
   static String get favoriteTags =>
-      loggedInUser.isAssigned ? loggedInUser.$.favoriteTags : "";
+      loggedInUser.isAssigned ? loggedInUser.$.favoriteTags : ""; */
   static int get apiBurstLimit =>
       loggedInUser.isAssigned ? loggedInUser.$.apiBurstLimit : 60;
   static int get apiRegenMultiplier =>
@@ -204,7 +203,9 @@ sealed class E621 extends Site {
         credentials: d,
       );
       lm.logRequest(r, _logger);
-      return e621.sendRequest(r).then(E621.resolveGetUserFuture);
+      return e621
+          .sendRequest(r)
+          .then((v) => E621.resolveGetUserFuture(v, updateIfLoggedIn));
     }
     _logger.finest("No id, trying access data");
     if (d == null) {
@@ -238,7 +239,13 @@ sealed class E621 extends Site {
           credentials: d,
         );
         lm.logRequest(r, _logger);
-        return e621.sendRequest(r).then(resolveGetUserFuture);
+        return e621
+            .sendRequest(r)
+            .then((v) => resolveGetUserFuture(v, updateIfLoggedIn))
+            .then((v) {
+          if (v == null && updateIfLoggedIn) tryUpdateLoggedInUser(t);
+          return v ?? t;
+        });
       }
     });
   }
@@ -608,19 +615,22 @@ sealed class E621 extends Site {
   }
 
   // #region User API
-  static e621.UserDetailed? resolveGetUserFuture(http.Response v,
-      [bool updateIfLoggedIn = true]) {
+  static e621.UserDetailed? resolveGetUserFuture(
+    http.Response v, [
+    bool updateIfLoggedIn = true,
+  ]) {
     lm.logResponseSmart(v, _logger);
     if (!v.statusCodeInfo.isSuccessful) {
       return null;
     } else {
+      e621.UserDetailed t;
       try {
-        final t = e621.UserLoggedInDetail.fromRawJson(v.body);
-        if (updateIfLoggedIn) tryUpdateLoggedInUser(t);
-        return t;
-      } catch (e) {
-        return e621.UserDetailed.fromRawJson(v.body);
+        t = e621.UserLoggedInDetail.fromRawJson(v.body);
+      } catch (_) {
+        t = e621.UserDetailed.fromRawJson(v.body);
       }
+      if (updateIfLoggedIn) tryUpdateLoggedInUser(t);
+      return t;
     }
   }
 
