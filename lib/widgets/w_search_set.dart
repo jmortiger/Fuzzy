@@ -17,6 +17,7 @@ import '../web/e621/e621_access_data.dart';
 
 class WSearchSet extends StatefulWidget {
   final String? initialSearchName;
+  final List<String>? initialSearchIds;
   final String? initialSearchShortname;
   final String? initialSearchCreatorName;
   final int? initialSearchCreatorId;
@@ -41,6 +42,7 @@ class WSearchSet extends StatefulWidget {
     super.key,
     required this.onSelected,
     this.initialSearchName,
+    this.initialSearchIds,
     this.initialSearchShortname,
     this.initialSearchCreatorName,
     this.initialSearchCreatorId,
@@ -70,6 +72,7 @@ class WSearchSet extends StatefulWidget {
     this.popOnSelect = true,
   })  : hasInitialSearch = false,
         initialSearchName = null,
+        initialSearchIds = null,
         initialSearchShortname = null,
         initialSearchCreatorName = null,
         initialSearchCreatorId = null,
@@ -90,6 +93,7 @@ class WSearchSet extends StatefulWidget {
     this.popOnSelect = true,
   })  : hasInitialSearch = true,
         initialSearchName = null,
+        initialSearchIds = null,
         initialSearchShortname = null,
         initialSearchCreatorName = null,
         initialSearchCreatorId = null,
@@ -110,6 +114,8 @@ class _WSearchSetState extends State<WSearchSet> {
   late SetSearchParameterModel p;
   String? get searchName => p.searchName;
   set searchName(String? value) => p.searchName = value;
+  List<int>? get searchIds => p.searchIds;
+  set searchIds(List<int>? value) => p.searchIds = value;
   String? get searchShortname => p.searchShortname;
   set searchShortname(String? value) => p.searchShortname = value;
   String? get searchCreatorName => p.searchCreatorName;
@@ -159,6 +165,7 @@ class _WSearchSetState extends State<WSearchSet> {
               ? e621
                   .sendRequest(e621.initSetSearch(
                     searchName: searchName,
+                    searchIds: searchIds,
                     searchShortname: searchShortname,
                     searchCreatorName: searchCreatorName,
                     searchCreatorId: searchCreatorId,
@@ -255,12 +262,28 @@ class _WSearchSetState extends State<WSearchSet> {
                       ListTile(
                         title: TextField(
                           maxLines: 1,
-                          onChanged: (v) => searchName = v,
+                          onChanged: (v) => searchIds = v
+                              .replaceAll(RegExp("[^0-9]+"), " ")
+                              .trim()
+                              .split(" ")
+                              .map((e) => int.parse(e))
+                              .toList(),
                           decoration: const InputDecoration.collapsed(
-                              hintText: "Set Name"),
-                          controller: searchName != null
-                              ? TextEditingController(text: searchName!)
+                              hintText: "Set Ids (comma separated list)"),
+                          controller: searchIds != null
+                              ? TextEditingController(
+                                  text: searchIds!.join(", "))
                               : null,
+                          inputFormatters: [
+                            TextInputFormatter.withFunction(
+                              (oldValue, newValue) => TextEditingValue(
+                                text: newValue.text
+                                    .replaceAll(RegExp("[^0-9, ]+"), ""),
+                                selection: TextSelection.collapsed(
+                                    offset: newValue.selection.start),
+                              ),
+                            )
+                          ],
                         ),
                       ),
                       ListTile(
@@ -320,8 +343,11 @@ class _WSearchSetState extends State<WSearchSet> {
                     aspectRatio: 1,
                     child: CircularProgressIndicator(),
                   ),
-                if (loadingSets == null && sets?.firstOrNull == null)
-                  const Text("No Results"),
+                if (loadingSets == null && sets == null)
+                  if (sets!.firstOrNull == null)
+                    const Text("No Results")
+                  else
+                    Text("${sets!.length} Results"),
                 if (sets?.firstOrNull != null)
                   ...sets!.map((e) {
                     return WSetTile(
@@ -621,6 +647,7 @@ class WSetTile extends StatelessWidget {
 class SetSearchParameterModel with PageSearchParameterNullable {
   SetSearchParameterModel({
     this.searchName,
+    this.searchIds,
     this.searchShortname,
     this.searchCreatorName,
     this.searchCreatorId,
@@ -630,6 +657,7 @@ class SetSearchParameterModel with PageSearchParameterNullable {
   });
 
   String? searchName;
+  List<int>? searchIds;
 
   String? searchShortname;
 
@@ -657,6 +685,7 @@ class SetSearchParameterNotifier extends ChangeNotifier
     implements SetSearchParameterModel {
   SetSearchParameterNotifier({
     String? searchName,
+    List<int>? searchIds,
     String? searchShortname,
     String? searchCreatorName,
     int? searchCreatorId,
@@ -664,6 +693,7 @@ class SetSearchParameterNotifier extends ChangeNotifier
     int? limit,
     String? page,
   })  : _searchName = searchName,
+        _searchIds = searchIds,
         _searchShortname = searchShortname,
         _searchCreatorName = searchCreatorName,
         _searchCreatorId = searchCreatorId,
@@ -677,6 +707,15 @@ class SetSearchParameterNotifier extends ChangeNotifier
   @override
   set searchName(String? value) {
     _searchName = value;
+    notifyListeners();
+  }
+
+  List<int>? _searchIds;
+  @override
+  List<int>? get searchIds => _searchIds;
+  @override
+  set searchIds(List<int>? value) {
+    _searchIds = value;
     notifyListeners();
   }
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:e621/e621.dart' as e621;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:http/http.dart';
@@ -157,7 +158,7 @@ class _WSearchPoolState extends State<WSearchPool> {
             // final f =
             //     await Future.wait(v.map((e) => widget.filterResultsAsync!(e)));
             // // for (var i = 0; i < v.length; i++) {
-            // //   if (f[i]) 
+            // //   if (f[i])
             // // }
             // return f.indexed.where((e)=> e.$2).map((e)=>v[e.$1]).toList();
             final r = <e621.Pool>[];
@@ -226,13 +227,30 @@ class _WSearchPoolState extends State<WSearchPool> {
                       : null,
                 ),
               ),
-              // TODO: Pool ids?
-              // WIntegerField(
-              //   name: "Pool Ids",
-              //   getVal: () => searchId ?? -1,
-              //   setVal: (v) => searchId,
-              //   validateVal: (p1) => p1 != null && p1 >= 0,
-              // ),
+              ListTile(
+                title: TextField(
+                  maxLines: 1,
+                  onChanged: (v) => searchId = v
+                      .replaceAll(RegExp("[^0-9]+"), " ")
+                      .trim()
+                      .split(" ")
+                      .map((e) => int.parse(e))
+                      .toList(),
+                  decoration: const InputDecoration.collapsed(
+                      hintText: "Pool Ids (comma separated list)"),
+                  controller: searchId != null
+                      ? TextEditingController(text: searchId!.join(", "))
+                      : null,
+                  inputFormatters: [
+                    TextInputFormatter.withFunction((oldValue, newValue) =>
+                        TextEditingValue(
+                            text: newValue.text
+                                .replaceAll(RegExp("[^0-9, ]+"), ""),
+                            selection: TextSelection.collapsed(
+                                offset: newValue.selection.start)))
+                  ],
+                ),
+              ),
               ListTile(
                 title: TextField(
                   maxLines: 1,
@@ -314,8 +332,11 @@ class _WSearchPoolState extends State<WSearchPool> {
               aspectRatio: 1,
               child: CircularProgressIndicator(),
             ),
-          if (loadingPools == null && pools?.firstOrNull == null)
-            const Text("No Results"),
+          if (loadingPools == null && pools == null)
+            if (pools!.firstOrNull == null)
+              const Text("No Results")
+            else
+              Text("${pools!.length} Results"),
           if (pools?.firstOrNull != null)
             ...pools!.map((e) {
               return WPoolTile(
