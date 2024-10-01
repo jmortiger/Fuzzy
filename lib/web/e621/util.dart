@@ -7,6 +7,7 @@ bool hasBlacklistedTag(Iterable<String> tagList) => tagList.reduceUntilTrue(
         ? (true, true)
         : (false, false),
     false);
+
 /// Accounts for blacklisted tag
 bool isBlacklisted(E6PostResponse post) =>
     (SearchView.i.blacklistFavs || !post.isFavorited) &&

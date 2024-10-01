@@ -251,7 +251,7 @@ class SubscriptionManager {
     final l = await SubscriptionManager.loadFromStorageAsync();
     for (int i = 0; i < l.length; ++i) {
       final res = (await e621.sendRequest(
-          e621.initPostSearchRequest(
+          e621.initPostSearch(
               credentials: accessData?.cred,
               tags: l[i].tag,
               limit: e621.maxPostsPerSearch)
@@ -326,7 +326,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
         else
           FutureBuilder(
             future: e621.sendRequest(
-                e621.initPostSearchRequest(
+                e621.initPostSearch(
                     tags: e.cachedPosts.length > e621.maxTagsPerSearch
                         ? e.cachedPosts.fold("", (prior, t) => "~id:$t $prior")
                         : e.tag,

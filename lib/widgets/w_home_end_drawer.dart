@@ -496,12 +496,12 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                         height: double.maxFinite,
                         child: WBackButton.noOverlay(
                             child: SingleChildScrollView(
-                              child: WCommentsLoader(
-                                                        postId: util.devData.isAssigned
+                          child: WCommentsLoader(
+                            postId: util.devData.isAssigned
                                 ? util.devData.$["e621"]["posts"]["comments2"]
                                 : 1699321,
-                                                      ),
-                            )),
+                          ),
+                        )),
                       )));
             },
           ),

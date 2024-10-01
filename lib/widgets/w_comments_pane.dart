@@ -44,7 +44,10 @@ class _WCommentsLoaderState extends State<WCommentsLoader> {
                 // searchOrder: e6.CommentOrder.updatedAtDesc,
               ))
               .then((v) => e6.Comment.fromRawJsonResults(v.body))
-              .then((v) => v.map((e) => WComment(comment: e, mainAxisSize: MainAxisSize.max)).toList())
+              .then((v) => v
+                  .map((e) =>
+                      WComment(comment: e, mainAxisSize: MainAxisSize.max))
+                  .toList())
               .onError(
               (e, s) {
                 logger.severe(e, e, s);
@@ -82,7 +85,8 @@ class WCommentsPane extends StatelessWidget {
 class WComment extends StatelessWidget {
   final e6.Comment comment;
   final MainAxisSize mainAxisSize;
-  const WComment({super.key, required this.comment, this.mainAxisSize = MainAxisSize.min});
+  const WComment(
+      {super.key, required this.comment, this.mainAxisSize = MainAxisSize.min});
 
   @override
   Widget build(BuildContext context) {

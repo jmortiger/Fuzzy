@@ -326,7 +326,7 @@ class SetViewPageBuilder extends StatelessWidget
   Widget build(BuildContext context) {
     return FutureBuilder(
       future: E621
-          .sendRequest(e621.initGetSetRequest(setId))
+          .sendRequest(e621.initSetGet(setId))
           .toResponse()
           .then((v) => SetViewPage(
                 set: SetModel.fromRawJson(v.body),

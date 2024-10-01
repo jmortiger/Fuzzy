@@ -56,7 +56,9 @@ T defaultOnError<T>(Object? error, StackTrace trace) {
 
 // #region User Message
 const useSnackbar = true;
-ScaffoldFeatureController showUserMessage({
+
+/// Checks if mounted
+ScaffoldFeatureController? showUserMessage({
   required BuildContext context,
   required Widget content,
   bool autoHidePrior = true,
@@ -65,15 +67,17 @@ ScaffoldFeatureController showUserMessage({
   List<(String label, VoidCallback onTap)>? actions,
   bool addDismissOption = true,
 }) =>
-    (useSnackbar ? _showUserMessageSnackbar : _showUserMessageBanner)(
-      context: context,
-      content: content,
-      action: action,
-      actions: actions,
-      autoHidePrior: autoHidePrior,
-      duration: duration,
-      addDismissOption: addDismissOption,
-    );
+    context.mounted
+        ? (useSnackbar ? _showUserMessageSnackbar : _showUserMessageBanner)(
+            context: context,
+            content: content,
+            action: action,
+            actions: actions,
+            autoHidePrior: autoHidePrior,
+            duration: duration,
+            addDismissOption: addDismissOption,
+          )
+        : null;
 
 ScaffoldFeatureController _showUserMessageSnackbar({
   required BuildContext context,
@@ -391,3 +395,12 @@ const defaultLinkStyle = TextStyle(
   color: Colors.amber,
   decoration: TextDecoration.underline,
 );
+
+T? contextCheck<T>(
+  BuildContext? context,
+  T Function(BuildContext) ifTrue, [
+  T? Function(BuildContext?)? ifFalse,
+]) =>
+    context != null && context.mounted
+        ? ifTrue(context)
+        : ifFalse?.call(context) ?? null as T?;

@@ -275,7 +275,7 @@ Future<List<SavedElementRecord>?> showBestImportElementEditDialogue(
       return null;
     });
     return f.then(
-      (data) => data != null
+      (data) => data != null && context.mounted
           ? showDialog<List<SavedElementRecord>>(
               context: context,
               builder: (context) {

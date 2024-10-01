@@ -748,8 +748,10 @@ class SearchView implements SearchViewData {
   @override
   bool get lazyBuilding => _lazyBuilding;
   set lazyBuilding(bool v) => _lazyBuilding = v;
+
   /// {@macro blacklistFavs}
   bool _blacklistFavs;
+
   /// {@macro blacklistFavs}
   @override
   bool get blacklistFavs => _blacklistFavs;

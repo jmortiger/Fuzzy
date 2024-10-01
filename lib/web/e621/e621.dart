@@ -387,12 +387,12 @@ sealed class E621 extends Site {
     return client.send(request);
   }
 
-  static http.Request initDeleteFavoriteRequest(
+  static http.Request initFavoriteDelete(
     int postId, {
     String? username,
     String? apiKey,
   }) =>
-      e621.initDeleteFavoriteRequest(
+      e621.initFavoriteDelete(
         postId: postId,
         credentials: getAuth(username, apiKey),
       );
@@ -401,8 +401,8 @@ sealed class E621 extends Site {
     String? username,
     String? apiKey,
   }) {
-    return sendRequest(initDeleteFavoriteRequest(postId,
-            username: username, apiKey: apiKey))
+    return sendRequest(
+            initFavoriteDelete(postId, username: username, apiKey: apiKey))
         .toResponse()
         .onError(defaultOnError)
         .then((v) {
@@ -420,8 +420,8 @@ sealed class E621 extends Site {
     String? username,
     String? apiKey,
   }) {
-    return sendRequest(initDeleteFavoriteRequest(post.id,
-            username: username, apiKey: apiKey))
+    return sendRequest(
+            initFavoriteDelete(post.id, username: username, apiKey: apiKey))
         .toResponse()
         .onError(defaultOnError)
         .then((v) {
@@ -442,8 +442,8 @@ sealed class E621 extends Site {
     void Function(Object? error, StackTrace trace)? onError = defaultOnError,
   }) {
     return sendRequestBatch(
-        () => postIdGenerator.map((e) =>
-            initDeleteFavoriteRequest(e, username: username, apiKey: apiKey)),
+        () => postIdGenerator.map(
+            (e) => initFavoriteDelete(e, username: username, apiKey: apiKey)),
         onComplete: (responses) => onComplete?.call(responses.map((v) {
               v.stream.asBroadcastStream().last.then((v1) {
                 lm.logResponseSmart(v, _logger);
@@ -507,7 +507,7 @@ sealed class E621 extends Site {
     String? username,
     String? apiKey,
   }) =>
-      e621.initCreateFavoriteRequest(
+      e621.initFavoriteCreate(
         postId: postId,
         credentials: getAuth(username, apiKey),
       );
@@ -572,7 +572,7 @@ sealed class E621 extends Site {
     String? username,
     String? apiKey,
   }) =>
-      e621.initPostSearchRequest(
+      e621.initPostSearch(
         credentials: getAuth(username, apiKey),
         tags: fillTagTemplate(tags),
         limit: limit ?? SearchView.i.postsPerPage,
@@ -836,7 +836,7 @@ sealed class E621 extends Site {
       int limit = sLimit,
       required int pageNumber,
     }) =>
-        e621.initPostSearchRequest(
+        e621.initPostSearch(
           credentials: cred,
           tags: tags,
           limit: limit,
@@ -1065,12 +1065,12 @@ sealed class E621 extends Site {
       (username?.isNotEmpty ?? false)
           ? username
           : E621AccessData.fallback?.cred.username;
-  static String? getValidApiKey(
+  /* static String? getValidApiKey(
     String? apiKey,
   ) =>
       (apiKey?.isNotEmpty ?? false)
           ? apiKey
-          : E621AccessData.fallback?.cred.apiKey;
+          : E621AccessData.fallback?.cred.apiKey; */
   static bool isValidUsername(
     String? username,
   ) =>
@@ -1109,7 +1109,7 @@ sealed class E621 extends Site {
     if (v != null) {
       _print("Adding ${postListing.id} to set ${v.id}");
       var res = await E621
-          .sendRequest(e621.initAddToSetRequest(
+          .sendRequest(e621.initSetAddPosts(
             v.id,
             [postListing.id],
             credentials: cred ?? E621AccessData.fallback?.cred,
@@ -1328,7 +1328,8 @@ Future<({String username, String apiKey})?> launchLogInDialog(
           E621AccessData.tryWrite().then<void>(
             (success) => success
                 ? showUserMessage(
-                    context: context,
+                    context:
+                        context.mounted ? context : getMountedContext!.call(),
                     content: const Text("Successfully stored! Test it!"),
                     duration: snackbarDuration,
                     action: getMountedContext?.call().mounted ?? false

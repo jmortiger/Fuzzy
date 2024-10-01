@@ -165,7 +165,7 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
             _logger.severe(e, e, s);
             return await compute(
               processCompressedTagDbData,
-              await E621.sendRequest(e621.initDbExportRequest()),
+              await E621.sendRequest(e621.initDbExportTagsGet()),
             );
           }
         }
@@ -185,7 +185,7 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
       _logger.severe(e, e, s);
       return await compute(
         processCompressedTagDbData,
-        await E621.sendRequest(e621.initDbExportRequest()),
+        await E621.sendRequest(e621.initDbExportTagsGet()),
       );
     }
   }
@@ -193,10 +193,10 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
 
 Future<String> getDatabaseFileFromServer() async =>
     processCompressedPlaintextData(
-        await E621.sendRequest(e621.initDbExportRequest()));
+        await E621.sendRequest(e621.initDbExportTagsGet()));
 // Future<String> getDatabaseFileFromServer() async => compute(
 //     processCompressedPlaintextData,
-//     await E621.sendRequest(e621.initDbExportRequest()));
+//     await E621.sendRequest(e621.initDbExportTagsGet()));
 
 Future<String> getDatabaseFileFromCompressedFileIo(File f) =>
     compute(processCompressedPlaintextData, f);
@@ -214,7 +214,7 @@ Future<String> getDatabaseFileFromCompressedBytes(Uint8List f) =>
             a.GZipDecoder().decodeBytes(f.toList(growable: false)))
         .bytesToString();
 Future<String> _getDatabaseFileFromServer(Null _) =>
-    E621.sendRequest(e621.initDbExportRequest()).then((value) => value.stream
+    E621.sendRequest(e621.initDbExportTagsGet()).then((value) => value.stream
         .toBytes()
         .then((v) => http.ByteStream.fromBytes(
                 a.GZipDecoder().decodeBytes(v.toList(growable: false)))

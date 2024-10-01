@@ -430,7 +430,7 @@ class _PostViewPageState
               MaterialPageRoute(
                 builder: (_) => FutureBuilder(
                   future: E621
-                      .sendRequest(e621.initGetPostRequest(e))
+                      .sendRequest(e621.initPostGet(e))
                       .toResponse()
                       .then((v) => jsonDecode(v.body)),
                   builder: (_, snapshot) {
@@ -710,6 +710,7 @@ class _PostViewPageState
     required e621.TagCategory category,
   }) {
     SavedDataE6.init();
+    BuildContext ctx(BuildContext ctx) => ctx.mounted ? ctx : context;
     showDialog(
       context: context,
       builder: (context) {
@@ -826,7 +827,8 @@ class _PostViewPageState
                       ).then((e) => e == null
                           ? ""
                           : showSavedElementEditDialogue(
-                              this.context,
+                              // ignore: use_build_context_synchronously
+                              ctx(context),
                               initialData: "${e.searchString} $tag",
                               initialParent: e.parent,
                               initialTitle: e.title,
@@ -850,13 +852,15 @@ class _PostViewPageState
                 ListTile(
                   title: const Text("Add to clipboard"),
                   onTap: () {
-                    Clipboard.setData(ClipboardData(text: tag)).then((v) {
-                      util.showUserMessage(
-                        context: context,
-                        content: Text("$tag added to clipboard."),
-                      );
-                      Navigator.pop(context);
-                    });
+                    Clipboard.setData(ClipboardData(text: tag))
+                        // ignore: use_build_context_synchronously
+                        .then((v) => util.contextCheck(ctx(context), (context) {
+                              util.showUserMessage(
+                                context: context,
+                                content: Text("$tag added to clipboard."),
+                              );
+                              Navigator.pop(context);
+                            }));
                   },
                 ),
                 ListTile(
@@ -868,7 +872,8 @@ class _PostViewPageState
                       (value) => value
                           ? launchUrl(url)
                           : showDialog(
-                              context: context,
+                              // ignore: use_build_context_synchronously
+                              context: (ctx(context)),
                               builder: (context) => AlertDialog(
                                 content: const Text("Cannot open in browser"),
                                 actions: [
@@ -1092,7 +1097,7 @@ class PostViewPageLoader extends StatelessWidget
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: e621.sendRequest(e621.initGetPostRequest(
+      future: e621.sendRequest(e621.initPostGet(
         postId,
         credentials: E621AccessData.fallback?.cred,
       )),
@@ -1230,9 +1235,12 @@ class _WarnPageState extends State<WarnPage> {
                 continued = v;
               });
             }
-            v == true
-                ? widget.onSuccess?.call(context)
-                : widget.onCancel.call(context);
+            final BuildContext context;
+            if ((context = this.context).mounted) {
+              v == true
+                  ? widget.onSuccess?.call(context)
+                  : widget.onCancel.call(context);
+            }
           });
           // setState(() {
           launchedDialog = true;

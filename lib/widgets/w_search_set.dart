@@ -157,7 +157,7 @@ class _WSearchSetState extends State<WSearchSet> {
       sets = null;
       loadingSets = (!showEditableSets
               ? e621
-                  .sendRequest(e621.initSearchSetsRequest(
+                  .sendRequest(e621.initSetSearch(
                     searchName: searchName,
                     searchShortname: searchShortname,
                     searchCreatorName: searchCreatorName,
@@ -174,7 +174,7 @@ class _WSearchSetState extends State<WSearchSet> {
                   ))
                   .then(
                     (value) => e621
-                        .sendRequest(e621.initSearchSetsRequest(
+                        .sendRequest(e621.initSetSearch(
                           searchIds:
                               e621.ModifiablePostSets.fromRawJson(value.body)
                                   .all
@@ -189,7 +189,7 @@ class _WSearchSetState extends State<WSearchSet> {
                     // (value) => Future.wait(
                     //   e621.ModifiablePostSets.fromRawJson(value.body).all.map(
                     //         (e) => e621
-                    //             .sendRequest(e621.initGetSetRequest(e.id))
+                    //             .sendRequest(e621.initSetGet(e.id))
                     //             .then((e1) => e1.body),
                     //       ),
                     // ).then(
@@ -345,7 +345,8 @@ class _WSearchSetState extends State<WSearchSet> {
                             ))).then((v) {
                   if (v == null) return;
                   if (widget.returnOnCreateSet) {
-                    Navigator.pop(context, v as e621.PostSet);
+                    // ignore: use_build_context_synchronously
+                    Navigator.pop(this.context, v as e621.PostSet);
                   }
                   if (sets != null) {
                     setState(() {
@@ -558,6 +559,7 @@ class WSetTile extends StatelessWidget {
                               ).then((e) => e == null
                                   ? ""
                                   : showSavedElementEditDialogue(
+                                      // ignore: use_build_context_synchronously
                                       context,
                                       initialData:
                                           "${e.searchString} ${SearchView.i.preferSetShortname ? set.searchByShortname : set.searchById}",
@@ -590,8 +592,10 @@ class WSetTile extends StatelessWidget {
                             Clipboard.setData(ClipboardData(text: text))
                                 .then((v) {
                               util.showUserMessage(
+                                  // ignore: use_build_context_synchronously
                                   context: context,
                                   content: Text("$text added to clipboard."));
+                              // ignore: use_build_context_synchronously
                               Navigator.pop(context);
                             });
                           },

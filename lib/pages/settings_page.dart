@@ -76,6 +76,7 @@ class SettingsPage extends StatelessWidget implements IRoute<SettingsPage> {
                 .then((v) {
               _print(v);
               util.showUserMessage(
+                // ignore: use_build_context_synchronously
                 context: context,
                 content: const Text("Saved!"),
                 action: context.mounted
@@ -102,6 +103,7 @@ class SettingsPage extends StatelessWidget implements IRoute<SettingsPage> {
           TextButton(
             onPressed: () => settings.loadFromFile().then((v) {
               util.showUserMessage(
+                // ignore: use_build_context_synchronously
                 context: context,
                 content: const Text("Loaded from file!"),
                 action: context.mounted

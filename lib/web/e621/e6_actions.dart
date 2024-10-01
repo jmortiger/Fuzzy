@@ -49,8 +49,8 @@ Future<E6PostResponse?> _addPostToFavorites({
   final id = postId ??= post!.id;
   final out = "Adding $id to favorites...";
   _logger.finer(out);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(out));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(out));
   }
   if (AppSettings.i!.upvoteOnFavorite) {
     (post != null
@@ -70,13 +70,13 @@ Future<E6PostResponse?> _addPostToFavorites({
       var postRet = v.statusCodeInfo.isSuccessful
           ? E6PostMutable.fromRawJson(v.body)
           : post;
-      if (context?.mounted ?? false) {
+      if (context != null && context.mounted) {
         !v.statusCodeInfo.isSuccessful
             ? util.showUserMessage(
-                context: context!,
+                context: context,
                 content: Text("${v.statusCode}: ${v.reasonPhrase}"))
             : util.showUserMessage(
-                context: context!,
+                context: context,
                 content: Text("$id added from favorites"),
                 action: (
                     "Undo",
@@ -120,12 +120,12 @@ Future<E6PostResponse?> _removePostFromFavorites({
   final id = postId ?? post!.id;
   final out = "Removing $id from favorites...";
   _logger.finer(out);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(out));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(out));
   }
   return E621
       .sendRequest(
-        E621.initDeleteFavoriteRequest(
+        E621.initFavoriteDelete(
           id,
           username: E621AccessData.fallback?.username,
           apiKey: E621AccessData.fallback?.apiKey,
@@ -137,13 +137,13 @@ Future<E6PostResponse?> _removePostFromFavorites({
     var postRet = v.statusCodeInfo.isSuccessful
         ? E6PostMutable.fromRawJson(v.body)
         : post;
-    if (context?.mounted ?? false) {
+    if (context != null && context.mounted) {
       !v.statusCodeInfo.isSuccessful
           ? util.showUserMessage(
-              context: context!,
+              context: context,
               content: Text("${v.statusCode}: ${v.reasonPhrase}"))
           : util.showUserMessage(
-              context: context!,
+              context: context,
               content: Text("$id removed from favorites"),
               action: (
                   "Undo",
@@ -172,8 +172,8 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithPosts({
 }) {
   var str = "Adding ${posts.length} posts to favorites...";
   _logger.finer(str);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(str));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(str));
   }
   if (AppSettings.i!.upvoteOnFavorite) {
     voteOnPostsWithPosts(isUpvote: true, posts: posts).map((e) => e.ignore());
@@ -192,16 +192,16 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithPosts({
           "$total posts added to favorites!";
       responses.where((r) => r.statusCode == 422).forEach((r) async {
         var pId = int.parse(r.request!.url.queryParameters["post_id"]!);
-        if ((context?.mounted ?? false) &&
-            Provider.of<cf.CachedFavorites>(context!, listen: false)
+        if ((context != null && context.mounted) &&
+            Provider.of<cf.CachedFavorites>(context, listen: false)
                 .postIds
                 .contains(pId)) {
           sbs += " $pId Cached";
         }
       });
-      if (context?.mounted ?? false) {
+      if (context != null && context.mounted) {
         util.showUserMessage(
-          context: context!,
+          context: context,
           content: Text(sbs),
           action: (
             "Undo",
@@ -236,8 +236,8 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithIds({
 }) {
   var str = "Adding ${postIds.length} posts to favorites...";
   _logger.finer(str);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(str));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(str));
   }
   if (AppSettings.i!.upvoteOnFavorite) {
     voteOnPostsWithPostIds(isUpvote: true, postIds: postIds)
@@ -256,16 +256,16 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithIds({
           "$total posts added to favorites!";
       responses.where((r) => r.statusCode == 422).forEach((r) async {
         var pId = int.parse(r.request!.url.queryParameters["post_id"]!);
-        if ((context?.mounted ?? false) &&
-            Provider.of<cf.CachedFavorites>(context!, listen: false)
+        if ((context != null && context.mounted) &&
+            Provider.of<cf.CachedFavorites>(context, listen: false)
                 .postIds
                 .contains(pId)) {
           sbs += " $pId Cached";
         }
       });
-      if (context?.mounted ?? false) {
+      if (context != null && context.mounted) {
         util.showUserMessage(
-          context: context!,
+          context: context,
           content: Text(sbs),
           action: (
             "Undo",
@@ -301,8 +301,8 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithPosts({
 }) {
   var str = "Removing ${posts.length} posts from favorites...";
   _logger.finer(str);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(str));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(str));
   }
   final pIds = posts.map((e) => e.id);
   return E621.sendDeleteFavoriteRequestBatch(
@@ -318,16 +318,16 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithPosts({
           "$total posts removed from favorites!";
       // responses.where((r) => r.statusCode == 422).forEach((r) async {
       //   var pId = int.parse(r.request!.url.queryParameters["post_id"]!);
-      //   if ((context?.mounted ?? false) &&
+      //   if ((context != null && context.mounted) &&
       //       Provider.of<cf.CachedFavorites>(context!, listen: false)
       //           .postIds
       //           .contains(pId)) {
       //     sbs += " $pId Cached";
       //   }
       // });
-      if (context?.mounted ?? false) {
+      if (context != null && context.mounted) {
         util.showUserMessage(
-          context: context!,
+          context: context,
           content: Text(sbs),
           action: (
             "Undo",
@@ -363,8 +363,8 @@ Stream<E6BatchActionEvent> removeFavoritesWithPosts({
 }) async* {
   var str = "Removing ${posts.length} posts from favorites...";
   _logger.finer(str);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(str));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(str));
   }
   final pIds = posts.map((e) => e.id).toList();
   final totalProgressSend = pIds.length;
@@ -385,7 +385,7 @@ Stream<E6BatchActionEvent> removeFavoritesWithPosts({
   for (var i = 0; i < pIds.length; i++) {
     results.add(e621
         .sendRequest(
-      e621.initDeleteFavoriteRequest(
+      e621.initFavoriteDelete(
         postId: pIds[i],
         credentials: E621AccessData.fallback?.cred,
       ),
@@ -439,14 +439,14 @@ Stream<E6BatchActionEvent> removeFavoritesWithPosts({
   //         "$total posts removed from favorites!";
   //     // responses.where((r) => r.statusCode == 422).forEach((r) async {
   //     //   var pId = int.parse(r.request!.url.queryParameters["post_id"]!);
-  //     //   if ((context?.mounted ?? false) &&
+  //     //   if ((context != null && context.mounted) &&
   //     //       Provider.of<cf.CachedFavorites>(context!, listen: false)
   //     //           .postIds
   //     //           .contains(pId)) {
   //     //     sbs += " $pId Cached";
   //     //   }
   //     // });
-  //     if (context?.mounted ?? false) {
+  //     if (context != null && context.mounted) {
   //       ScaffoldMessenger.of(context!)
   //         ..hideCurrentSnackBar()
   //         ..showSnackBar(
@@ -489,8 +489,8 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithIds({
 }) {
   var str = "Removing ${postIds.length} posts from favorites...";
   _logger.finer(str);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(str));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(str));
   }
   return E621.sendDeleteFavoriteRequestBatch(
     postIds,
@@ -505,16 +505,16 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithIds({
           "$total posts removed favorites!";
       responses.where((r) => r.statusCode == 422).forEach((r) async {
         var pId = int.parse(r.request!.url.queryParameters["post_id"]!);
-        if ((context?.mounted ?? false) &&
-            Provider.of<cf.CachedFavorites>(context!, listen: false)
+        if ((context != null && context.mounted) &&
+            Provider.of<cf.CachedFavorites>(context, listen: false)
                 .postIds
                 .contains(pId)) {
           sbs += " $pId Cached";
         }
       });
-      if (context?.mounted ?? false) {
+      if (context != null && context.mounted) {
         util.showUserMessage(
-          context: context!,
+          context: context,
           content: Text(sbs),
           action: (
             "Undo",
@@ -722,7 +722,7 @@ Future<e621.PostSet?> addToSetWithPosts({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.initAddToSetRequest(
+        .sendRequest(e621.initSetAddPosts(
           v.id,
           posts.map((e) => e.id).toList(),
           credentials: E621AccessData.fallback?.cred,
@@ -973,7 +973,7 @@ Future<e621.PostSet?> addToSetWithIds({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.initAddToSetRequest(
+        .sendRequest(e621.initSetAddPosts(
           v.id,
           postIds,
           credentials: E621AccessData.fallback?.cred,
@@ -1202,7 +1202,7 @@ Future<e621.PostSet?> addToSetWithPost({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.initAddToSetRequest(
+        .sendRequest(e621.initSetAddPosts(
           v.id,
           [post.id],
           credentials: E621AccessData.fallback?.cred,
@@ -1431,7 +1431,7 @@ Future<e621.PostSet?> addToSetWithId({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.initAddToSetRequest(
+        .sendRequest(e621.initSetAddPosts(
           v.id,
           [postId],
           credentials: E621AccessData.fallback?.cred,
@@ -1518,8 +1518,8 @@ List<Future<E6PostResponse>> voteOnPostsWithPosts({
   final message =
       "${isUpvote ? "Upvoting" : "Downvoting"} ${posts.length} posts...";
   _logger.finer(message);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(message));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(message));
   }
   return posts.map((post) {
     lm.logRequest(
@@ -1545,7 +1545,7 @@ List<Future<E6PostResponse>> voteOnPostsWithPosts({
         _logger.info("${post.id} vote done");
         lm.logResponseSmart(v, _logger, overrideLevel: lm.LogLevel.INFO);
         // TODO: response
-        /* if (context?.mounted ?? false) {
+        /* if (context != null && context.mounted) {
             if (!v.statusCodeInfo.isSuccessful) {
               util.showUserMessage(
                   context: context!,
@@ -1583,8 +1583,8 @@ List<Future<e621.UpdatedScore?>> voteOnPostsWithPostIds({
   final message =
       "${isUpvote ? "Upvoting" : "Downvoting"} ${postIds.length} posts...";
   _logger.finer(message);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(message));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(message));
   }
   return postIds
       .map((postId) => e621
@@ -1600,7 +1600,7 @@ List<Future<e621.UpdatedScore?>> voteOnPostsWithPostIds({
             (v) {
               lm.logResponseSmart(v, _logger);
               // TODO: Response
-              // if (context?.mounted ?? false) {
+              // if (context != null && context.mounted) {
               //   if (!v.statusCodeInfo.isSuccessful) {
               //     ScaffoldMessenger.of(context!)
               //       ..hideCurrentSnackBar()
@@ -1643,8 +1643,8 @@ Future<E6PostResponse> voteOnPostWithPost({
 }) {
   final message = "${isUpvote ? "Upvoting" : "Downvoting"} ${post.id}...";
   _logger.finer(message);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(message));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(message));
   }
   return e621
       .sendRequest(
@@ -1658,16 +1658,16 @@ Future<E6PostResponse> voteOnPostWithPost({
       .then(
     (v) {
       lm.logResponseSmart(v, _logger);
-      if (context?.mounted ?? false) {
+      if (context != null && context.mounted) {
         if (!v.statusCodeInfo.isSuccessful) {
           util.showUserMessage(
-              context: context!,
+              context: context,
               content: Text("${v.statusCode}: ${v.reasonPhrase}"));
           return post;
         } else {
           final update = e621.UpdatedScore.fromJsonRaw(v.body);
           util.showUserMessage(
-              context: context!,
+              context: context,
               content: Text(createPostVoteStringStrict(
                 postId: post.id,
                 score: update,
@@ -1694,9 +1694,9 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
   required int postId,
 }) {
   _print("${isUpvote ? "Upvoting" : "Downvoting"} $postId...");
-  if (context?.mounted ?? false) {
+  if (context != null && context.mounted) {
     util.showUserMessage(
-      context: context!,
+      context: context,
       content: Text("${isUpvote ? "Upvoting" : "Downvoting"} $postId..."),
     );
   }
@@ -1712,17 +1712,17 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
       .then(
     (v) {
       lm.logResponseSmart(v, _logger);
-      if (context?.mounted ?? false) {
+      if (context != null && context.mounted) {
         if (!v.statusCodeInfo.isSuccessful) {
           util.showUserMessage(
-            context: context!,
+            context: context,
             content: Text("${v.statusCode}: ${v.reasonPhrase}"),
           );
           return null;
         } else {
           final update = e621.UpdatedScore.fromJsonRaw(v.body);
           util.showUserMessage(
-            context: context!,
+            context: context,
             content: Text(createPostVoteStringStrict(
               postId: postId,
               score: update,
@@ -1782,15 +1782,15 @@ Future<String> downloadPostWithPost({
   final id = post.id;
   final out = "Downloading post $id...";
   _logger.finer(out);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(out));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(out));
   }
   return downloadPostRoot(post).then((v) {
     final out = "Downloaded $id to ${v ?? "an unknown path"}";
     _logger.info(out);
-    if (context?.mounted ?? false) {
+    if (context != null && context.mounted) {
       util.showUserMessage(
-        context: context!,
+        context: context,
         content: Text(out),
       );
     }
@@ -1798,9 +1798,9 @@ Future<String> downloadPostWithPost({
   }).onError((e, s) {
     final out = "Failed to download $id";
     _logger.severe(out, e, s);
-    if (context?.mounted ?? false) {
+    if (context != null && context.mounted) {
       util.showUserMessage(
-        context: context!,
+        context: context,
         content: Text("$out ($e)"),
         duration: const Duration(seconds: 10),
       );
@@ -1814,17 +1814,18 @@ Future<String> downloadPostWithId({
   required final int postId,
 }) =>
     e621
-        .sendRequest(e621.initGetPostRequest(postId))
+        .sendRequest(e621.initPostGet(postId))
         .then((r) => downloadPostWithPost(
+              // ignore: use_build_context_synchronously
               context: context,
               post: E6PostResponse.fromRawJson(r.body),
             ))
         .onError((e, s) {
       final out = "Failed to download $postId";
       _logger.severe(out, e, s);
-      if (context?.mounted ?? false) {
+      if (context != null && context.mounted) {
         util.showUserMessage(
-          context: context!,
+          context: context,
           content: Text("$out (${e.runtimeType})"),
           duration: const Duration(seconds: 10),
         );
@@ -1837,8 +1838,8 @@ Future<List<String>> downloadPostsWithPosts({
 }) {
   final out = "Downloading ${posts.length} posts...";
   _logger.finer(out);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(out));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(out));
   }
   return Future.wait(posts.map((e) => downloadPostRoot(e).then((v) {
         final out = "Downloaded ${e.id} to ${v ?? "an unknown path"}";
@@ -1852,9 +1853,9 @@ Future<List<String>> downloadPostsWithPosts({
     final out =
         "${v.where((e) => e != valueOnError).length}/${v.length} posts downloaded";
     _logger.info(out);
-    if (context?.mounted ?? false) {
+    if (context != null && context.mounted) {
       util.showUserMessage(
-        context: context!,
+        context: context,
         content: Text(out),
       );
     }
@@ -1867,12 +1868,12 @@ Future<List<String>> downloadPostsWithIds({
   required final Iterable<int> postIds,
 }) =>
     Future.wait(postIds.map((postId) => e621
-            .sendRequest(e621.initGetPostRequest(postId))
+            .sendRequest(e621.initPostGet(postId))
             .then((r) => E6PostResponse.fromRawJson(r.body))
             .onError((e, s) {
           final out = "Failed to get $postId";
           _logger.severe(out, e, s);
-          // if (context?.mounted ?? false) {
+          // if (context != null && context.mounted) {
           //   util.showUserMessage(
           //     context: context!,
           //     content: Text("$out (${e.runtimeType})"),
@@ -1893,9 +1894,9 @@ Future<List<String>> downloadPostsWithIds({
       final out =
           "${v.where((e) => e != valueOnError).length}/${v.length} posts downloaded";
       _logger.info(out);
-      if (context?.mounted ?? false) {
+      if (context != null && context.mounted) {
         util.showUserMessage(
-          context: context!,
+          context: context,
           content: Text(out),
         );
       }
@@ -1920,15 +1921,15 @@ Future<String> downloadDescriptionWithPost({
   final id = post.id;
   final out = "Downloading post $id description...";
   _logger.finer(out);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(out));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(out));
   }
   return downloadDescriptionRoot(post).then((v) {
     final out = "Downloaded $id to ${v ?? "an unknown path"}";
     _logger.info(out);
-    if (context?.mounted ?? false) {
+    if (context != null && context.mounted) {
       util.showUserMessage(
-        context: context!,
+        context: context,
         content: Text(out),
       );
     }
@@ -1936,9 +1937,9 @@ Future<String> downloadDescriptionWithPost({
   }).onError((e, s) {
     final out = "Failed to download $id";
     _logger.severe(out, e, s);
-    if (context?.mounted ?? false) {
+    if (context != null && context.mounted) {
       util.showUserMessage(
-        context: context!,
+        context: context,
         content: Text("$out ($e)"),
         duration: const Duration(seconds: 10),
       );
@@ -1952,17 +1953,18 @@ Future<String> downloadDescriptionWithId({
   required final int postId,
 }) =>
     e621
-        .sendRequest(e621.initGetPostRequest(postId))
+        .sendRequest(e621.initPostGet(postId))
         .then((r) => downloadDescriptionWithPost(
+              // ignore: use_build_context_synchronously
               context: context,
               post: E6PostResponse.fromRawJson(r.body),
             ))
         .onError((e, s) {
       final out = "Failed to download $postId";
       _logger.severe(out, e, s);
-      if (context?.mounted ?? false) {
+      if (context != null && context.mounted) {
         util.showUserMessage(
-          context: context!,
+          context: context,
           content: Text("$out (${e.runtimeType})"),
           duration: const Duration(seconds: 10),
         );
@@ -1975,8 +1977,8 @@ Future<List<String>> downloadDescriptionsWithPosts({
 }) {
   final out = "Downloading ${posts.length} posts...";
   _logger.finer(out);
-  if (context?.mounted ?? false) {
-    util.showUserMessage(context: context!, content: Text(out));
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(out));
   }
   return Future.wait(posts.map((e) => downloadDescriptionRoot(e).then((v) {
         final out = "Downloaded ${e.id} to ${v ?? "an unknown path"}";
@@ -1990,9 +1992,9 @@ Future<List<String>> downloadDescriptionsWithPosts({
     final out =
         "${v.where((e) => e != valueOnError).length}/${v.length} descriptions downloaded";
     _logger.info(out);
-    if (context?.mounted ?? false) {
+    if (context != null && context.mounted) {
       util.showUserMessage(
-        context: context!,
+        context: context,
         content: Text(out),
       );
     }
@@ -2005,7 +2007,7 @@ Future<List<String>> downloadDescriptionsWithIds({
   required final Iterable<int> postIds,
 }) =>
     Future.wait(postIds.map((postId) => e621
-            .sendRequest(e621.initGetPostRequest(postId))
+            .sendRequest(e621.initPostGet(postId))
             .then((r) => E6PostResponse.fromRawJson(r.body))
             .onError((e, s) {
           final out = "Failed to get $postId";
@@ -2025,9 +2027,9 @@ Future<List<String>> downloadDescriptionsWithIds({
       final out =
           "${v.where((e) => e != valueOnError).length}/${v.length} posts downloaded";
       _logger.info(out);
-      if (context?.mounted ?? false) {
+      if (context != null && context.mounted) {
         util.showUserMessage(
-          context: context!,
+          context: context,
           content: Text(out),
         );
       }

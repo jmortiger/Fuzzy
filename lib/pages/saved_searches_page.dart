@@ -442,8 +442,10 @@ class _SavedSearchesPageSingletonState
         SavedEntryDialogOptions.addToClipboard =>
           Clipboard.setData(ClipboardData(text: entry.searchString)).then((v) {
             util.showUserMessage(
+                // ignore: use_build_context_synchronously
                 context: context,
                 content: Text("${entry.searchString} added to clipboard."));
+            // ignore: use_build_context_synchronously
             Navigator.pop(context);
           }),
         SavedEntryDialogOptions.addIdToClipboard =>
@@ -451,10 +453,12 @@ class _SavedSearchesPageSingletonState
             text: "${mye6.E621.savedSearchTag}${entry.uniqueId}",
           )).then((v) {
             util.showUserMessage(
+                // ignore: use_build_context_synchronously
                 context: context,
                 content: Text(
                   "${mye6.E621.savedSearchTag}${entry.uniqueId} added to clipboard.",
                 ));
+            // ignore: use_build_context_synchronously
             Navigator.pop(context);
           }),
         SavedEntryDialogOptions.delete =>

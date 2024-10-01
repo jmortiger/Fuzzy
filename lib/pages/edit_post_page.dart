@@ -167,7 +167,7 @@ class _EditPostPageState extends State<EditPostPage> {
             //             postSourceDiff) !=
             //         null ||
             //     postParentId != postOldParentId) {
-            if (e621.doesPostUpdateHaveChanges(
+            if (e621.doesPostEditHaveChanges(
               postTagStringDiff: postTagStringDiff,
               postSourceDiff: postSourceDiff,
               postParentId: postParentId,
@@ -177,7 +177,7 @@ class _EditPostPageState extends State<EditPostPage> {
               postRating: postRating,
               postOldRating: post.rating,
             )) {
-              final req = e621.initUpdatePostRequest(
+              final req = e621.initPostEdit(
                 postId: post.id,
                 postTagStringDiff: postTagStringDiff,
                 postSourceDiff: postSourceDiff,
@@ -207,7 +207,7 @@ class _EditPostPageState extends State<EditPostPage> {
               }
             } else {
               logger.info("No changes detected");
-              final req = e621.initUpdatePostRequest(
+              final req = e621.initPostEdit(
                 postId: post.id,
                 postTagStringDiff: postTagStringDiff,
                 postSourceDiff: postSourceDiff,
@@ -795,7 +795,7 @@ class EditPostPageLoader extends StatelessWidget
     return post != null
         ? EditPostPage(post: post!)
         : FutureBuilder(
-            future: e621.sendRequest(e621.initGetPostRequest(
+            future: e621.sendRequest(e621.initPostGet(
               postId!,
               credentials: E621AccessData.fallbackForced?.cred,
             )),

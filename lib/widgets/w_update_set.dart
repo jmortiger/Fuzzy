@@ -166,7 +166,7 @@ class _WUpdateSetState extends State<WUpdateSet> {
                             postSetShortnameErrorText == null
                         ? () async {
                             final r = widget.set == null
-                                ? e621.initCreateSetRequest(
+                                ? e621.initSetCreate(
                                     postSetName: postSetName,
                                     postSetShortname: postSetShortname,
                                     postSetDescription: postSetDescription,
@@ -176,7 +176,7 @@ class _WUpdateSetState extends State<WUpdateSet> {
                                     credentials:
                                         E621AccessData.fallbackForced?.cred,
                                   )
-                                : e621.initUpdateSetRequest(
+                                : e621.initSetEdit(
                                     widget.set!.id,
                                     postSetName: postSetName,
                                     postSetShortname: postSetShortname,

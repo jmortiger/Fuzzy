@@ -59,7 +59,7 @@ class _WPostThumbnailState extends State<WPostThumbnail> {
         widget.fit,
       );
     } else {
-      future = e621.sendRequest(e621.initGetPostRequest(widget.id!)).then((v) {
+      future = e621.sendRequest(e621.initPostGet(widget.id!)).then((v) {
         return v.statusCode >= 300
             ? null
             : retrieveImageInfo(E6PostResponse.fromRawJson(v.body));

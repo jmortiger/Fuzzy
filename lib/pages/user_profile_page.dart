@@ -118,7 +118,8 @@ class UserProfilePage extends StatelessWidget
           if (userL != null) generateFavStatsFull(userL!),
           if (userL != null) Text("Tag Query Limit: ${userL!.tagQueryLimit}"),
           if (userL != null) Text("Blacklist Users: ${userL!.blacklistUsers}"),
-          if (userL != null) Text("Blacklisted Tags: ${userL!.blacklistedTags}"),
+          if (userL != null)
+            Text("Blacklisted Tags: ${userL!.blacklistedTags}"),
           if (userL != null) Text("Favorite Tags: ${userL!.favoriteTags}"),
           if (userL != null) Text("Api Burst Limit: ${userL!.apiBurstLimit}"),
           if (userL != null)
