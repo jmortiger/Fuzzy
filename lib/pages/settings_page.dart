@@ -656,11 +656,15 @@ class WBooleanTristateField extends StatefulWidget {
 }
 
 class _WBooleanTristateFieldState extends State<WBooleanTristateField> {
-  void onChanged([bool? value]) => widget.validateVal?.call(value) ?? true
-      ? setState(() {
-          widget.setVal(value);
-        })
-      : null;
+  bool? cycle(bool? value) => switch (value) {
+        false => true,
+        true => null,
+        null => false,
+      };
+  void onChanged([bool? value]) =>
+      widget.validateVal?.call(value ?? cycle(widget.getVal())) ?? true
+          ? setState(() => widget.setVal(value ?? cycle(widget.getVal())))
+          : null;
   @override
   Widget build(BuildContext context) {
     return ListTile(
