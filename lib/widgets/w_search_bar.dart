@@ -288,6 +288,27 @@ class _WSearchBarState extends State<WSearchBar> {
           ),
           SubmenuButton(
             menuChildren: [
+              MenuItemButton(
+                child: DropdownMenu(
+                  dropdownMenuEntries: _orderDropdownEntries,
+                  onSelected: (value) => setState(() =>
+                      value != sh.Order.idDesc ? mts.order = value : null),
+                  initialSelection: mts.order ?? sh.Order.idDesc,
+                  inputDecorationTheme: const InputDecorationTheme(
+                    isDense: true,
+                    border: InputBorder.none,
+                    isCollapsed: true,
+                    // constraints: BoxConstraints.tightFor(width: 12 + padding),
+                  ),
+                  // width: 10 + padding,
+                ),
+                // child: Text(
+                //   mts.orderString.isEmpty ? "order:id_desc" : mts.orderString,
+                //   style: mts.order == null
+                //       ? noOutputStyle
+                //       : const TextStyle(color: Colors.white),
+                // ),
+              ),
               SubmenuButton(
                 leadingIcon: Checkbox(
                   value: convertTristateForCheckbox(mts.addRating),
@@ -764,5 +785,159 @@ const _modifierDropdownEntriesFull = <DropdownMenuEntry<sh.Modifier?>>[
         overflow: TextOverflow.ellipsis,
       ),
     ),
+  ),
+];
+const _orderDropdownEntries = [
+  DropdownMenuEntry(
+    value: sh.Order.change,
+    label: "order:${sh.Order.changeSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.changeAsc,
+    label: "order:${sh.Order.changeAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.changeDesc,
+    label: "order:${sh.Order.changeDescSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.commentBumped,
+    label: "order:${sh.Order.commentBumpedSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.commentBumpedAsc,
+    label: "order:${sh.Order.commentBumpedAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.commentCount,
+    label: "order:${sh.Order.commentCountSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.commentCountAsc,
+    label: "order:${sh.Order.commentCountAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.duration,
+    label: "order:${sh.Order.durationSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.durationAsc,
+    label: "order:${sh.Order.durationAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.favCount,
+    label: "order:${sh.Order.favCountSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.favCountAsc,
+    label: "order:${sh.Order.favCountAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.fileSize,
+    label: "order:${sh.Order.fileSizeSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.fileSizeAsc,
+    label: "order:${sh.Order.fileSizeAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.id,
+    label: "order:${sh.Order.idSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: null,
+    label: "order:${sh.Order.idDescSuffix}",
+    labelWidget: Text(
+      "order:${sh.Order.idDescSuffix} (Default)",
+      style: _WSearchBarState.noOutputStyle,
+    ),
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.score,
+    label: "order:${sh.Order.scoreSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.scoreAsc,
+    label: "order:${sh.Order.scoreAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.tagCount,
+    label: "order:${sh.Order.tagCountSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.tagCountAsc,
+    label: "order:${sh.Order.tagCountAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.artTags,
+    label: "order:${sh.Order.artTagsSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.artTagsAsc,
+    label: "order:${sh.Order.artTagsAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.charTags,
+    label: "order:${sh.Order.charTagsSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.charTagsAsc,
+    label: "order:${sh.Order.charTagsAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.copyTags,
+    label: "order:${sh.Order.copyTagsSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.copyTagsAsc,
+    label: "order:${sh.Order.copyTagsAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.genTags,
+    label: "order:${sh.Order.genTagsSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.genTagsAsc,
+    label: "order:${sh.Order.genTagsAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.invTags,
+    label: "order:${sh.Order.invTagsSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.invTagsAsc,
+    label: "order:${sh.Order.invTagsAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.lorTags,
+    label: "order:${sh.Order.lorTagsSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.lorTagsAsc,
+    label: "order:${sh.Order.lorTagsAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.metaTags,
+    label: "order:${sh.Order.metaTagsSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.metaTagsAsc,
+    label: "order:${sh.Order.metaTagsAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.specTags,
+    label: "order:${sh.Order.specTagsSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.specTagsAsc,
+    label: "order:${sh.Order.specTagsAscSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.mPixels,
+    label: "order:${sh.Order.mPixelsSuffix}",
+  ),
+  DropdownMenuEntry(
+    value: sh.Order.mPixelsAsc,
+    label: "order:${sh.Order.mPixelsAscSuffix}",
   ),
 ];
