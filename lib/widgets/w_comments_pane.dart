@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:e621/e621.dart' as e6;
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/log_management.dart' show SymbolName;
-import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/dtext_formatter.dart' as dtext;
 import 'package:fuzzy/web/e621/e621.dart';
@@ -11,8 +10,13 @@ import 'package:fuzzy/widgets/w_back_button.dart';
 
 class WCommentsLoader extends StatefulWidget {
   final int postId;
+  final ListTileControlAffinity controlAffinity;
 
-  const WCommentsLoader({super.key, required this.postId});
+  const WCommentsLoader({
+    super.key,
+    required this.postId,
+    this.controlAffinity = ListTileControlAffinity.leading,
+  });
 
   @override
   State<WCommentsLoader> createState() => _WCommentsLoaderState();
@@ -21,8 +25,8 @@ class WCommentsLoader extends StatefulWidget {
 class _WCommentsLoaderState extends State<WCommentsLoader> {
   // ignore: unnecessary_late
   static late final logger = lm.generateLogger((#WCommentsLoader).name).logger;
-  Future<List<WComment>>? f;
-  List<WComment>? comments;
+  Future<List<Widget>>? f;
+  List<Widget>? comments;
   Widget? errorPage;
   @override
   void dispose() {
@@ -35,29 +39,12 @@ class _WCommentsLoaderState extends State<WCommentsLoader> {
   Widget build(BuildContext context) {
     return ExpansionTile(
       expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
-      controlAffinity: ListTileControlAffinity.leading,
-      title: const Text("Comments"),
-      onExpansionChanged: (value) => f = value && comments == null && f == null
-          ? (e6
-              .sendRequest(e6.initSearchCommentsRequest(
-                searchPostId: widget.postId,
-                // searchOrder: e6.CommentOrder.updatedAtDesc,
-              ))
-              .then((v) => e6.Comment.fromRawJsonResults(v.body))
-              .then((v) => v
-                  .map((e) =>
-                      WComment(comment: e, mainAxisSize: MainAxisSize.max))
-                  .toList())
-              .onError(
-              (e, s) {
-                logger.severe(e, e, s);
-                return <WComment>[];
-              },
-            )..then((v) => setState(() {
-                comments = v.isEmpty ? null : v;
-                f = null;
-              })).ignore())
-          : f,
+      controlAffinity: widget.controlAffinity,
+      title: comments == null
+          ? const Text("Comments")
+          : Text("Comments (${comments!.length})"),
+      onExpansionChanged: onExpansionChanged,
+      // childrenPadding: const EdgeInsets.symmetric(horizontal: 4),
       children: comments ??
           [
             errorPage ??
@@ -66,6 +53,33 @@ class _WCommentsLoaderState extends State<WCommentsLoader> {
           ],
     );
   }
+
+  void onExpansionChanged(value) => f = value && comments == null && f == null
+      ? (e6
+          .sendRequest(e6.initSearchCommentsRequest(
+            searchPostId: widget.postId,
+          ))
+          .then((v) => e6.Comment.fromRawJsonResults(v.body).map(buildChild))
+          .then((v) => util.toListAsync(v))
+          .onError(
+          (e, s) {
+            logger.severe(e, e, s);
+            return [];
+          },
+        )..then((v) => setState(() {
+            comments = v.isEmpty ? null : v;
+            f = null;
+          })).ignore())
+      : f;
+  @widgetFactory
+  Container buildChild(e6.Comment e) => Container(
+        decoration: const BoxDecoration(
+            border: Border.symmetric(
+          horizontal: BorderSide(color: Colors.white70, width: 2),
+          vertical: BorderSide(color: Color(0), width: 4),
+        )),
+        child: WComment(comment: e),
+      );
 }
 
 class WCommentsPane extends StatelessWidget {
@@ -83,21 +97,32 @@ class WCommentsPane extends StatelessWidget {
 }
 
 class WComment extends StatelessWidget {
+  /// Normalized percentage of width taken up by the header. Must be <= 1.
+  ///
+  /// See [FractionallySizedBox].
+  final double headerFraction;
+  double get bodyFraction => 1 - headerFraction;
   final e6.Comment comment;
-  final MainAxisSize mainAxisSize;
-  const WComment(
-      {super.key, required this.comment, this.mainAxisSize = MainAxisSize.min});
+  const WComment({
+    super.key,
+    required this.comment,
+    this.headerFraction = .2,
+  });
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: mainAxisSize,
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.start,
+      // crossAxisAlignment: CrossAxisAlignment.start,
+      // mainAxisSize: MainAxisSize.max,
+      runAlignment: WrapAlignment.start,
       children: [
-        Flexible(
-          fit: FlexFit.loose,
-          flex: 3,
+        // Flexible(
+        //   fit: FlexFit.loose,
+        //   flex: 3,
+        FractionallySizedBox(
+          widthFactor: headerFraction,
           child: Padding(
             padding: const EdgeInsets.only(right: 10),
             child: Column(
@@ -108,26 +133,52 @@ class WComment extends StatelessWidget {
                   comment.creatorName,
                   style: textTheme.headlineSmall,
                 ),
-                SelectableText(
-                  "#${comment.id}",
-                  style: textTheme.labelLarge,
+                InkWell(
+                  onTap: () => util.defaultTryLaunchUrl(Uri.parse(
+                    "https://e621.net/comments/${comment.id}",
+                  )),
+                  child: Text(
+                    "#${comment.id}",
+                    style: textTheme.labelLarge?.copyWith(
+                      color: Theme.of(context)
+                          .textButtonTheme
+                          .style
+                          ?.foregroundColor
+                          ?.resolve({}),
+                      // ?.textStyle
+                      // ?.resolve({})?.color,
+                    ),
+                  ),
                 ),
+                // TextButton(
+                //   style: util.modifyTextButtonStyle(context,
+                //       visualDensity: VisualDensity.compact),
+                //   onPressed: () => Navigator.pop(
+                //     context,
+                //     util.defaultTryLaunchUrl(Uri.parse(
+                //       "https://e621.net/comments/${comment.id}",
+                //     )),
+                //   ),
+                //   child: Text("#${comment.id}", style: textTheme.labelLarge),
+                // ),
                 SelectableText(
-                  "${comment.createdAt}",
+                  "C: ${comment.createdAt}",
                   style: textTheme.labelMedium,
                 ),
                 if (!comment.createdAt.isAtSameMomentAs(comment.updatedAt))
                   SelectableText(
-                    "${comment.updatedAt}",
+                    "U: ${comment.updatedAt}",
                     style: textTheme.labelMedium,
                   ),
               ],
             ),
           ),
         ),
-        Flexible(
-          fit: FlexFit.loose,
-          flex: 7,
+        // Flexible(
+        //   fit: FlexFit.loose,
+        //   flex: 7,
+        FractionallySizedBox(
+          widthFactor: bodyFraction,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -346,12 +397,10 @@ class WLabeledSwitch extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [label, Switch(value: value, onChanged: onChanged)],
-    );
-  }
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [label, Switch(value: value, onChanged: onChanged)],
+      );
 }
 
 class WLabeledCheckbox extends StatelessWidget {
@@ -368,13 +417,9 @@ class WLabeledCheckbox extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
+  Widget build(BuildContext context) =>
+      Row(mainAxisSize: MainAxisSize.min, children: [
         label,
         Checkbox(value: value, onChanged: onChanged, tristate: tristate),
-      ],
-    );
-  }
+      ]);
 }

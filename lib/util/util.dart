@@ -188,8 +188,9 @@ extension StringPrint on String {
   }
 }
 
-// final nonNumeric = RegExp(r'[^1234567890]');
+// #region TextInputFormatter
 RegExp get nonNumeric => RegExp(r'[^0-9]');
+// final nonNumeric = RegExp(r'[^1234567890]');
 // ignore: unnecessary_late
 late final numericFormatter = TextInputFormatter.withFunction(
   (old, newV) => nonNumeric.hasMatch(newV.text) ? old : newV,
@@ -204,6 +205,7 @@ TextInputFormatter getParsableDecimalFormatter([bool Function(double)? test]) =>
         return t != null && (test?.call(t) ?? true) ? newValue : oldValue;
       },
     );
+// #endregion TextInputFormatter
 
 TextEditingController? defaultSelection(String? defaultValue) =>
     defaultValue?.isEmpty ?? true
@@ -247,6 +249,7 @@ const spinnerExpanded = Expanded(
     child: CircularProgressIndicator(),
   ),
 );
+// #region Url and Link Stuff
 const commonTopLevelDomainStr = "com|org|gov|net|edu|jp|us|au|uk|tv"; //|mil|xxx
 // https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
 RegExp get urlMatcher => RegExp(urlMatcherStr);
@@ -278,33 +281,43 @@ const linkifierOptions = LinkifyOptions(
   excludeLastPeriod: true,
   defaultToHttps: true,
 );
-void defaultOnLinkifyOpen(LinkableElement link) {
-  final url = Uri.parse(link.url);
-  canLaunchUrl(url).then(
-    (value) => value
+Future<bool?> defaultTryLaunchUrl(Uri url, {BuildContext? ctx}) =>
+    canLaunchUrl(url).then<bool?>((value) => value
         ? launchUrl(url)
-        : "" /* showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          content: const Text("Cannot open in browser"),
-                          actions: [
-                            TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text("Ok"))
-                          ],
-                        ),
-                      ) */
-    ,
+        : ctx != null && ctx.mounted
+            ? showDialog<bool?>(
+                context: ctx,
+                builder: (ctx2) => AlertDialog(
+                  content: const Text("Cannot open in browser"),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx2),
+                      child: const Text("Ok"),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx2, launchUrl(url)),
+                      child: const Text("Try anyway"),
+                    ),
+                  ],
+                ),
+              )
+            : null);
+
+Future<bool?> defaultOnLinkifyOpen(LinkableElement link) {
+  final url = Uri.parse(link.url);
+  return canLaunchUrl(url).then<bool?>(
+    (value) => value ? launchUrl(url) : null,
   );
 }
 
-void defaultOnE6LinkifyOpen(LinkableElement link, BuildContext context) {
+Future<bool?>? defaultOnE6LinkifyOpen(
+    LinkableElement link, BuildContext context) {
   if (supportedFirstPathSegments.contains(
         Uri.tryParse(link.url)?.pathSegments.first,
       ) &&
       context.mounted) {
     Navigator.pushNamed(context, link.url);
-    return;
+    return null;
   }
   return defaultOnLinkifyOpen(link);
 }
@@ -395,6 +408,7 @@ const defaultLinkStyle = TextStyle(
   color: Colors.amber,
   decoration: TextDecoration.underline,
 );
+// #endregion Url and Link Stuff
 
 T? contextCheck<T>(
   BuildContext? context,
@@ -404,3 +418,81 @@ T? contextCheck<T>(
     context != null && context.mounted
         ? ifTrue(context)
         : ifFalse?.call(context) ?? null as T?;
+ButtonStyle? modifyTextButtonStyle(
+  BuildContext context, {
+  WidgetStateProperty<TextStyle?>? textStyle,
+  WidgetStateProperty<Color?>? backgroundColor,
+  WidgetStateProperty<Color?>? foregroundColor,
+  WidgetStateProperty<Color?>? overlayColor,
+  WidgetStateProperty<Color?>? shadowColor,
+  WidgetStateProperty<Color?>? surfaceTintColor,
+  WidgetStateProperty<double?>? elevation,
+  WidgetStateProperty<EdgeInsetsGeometry?>? padding,
+  WidgetStateProperty<Size?>? minimumSize,
+  WidgetStateProperty<Size?>? fixedSize,
+  WidgetStateProperty<Size?>? maximumSize,
+  WidgetStateProperty<Color?>? iconColor,
+  WidgetStateProperty<double?>? iconSize,
+  WidgetStateProperty<BorderSide?>? side,
+  WidgetStateProperty<OutlinedBorder?>? shape,
+  WidgetStateProperty<MouseCursor?>? mouseCursor,
+  VisualDensity? visualDensity,
+  MaterialTapTargetSize? tapTargetSize,
+  Duration? animationDuration,
+  bool? enableFeedback,
+  AlignmentGeometry? alignment,
+  InteractiveInkFeatureFactory? splashFactory,
+  Widget Function(BuildContext, Set<WidgetState>, Widget?)? backgroundBuilder,
+  Widget Function(BuildContext, Set<WidgetState>, Widget?)? foregroundBuilder,
+}) =>
+    Theme.of(context).textButtonTheme.style?.copyWith(
+          textStyle: textStyle,
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          overlayColor: overlayColor,
+          shadowColor: shadowColor,
+          surfaceTintColor: surfaceTintColor,
+          elevation: elevation,
+          padding: padding,
+          minimumSize: minimumSize,
+          fixedSize: fixedSize,
+          maximumSize: maximumSize,
+          iconColor: iconColor,
+          iconSize: iconSize,
+          side: side,
+          shape: shape,
+          mouseCursor: mouseCursor,
+          visualDensity: visualDensity,
+          tapTargetSize: tapTargetSize,
+          animationDuration: animationDuration,
+          enableFeedback: enableFeedback,
+          alignment: alignment,
+          splashFactory: splashFactory,
+          backgroundBuilder: backgroundBuilder,
+          foregroundBuilder: foregroundBuilder,
+        );
+
+/// If [delay] is null, uses `Future.sync`; otherwise, uses `Future.delayed`
+Stream<E> toListStream<E>(Iterable<E> collection, {Duration? delay}) async* {
+  for (var i = collection.iterator;
+      i.moveNext();
+      await (delay != null ? Future.delayed(delay) : Future.sync(() {}))) {
+    yield i.current;
+  }
+}
+
+//   Iterable<E> collection, {
+//   // bool growable = true,
+//   Duration? delay,
+Future<List<E>> toListAsync<E>(Iterable<E> collection) async {
+  final r = <E>[], i = collection.iterator;
+  for (var loop = await Future.microtask(() => i.moveNext()),
+          e = loop ? await Future.microtask(() => i.current) : null;
+      loop;
+      loop = await Future.microtask(() => i.moveNext()),
+      e = loop ? await Future.microtask(() => i.current) : null) {
+    r.add(e as E);
+  }
+  return r;
+  // return growable ? r : r.toList(growable: false);
+}
