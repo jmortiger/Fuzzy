@@ -1119,43 +1119,6 @@ class PostViewPageLoader extends StatelessWidget
   }
 }
 
-void warnIfBlacklistedWithPage({
-  required E6PostResponse p,
-  required VoidFunction onSuccess,
-  VoidFunction? onCancel,
-  required BuildContext context,
-}) {
-  final intersect =
-      p.tagList.toSet().intersection(AppSettings.i!.blacklistedTagsAll);
-  if (intersect.isNotEmpty) {
-    showDialog(
-      context: context,
-      useSafeArea: true,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: SizedBox.shrink(
-          child: Text(
-              "This post has the following blacklisted tags:${intersect.fold("", (p, e) => "$p\n\t$e")}\nDo you want to proceed?"),
-        ),
-        actions: [
-          TextButton.icon(
-            onPressed: () => Navigator.pop(context, true),
-            label: const Text("Yes"),
-            icon: const Icon(Icons.close),
-          ),
-          TextButton.icon(
-            onPressed: () => Navigator.pop(context, false),
-            label: const Text("Yes"),
-            icon: const Icon(Icons.close),
-          )
-        ],
-      ),
-    ).then((v) => v == true ? onSuccess() : onCancel?.call());
-  } else {
-    onSuccess();
-  }
-}
-
 class WarnPage extends StatefulWidget {
   final E6PostResponse p;
   final Widget? child;

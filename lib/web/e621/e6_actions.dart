@@ -2127,7 +2127,7 @@ class _WE6BatchActionState extends State<WE6BatchAction> {
 // TODO: IMPLEMENT AND TEST BATCH ACTIONS
 class E6Actions extends ChangeNotifier {
   static final batchActions =
-      ListNotifier<Stream<E6BatchActionEvent>>.empty(true);
+      ListNotifier<Stream<E6BatchActionEvent>>.empty(growable: true);
 }
 
 class E6BatchActionEvent<T> {

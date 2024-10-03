@@ -45,13 +45,13 @@ class SavedDataE6 extends ChangeNotifier {
   static ListNotifier<ListNotifier<SavedEntry>> makeParented(
           List<SavedEntry> searches) =>
       searches.fold(
-        ListNotifier.empty(true),
+        ListNotifier.empty(growable: true),
         (acc, el) {
           try {
             return acc
               ..singleWhere((e) => e.firstOrNull?.parent == el.parent).add(el);
           } catch (e) {
-            return acc..add(ListNotifier.filled(1, el, true));
+            return acc..add(ListNotifier.filled(1, el, growable: true));
           }
         },
       )
@@ -96,7 +96,7 @@ class SavedDataE6 extends ChangeNotifier {
   }) {
     if (searches == null) {
       if (!isInit) {
-        SavedDataE6.searches = ListNotifier<SavedSearchData>.empty(true);
+        SavedDataE6.searches = ListNotifier<SavedSearchData>.empty(growable: true);
         storageAsync.then((v) {
           if (!validateUniqueness()) _save();
           SavedDataE6.searches.addListener(notifyListeners);
@@ -110,7 +110,7 @@ class SavedDataE6 extends ChangeNotifier {
   }
   SavedDataE6.recycle() {
     if (!isInit) {
-      SavedDataE6.searches = ListNotifier<SavedSearchData>.empty(true);
+      SavedDataE6.searches = ListNotifier<SavedSearchData>.empty(growable: true);
       storageAsync.then((v) {
         searches = v;
         if (!validateUniqueness()) {

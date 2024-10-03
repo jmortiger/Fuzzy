@@ -16,7 +16,7 @@ late final _lRecord = lm.generateLogger("Intent");
 // #endregion Logger
 
 late StreamSubscription<List<SharedFile>> intentDataStreamSubscription;
-final requestedUrls = ListNotifier<Uri>.empty(true);
+final requestedUrls = ListNotifier<Uri>.empty(growable: true);
 
 Future<void> initIntentHandling() async {
   if (Platform.isAndroid) {

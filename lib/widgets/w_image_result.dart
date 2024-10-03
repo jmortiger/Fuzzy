@@ -141,8 +141,9 @@ class WImageResult extends StatelessWidget {
       Provider.of<SearchResultsNotifier>(context);
 
   Widget _buildInputDetector(BuildContext context) {
-    SearchResultsNotifier? srl;
-    if (!disallowSelections) srl = Provider.of<SearchResultsNotifier>(context);
+    final srl = !disallowSelections
+        ? Provider.of<SearchResultsNotifier>(context)
+        : null;
     void toggle() {
       logger.info(
           "Toggling ${imageListing.id} selection, was selected: ${srl?.getIsPostSelected(imageListing.id)}, is selected: ${srl?.togglePostSelection(
