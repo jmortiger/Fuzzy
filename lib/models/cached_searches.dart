@@ -34,12 +34,11 @@ class CachedSearches {
   });
 
   static async_lib.FutureOr<List<SearchData>> loadFromStorageAsync() async {
-    // E621.searchBegan.subscribe(onSearchBegan);
-    Changed.subscribe(CachedSearches._save);
+    changed.subscribe(CachedSearches._save);
     var t = await (await file.getItem())?.readAsString();
     return (t != null)
         ? CachedSearches.loadFromJson(jsonDecode(t))
-        : await loadFromPref(); // _searches = const <SearchData>[];
+        : await loadFromPref();
   }
 
   static const localStoragePrefix = 'cs';
@@ -99,21 +98,20 @@ class CachedSearches {
   static List toJson() => _searches;
   // #endregion IO
 
-  @event
-  static final Changed = JEvent<CachedSearchesEvent>();
+  @Event(name: "Changed")
+  static final changed = JEvent<CachedSearchesEvent>();
 
   static List<SearchData> _searches = const <SearchData>[];
   static List<SearchData> get searches => _searches;
   static set searches(List<SearchData> v) {
-    Changed.invoke(
+    changed.invoke(
       CachedSearchesEvent(
           priorValue: List.unmodifiable(_searches),
           currentValue: _searches = List.unmodifiable(v)),
     );
   }
 
-  // static void clear() => searches = const <SearchData>[];
-  static void clear() => Changed.invoke(CachedSearchesEvent(
+  static void clear() => changed.invoke(CachedSearchesEvent(
         priorValue: List.unmodifiable(_searches),
         currentValue: List.unmodifiable(searches = const []),
       ));
@@ -124,7 +122,7 @@ class CachedSearches {
     int? index,
   }) =>
       (searchString ?? element ?? index) != null
-          ? Changed.invoke(CachedSearchesEvent(
+          ? changed.invoke(CachedSearchesEvent(
               priorValue: List.unmodifiable(_searches),
               currentValue: List.unmodifiable(searches = element != null
                   ? (searches.toList()..remove(element))
@@ -137,7 +135,7 @@ class CachedSearches {
 
   static void onSearchBegan(SearchArgs a) {
     final t = _searches.toSet()..add(SearchData.fromList(tagList: a.tags));
-    Changed.invoke(
+    changed.invoke(
       CachedSearchesEvent(
           priorValue: List.unmodifiable(_searches),
           currentValue: searches = List.unmodifiable(
@@ -176,48 +174,3 @@ class CachedSearchesEvent extends JEventArgs {
     required this.currentValue,
   });
 }
-/* class CachedSearches extends ChangeNotifier {
-  static const fileName = "CachedSearches.json";
-  static final fileFullPath = LazyInitializer.immediate(fileFullPathInit);
-  static Future<String> fileFullPathInit() async {
-    print("fileFullPathInit called");
-    try {
-      return Platform.isWeb ? "" : "${await appDataPath.getItem()}/$fileName";
-    } catch (e) {
-      print("Error in CachedSearches.fileFullPathInit():\n$e");
-      return "";
-    }
-  }
-
-  static async_lib.FutureOr<CachedSearches> loadFromStorageAsync() async =>
-      CachedSearches.fromJson(
-        jsonDecode(
-          await Storable.tryLoadStringAsync(await fileFullPath.getItem()) ??
-              jsonEncode(CachedSearches().toJson()),
-        ),
-      );
-  factory CachedSearches.fromJson(JsonMap json) => CachedSearches();
-  Map<String, dynamic> toJson() => {};
-
-  @event
-  final Changed = JPureEvent();
-
-  List<String> searches;
-
-  CachedSearches({List<String>? searches})
-      : searches = searches ?? List<String>.empty(growable: true) {
-    E621.searchBegan.subscribe(onSearchBegan);
-  }
-  void onSearchBegan(SearchArgs a) {
-    searches.add(a.tags.foldToString());
-    _save();
-  }
-
-  void _save() {
-    notifyListeners();
-    tryWriteAsync().then(
-      (value) => print("Write ${value ? "successful" : "failed"}"),
-    );
-  }
-}
- */

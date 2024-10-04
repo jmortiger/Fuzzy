@@ -53,20 +53,20 @@ class CachedFavorites extends ChangeNotifier with Storable<CachedFavorites> {
 
   List<int> postIds;
 
-  @event
-  final Changed = JPureEvent();
+  @Event(name: "Changed")
+  final changed = JPureEvent();
 
   CachedFavorites({List<int>? postIds}) : postIds = postIds ?? <int>[] {
     initStorageAsync(fileFullPath.$);
     E621.favDeleted.subscribe(onFavoriteSlotOpen);
     E621.favFailed.subscribe(onFavFail);
-    Changed.subscribe(_save);
+    changed.subscribe(_save);
   }
   void onFavFail(PostActionArgs p) {
     print("cacheAttempt ${p.postId}");
     if (!postIds.contains(p.postId)) {
       postIds.add(p.postId);
-      Changed.invoke();
+      changed.invoke();
     }
   }
 
@@ -78,7 +78,7 @@ class CachedFavorites extends ChangeNotifier with Storable<CachedFavorites> {
         if (v2.statusCodeInfo.isSuccessful) {
           postIds.removeAt(0);
           print("Cached Fav removed");
-          Changed.invoke();
+          changed.invoke();
         }
       });
       // .then((v1) => v1.stream.last.then((v2) {

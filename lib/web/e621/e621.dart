@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:fuzzy/models/app_settings.dart';
@@ -10,7 +9,6 @@ import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
-import 'package:fuzzy/web/site.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:fuzzy/widgets/w_search_set.dart';
 import 'package:http/http.dart' as http;
@@ -29,7 +27,7 @@ lm.FileLogger get _logger => _lRecord.logger;
 late final _lRecord = lm.generateLogger("E621");
 
 // #endregion Logger
-sealed class E621 extends Site {
+sealed class E621 {
   const E621();
   @event
   static final favDeleted = JPureEvent();
@@ -651,7 +649,7 @@ sealed class E621 extends Site {
   static Future<http.Response> sendGetUserRequest(
     int userId, {
     e621.BaseCredentials? credentials,
-    bool logRequest = kDebugMode,
+    bool logRequest = isDebug,
   }) =>
       (logRequest
           ? logAndSendRequest(
