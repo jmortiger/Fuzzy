@@ -121,7 +121,7 @@ class _WSearchPoolState extends State<WSearchPool> {
     setState(() {
       pools = null;
       loadingPools = e621
-          .initSearchPoolsRequest(
+          .initPoolSearch(
             searchNameMatches: searchNameMatches,
             searchIds: searchId,
             searchDescriptionMatches: searchDescriptionMatches,

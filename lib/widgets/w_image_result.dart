@@ -35,8 +35,8 @@ class WImageResult extends StatelessWidget {
   final int index;
   final bool isSelected;
   final bool disallowSelections;
+  final bool? filterBlacklist;
 
-  // final void Function(int index)? onSelectionToggle;
   final Iterable<E6PostResponse>? postsCache;
   ManagedPostCollectionSync getSc(BuildContext context,
           [bool listen = false]) =>
@@ -49,6 +49,7 @@ class WImageResult extends StatelessWidget {
     this.isSelected = false,
     this.disallowSelections = false,
     this.postsCache,
+    required this.filterBlacklist,
   });
 
   @override
@@ -84,7 +85,7 @@ class WImageResult extends StatelessWidget {
         if (isSelected ||
             (!disallowSelections &&
                 sr(context).getIsPostSelected(imageListing.id)))
-          _buildCheckmark(context),
+          _WCheckmark(context: context),
         if (isE6Post && post.isAnimatedGif)
           Positioned.directional(
               textDirection: TextDirection.ltr,
@@ -115,48 +116,21 @@ class WImageResult extends StatelessWidget {
     return (height: sizeHeight, width: sizeWidth);
   }
 
-  @widgetFactory
-  Widget _buildCheckmark(BuildContext context) {
-    return IgnorePointer(
-      ignoring: true,
-      child: Align(
-        alignment: AlignmentDirectional.bottomEnd,
-        // heightFactor: 6,
-        // widthFactor: 6,
-        child: Icon(
-          Icons.check,
-          color: Colors.green,
-          opticalSize: (IconTheme.of(context).opticalSize ?? 48) * 6,
-          size: (IconTheme.of(context).size ?? 24) * 6,
-          shadows: const [Shadow(offset: Offset(2.5, 5), blurRadius: 5)],
-        ),
-      ),
-    );
-  }
+  SearchResultsNotifier sr(BuildContext c) =>
+      Provider.of<SearchResultsNotifier>(c, listen: false);
 
-  SearchResultsNotifier sr(BuildContext context) =>
-      Provider.of<SearchResultsNotifier>(context, listen: false);
-
-  SearchResultsNotifier srl(BuildContext context) =>
-      Provider.of<SearchResultsNotifier>(context);
-
-  Widget _buildInputDetector(BuildContext context) {
-    final srl = !disallowSelections
-        ? Provider.of<SearchResultsNotifier>(context)
-        : null;
+  Widget _buildInputDetector(BuildContext ctx) {
+    final srl =
+        !disallowSelections ? Provider.of<SearchResultsNotifier>(ctx) : null;
     void toggle() {
-      logger.info(
-          "Toggling ${imageListing.id} selection, was selected: ${srl?.getIsPostSelected(imageListing.id)}, is selected: ${srl?.togglePostSelection(
-        index: index,
+      if (srl == null) return logger.warning("Can't select ${imageListing.id}");
+      logger.info("Toggling ${imageListing.id} selection, "
+          "was selected: ${srl.getIsPostSelected(imageListing.id)}, "
+          "is selected: ${srl.togglePostSelection(
         postId: imageListing.id,
         resolveDesync: false,
-      )} ");
-      // srl?.toggleSelection(
-      //   index: index,
-      //   postId: imageListing.id,
-      // );
-      logger.finest("Currently selected post ids: ${srl?.selectedPostIds}");
-      logger.finest("Currently selected indices: ${srl?.selectedIndices}");
+      )}");
+      logger.finest("Currently selected post ids: ${srl.selectedPostIds}");
     }
 
     void viewPost() {
@@ -164,146 +138,126 @@ class WImageResult extends StatelessWidget {
       int? p;
       ManagedPostCollectionSync? sc;
       if (!disallowSelections) {
-        sc = getSc(context, false);
+        sc = getSc(ctx, false);
         // await getSc(context, false).mpcSync.updateCurrentPostIndex(index);
-        p = sc.getPageOfGivenPostIndexOnPage(index);
+        p = sc.getPageIndexOfGivenPost(index);
         sc.updateCurrentPostIndex(index);
       }
-      void parseReturnValue(v) {
-        if (v == null) return;
+      void parseReturnValue(e) {
+        if (e == null) return;
+        final v = (
+          selectedPosts: e.selectedPosts as List<E6PostResponse>?,
+          tagsToAddToSearch: e.tagsToAddToSearch as List<String>
+        );
         try {
-          if (v.tagsToAddToSearch is List<String> &&
-              (v.tagsToAddToSearch as List<String>).firstOrNull != null) {
-            sc?.searchText +=
-                (v.tagsToAddToSearch as List<String>).foldToString();
+          if (v.tagsToAddToSearch.firstOrNull != null) {
+            sc?.searchText += v.tagsToAddToSearch.foldToString();
           }
-          if (!disallowSelections) {
-            // TODO: NEEDS TO TRIGGER REBUILD
-            sr(context).selectedPostIds =
-                ((v.selectedPosts as Iterable<E6PostResponse>).map((e) => e.id))
-                    .toSet();
-          }
+          // if (!disallowSelections && v.selectedPosts != null) {
+          //   // TODO: NEEDS TO TRIGGER REBUILD
+          //   sr(context).selectedPostIds =
+          //       (v.selectedPosts!.map((e) => e.id)).toSet();
+          // }
         } catch (e, s) {
           logger.severe(e, e, s);
         }
       }
 
       Navigator.push(
-          context,
+          ctx,
           MaterialPageRoute(
             builder: (_) => allowPostViewNavigation && !disallowSelections
                 ? PostSwipePageManaged(
                     initialIndex: index,
                     // initialPageIndex:
                     //     getSc(context, false).mpcSync.currentPageIndex,
-                    initialPageIndex:
-                        p ?? sc!.getPageOfGivenPostIndexOnPage(index),
+                    initialPageIndex: p ?? sc!.getPageIndexOfGivenPost(index),
                     posts: sc!,
-                    onAddToSearch: getOnAddToSearch(context),
+                    onAddToSearch: getOnAddToSearch(ctx),
                     // tagsToAdd: [],
-                    selectedPosts: sc.collection
-                        .where(
-                          (element) => sr(context)
-                              .selectedPostIds
-                              .contains(element.$.id),
-                        )
-                        .map((e) => e.$)
-                        .toList(),
+                    filterBlacklist: filterBlacklist,
+                    selectedPosts: sr(ctx)
+                        .makeSelectedPostList(sc.collection.map((e) => e.$)),
+                    // selectedPosts: sc.collection
+                    //     .where(
+                    //       (element) => sr(context)
+                    //           .selectedPostIds
+                    //           .contains(element.$.id),
+                    //     )
+                    //     .map((e) => e.$)
+                    //     .toList(),
                     // selectedPosts: srl,
                   )
                 : PostSwipePage.postsCollection(
                     initialIndex: index,
-                    posts: postsCache ??
-                        (!disallowSelections
-                            ? getSc(context, false).posts!.posts
-                            : []),
-                    onAddToSearch: getOnAddToSearch(context),
-                    selectedPosts: sc?.collection
-                        .where(
-                          (element) => sr(context)
-                              .selectedPostIds
-                              .contains(element.$.id),
-                        )
-                        .map((e) => e.$)
-                        .toList(),
+                    posts: postsCache ?? sc?.posts!.posts ?? [],
+                    onAddToSearch: getOnAddToSearch(ctx),
+                    selectedPosts: sc != null
+                        ? sr(ctx)
+                            .makeSelectedPostList(sc.collection.map((e) => e.$))
+                        : null,
+                    // selectedPosts: sc?.collection
+                    //     .where(
+                    //       (element) => sr(context)
+                    //           .selectedPostIds
+                    //           .contains(element.$.id),
+                    //     )
+                    //     .map((e) => e.$)
+                    //     .toList(),
                     // tagsToAdd: [],
                   ),
           )).then<void>(parseReturnValue);
     }
 
+    bool inSelectionState() => isSelected || (srl?.areAnySelected ?? false);
+
+    void onLongPress() {
+      print("[$index] OnLongPress", lm.LogLevel.INFO);
+      inSelectionState() ? viewPost() : toggle();
+    }
+
+    void onDoubleTap() {
+      print("[$index] OnDoubleTap", lm.LogLevel.FINE);
+      toggle();
+    }
+
+    void onTap() {
+      print("[$index] OnTap", lm.LogLevel.INFO);
+      inSelectionState() ? toggle() : viewPost();
+    }
+
     return Positioned.fill(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          // onHover: (value) {
-          //   // tooltip: _buildTooltipString,
-          // },
-          onLongPress: () {
-            print("[$index] OnLongPress", lm.LogLevel.INFO);
-            // toggle();
-            if (isSelected || (srl?.areAnySelected ?? false)) {
-              viewPost();
-            } else {
-              toggle();
-            }
-          },
-          onDoubleTap: () {
-            print("[$index] onDoubleTap", lm.LogLevel.FINE);
-            toggle();
-          },
-          onTap: () {
-            print("[$index] OnTap", lm.LogLevel.INFO);
-            if (isSelected || (srl?.areAnySelected ?? false)) {
-              toggle();
-            } else {
-              viewPost();
-            }
-          },
-        ),
-      ),
-    );
+        child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onLongPress: onLongPress,
+              onDoubleTap: onDoubleTap,
+              onTap: onTap,
+            )));
   }
 
-  void Function(String) getOnAddToSearch(BuildContext context) =>
-      (String addition) {
-        print("WImageResult: onAddToSearch:");
-        print("Before: ${Provider.of<ManagedPostCollectionSync>(
-          context,
-          listen: false,
-        ).searchText}");
-        // Provider.of<SearchViewModel>(
-        //   context,
-        //   listen: false,
-        // ).fillTextBarWithSearchString = true;
-        print(
-          "After: ${getSc(context, false).searchText += " $addition"}",
-        );
-      };
+  void Function(String) getOnAddToSearch(BuildContext ctx) =>
+      (addition) => print("onAddToSearch:"
+          "\n\tBefore: ${getSc(ctx, false).searchText}"
+          "\n\tAfter: ${getSc(ctx, false).searchText += " $addition"}");
   static const progressiveImageBlur = 5.0;
   @widgetFactory
   Widget _buildPane(BuildContext ctx, IImageInfo imageInfo) {
-    int w;
-    int h;
-    String url;
-    IImageInfo(width: w, height: h, url: url) = imageInfo;
-    if (url == "") {
-      logger.info("NO URL $index");
-    }
+    var IImageInfo(width: w, height: h, url: url) = imageInfo;
+    if (url == "") logger.info("NO URL $index");
     var (width: sizeWidth, height: sizeHeight) =
         WImageResult.getGridSizeEstimate(ctx);
     var (:width, :height, :cacheWidth, :cacheHeight, :aspectRatio) =
         determineResolution(w, h, sizeWidth, sizeHeight, imageFit);
     if (!SearchView.i.useProgressiveImages) {
-      Widget i = Image(
-        errorBuilder: (context, e, s) {
-          return ErrorPage(
-            error: e,
-            stackTrace: s,
-            logger: logger,
-            message: "Couldn't load ${imageInfo.url}",
-            isFullPage: false,
-          );
-        },
+      final i = Image(
+        errorBuilder: (context, e, s) => ErrorPage(
+          error: e,
+          stackTrace: s,
+          logger: logger,
+          message: "Couldn't load ${imageInfo.url}",
+          isFullPage: false,
+        ),
         fit: imageFit,
         width: width.toDouble(),
         height: height.toDouble(),
@@ -328,8 +282,7 @@ class WImageResult extends StatelessWidget {
                 ? cacheWidth! / w
                 : cacheHeight?.isFinite ?? false
                     ? cacheHeight! / h
-                    : 1,
-          )
+                    : 1)
         : ResizeImage.resizeIfNeeded(
             cacheWidth?.toInt(),
             cacheHeight?.toInt(),
@@ -340,8 +293,7 @@ class WImageResult extends StatelessWidget {
                   : cacheHeight?.isFinite ?? false
                       ? cacheHeight! / h
                       : 1,
-            ),
-          );
+            ));
     final fWidth = width, fHeight = height;
     ImageProvider thumb;
     if (imageListing.preview != imageInfo) {
@@ -398,17 +350,44 @@ class WImageResult extends StatelessWidget {
       );
       thumb = i;
     }
-    i = ProgressiveImage(
-      blur: progressiveImageBlur,
-      placeholder: placeholder,
-      thumbnail: thumb,
-      image: i,
-      width: fWidth.toDouble(),
-      height: fHeight.toDouble(),
-      fit: imageFit,
+    return Center(
+      child: ProgressiveImage(
+        blur: progressiveImageBlur,
+        placeholder: placeholder,
+        thumbnail: thumb,
+        image: i,
+        width: fWidth.toDouble(),
+        height: fHeight.toDouble(),
+        fit: imageFit,
+      ),
     );
-    return Center(child: i);
   }
+}
+
+class _WCheckmark extends StatelessWidget {
+  const _WCheckmark({
+    super.key,
+    required this.context,
+  });
+
+  final BuildContext context;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        ignoring: true,
+        child: Align(
+          alignment: AlignmentDirectional.bottomEnd,
+          // heightFactor: 6,
+          // widthFactor: 6,
+          child: Icon(
+            Icons.check,
+            color: Colors.green,
+            opticalSize: (IconTheme.of(context).opticalSize ?? 48) * 6,
+            size: (IconTheme.of(context).size ?? 24) * 6,
+            shadows: const [Shadow(offset: Offset(2.5, 5), blurRadius: 5)],
+          ),
+        ),
+      );
 }
 
 class PostInfoPane extends StatelessWidget {

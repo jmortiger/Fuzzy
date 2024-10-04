@@ -389,7 +389,7 @@ packages:
       path: "../j_util"
       relative: true
     source: path
-    version: "2.1.1"
+    version: "2.0.0"
   js:
     dependency: transitive
     description:

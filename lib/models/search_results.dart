@@ -1,11 +1,14 @@
 import 'package:flutter/foundation.dart';
+import 'package:fuzzy/web/e621/models/e6_models.dart' show E6PostResponse;
 import 'package:j_util/j_util_full.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/log_management.dart' show SymbolName;
 
 class SearchResultsNotifier with ChangeNotifier {
   // ignore: unnecessary_late
-  static late final logger = lm.generateLogger("SearchResultsNotifier").logger;
+  static late final logger =
+      lm.generateLogger((#SearchResultsNotifier).name).logger;
   SearchResultsNotifier({
     Set<int>? selectedIndices,
     Set<int>? selectedPostIds,
@@ -25,8 +28,10 @@ class SearchResultsNotifier with ChangeNotifier {
     logger.finer("selectedIndices assignment");
     if (setEquals(_selectedIndices, value)) {
       logger.finest("New Set != Old Set, assigning and notifying listeners");
-      _selectedIndices =
-          value is SetNotifier<int> ? value : SetNotifier<int>.from(value);
+      // _selectedIndices =
+      //     value is SetNotifier<int> ? value : SetNotifier<int>.from(value);
+      _selectedIndices.clear();
+      _selectedIndices.addAll(value);
       notifyListeners();
     } else {
       logger
@@ -40,8 +45,10 @@ class SearchResultsNotifier with ChangeNotifier {
     logger.finer("selectedPostIds assignment");
     if (!setEquals(_selectedPostIds, value)) {
       logger.finest("New Set != Old Set, assigning and notifying listeners");
-      _selectedPostIds =
-          value is SetNotifier<int> ? value : SetNotifier<int>.from(value);
+      // _selectedPostIds =
+      //     value is SetNotifier<int> ? value : SetNotifier<int>.from(value);
+      _selectedPostIds.clear();
+      _selectedPostIds.addAll(value);
       notifyListeners();
     } else {
       logger
@@ -228,5 +235,72 @@ class SearchResultsNotifier with ChangeNotifier {
       "\n\t_selectedIndices: $_selectedIndices,"
       "\n\t_selectedPostIds: $_selectedPostIds",
     );
+  }
+
+  ListNotifier<int> makeSelectedPostIdList({bool listen = true}) {
+    var r = ListNotifier.from(_selectedPostIds);
+    r.addListener(() {
+      final rs = r.toSet();
+      if (!setEquals(_selectedPostIds, rs)) {
+        logger.info("Generated list of selectedPostIds changed");
+        _selectedPostIds.addAll(rs.difference(_selectedPostIds));
+        _selectedPostIds.removeAll(_selectedPostIds.difference(rs));
+        if (listen) notifyListeners();
+      }
+    });
+    return r;
+  }
+
+  ListNotifier<E6PostResponse> makeSelectedPostList(
+    final Iterable<E6PostResponse> posts, {
+    final bool listen = true,
+  }) =>
+      makeSelectedPostListWithMapper(
+          (int id) => posts.firstWhere((p) => p.id == id),
+          listen: listen);
+
+  ListNotifier<E6PostResponse> makeSelectedPostListFromMap(
+    Map<int, E6PostResponse> posts, {
+    bool listen = true,
+  }) =>
+      makeSelectedPostListWithMapper((int id) => posts[id]!, listen: listen);
+
+  ListNotifier<E6PostResponse> makeSelectedPostListWithMapper(
+    E6PostResponse Function(int id) mapToPosts, {
+    bool listen = true,
+  }) {
+    var r = ListNotifier.from(_selectedPostIds.map(mapToPosts));
+    void Function()? onSelectedChanged;
+    void onListChanged() {
+      final rs = r.map((e) => e.id).toSet();
+      if (!setEquals(_selectedPostIds, rs)) {
+        logger.info("Generated list of selectedPosts changed");
+        _selectedPostIds
+          ..removeListener(onSelectedChanged!)
+          ..addAll(rs.difference(_selectedPostIds))
+          ..removeAll(_selectedPostIds.difference(rs))
+          ..addListener(onSelectedChanged);
+        if (listen) notifyListeners();
+      }
+    }
+
+    onSelectedChanged = () {
+      final rs = r.toSet();
+      final sps = _selectedPostIds.map(mapToPosts).toSet();
+      if (!setEquals(_selectedPostIds, rs)) {
+        logger.info("selectedPosts changed, changing generated list");
+        r
+          ..removeListener(onListChanged)
+          ..addAll(sps.difference(rs));
+        for (var e in rs.difference(sps)) {
+          r.remove(e);
+        }
+        r.addListener(onListChanged);
+        if (listen) notifyListeners();
+      }
+    };
+    r.addListener(onListChanged);
+    _selectedPostIds.addListener(onSelectedChanged);
+    return r;
   }
 }

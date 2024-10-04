@@ -6,7 +6,6 @@ import 'package:archive/archive.dart'
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart' show ByteData, Uint8List, rootBundle;
 import 'package:fuzzy/models/app_settings.dart';
-import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'package:http/http.dart' as http;
@@ -23,24 +22,6 @@ Future<TagDB> _core(String vf) {
   _logger.finest("Tag Database Decompressed!");
   return compute(TagDB.makeFromCsvString, vf);
 }
-
-// #region TagDB
-// Future<TagDB> _dbFromList(List<int> value) {
-//   return http.ByteStream.fromBytes(value).bytesToString().then(_core);
-// }
-
-// Future<TagDB> _decodeDbFromServer(http.StreamedResponse value) {
-//   return value.stream.toBytes().then((v) => _decodeDbFromList(v));
-// }
-
-// Future<TagDB> _decodeDbFromList(List<int> value) {
-//   return _dbFromList(a.GZipDecoder().decodeBytes(value));
-// }
-
-// Future<TagDB> _decodeDbFromLocal(ByteData data) {
-//   return _dbFromList(a.GZipDecoder().decodeBuffer(a.InputStream(data)));
-// }
-// #endregion TagDB
 
 // #region String
 Future<String> _fromList(List<int> data) {

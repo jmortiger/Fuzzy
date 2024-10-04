@@ -356,133 +356,6 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithPosts({
   );
 }
 
-Stream<E6BatchActionEvent> removeFavoritesWithPosts({
-  BuildContext? context,
-  required Iterable<E6PostResponse> posts,
-  bool updatePost = true,
-}) async* {
-  var str = "Removing ${posts.length} posts from favorites...";
-  _logger.finer(str);
-  if (context != null && context.mounted) {
-    util.showUserMessage(context: context, content: Text(str));
-  }
-  final pIds = posts.map((e) => e.id).toList();
-  final totalProgressSend = pIds.length;
-  var currentProgressSend = 0;
-  final totalProgressReceive = pIds.length;
-  var currentProgressReceive = 0;
-  String m(num _, num __) {
-    return "$currentProgressSend/"
-        "$totalProgressSend favorite removal requests sent!";
-  }
-
-  String m2(num _, num __) {
-    return "$currentProgressReceive/"
-        "$totalProgressReceive posts removed from favorites!";
-  }
-
-  final results = <Future<E6BatchActionEvent<dynamic>>>[];
-  for (var i = 0; i < pIds.length; i++) {
-    results.add(e621
-        .sendRequest(
-      e621.initFavoriteDelete(
-        postId: pIds[i],
-        credentials: E621AccessData.fallback?.cred,
-      ),
-      useBurst: true,
-    )
-        .then(
-      (value) {
-        ++currentProgressReceive;
-        lm.logResponseSmart(value, _logger);
-        if (value.statusCodeInfo.isSuccessful) {
-          return E6BatchActionEvent.builder(
-            currentProgress: currentProgressReceive + currentProgressSend,
-            messageBuilder: m2,
-            totalProgress: totalProgressReceive + totalProgressSend,
-            sideAction: (
-              "Undo",
-              () => addPostToFavoritesWithPost(post: posts.elementAt(i))
-            ),
-          );
-        } else {
-          return E6BatchActionEvent.builder(
-            currentProgress: currentProgressReceive + currentProgressSend,
-            messageBuilder: m2,
-            totalProgress: totalProgressReceive + totalProgressSend,
-            sideAction: (
-              "Undo",
-              () => addPostToFavoritesWithPost(post: posts.elementAt(i))
-            ),
-            error: value.reasonPhrase,
-          );
-        }
-      },
-    ));
-    yield E6BatchActionEvent.builder(
-      currentProgress: ++currentProgressSend + currentProgressReceive,
-      totalProgress: totalProgressSend + totalProgressReceive,
-      messageBuilder: m,
-    );
-  }
-  yield* Stream.fromFutures(results);
-  // return E621.sendDeleteFavoriteRequestBatch(
-  //   pIds,
-  //   username: E621AccessData.fallback?.username,
-  //   apiKey: E621AccessData.fallback?.apiKey,
-  //   onComplete: (responses) {
-  //     var total = responses.length;
-  //     responses.removeWhere(
-  //       (element) => element.statusCodeInfo.isSuccessful,
-  //     );
-  //     var sbs = "${total - responses.length}/"
-  //         "$total posts removed from favorites!";
-  //     // responses.where((r) => r.statusCode == 422).forEach((r) async {
-  //     //   var pId = int.parse(r.request!.url.queryParameters["post_id"]!);
-  //     //   if ((context != null && context.mounted) &&
-  //     //       Provider.of<cf.CachedFavorites>(context!, listen: false)
-  //     //           .postIds
-  //     //           .contains(pId)) {
-  //     //     sbs += " $pId Cached";
-  //     //   }
-  //     // });
-  //     if (context != null && context.mounted) {
-  //       ScaffoldMessenger.of(context!)
-  //         ..hideCurrentSnackBar()
-  //         ..showSnackBar(
-  //           SnackBar(
-  //             content: Text(sbs),
-  //             action: SnackBarAction(
-  //               label: "Undo",
-  //               onPressed: () async {
-  //                 E621.sendAddFavoriteRequestBatch(
-  //                   pIds,
-  //                   username: E621AccessData.fallback?.username,
-  //                   apiKey: E621AccessData.fallback?.apiKey,
-  //                   onComplete: (rs) {
-  //                     if (context.mounted) {
-  //                       ScaffoldMessenger.of(context)
-  //                         ..hideCurrentSnackBar()
-  //                         ..showSnackBar(
-  //                           SnackBar(
-  //                             content: Text(
-  //                               "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
-  //                               "/${rs.length} posts added to favorites!",
-  //                             ),
-  //                           ),
-  //                         );
-  //                     }
-  //                   },
-  //                 );
-  //               },
-  //             ),
-  //           ),
-  //         );
-  //     }
-  //   },
-  // );
-}
-
 Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithIds({
   BuildContext? context,
   required final Iterable<int> postIds,
@@ -597,7 +470,7 @@ Future<e621.PostSet?> removeFromSetWithPosts({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.initRemoveFromSetRequest(
+        .sendRequest(e621.initSetRemovePosts(
           v.id,
           posts.map((e) => e.id).toList(),
           credentials: E621AccessData.fallback?.cred,
@@ -847,7 +720,7 @@ Future<e621.PostSet?> removeFromSetWithIds({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.initRemoveFromSetRequest(
+        .sendRequest(e621.initSetRemovePosts(
           v.id,
           postIds,
           credentials: E621AccessData.fallback?.cred,
@@ -1088,7 +961,7 @@ Future<e621.PostSet?> removeFromSetWithPost({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.initRemoveFromSetRequest(
+        .sendRequest(e621.initSetRemovePosts(
           v.id,
           [post.id],
           credentials: E621AccessData.fallback?.cred,
@@ -1316,7 +1189,7 @@ Future<e621.PostSet?> removeFromSetWithId({
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
     var res = await E621
-        .sendRequest(e621.initRemoveFromSetRequest(
+        .sendRequest(e621.initSetRemovePosts(
           v.id,
           [postId],
           credentials: E621AccessData.fallback?.cred,
@@ -2100,85 +1973,6 @@ E6PostResponse updatePostWithScore(
 }
 // #endregion Helpers
 
-// typedef E6BatchActionEvent = ({int currentProgress, int totalProgress, String })
-class WE6BatchAction extends StatefulWidget {
-  final StreamSubscription<E6BatchActionEvent> stream;
-  const WE6BatchAction({
-    super.key,
-    required this.stream,
-  });
-
-  @override
-  State<WE6BatchAction> createState() => _WE6BatchActionState();
-}
-
-class _WE6BatchActionState extends State<WE6BatchAction> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container();
-  }
-}
-
-// TODO: IMPLEMENT AND TEST BATCH ACTIONS
-class E6Actions extends ChangeNotifier {
-  static final batchActions =
-      ListNotifier<Stream<E6BatchActionEvent>>.empty(growable: true);
-}
-
-class E6BatchActionEvent<T> {
-  final num currentProgress;
-  final String? message;
-  final String Function(num currentProgress, num totalProgress)? messageBuilder;
-  final num totalProgress;
-  final Object? error;
-  final StackTrace? stackTrace;
-  final String? errorMessage;
-  final T? result;
-  final VoidCallback? cancel;
-  final (String label, VoidCallback)? sideAction;
-  bool get hasError => error != null;
-
-  const E6BatchActionEvent({
-    required this.currentProgress,
-    required this.message,
-    this.totalProgress = 1,
-    this.error,
-    this.stackTrace,
-    this.errorMessage,
-    this.result,
-    this.cancel,
-    this.sideAction,
-  }) : messageBuilder = null;
-  const E6BatchActionEvent.builder({
-    required this.currentProgress,
-    required this.messageBuilder,
-    this.totalProgress = 1,
-    this.error,
-    this.stackTrace,
-    this.errorMessage,
-    this.result,
-    this.cancel,
-    this.sideAction,
-  }) : message = null;
-  const E6BatchActionEvent.req({
-    required this.messageBuilder,
-    required this.currentProgress,
-    required this.message,
-    required this.totalProgress,
-    required this.error,
-    required this.stackTrace,
-    required this.errorMessage,
-    required this.result,
-    required this.cancel,
-    required this.sideAction,
-  });
-}
-
 class WBatchFavRemoval extends StatefulWidget {
   final Stream<RemoveFavEvent> stream;
   final int numPosts;
@@ -2272,8 +2066,8 @@ class RemoveFavEvent {
     required this.result,
     required List<int> this.postIds,
     required List<int> this.successfulPostIds,
-  })  : posts = null,
-        successfulPosts = null;
+    this.successfulPosts,
+  }) : posts = null;
   double get progress => (currentSent + currentReceived * 3) / totalPosts * 4;
   double get sentProgress => currentSent / totalPosts;
   double get receivedProgress => currentReceived / totalPosts;
@@ -2295,12 +2089,7 @@ Stream<RemoveFavEvent> testRemoveFavoritesWithPosts({
   var currentReceived = 0;
   final successes = <E6PostResponse>[];
 
-  void onListen() {}
-  void onCancel() {}
-  final ctr = StreamController<RemoveFavEvent>.broadcast(
-    onListen: onListen,
-    onCancel: onCancel,
-  );
+  final ctr = StreamController<RemoveFavEvent>.broadcast();
   dispatch() async* {
     for (final post in posts) {
       yield RemoveFavEvent.withPost(
@@ -2344,27 +2133,6 @@ Stream<RemoveFavEvent> testRemoveFavoritesWithPosts({
                     .then((_) => _logger.info("Remove fav controller closed"))
                     .ignore();
               }
-              /* if (value.statusCodeInfo.isSuccessful) {
-          ctr.add(RemoveFavEvent.withPost(
-            currentReceived: currentProgressReceive,
-            currentSent: currentProgressSend,
-            totalPosts: posts.length,
-            currentEventPost: post,
-            wasRequest: false,
-            result: value,
-          ));
-        } else {
-          return E6BatchActionEvent.builder(
-            currentProgress: currentProgressReceive + currentProgressSend,
-            messageBuilder: m2,
-            totalProgress: totalProgressReceive + totalProgressSend,
-            sideAction: (
-              "Undo",
-              () => addPostToFavoritesWithPost(post: posts.elementAt(i))
-            ),
-            error: value.reasonPhrase,
-          );
-        } */
             },
           ).ignore(),
       );
@@ -2379,105 +2147,84 @@ Stream<RemoveFavEvent> testRemoveFavoritesWithPosts({
         content: WBatchFavRemoval(stream: ctr.stream, numPosts: posts.length));
   }
   return ctr.stream;
+}
 
-  /* final results = <Future<E6BatchActionEvent<dynamic>>>[];
-  for (var i = 0; i < posts.length; i++) {
-    results.add(e621
-        .sendRequest(
-      e621.initFavoriteDelete(
-        postId: posts[i],
-        credentials: E621AccessData.fallback?.cred,
-      ),
-      useBurst: true,
-    )
-        .then(
-      (value) {
-        ++currentProgressReceive;
-        lm.logResponseSmart(value, _logger);
-        if (value.statusCodeInfo.isSuccessful) {
-          return E6BatchActionEvent.builder(
-            currentProgress: currentProgressReceive + currentProgressSend,
-            messageBuilder: m2,
-            totalProgress: totalProgressReceive + totalProgressSend,
-            sideAction: (
-              "Undo",
-              () => addPostToFavoritesWithPost(post: posts.elementAt(i))
-            ),
-          );
-        } else {
-          return E6BatchActionEvent.builder(
-            currentProgress: currentProgressReceive + currentProgressSend,
-            messageBuilder: m2,
-            totalProgress: totalProgressReceive + totalProgressSend,
-            sideAction: (
-              "Undo",
-              () => addPostToFavoritesWithPost(post: posts.elementAt(i))
-            ),
-            error: value.reasonPhrase,
-          );
-        }
-      },
-    ));
-    yield E6BatchActionEvent.builder(
-      currentProgress: ++currentProgressSend + currentProgressReceive,
-      totalProgress: totalProgressSend + totalProgressReceive,
-      messageBuilder: m,
-    );
+Stream<RemoveFavEvent> testRemoveFavoritesWithIds({
+  BuildContext? context,
+  required List<int> ids,
+}) {
+  var str = "Removing ${ids.length} posts from favorites...";
+  _logger.finer(str);
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(str));
   }
-  yield* Stream.fromFutures(results); */
-  // return E621.sendDeleteFavoriteRequestBatch(
-  //   pIds,
-  //   username: E621AccessData.fallback?.username,
-  //   apiKey: E621AccessData.fallback?.apiKey,
-  //   onComplete: (responses) {
-  //     var total = responses.length;
-  //     responses.removeWhere(
-  //       (element) => element.statusCodeInfo.isSuccessful,
-  //     );
-  //     var sbs = "${total - responses.length}/"
-  //         "$total posts removed from favorites!";
-  //     // responses.where((r) => r.statusCode == 422).forEach((r) async {
-  //     //   var pId = int.parse(r.request!.url.queryParameters["post_id"]!);
-  //     //   if ((context != null && context.mounted) &&
-  //     //       Provider.of<cf.CachedFavorites>(context!, listen: false)
-  //     //           .postIds
-  //     //           .contains(pId)) {
-  //     //     sbs += " $pId Cached";
-  //     //   }
-  //     // });
-  //     if (context != null && context.mounted) {
-  //       ScaffoldMessenger.of(context!)
-  //         ..hideCurrentSnackBar()
-  //         ..showSnackBar(
-  //           SnackBar(
-  //             content: Text(sbs),
-  //             action: SnackBarAction(
-  //               label: "Undo",
-  //               onPressed: () async {
-  //                 E621.sendAddFavoriteRequestBatch(
-  //                   pIds,
-  //                   username: E621AccessData.fallback?.username,
-  //                   apiKey: E621AccessData.fallback?.apiKey,
-  //                   onComplete: (rs) {
-  //                     if (context.mounted) {
-  //                       ScaffoldMessenger.of(context)
-  //                         ..hideCurrentSnackBar()
-  //                         ..showSnackBar(
-  //                           SnackBar(
-  //                             content: Text(
-  //                               "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
-  //                               "/${rs.length} posts added to favorites!",
-  //                             ),
-  //                           ),
-  //                         );
-  //                     }
-  //                   },
-  //                 );
-  //               },
-  //             ),
-  //           ),
-  //         );
-  //     }
-  //   },
-  // );
+  var currentSent = 0;
+  var currentReceived = 0;
+  final successes = <int>[], successfulPosts = <E6PostResponse>[];
+
+  final ctr = StreamController<RemoveFavEvent>.broadcast();
+  dispatch() async* {
+    for (final post in ids) {
+      yield RemoveFavEvent.withId(
+        currentEventPostId: post,
+        successfulPostIds: successes,
+        postIds: ids,
+        // successfulPosts: successes,
+        // posts: ids,
+        successfulPosts: successfulPosts,
+        // currentEventPost: post,
+        currentReceived: currentReceived,
+        currentSent: currentSent,
+        totalPosts: ids.length,
+        wasRequest: true,
+        result: e621.sendRequest(
+          e621.initFavoriteDelete(
+            postId: post,
+            credentials: E621AccessData.fallback?.cred,
+          ),
+          useBurst: true,
+        )..then(
+            (value) {
+              ++currentReceived;
+              lm.logResponseSmart(value, _logger);
+              final E6PostResponse? v;
+              if (value.statusCodeInfo.isSuccessful) {
+                v = E6PostResponse.fromRawJson(value.body);
+                successes.add(post);
+                successfulPosts.add(v);
+              } else {
+                v = null;
+              }
+              ctr.add(RemoveFavEvent.withId(
+                postIds: ids,
+                successfulPostIds: successes,
+                successfulPosts: successfulPosts,
+                currentReceived: currentReceived,
+                currentSent: currentSent,
+                totalPosts: ids.length,
+                currentEventPost: v,
+                wasRequest: false,
+                result: value,
+                currentEventPostId: post,
+              ));
+              if (currentReceived == ids.length) {
+                ctr
+                    .close()
+                    .then((_) => _logger.info("Remove fav controller closed"))
+                    .ignore();
+              }
+            },
+          ).ignore(),
+      );
+    }
+  }
+
+  ctr.addStream(dispatch());
+  if (context != null && context.mounted) {
+    util.showUserMessageBanner(
+        duration: null,
+        context: context,
+        content: WBatchFavRemoval(stream: ctr.stream, numPosts: ids.length));
+  }
+  return ctr.stream;
 }

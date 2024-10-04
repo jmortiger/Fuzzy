@@ -59,6 +59,7 @@ void main(List<String> args) async {
       (await CachedSearches.loadFromStorageAsync()).lastOrNull?.searchString;
   await E621AccessData.tryLoad();
   e621.activeCredentials = E621AccessData.fallbackForced?.cred;
+  e621.activeUserAgent = E621AccessData.fallbackForced?.userAgent;
   CachedFavorites.fileFullPath.getItemAsync().ignore();
   SavedDataE6.init();
   SubscriptionManager.initAndCheckSubscriptions();

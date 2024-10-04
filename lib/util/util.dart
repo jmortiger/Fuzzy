@@ -68,7 +68,7 @@ ScaffoldFeatureController? showUserMessage({
   bool addDismissOption = true,
 }) =>
     context.mounted
-        ? (useSnackbar ? _showUserMessageSnackbar : _showUserMessageBanner)(
+        ? (useSnackbar ? _showUserMessageSnackbar : showUserMessageBanner)(
             context: context,
             content: content,
             action: action,
@@ -107,7 +107,8 @@ SnackBarAction? _makeSnackBarAction((String label, VoidCallback onTap)? action,
       : null;
 }
 
-ScaffoldFeatureController _showUserMessageBanner({
+ScaffoldFeatureController<MaterialBanner, MaterialBannerClosedReason>
+    showUserMessageBanner({
   required BuildContext context,
   required Widget content,
   bool autoHidePrior = true,
@@ -116,21 +117,23 @@ ScaffoldFeatureController _showUserMessageBanner({
   List<(String label, VoidCallback onTap)>? actions,
   bool addDismissOption = true,
 }) {
-  final message = MaterialBanner(
+  final ctr = ValueNotifier<ScaffoldFeatureController?>(null),
+      message = MaterialBanner(
         content: content,
-        actions: _makeBannerAction(action, actions, addDismissOption),
+        actions: _makeBannerAction(action, actions, ctr, addDismissOption),
       ),
       sm = ScaffoldMessenger.of(context);
   if (autoHidePrior) sm.hideCurrentMaterialBanner();
   if (duration == null) return sm.showMaterialBanner(message);
-  final ret = sm.showMaterialBanner(message);
+  final ret = ctr.value = sm.showMaterialBanner(message);
   Future.delayed(duration, () => ret.close()).ignore();
   return ret;
 }
 
 List<Widget> _makeBannerAction(
   (String label, VoidCallback onTap)? action,
-  List<(String label, VoidCallback onTap)>? actions, [
+  List<(String label, VoidCallback onTap)>? actions,
+  ValueListenable<ScaffoldFeatureController?> ctr, [
   bool addDismissOption = true,
 ]) {
   Widget make((String label, VoidCallback onTap) action) => TextButton.icon(
@@ -141,7 +144,8 @@ List<Widget> _makeBannerAction(
     if (addDismissOption ||
         (action ?? actions) == null ||
         (action == null && actions!.isEmpty))
-      TextButton.icon(label: const Text("Ok"), onPressed: () {}),
+      TextButton.icon(
+          label: const Text("Ok"), onPressed: () => ctr.value!.close()),
     if (action != null) make(action),
     if (actions != null) ...actions.map(make)
   ];

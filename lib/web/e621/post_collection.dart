@@ -54,6 +54,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   // #endregion Logger
   // #region Fields
   bool treatAsNull = true;
+  // #region Filter Blacklist
   bool _filterBlacklist;
 
   bool get filterBlacklist => _filterBlacklist;
@@ -62,17 +63,29 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     _filterBlacklist = value;
     notifyListeners();
   }
+  // #endregion Filter Blacklist
 
   PostSearchQueryRecord? lastPage;
 
   bool tryValidatingSearches = false;
   final PostCollectionSync collection;
   final onPageRetrievalFailure = JEvent<PostCollectionEvent>();
-  PostSearchQueryRecord _parameters;
+  PostSearchQueryRecord get _parameters => PostSearchQueryRecord.withNumber(
+        tags: _tags,
+        limit: _limit,
+        pageNumber: currentPageNumber,
+      );
+  set _parameters(PostSearchQueryRecord v) {
+    _tags = v.tags;
+    _limit = v.validLimit;
+    _currentPageIndex = v.pageIndex ?? 0;
+  }
+
+  String _tags;
+  int _limit;
   int _startingPage = 0;
-  int _currentPageOffset;
   E6Posts? _e6posts;
-  int _currentPostIndex = 0;
+  int _currentPostIndex;
   final _loading = <PostSearchQueryRecord, Future<CacheType>>{};
   Future<CacheType>? checkLoading(PostSearchQueryRecord p) => _loading[p];
   Future<int> _numSearchPostsInit() => E621.findTotalPostNumber(
@@ -120,10 +133,15 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     super.hasNextPageCached,
     bool filterBlacklist = true,
   })  : _filterBlacklist = filterBlacklist,
-        _parameters = parameters ?? const PostSearchQueryRecord(),
-        _currentPageOffset = 0,
         _startingPage =
             (parameters ?? const PostSearchQueryRecord()).pageIndex ?? 0,
+        // _currentPageOffset = 0,
+        // _parameters = parameters ?? const PostSearchQueryRecord(),
+        _limit = (parameters ?? const PostSearchQueryRecord()).validLimit,
+        _tags = (parameters ?? const PostSearchQueryRecord()).tags,
+        _currentPostIndex =
+            ((parameters ?? const PostSearchQueryRecord()).pageIndex ?? 0) *
+                (parameters ?? const PostSearchQueryRecord()).validLimit,
         collection = PostCollectionSync() {
     _totalPostsInSearch = LazyInitializer<int>(_numSearchPostsInit);
     if (parameters != null) {
@@ -150,15 +168,34 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     super.hasNextPageCached,
     bool filterBlacklist = true,
   })  : _filterBlacklist = filterBlacklist,
-        _parameters = parameters ?? const PostSearchQueryRecord(),
-        _currentPageOffset = 0,
         _startingPage =
             (parameters ?? const PostSearchQueryRecord()).pageIndex ?? 0,
+        // _currentPageOffset = 0,
+        // _parameters = parameters ?? const PostSearchQueryRecord(),
+        _limit = (parameters ?? const PostSearchQueryRecord()).validLimit,
+        _tags = (parameters ?? const PostSearchQueryRecord()).tags,
+        _currentPostIndex =
+            ((parameters ?? const PostSearchQueryRecord()).pageIndex ?? 0) *
+                (parameters ?? const PostSearchQueryRecord()).validLimit,
         collection = PostCollectionSync();
   // #endregion Ctor
 
   // #region Properties
+  int get _currentPageOffset => getPageIndexOfGivenPost();
+
+  /// Performs background async operation to update [currentPostIndex] to the 1st post on the page; use [updateCurrentPostIndex] to await its resolution.
+  set _currentPageOffset(int v) {
+    if (_currentPageOffset != v - startingPageIndex) {
+      updateCurrentPostIndex(getPageFirstPostIndex(v));
+    }
+  }
+
   int get currentPageIndex => _startingPage + _currentPageOffset;
+  int get _currentPageIndex => currentPageIndex;
+  set _currentPageIndex(int v) {
+    if (_currentPageIndex != v) _currentPageOffset = v - currentPageIndex;
+  }
+
   int get currentPageNumber => currentPageIndex + 1;
 
   /// The currently view post index in [collection].
@@ -172,8 +209,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   set currentPostIndex(int value) => updateCurrentPostIndex(value);
 
   /// The index in [collection] of the 1st post of the [currentPageIndex].
-  int get currentPageFirstPostIndex =>
-      (_startingPage + _currentPageOffset) * postsPerPage;
+  int get currentPageFirstPostIndex => currentPageIndex * postsPerPage;
 
   /// The last page of results currently in [collection].
   ///
@@ -210,9 +246,9 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   void launchOrReloadSearch(PostSearchQueryRecord value) {
     logger.info("Forcibly relaunching search"
         "\n\told:"
-        "\n\t\ttags:${_parameters.tags}"
-        "\n\t\tlimit:${_parameters.limit}"
-        "\n\t\tpageNumber:${_parameters.pageNumber}"
+        "\n\t\ttags:${parameters.tags}"
+        "\n\t\tlimit:${parameters.limit}"
+        "\n\t\tpageNumber:${parameters.pageNumber}"
         "\n\tnew:"
         "\n\t\ttags:${value.tags}"
         "\n\t\tlimit:${value.limit}"
@@ -236,15 +272,15 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   set parameters(PostSearchQueryRecord value) {
     logger.finest("set parameters called"
         "\n\told:"
-        "\n\t\ttags:${_parameters.tags}"
-        "\n\t\tlimit:${_parameters.limit}"
-        "\n\t\tpageNumber:${_parameters.pageNumber}"
+        "\n\t\ttags:${parameters.tags}"
+        "\n\t\tlimit:${parameters.limit}"
+        "\n\t\tpageNumber:${parameters.pageNumber}"
         "\n\tnew:"
         "\n\t\ttags:${value.tags}"
         "\n\t\tlimit:${value.limit}"
         "\n\t\tpageNumber:${value.pageNumber}");
-    if (!setEquals(_parameters.tagSet, value.tagSet)) {
-      logger.info("Tag Parameter changed from ${_parameters.tagSet} "
+    if (!setEquals(parameters.tagSet, value.tagSet)) {
+      logger.info("Tag Parameter changed from ${parameters.tagSet} "
           "to ${value.tagSet}, clearing collection and notifying listeners");
       _parameters = value;
       _reload();
@@ -316,7 +352,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     }
   }
 
-  String get searchText => _parameters.tags;
+  String get searchText => parameters.tags;
   set searchText(String value) {
     parameters = parameters.copyWith(tags: value);
     // notifyListeners();
@@ -426,23 +462,28 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
 
   bool assignPagePosts(
       final int pageIndex, final Iterable<E6PostResponse> toAdd) {
-    var start = getPageFirstPostIndex(pageIndex);
-    if (start < 0) {
-      do {
-        _startingPage--;
-        start++;
+    switch (getPageFirstPostIndex(pageIndex)) {
+      case < 0:
         final t = toAdd.toList();
+        if (t.isEmpty) return true;
         do {
-          collection._posts.addFirst(E6PostEntrySync(value: t.removeLast()));
-        } while (t.isNotEmpty);
-      } while (start < 0);
-      return true;
-    } else if (start >= collection._posts.length) {
-      collection._posts.addAll(toAdd.map((e) => E6PostEntrySync(value: e)));
-      return true;
-    } else {
-      // TODO: Allow Replacement
-      return false;
+          _startingPage--;
+          for (int i = 0; t.isNotEmpty && postsPerPage > i; i++) {
+            collection._posts.addFirst(E6PostEntrySync(value: t.removeLast()));
+          }
+        } while (t.isNotEmpty && getPageFirstPostIndex(pageIndex) < 0);
+        notifyListeners();
+        return true;
+
+      case int start when start >= collection._posts.length:
+        if (toAdd.firstOrNull == null) return true;
+        collection._posts.addAll(toAdd.map((e) => E6PostEntrySync(value: e)));
+        notifyListeners();
+        return true;
+
+      default:
+        // TODO: Allow Replacement
+        return false;
     }
   }
 
@@ -554,11 +595,10 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   /// {@macro negativePageIndexWarn}
   ///
   /// If null, [postIndexOverall] defaults to [currentPostIndex].
-  int getPageOfGivenPostIndexOnPage([int? postIndexOverall]) =>
+  int getPageIndexOfGivenPost([int? postIndexOverall]) =>
       // ((postIndexOverall ?? currentPostIndex) - (_startingPage * postsPerPage)) ~/
       //     postsPerPage;
-      ((postIndexOverall ?? currentPostIndex) / postsPerPage - _startingPage)
-          .toInt();
+      (postIndexOverall ?? currentPostIndex) ~/ postsPerPage - _startingPage;
 
   /// Takes the given [postIndexOverall] in [collection] and returns the index
   /// relative to the given [pageIndexOverall].
@@ -577,8 +617,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     String? apiKey,
   }) async {
     if (await tryLoadNextPage(username: username, apiKey: apiKey)) {
-      _currentPageOffset++;
-      parameters = _parameters.copyWith(pageIndex: currentPageIndex);
+      _currentPageIndex++; //_currentPageOffset++;
+      // parameters = parameters.copyWith(pageIndex: currentPageIndex);
       return true;
     } else {
       return false;
@@ -590,8 +630,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     String? apiKey,
   }) async {
     if (await tryLoadPriorPage(username: username, apiKey: apiKey)) {
-      _currentPageOffset--;
-      parameters = _parameters.copyWith(pageIndex: currentPageIndex);
+      _currentPageIndex--; //_currentPageOffset--;
+      // parameters = parameters.copyWith(pageIndex: currentPageIndex);
       return true;
     } else {
       return false;
@@ -608,13 +648,17 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     if (isPageLoaded(pageIndex)) {
       // pageIndex = desiredPageOffset + startingPageIndex
       // currentPageIndex = _currentPageOffset + startingPageIndex
-      // currentPageIndex - pageIndex = delta
-      // (_currentPageOffset + startingPageIndex) - (desiredPageOffset + startingPageIndex) = delta
-      // cpo + spi - dpo - spi = delta
-      // cpo - dpo = delta
-      // cpo = dpo + delta
-      // cpo - delta = dpo
-      _currentPageOffset -= currentPageIndex - pageIndex;
+      // pageIndex - currentPageIndex = delta
+      // (desiredPageOffset + startingPageIndex) - (_currentPageOffset + startingPageIndex) = delta
+      // dpo + spi - cpo - spi = delta
+      // dpo - cpo = delta
+      // dpo = cpo + delta
+      // dpo - delta = cpo
+      // dpo + spi - cpo - spi = delta
+      // dpo + spi = delta + cpo + spi
+      // dpo + spi - delta = cpo + spi
+      // _currentPageOffset = currentPageIndex - pageIndex;
+      _currentPageIndex = pageIndex;
       return true;
     }
     // if (allowJumping &&
@@ -667,8 +711,11 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     String? apiKey,
   }) async {
     FutureOr<bool> doIt() {
+      final p = parameters.copyWith(pageIndex: currentPageIndex + 1);
+      /* 
       final p = _parameters.copyWith(
           pageIndex: _currentPageOffset + 1 + _startingPage);
+       */
       return _fetchPage(p).then((v) {
         if (v?.isEmpty ?? true) {
           logger.info(
@@ -717,8 +764,11 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     String? apiKey,
   }) {
     FutureOr<bool> doIt() {
+      final p = parameters.copyWith(pageIndex: currentPageIndex - 1);
+      /* 
       final p = _parameters.copyWith(
           pageIndex: _currentPageOffset - 1 + _startingPage);
+       */
       return _fetchPage(p).then((v) {
         if (v?.isEmpty ?? true) {
           logger.info(
@@ -754,7 +804,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       logger.info(
         "Should be no prior page\n"
         "\tvalidLimit: ${parameters.validLimit}\n"
-        "\tpageNumber: ${_currentPageOffset - 1 + _startingPage + 1}\n"
+        "\tpageNumber: ${currentPageNumber - 1}\n"
+        //"\tpageNumber: ${_currentPageOffset - 1 + _startingPage + 1}\n"
         "\ttags: ${parameters.tags}",
       );
       return false;
@@ -768,7 +819,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   }) {
     FutureOr<bool> doIt() async {
       Future<bool> l(int p) {
-        final param = _parameters.copyWith(pageIndex: p);
+        final param = parameters.copyWith(pageIndex: p);
         return _fetchPage(param).then((v) {
           if (v?.isEmpty ?? true) {
             logger.info(
@@ -812,7 +863,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
       logger.info(
           "Should be no prior page and therefore no page $pageIndex\n"
               "\tvalidLimit: ${parameters.validLimit}\n"
-              "\tpageNumber: ${_currentPageOffset - 1 + _startingPage}\n"
+              "\tpageNumber: ${currentPageNumber - 1}\n"
               "\ttags: ${parameters.tags}",
           "\tRequest index: $pageIndex\n");
       return false;
@@ -826,7 +877,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
   }) async {
     FutureOr<bool> doIt() async {
       Future<bool> l(int p) {
-        final param = _parameters.copyWith(pageIndex: p);
+        final param = parameters.copyWith(pageIndex: p);
         return _fetchPage(param).then((v) {
           if (v?.isEmpty ?? true) {
             logger.info(
@@ -893,7 +944,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     String? username,
     String? apiKey,
   }) {
-    final param = _parameters.copyWith(pageIndex: 0);
+    final param = parameters.copyWith(pageIndex: 0);
     return _fetchPage(param).then((v) {
       if (v?.isEmpty ?? true) {
         logger.info(
@@ -946,20 +997,45 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
 
   bool isNewSearch(String newSearchText) =>
       !setEquals(newSearchText.split(RegExp(r"\s")).toSet(), parameters.tagSet);
-
+  (int index, Future<void> f)? _postUpdate;
   Future<void> updateCurrentPostIndex(int newIndex) async {
-    _currentPostIndex = newIndex;
-    while (getPageLastPostIndex(currentPageIndex) < _currentPostIndex) {
-      await goToNextPage();
+    if (_postUpdate != null && _postUpdate!.$1 == newIndex) {
+      return _postUpdate!.$2;
     }
-    while (getPageFirstPostIndex(currentPageIndex) > _currentPostIndex) {
-      await goToPriorPage();
+    if (_postUpdate != null && _postUpdate!.$1 != newIndex) {
+      logger.warning("Discarding attempted post index change to $newIndex");
+      return _postUpdate!.$2;
+    }
+    return (_postUpdate = (
+      newIndex,
+      _updateCurrentPostIndex(newIndex)..then((_) => _postUpdate = null)
+    ))
+        .$2;
+  }
+
+  Future<void> _updateCurrentPostIndex(int newIndex) async {
+    if (currentPostIndex == newIndex) return;
+    final pageIndex = getPageIndexOfGivenPost(newIndex);
+    if (isPageLoaded(pageIndex)) {
+      _currentPostIndex = newIndex;
+      notifyListeners();
+      return;
+    }
+    if (await tryRetrievePage(pageIndex)) {
+      _currentPostIndex = newIndex;
+      notifyListeners();
+    } else {
+      logger.warning(
+        "Failed to update post index to page:"
+        "\n\tdesiredPostIndex: $newIndex"
+        "\n\tdesiredPageIndex: $pageIndex",
+      );
     }
   }
 
   Future<Iterable<E6PostResponse>?> _fetchPage(
       [PostSearchQueryRecord? parameters]) {
-    parameters ??= _parameters;
+    parameters ??= this.parameters;
     logger.info("Getting page ${parameters.page}");
     return _loading[parameters] ??
         (!(lastPage?.hasLesserPageNumber(parameters, orEqual: true) ?? false)
@@ -1275,15 +1351,12 @@ class FavoritesCollectionLoader extends ManagedPostCollectionSync {
         }).ignore();
 
   @override
-  PostSearchQueryRecord get parameters => _parameters;
-
-  @override
   set parameters(PostSearchQueryRecord value) {
     logger.finest("set parameters called"
         "\n\told:"
-        "\n\t\ttags:${_parameters.tags}"
-        "\n\t\tlimit:${_parameters.limit}"
-        "\n\t\tpageNumber:${_parameters.pageNumber}"
+        "\n\t\ttags:${parameters.tags}"
+        "\n\t\tlimit:${parameters.limit}"
+        "\n\t\tpageNumber:${parameters.pageNumber}"
         "\n\tnew:"
         "\n\t\ttags:${value.tags}"
         "\n\t\tlimit:${value.limit}"
@@ -1312,7 +1385,7 @@ class FavoritesCollectionLoader extends ManagedPostCollectionSync {
   @override
   Future<Iterable<E6PostResponse>?> _fetchPage(
       [PostSearchQueryRecord? parameters]) {
-    parameters ??= _parameters;
+    parameters ??= this.parameters;
     logger.info("Getting page ${parameters.page}");
     return _loading[parameters] ??
         (_loading[parameters] = E621

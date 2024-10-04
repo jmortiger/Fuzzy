@@ -183,7 +183,7 @@ class UserProfileLoaderPage extends StatefulWidget
   //     logger.warning("No user info available: cannot find user");
   //     return null;
   //   }
-  //   var r = e621.initSearchUsersRequest(
+  //   var r = e621.initUserSearch(
   //     searchNameMatches: username,
   //     credentials: d,
   //     limit: 1,
@@ -233,7 +233,7 @@ class UserProfileLoaderPage extends StatefulWidget
   //     if (d == null) {
   //       logger.info("No credential data, can't get logged in data.");
   //     }
-  //     var r = e621.initGetUserRequest(
+  //     var r = e621.initUserGet(
   //       id,
   //       credentials: d,
   //     );
@@ -249,7 +249,7 @@ class UserProfileLoaderPage extends StatefulWidget
   //     logger.warning("No user info available: cannot find user");
   //     return null;
   //   }
-  //   var r = e621.initSearchUsersRequest(
+  //   var r = e621.initUserSearch(
   //     searchNameMatches: username,
   //     credentials: d,
   //     limit: 1,
@@ -271,7 +271,7 @@ class UserProfileLoaderPage extends StatefulWidget
   //         t = User.fromRawJson(v.body);
   //       }
   //       logger.info("Launching request for User ${t.id} (${t.name})");
-  //       var r = e621.initGetUserRequest(
+  //       var r = e621.initUserGet(
   //         t.id,
   //         credentials: d,
   //       );

@@ -151,7 +151,7 @@ class PoolViewPageBuilder extends StatelessWidget
   Widget build(BuildContext context) {
     return FutureBuilder(
       future: E621
-          .sendRequest(e621.initGetPoolRequest(poolId))
+          .sendRequest(e621.initPoolGet(poolId))
           .toResponse()
           .then((v) => PoolViewPage(
                 pool: PoolModel.fromRawJson(v.body),

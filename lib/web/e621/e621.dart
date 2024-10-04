@@ -146,7 +146,7 @@ sealed class E621 extends Site {
       _logger.warning("No user info available: cannot find user");
       return null;
     }
-    var r = e621.initSearchUsersRequest(
+    var r = e621.initUserSearch(
       searchNameMatches: username,
       credentials: d,
       limit: 1,
@@ -198,7 +198,7 @@ sealed class E621 extends Site {
       if (d == null) {
         _logger.info("No credential data, can't get logged in data.");
       }
-      var r = e621.initGetUserRequest(
+      var r = e621.initUserGet(
         id,
         credentials: d,
       );
@@ -216,7 +216,7 @@ sealed class E621 extends Site {
       _logger.warning("No user info available: cannot find user");
       return null;
     }
-    var r = e621.initSearchUsersRequest(
+    var r = e621.initUserSearch(
       searchNameMatches: username,
       credentials: d,
       limit: 1,
@@ -234,7 +234,7 @@ sealed class E621 extends Site {
           t = e621.User.fromRawJson(v.body);
         }
         _logger.info("Launching request for User ${t.id} (${t.name})");
-        var r = e621.initGetUserRequest(
+        var r = e621.initUserGet(
           t.id,
           credentials: d,
         );
@@ -640,7 +640,7 @@ sealed class E621 extends Site {
     if (d == null) {
       _logger.finest("No access data");
     }
-    var r = e621.initGetUserRequest(
+    var r = e621.initUserGet(
       id,
       credentials: d,
     );
@@ -655,9 +655,9 @@ sealed class E621 extends Site {
   }) =>
       (logRequest
           ? logAndSendRequest(
-              e621.initGetUserRequest(userId, credentials: credentials))
+              e621.initUserGet(userId, credentials: credentials))
           : e621.sendRequest(
-              e621.initGetUserRequest(userId, credentials: credentials)))
+              e621.initUserGet(userId, credentials: credentials)))
         ..then((v) {
           final t = resolveGetUserFuture(v);
           if (t is e621.UserLoggedInDetail) loggedInUser.$ = t;

@@ -7,20 +7,13 @@ import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/log_management.dart' show SymbolName;
 // import 'package:fuzzy/models/search_results.dart' as srn_lib;
 
 import '../widgets/w_page_indicator.dart';
 
-class PostSwipePage extends StatefulWidget
-    implements /* 
-  void sortBySecondaryComparator() {
-    if (secondaryComparator != null) {
-      for (final e in queue) {
-        e.sort(secondaryComparator);
-      }
-    }
-  } */
-        IRoute<PostSwipePage> {
+// #region Unmanaged
+class PostSwipePage extends StatefulWidget implements IRoute<PostSwipePage> {
   static const routeNameString = "/";
 
   final bool startFullscreen;
@@ -31,8 +24,6 @@ class PostSwipePage extends StatefulWidget
   final Iterable<E6PostResponse>? postsIterable;
   Iterable<E6PostResponse> get posts => postsObj?.posts ?? postsIterable!;
   final void Function(String addition)? onAddToSearch;
-  // @override
-  // final List<String>? tagsToAdd;
   // final srn_lib.SearchResultsNotifier? selectedPosts;
   final List<E6PostResponse>? selectedPosts;
 
@@ -41,7 +32,6 @@ class PostSwipePage extends StatefulWidget
     required this.initialIndex,
     required Iterable<E6PostResponse> posts,
     this.onAddToSearch,
-    // this.tagsToAdd,
     this.startFullscreen = false,
     this.selectedPosts,
   })  : postsObj = null,
@@ -51,7 +41,6 @@ class PostSwipePage extends StatefulWidget
     required this.initialIndex,
     required E6Posts posts,
     this.onAddToSearch,
-    // this.tagsToAdd,
     this.startFullscreen = false,
     this.selectedPosts,
   })  : postsObj = posts,
@@ -137,14 +126,13 @@ class _PostSwipePageState extends State<PostSwipePage>
   void onAddToSearch(String s) {
     // widget.onAddToSearch?.call(s);
     toReturn = "$toReturn $s";
-    // widget.tagsToAdd?.add(s);
     tagsToAddToSearch.add(s);
   }
 
   final tagsToAddToSearch = <String>[];
   void onPop() => Navigator.pop(context, (
         tagsToAddToSearch: tagsToAddToSearch,
-        postsSelected: widget.selectedPosts,
+        selectedPosts: widget.selectedPosts,
       ));
 
   void _handlePageViewChanged(int currentPageIndex) {
@@ -167,8 +155,9 @@ class _PostSwipePageState extends State<PostSwipePage>
   }
 }
 
+// #endregion Unmanaged
 class PostSwipePageManaged extends StatefulWidget
-    implements /* IReturnsTags,  */ IRoute<PostSwipePageManaged> {
+    implements IRoute<PostSwipePageManaged> {
   static const routeNameString = "/";
 
   final bool startFullscreen;
@@ -176,12 +165,11 @@ class PostSwipePageManaged extends StatefulWidget
   get routeName => routeNameString;
   final int initialIndex;
   final int initialPageIndex;
+  final bool? filterBlacklist;
   final ManagedPostCollectionSync postsObj;
   Iterable<E6PostResponse> get posts => postsObj.posts!.posts;
   Iterable<E6PostEntrySync> get postCache => postsObj.collection.posts;
   final void Function(String addition)? onAddToSearch;
-  // @override
-  // final List<String>? tagsToAdd;
   final List<E6PostResponse>? selectedPosts;
 
   const PostSwipePageManaged({
@@ -190,9 +178,9 @@ class PostSwipePageManaged extends StatefulWidget
     required this.initialPageIndex,
     required ManagedPostCollectionSync posts,
     this.onAddToSearch,
-    // this.tagsToAdd,
     this.startFullscreen = false,
     required this.selectedPosts,
+    required this.filterBlacklist,
   }) : postsObj = posts;
 
   @override
@@ -205,12 +193,10 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
   static late final logger =
       lm.generateLogger("PostSwipePageManagedState").logger;
   late PageController _pageViewController;
-  // late TabController _tabController;
-  // TabController? get tabController =>
-  //     Platform.isDesktop ? _tabController : null;
   late int _currentPostPageIndex;
-  late ValueNotifier<int> currentPostPageIndexNotifier;
-  // late int _currentResultsPageIndex;
+
+  /// Used for the page indicator on desktop
+  late ValueNotifier<int>? currentPostPageIndexNotifier;
   String toReturn = "";
   bool isFullscreen = false;
   late final List<Widget> _extras;
@@ -225,16 +211,9 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
       initialPage: widget.initialIndex,
       keepPage: false,
     );
-    currentPostPageIndexNotifier = ValueNotifier<int>(widget.initialIndex);
+    currentPostPageIndexNotifier =
+        Platform.isDesktop ? ValueNotifier<int>(widget.initialIndex) : null;
     _currentPostPageIndex = widget.initialIndex;
-    // _currentResultsPageIndex = widget.initialPageIndex;
-    // if (Platform.isDesktop) {
-    //   _tabController = TabController(
-    //     initialIndex: widget.initialIndex,
-    //     length: widget.postsObj.collection.length,
-    //     vsync: this,
-    //   );
-    // }
     widget.postsObj.currentPostIndex = widget.initialIndex;
     _extras = [makeSlideshow(context)];
     cancel = ActionButton(
@@ -247,8 +226,8 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
   @override
   void dispose() {
     stopSlideshow();
+    currentPostPageIndexNotifier?.dispose();
     _pageViewController.dispose();
-    // tabController?.dispose();
     super.dispose();
   }
 
@@ -271,21 +250,17 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
             children: <Widget>[
               root,
               SelectorNotifier(
-                value: currentPostPageIndexNotifier,
+                value: currentPostPageIndexNotifier!,
                 builder: (context, currentPostPageIndex, child) {
                   return IndeterminatePageIndicator.builder(
-                    determineNextPage: (currentPageIndex) =>
-                        // (currentPageIndex == _tabController.length - 1)
-                        (currentPageIndex >= widget.postsObj.numStoredPosts - 1)
+                    determineNextPage: (currPageIndex) =>
+                        (currPageIndex >= widget.postsObj.numStoredPosts - 1)
                             ? null
-                            : currentPageIndex + 1,
+                            : currPageIndex + 1,
                     currentPageIndex: currentPostPageIndex,
-                    // currentPageIndex: _tabController.index,//_currentPostPageIndex,
                     onUpdateCurrentPageIndex: _updateCurrentPageIndexWrapper,
-                    pageIndicatorBuilder: (cxt, currentPageIndex) =>
-                        IgnorePointer(
-                            child:
-                                Text("tabController.index: $currentPageIndex")),
+                    pageIndicatorBuilder: (_, currPage) => IgnorePointer(
+                        child: Text("currentPageIndex: $currPage")),
                   );
                 },
                 selector: (context, value) => value.value,
@@ -296,10 +271,12 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
 
   /// Presumes [index] is the overall index, not the index on current page
   Widget? _pageBuilder(BuildContext context, int index) {
-    final page = widget.postsObj.getPageOfGivenPostIndexOnPage(index);
-    logger.info("_pageBuilder called: Index: $index PageIndex: $page ");
-    var ps = ValueAsync(value: widget.postsObj.getPostsOnPageAsObj(page)),
-        t = widget.postsObj.getPostsOnPageAsObjSync(page);
+    final page = widget.postsObj.getPageIndexOfGivenPost(index);
+    logger.info("[${(#_pageBuilder).name}]\n\tIndex: $index\n\tPageInd: $page");
+    var ps = ValueAsync(
+            value: widget.postsObj
+                .getPostsOnPageAsObj(page, widget.filterBlacklist)),
+        t = ps.$Safe;
     if (ps.isComplete && t == null) {
       return null;
     } else if (!ps.isComplete) {
@@ -342,17 +319,16 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
         },
       );
     } else {
-      final p =
-          t!.elementAtOrNull(widget.postsObj.getPostIndexOnPage(index, page));
+      // final p =
+      //     t!.elementAtOrNull(widget.postsObj.getPostIndexOnPage(index, page));
+      final p = t!.tryGet(widget.postsObj.getPostIndexOnPage(index, page));
       return p != null
           ? PostViewPage.overrideFullscreen(
               postListing: p,
               onAddToSearch: onAddToSearch,
               onPop: onPop,
               getFullscreen: () => isFullscreen,
-              setFullscreen: (v) => setState(() {
-                isFullscreen = v;
-              }),
+              setFullscreen: (v) => setState(() => isFullscreen = v),
               extraActions: extras,
               selectedPosts: widget.selectedPosts,
             )
@@ -362,7 +338,6 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
 
   void onAddToSearch(String s) {
     toReturn = "$toReturn $s";
-    // widget.tagsToAdd?.add(s);
     tagsToAddToSearch.add(s);
   }
 
@@ -380,118 +355,85 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
       tooltip: "Slideshow",
       onPressed: () {
         showDialog<
-            ({
-              bool backwards,
-              double duration,
-              bool fullscreen,
-              bool repeatPage
-            })>(
+            ({bool reverse, double time, bool fullscreen, bool repeatPage})>(
           context: context,
-          builder: (context) {
-            double duration = 5;
-            var backwards = false, fullscreen = false, repeatPage = false;
+          builder: (_) {
+            double time = 5;
+            var reverse = false, fullscreen = false, repeatPage = false;
             return StatefulBuilder(
-              builder: (BuildContext context, setState) {
-                return AlertDialog(
-                  title: const Text("Slideshow"),
-                  content: SizedBox.expand(
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Slider(
-                              label: "$duration sec.",
-                              onChanged: (value) =>
-                                  setState(() => duration = value),
-                              value: duration,
-                              divisions: 29,
-                              min: 1,
-                              max: 30,
-                            ),
-                            Text("$duration sec."),
-                          ],
+              builder: (ctx, setState) => AlertDialog(
+                title: const Text("Slideshow"),
+                content: SizedBox.expand(
+                  child: Column(
+                    children: [
+                      Row(children: [
+                        Slider(
+                          label: "$time sec.",
+                          onChanged: (value) => setState(() => time = value),
+                          value: time,
+                          divisions: 29,
+                          min: 1,
+                          max: 30,
                         ),
-                        Row(
-                          children: [
-                            const Text("Backwards"),
-                            Checkbox(
-                              value: backwards,
-                              onChanged: (value) =>
-                                  setState(() => backwards = value!),
-                            ),
-                          ],
+                        Text("$time sec."),
+                      ]),
+                      Row(children: [
+                        const Text("Reverse?"),
+                        Checkbox(
+                          value: reverse,
+                          onChanged: (value) =>
+                              setState(() => reverse = value!),
                         ),
-                        Row(
-                          children: [
-                            const Text("Fullscreen"),
-                            Checkbox(
-                              value: fullscreen,
-                              onChanged: (value) =>
-                                  setState(() => fullscreen = value!),
-                            ),
-                          ],
+                      ]),
+                      Row(children: [
+                        const Text("Fullscreen?"),
+                        Checkbox(
+                          value: fullscreen,
+                          onChanged: (value) =>
+                              setState(() => fullscreen = value!),
                         ),
-                        Row(
-                          children: [
-                            const Text("Repeat page"),
-                            Checkbox(
-                              value: repeatPage,
-                              onChanged: (value) =>
-                                  setState(() => repeatPage = value!),
-                            ),
-                          ],
+                      ]),
+                      Row(children: [
+                        const Text("Repeat page"),
+                        Checkbox(
+                          value: repeatPage,
+                          onChanged: (value) =>
+                              setState(() => repeatPage = value!),
                         ),
-                      ],
-                    ),
+                      ]),
+                    ],
                   ),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Cancel")),
-                    TextButton(
-                        onPressed: () => Navigator.pop(context, (
-                              backwards: backwards,
-                              fullscreen: fullscreen,
-                              repeatPage: repeatPage,
-                              duration: duration,
-                            )),
-                        child: const Text("Accept")),
-                  ],
-                );
-              },
+                ),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text("Cancel")),
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx, (
+                            reverse: reverse,
+                            fullscreen: fullscreen,
+                            repeatPage: repeatPage,
+                            time: time,
+                          )),
+                      child: const Text("Accept")),
+                ],
+              ),
             );
           },
         ).then(
-          (value) {
-            // const safetyBounds = 5;
+          (final value) {
             if (value == null) return;
             isFullscreen = value.fullscreen;
-            final delta = value.backwards ? -1 : 1;
+            final delta = value.reverse ? -1 : 1;
             onFinished = () {
               var newIndex = _currentPostPageIndex + delta;
 
               /// TODO: Still has problems
               if (value.repeatPage) {
-                final last = widget.postsObj.getPageLastVisiblePostIndex(widget
-                        .postsObj
-                        .currentPageIndex /* _currentResultsPageIndex */),
-                    first = widget.postsObj.getPageFirstVisiblePostIndex(widget
-                        .postsObj
-                        .currentPageIndex /* _currentResultsPageIndex */);
-                // int safety = 0;
-                // while ((newIndex > last || newIndex < first) &&
-                //     safety < safetyBounds) {
-                //   newIndex = switch (newIndex) {
-                //     int n when n > last =>
-                //       newIndex - widget.postsObj.postsPerPage,
-                //     int n when n < first =>
-                //       newIndex + widget.postsObj.postsPerPage,
-                //     _ => newIndex,
-                //   };
-                // }
-                // if (safety >= safetyBounds) {
-                //   logger.warning("Something's wrong in onFinished");
-                // }
+                final last = widget.postsObj.getPageLastVisiblePostIndex(
+                        widget.postsObj.currentPageIndex),
+                    first = widget.postsObj.getPageFirstVisiblePostIndex(
+                        widget.postsObj.currentPageIndex);
                 newIndex = switch (newIndex) {
                   int n when n > last => first,
                   int n when n < first => last,
@@ -507,50 +449,36 @@ class _PostSwipePageManagedState extends State<PostSwipePageManaged>
               }
               _updateCurrentPageIndex(newIndex);
             };
-            loopy = looper(Duration(seconds: value.duration.toInt()));
+            loopy = looper(Duration(seconds: value.time.toInt()));
           },
         );
       },
     );
   }
 
+  /// Called when the slideshow timer runs out (i.e. when [loopy] completes).
+  /// Setting to `null` will end the loop when the timer runs out next.
   VoidCallback? onFinished;
   Future<void>? loopy;
-  Future<void> looper(Duration duration) => Future.delayed(duration, () {
-        onFinished?.call();
-        return loopy = onFinished == null ? null : looper(duration);
-      });
+  Future<void> looper(Duration duration) => Future.delayed(duration,
+      () => loopy = (onFinished?..call()) == null ? null : looper(duration));
 
   void stopSlideshow() {
     loopy?.ignore();
-    loopy = null;
-    onFinished = null;
+    onFinished = loopy = null;
   }
   // #endregion Slideshow
 
   void _handlePageViewChanged(int currentPageIndex) {
     logger.info(
-      "PageView changed from $_currentPostPageIndex to $currentPageIndex",
-    );
+        "PageView changed from $_currentPostPageIndex to $currentPageIndex");
     widget.postsObj.currentPostIndex = currentPageIndex +
         widget.postsObj.currentPageIndex * widget.postsObj.postsPerPage;
-    // widget.postsObj.currentPostIndex = currentPageIndex +
-    //     _currentResultsPageIndex * widget.postsObj.postsPerPage;
-    // widget.postsObj.currentPostIndex =
-    //     currentPageIndex + widget.initialPageIndex * SearchView.i.postsPerPage;
-    // _currentResultsPageIndex = widget.postsObj.currentPageIndex;
-    // if (!Platform.isDesktop) {
-    //   return;
-    // }
-    // tabController?.index = currentPageIndex;
-    // setState(() {
     _currentPostPageIndex = currentPageIndex;
-    // });
-    currentPostPageIndexNotifier.value = currentPageIndex;
+    currentPostPageIndexNotifier?.value = currentPageIndex;
   }
 
   void _updateCurrentPageIndex(int newPageViewIndex) {
-    // _tabController.index = newPageViewIndex;
     (_currentPostPageIndex - newPageViewIndex).abs() > 1
         ? _pageViewController.jumpToPage(newPageViewIndex)
         : _pageViewController

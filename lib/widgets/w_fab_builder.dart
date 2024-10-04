@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show setEquals;
+// import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart';
@@ -32,6 +32,7 @@ class WFabBuilder extends StatelessWidget {
   final bool Function(int)? isPostSelected;
   // final srn_lib.SearchResultsNotifier? selectedPosts;
   final List<E6PostResponse>? selectedPosts;
+  final int? currentPageIndex;
 
   const WFabBuilder.singlePost({
     super.key,
@@ -41,6 +42,7 @@ class WFabBuilder extends StatelessWidget {
     this.isPostSelected,
     this.customActions,
     this.selectedPosts,
+    this.currentPageIndex,
   }) : posts = null;
   const WFabBuilder.multiplePosts({
     super.key,
@@ -50,71 +52,99 @@ class WFabBuilder extends StatelessWidget {
     this.isPostSelected,
     this.customActions,
     // this.selectedPosts,
+    this.currentPageIndex,
   })  : post = null,
         selectedPosts = null /* posts */;
 
   @widgetFactory
   static Widget buildItFull(BuildContext context) {
     return Selector2<SearchResultsNotifier, ManagedPostCollectionSync,
-        (Set<int>, PostCollectionSync)>(
+        (List<E6PostResponse>, PostCollectionSync, int page)>(
       builder: (context, value, child) => WFabBuilder.multiplePosts(
         key: ObjectKey(value.$1),
-        posts: value.$2
-            .where((e) => value.$1.contains(e.inst.$Safe?.id))
-            .map((e) => e.inst.$)
-            .toList(),
+        posts: value.$1,
+        currentPageIndex: value.$3,
       ),
-      selector: (ctx, p1, p2) => (p1.selectedPostIds, p2.collection),
-      shouldRebuild: (previous, next) => setEquals(previous.$1, next.$1),
+      selector: (ctx, p1, p2) => (
+        p1.makeSelectedPostList(p2.collection.map((e) => e.$), listen: true),
+        p2.collection,
+        p2.currentPageIndex
+      ),
+      shouldRebuild: (previous, next) =>
+          // !setEquals(previous.$1, next.$1) ||
+          previous.$2 != next.$2 || previous.$3 != next.$3,
     );
+    // return Selector2<SearchResultsNotifier, ManagedPostCollectionSync,
+    //     (Set<int>, PostCollectionSync, int page)>(
+    //   builder: (context, value, child) => WFabBuilder.multiplePosts(
+    //     key: ObjectKey(value.$1),
+    //     posts: value.$2
+    //         .where((e) => value.$1.contains(e.inst.$Safe?.id))
+    //         .map((e) => e.inst.$)
+    //         .toList(),
+    //     currentPageIndex: value.$3,
+    //   ),
+    //   selector: (ctx, p1, p2) =>
+    //       (p1.selectedPostIds, p2.collection, p2.currentPageIndex),
+    //   shouldRebuild: (previous, next) =>
+    //       !setEquals(previous.$1, next.$1) ||
+    //       previous.$2 != next.$2 ||
+    //       previous.$3 != next.$3,
+    // );
   }
 
   /// TODO: Fails after toggle selection in single post view
-  static ActionButton getClearSelectionButton(
-    BuildContext context, [
-    void Function()? clearSelection,
-    // srn_lib.SearchResultsNotifier? selected,
-    List<E6PostResponse>? selected,
-  ]) =>
-      ActionButton(
-        icon: const Icon(Icons.clear),
-        tooltip: "Clear Selections",
-        onPressed: clearSelection ??
-            // selected?.clearSelections ??
-            // context.watch<SearchResultsNotifier>().clearSelections,
-            Provider.of<SearchResultsNotifier>(
-              context,
-              listen: false,
-            ).clearSelections,
-      );
+  // static Widget getClearSelectionButton(
+  //   BuildContext context, [
+  //   void Function()? clearSelection,
+  //   // srn_lib.SearchResultsNotifier? selected,
+  //   List<E6PostResponse>? selected,
+  // ]) =>
+  //     ActionButton(
+  //       icon: const Icon(Icons.clear),
+  //       tooltip: "Clear Selections",
+  //       onPressed: clearSelection ??
+  //           selected?.clear ??
+  //           // selected?.clearSelections ??
+  //           // context.watch<SearchResultsNotifier>().clearSelections,
+  //           Provider.of<SearchResultsNotifier>(
+  //             context,
+  //             listen: false,
+  //           ).clearSelections,
+  //     );
+
+  /// Only available in multi-post mode. Ergo, the Providers must be in scope.
   static Widget getChangePageSelectionButton(
     BuildContext context, {
     required bool select,
-  }) {
-    final mpcW = Provider.of<ManagedPostCollectionSync>(context, listen: false);
-    return ActionButton(
-      icon: select
-          ? const Icon(Icons.playlist_add_check, color: Colors.black54)
-          : const Icon(Icons.playlist_remove, color: Colors.black54),
-      tooltip: "${select ? "Select" : "Deselect"} all on page",
-      onPressed: mpcW.getPostsOnPageSync(mpcW.currentPageIndex) != null
-          ? () {
-              final mpc = Provider.of<ManagedPostCollectionSync>(context,
-                      listen: false),
-                  page = mpc.getPostsOnPageSync(mpc.currentPageIndex);
-              Provider.of<SearchResultsNotifier>(
-                context,
-                listen: false,
-              ).assignPostSelections(
-                select: select,
-                postIds: page!.map((e) => e.id).toList(),
-              );
-            }
-          : null,
-    );
-  }
+    int? pageIndex,
+  }) =>
+      Selector<ManagedPostCollectionSync,
+          (int pageIndex, Iterable<E6PostResponse>?)>(
+        builder: (context, v, _) => ActionButton(
+          icon: select
+              ? const Icon(Icons.playlist_add_check, color: Colors.black54)
+              : const Icon(Icons.playlist_remove, color: Colors.black54),
+          tooltip: "${select ? "Select" : "Deselect"} all on page ${v.$1}",
+          onPressed: (v.$2?.isNotEmpty ?? false)
+              ? () {
+                  Provider.of<SearchResultsNotifier>(
+                    context,
+                    listen: false,
+                  ).assignPostSelections(
+                    select: select,
+                    postIds: v.$2!.map((e) => e.id).toList(),
+                  );
+                }
+              : null,
+        ),
+        selector: (_, mpc) => (
+          mpc.currentPageIndex,
+          mpc.getPostsOnPageSync(/* pageIndex ??=  */ mpc.currentPageIndex)
+        ),
+      );
 
-  static ActionButton getSinglePostUpvoteAction(
+  static Widget getSinglePostUpvoteAction(
     BuildContext context,
     E6PostResponse post, {
     bool noUnvote = true,
@@ -134,7 +164,7 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
-  static ActionButton getSinglePostDownvoteAction(
+  static Widget getSinglePostDownvoteAction(
     BuildContext context,
     E6PostResponse post, {
     bool noUnvote = true,
@@ -154,7 +184,7 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
-  static ActionButton getMultiplePostsUpvoteAction(
+  static Widget getMultiplePostsUpvoteAction(
     BuildContext context,
     List<E6PostResponse> posts, {
     bool noUnvote = true,
@@ -172,7 +202,7 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
-  static ActionButton getMultiplePostsDownvoteAction(
+  static Widget getMultiplePostsDownvoteAction(
     BuildContext context,
     List<E6PostResponse> posts, {
     bool noUnvote = true,
@@ -190,7 +220,7 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
-  static ActionButton getSinglePostAddFavAction(
+  static Widget getSinglePostAddFavAction(
     BuildContext context,
     E6PostResponse post, {
     double elevation = 4,
@@ -209,7 +239,7 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
-  static ActionButton getMultiplePostsAddFavAction(
+  static Widget getMultiplePostsAddFavAction(
     BuildContext context,
     List<E6PostResponse> posts,
   ) {
@@ -225,7 +255,7 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
-  static ActionButton getMultiplePostsAddToSetAction(
+  static Widget getMultiplePostsAddToSetAction(
     BuildContext context,
     List<E6PostResponse> posts,
   ) {
@@ -241,7 +271,7 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
-  static ActionButton getSinglePostAddToSetAction(
+  static Widget getSinglePostAddToSetAction(
     BuildContext context,
     E6PostResponse post,
   ) {
@@ -253,7 +283,7 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
-  static ActionButton getMultiplePostsRemoveFromSetAction(
+  static Widget getMultiplePostsRemoveFromSetAction(
       BuildContext context, List<E6PostResponse> posts) {
     return ActionButton(
       icon: const Icon(Icons.delete),
@@ -267,7 +297,7 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
-  static ActionButton getSinglePostRemoveFromSetAction(
+  static Widget getSinglePostRemoveFromSetAction(
       BuildContext context, E6PostResponse post) {
     return ActionButton(
       icon: const Icon(Icons.delete),
@@ -281,21 +311,21 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
-  static ActionButton getMultiplePostsRemoveFavAction(
+  static Widget getMultiplePostsRemoveFavAction(
       BuildContext context, List<E6PostResponse> posts) {
     return ActionButton(
       icon: const Icon(Icons.heart_broken_outlined),
       tooltip: "Remove selected from favorites",
       onPressed: () => actions
-          .removeFromFavoritesWithPosts(
-            posts: posts,
-            context: context,
-          )
-          .ignore(),
+          // .removeFromFavoritesWithPosts(
+          .testRemoveFavoritesWithPosts(
+        posts: posts,
+        context: context,
+      ),
     );
   }
 
-  static ActionButton getSinglePostRemoveFavAction(
+  static Widget getSinglePostRemoveFavAction(
       BuildContext context, E6PostResponse post) {
     return ActionButton(
       icon: const Icon(Icons.heart_broken_outlined),
@@ -310,7 +340,7 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
-  static ActionButton getSinglePostEditAction(
+  static Widget getSinglePostEditAction(
       BuildContext context, E6PostResponse post) {
     return ActionButton(
       icon: const Icon(Icons.edit),
@@ -333,7 +363,7 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
-  static ActionButton getSinglePostToggleSelectAction(
+  static Widget getSinglePostToggleSelectAction(
     BuildContext context,
     E6PostResponse post, {
     String? tooltip = "Toggle selection",
@@ -375,7 +405,7 @@ class WFabBuilder extends StatelessWidget {
     );
   }
 
-  static ActionButton getPrintSelectionsAction(
+  static Widget getPrintSelectionsAction(
     BuildContext context,
     E6PostResponse? post,
     List<E6PostResponse>? posts,
@@ -407,8 +437,6 @@ class WFabBuilder extends StatelessWidget {
     bool? isSelected;
     bool canSelect = false;
     try {
-      Provider.of<SearchResultsNotifier>(context, listen: false);
-      canSelect = true;
       if (isSinglePost) {
         isSelected = isPostSelected?.call(post!.id) ??
             // selectedPosts?.getIsPostSelected(post!.id) ??
@@ -416,8 +444,11 @@ class WFabBuilder extends StatelessWidget {
             Provider.of<SearchResultsNotifier>(context, listen: false)
                 .getIsPostSelected(post!.id);
       }
-    } catch (e, s) {
-      logger.warning("Couldn't access SearchResultsNotifier in fab", e, s);
+      Provider.of<SearchResultsNotifier>(context, listen: false);
+      canSelect = true;
+    } catch (e /* , s */) {
+      logger
+          .warning("Couldn't access SearchResultsNotifier in fab" /* , e, s */);
     }
     Widget builder(
             BuildContext context,
@@ -468,14 +499,32 @@ class WFabBuilder extends StatelessWidget {
             ?  */
               [
             if (hasMultiplePosts)
-              getClearSelectionButton(
-                context,
-                onClearSelections, /* selectedPosts, */
+              ActionButton(
+                icon: const Icon(Icons.clear),
+                tooltip: "Clear Selections",
+                onPressed: onClearSelections ??
+                    selectedPosts?.clear ??
+                    Provider.of<SearchResultsNotifier>(
+                      context,
+                      listen: false,
+                    ).clearSelections,
               ),
+            // getClearSelectionButton(
+            //   context,
+            //   onClearSelections, /* selectedPosts, */
+            // ),
             if (isMultiplePosts && canSelect)
-              getChangePageSelectionButton(context, select: true),
+              getChangePageSelectionButton(
+                context,
+                pageIndex: currentPageIndex,
+                select: true,
+              ),
             if (hasMultiplePosts && canSelect)
-              getChangePageSelectionButton(context, select: false),
+              getChangePageSelectionButton(
+                context,
+                pageIndex: currentPageIndex,
+                select: false,
+              ),
             if (isSinglePost)
               getSinglePostAddToSetAction(context, post!)
             else

@@ -176,7 +176,7 @@ class _WSearchSetState extends State<WSearchSet> {
                   ))
                   .then((value) => value.body)
               : e621
-                  .sendRequest(e621.initGetModifiableSetsRequest(
+                  .sendRequest(e621.initSetGetModifiable(
                     credentials: E621AccessData.devAccessData.$.cred,
                   ))
                   .then(

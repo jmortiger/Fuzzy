@@ -76,7 +76,7 @@ class _WCommentsLoaderState extends State<WCommentsLoader> {
         decoration: const BoxDecoration(
             border: Border.symmetric(
           horizontal: BorderSide(color: Colors.white70, width: 2),
-          vertical: BorderSide(color: Color(0), width: 4),
+          vertical: BorderSide(color: Color(0x00000000), width: 4),
         )),
         child: WComment(comment: e),
       );

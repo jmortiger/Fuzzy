@@ -30,11 +30,20 @@ class WPostSearchResults extends StatefulWidget {
   final E6Posts? _posts;
   E6Posts posts(BuildContext context,
           {bool listen = false, bool? filterBlacklist}) =>
-      _posts ??
-      E6PostsSync(
-          posts: Provider.of<ManagedPostCollectionSync>(context, listen: listen)
-                  .getPostsOnPageAsObjSync(pageIndex, filterBlacklist) ??
-              []);
+      useProviderForPosts
+          ? E6PostsSync(
+              posts: Provider.of<ManagedPostCollectionSync>(context,
+                          listen: listen)
+                      .getPostsOnPageAsObjSync(pageIndex, filterBlacklist) ??
+                  _posts?.posts.toList() ??
+                  [])
+          : _posts ??
+              E6PostsSync(
+                  posts: Provider.of<ManagedPostCollectionSync>(context,
+                              listen: listen)
+                          .getPostsOnPageAsObjSync(
+                              pageIndex, filterBlacklist) ??
+                      []);
   final int expectedCount;
 
   bool get usesLazyPosts => posts is E6PostsLazy;
@@ -218,6 +227,7 @@ class WPostSearchResults extends StatefulWidget {
       );
 }
 
+/// TODO: Keep scroll pos when toggling blacklist
 class _WPostSearchResultsState extends State<WPostSearchResults>
     with WBlacklistToggle {
   static lm.FileLogger get _logger => WPostSearchResults._logger;
@@ -269,7 +279,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
   @override
   final ValueNotifier<bool>? filterBlacklistNotifier = null;
   // #endregion Blacklist Mixin
-
+  late ScrollController scroll;
   @override
   void initState() {
     super.initState();
@@ -285,16 +295,78 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
     // filterBlacklistNotifier = !widget.useProviderForPosts
     //     ? (ValueNotifier(true)..addListener())
     //     : null;
+    scroll = ScrollController(keepScrollOffset: true);
   }
 
   @override
   void dispose() {
     widget._fireRebuild?.unsubscribe(_rebuildCallback);
+    scroll.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final sc = widget.useProviderForPosts //!widget.stripToGridView
+        ? Provider.of<ManagedPostCollectionSync>(context, listen: false)
+        : null;
+    final root = widget.useLazyBuilding
+        ? GridView.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: SearchView.i.postsPerRow,
+              crossAxisSpacing: SearchView.i.horizontalGridSpace,
+              mainAxisSpacing: SearchView.i.verticalGridSpace,
+              childAspectRatio: SearchView.i.widthToHeightRatio,
+            ),
+            itemCount: estimatedCount,
+            itemBuilder: (_, i) {
+              // TODO: Make not dependent on current page / first loaded page.
+              i += sc!.currentPageFirstPostIndex;
+              var data = sc.collection[i].$Safe;
+              return (data == null) ? null : constructImageResult(data, i);
+            },
+            controller: scroll,
+          )
+        : widget.useProviderForPosts //!widget.stripToGridView
+            ? Selector<ManagedPostCollectionSync, Iterable<E6PostResponse>?>(
+                selector: (context, value) =>
+                    value.getPostsOnPageSync(widget.pageIndex, filterBlacklist),
+                builder: (_, v, __) => GridView.count(
+                  crossAxisCount: SearchView.i.postsPerRow,
+                  crossAxisSpacing: SearchView.i.horizontalGridSpace,
+                  mainAxisSpacing: SearchView.i.verticalGridSpace,
+                  childAspectRatio: SearchView.i.widthToHeightRatio,
+                  controller: scroll,
+                  children: sc!
+                          .getPostsOnPageSync(widget.pageIndex, filterBlacklist)
+                          ?.mapAsList((e, i, _) => constructImageResult(
+                                e,
+                                i + sc.getPageFirstPostIndex(widget.pageIndex),
+                              ))
+                          .toList() ??
+                      [],
+                ),
+              )
+            : GridView.count(
+                crossAxisCount: SearchView.i.postsPerRow,
+                crossAxisSpacing: SearchView.i.horizontalGridSpace,
+                mainAxisSpacing: SearchView.i.verticalGridSpace,
+                childAspectRatio: SearchView.i.widthToHeightRatio,
+                controller: scroll,
+                children: (() {
+                  final usedPosts = <E6PostResponse>{};
+                  return Iterable<int>.generate(estimatedCount)
+                      .reduceUntilTrue<List<Widget>>((acc, _, i, __) {
+                    final p = widget
+                        .posts(context)
+                        .tryGet(i, filterBlacklist: filterBlacklist);
+                    if (p != null && usedPosts.add(p)) {
+                      acc.add(constructImageResult(p, i));
+                    }
+                    return (acc, p == null);
+                  }, []);
+                })(),
+              );
     return !widget.stripToGridView
         ? Column(
             children: [
@@ -307,14 +379,14 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
                       "https://e621.net/help/global_blacklist",
                   linkStyle: const TextStyle(color: Colors.yellow),
                 ),
-              Expanded(child: _makeGridView(widget.posts(context))),
+              Expanded(child: root),
               super.buildBlacklistToggle(context,
                   blacklistedPosts: blacklistedPostCount),
             ],
           )
         : buildBlacklistToggle(
             context,
-            child: _makeGridView(widget.posts(context)),
+            child: root,
             blacklistedPosts: blacklistedPostCount,
           );
   }
@@ -322,113 +394,35 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
   int get estimatedCount => widget.usesLazyPosts
       ? widget.posts(context).count
       : trueCount ?? widget.expectedCount;
-  @widgetFactory
-  Widget _makeGridView(E6Posts posts) {
-    final sc = widget.useProviderForPosts //!widget.stripToGridView
-        ? Provider.of<ManagedPostCollectionSync>(context, listen: false)
-        : null;
-    // TODO: Lazy builder is decades behind
-    return widget.useLazyBuilding
-        ? GridView.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: SearchView.i.postsPerRow,
-              crossAxisSpacing: SearchView.i.horizontalGridSpace,
-              mainAxisSpacing: SearchView.i.verticalGridSpace,
-              childAspectRatio: SearchView.i.widthToHeightRatio,
-            ),
-            itemCount: estimatedCount,
-            itemBuilder: (context, index) {
-              // var data = sc.mpcSync
-              //     .collection
-              //     .posts
-              //     .elementAtOrNull(index)?.inst.$Safe;
-              // TODO: Make not dependent on current page / first loaded page.
-              index += sc!.currentPageFirstPostIndex;
-              var data = sc.collection[index].$Safe;
-              return (data == null) ? null : constructImageResult(data, index);
-            }
-            // (context, index) {
-            //     if (trueCount == null &&
-            //         widget.expectedCount - 1 == index) {
-            //       posts.tryGet(index + 3);
-            //     }
-            //     var data = posts.tryGet(index);
-            //     return (data == null)
-            //         ? null
-            //         : constructImageResult(data, index);
-            //   },
-            )
-        : widget.useProviderForPosts //!widget.stripToGridView
-            ? Selector<ManagedPostCollectionSync, Iterable<E6PostResponse>?>(
-                selector: (context, value) =>
-                    value.getPostsOnPageSync(widget.pageIndex, filterBlacklist),
-                builder: (context, posts, _) {
-                  return GridView.count(
-                    crossAxisCount: SearchView.i.postsPerRow,
-                    crossAxisSpacing: SearchView.i.horizontalGridSpace,
-                    mainAxisSpacing: SearchView.i.verticalGridSpace,
-                    childAspectRatio: SearchView.i.widthToHeightRatio,
-                    children: sc!
-                            .getPostsOnPageSync(
-                                widget.pageIndex, filterBlacklist)
-                            ?.mapAsList((e, i, l) => constructImageResult(
-                                  e,
-                                  i +
-                                      sc.getPageFirstPostIndex(
-                                          widget.pageIndex),
-                                ))
-                            .toList() ??
-                        [],
-                  );
-                })
-            : GridView.count(
-                crossAxisCount: SearchView.i.postsPerRow,
-                crossAxisSpacing: SearchView.i.horizontalGridSpace,
-                mainAxisSpacing: SearchView.i.verticalGridSpace,
-                childAspectRatio: SearchView.i.widthToHeightRatio,
-                children: (() {
-                  final usedPosts = <E6PostResponse>{};
-                  return (Iterable<int>.generate(estimatedCount))
-                      .reduceUntilTrue<List<Widget>>(
-                          (accumulator, _, index, __) {
-                    final p = posts.tryGet(
-                      index,
-                      filterBlacklist: filterBlacklist,
-                    );
-                    if (p != null && usedPosts.add(p)) {
-                      accumulator.add(constructImageResult(p, index));
-                    }
-                    return (accumulator, p == null);
-                  }, []);
-                })(),
-              );
-  }
 
   @widgetFactory
   Widget constructImageResult(E6PostResponse data, int index) =>
       ErrorPage.errorWidgetWrapper(
         () => !widget.disallowSelections
             ? Selector<SearchResultsNotifier, bool>(
-                builder: (_, value, __) => ErrorPage.errorWidgetWrapper(
-                  () => WImageResult(
-                    disallowSelections: widget.disallowSelections,
-                    imageListing: data,
-                    index: index,
-                    postsCache: widget.disallowSelections
-                        ? widget.posts(context).posts
-                        : null,
-                    isSelected: value,
-                  ),
-                  logger: _logger,
-                ).value,
-                selector: (ctx, v) => v.getIsPostSelected(data.id),
+                builder: (_, value, __) => WImageResult(
+                  disallowSelections: widget.disallowSelections,
+                  imageListing: data,
+                  index: index,
+                  filterBlacklist: filterBlacklist,
+                  postsCache: widget.disallowSelections
+                      ? widget
+                          .posts(context, filterBlacklist: filterBlacklist)
+                          .posts
+                      : null,
+                  isSelected: value,
+                ),
+                selector: (_, v) => v.getIsPostSelected(data.id),
               )
             : WImageResult(
                 disallowSelections: widget.disallowSelections,
                 imageListing: data,
                 index: index,
+                filterBlacklist: filterBlacklist,
                 postsCache: widget.disallowSelections
-                    ? widget.posts(context).posts
+                    ? widget
+                        .posts(context, filterBlacklist: filterBlacklist)
+                        .posts
                     : null,
                 isSelected: false,
               ),
@@ -461,12 +455,12 @@ class WPostSearchResultsSwiper extends StatefulWidget {
   static Widget buildItFull(BuildContext context) => Column(
         children: [
           Selector<ManagedPostCollectionSync, String>(
-            builder: (context, value, child) => Expanded(
-                key: ObjectKey(value),
+            builder: (_, v, __) => Expanded(
+                // key: ObjectKey(v),
                 child: WPostSearchResultsSwiper(
-                  useLazyBuilding: SearchView.i.lazyBuilding,
-                )),
-            selector: (ctx, p1) => p1.parameters.tags,
+              useLazyBuilding: SearchView.i.lazyBuilding,
+            )),
+            selector: (_, p) => p.parameters.tags,
           ),
         ],
       );
@@ -475,34 +469,24 @@ class WPostSearchResultsSwiper extends StatefulWidget {
       _WPostSearchResultsSwiperState();
 }
 
-class _WPostSearchResultsSwiperState extends State<
-    WPostSearchResultsSwiper> /* 
-    with TickerProviderStateMixin */
-{
-  // #region Logger
-  static lm.FileLogger get logger => lRecord.logger;
+class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper> {
   // ignore: unnecessary_late
-  static late final lRecord =
-      lm.generateLogger("WPostSearchResultsSwiperState");
-  // #endregion Logger
+  static late final logger =
+      lm.generateLogger("WPostSearchResultsSwiperState").logger;
   late PageController _pageViewController;
-  // late TabController _tabController;
+  int largestValidIndex = 0;
   int _currentPageIndex = 0;
   // int _numPages = 50;
 
-  // late OverlayPortalController _portal;
   @override
   void initState() {
     super.initState();
     _pageViewController = PageController();
-    // _tabController = TabController(length: _numPages, vsync: this);
-    // _portal = OverlayPortalController()..show();
   }
 
   @override
   void dispose() {
     _pageViewController.dispose();
-    // _tabController.dispose();
     super.dispose();
   }
 
@@ -514,63 +498,170 @@ class _WPostSearchResultsSwiperState extends State<
   @override
   Widget build(BuildContext context) {
     String logE6Posts(Iterable<E6PostResponse>? posts) =>
-        "${posts?.map((e) => e.id)}";
-    // logger.info(
-    //     "Building widget.posts.parameters.tags: ${widget.posts.parameters.tags} Provider.of<SearchCacheLegacy>(context).mpcSync.parameters.tags: ${scWatch.mpcSync.parameters.tags}");
+        "${posts?.take(3).followedBy(posts.skip(posts.length - 3)).map((e) => e.id)}";
     logger.info("build called");
     final root = PageView.builder(
       /// [PageView.scrollDirection] defaults to [Axis.horizontal].
       /// Use [Axis.vertical] to scroll vertically.
       controller: _pageViewController,
-      onPageChanged:
-          _handlePageViewChanged, //Platform.isDesktop ? _handlePageViewChanged : null,
+      onPageChanged: _handlePageViewChanged,
       itemBuilder: (context, index) {
         logger.info("itemBuilder called $index");
-        // var ps = widget.posts[index], t = ps.$Safe;
-        // logger.finest("${widget.posts.parameters.tags} $index");
-        // logger.finest("$tags $index");
-        var ps = ValueAsync(value: sc.getPostsOnPageAsObj(index)),
-            // value: widget.posts.getPostsOnPageAsObj(index)),
-            t = ps.$Safe;
-        Widget ret;
-        // logger.finer("index: $index, sync posts: ${t?.map(
-        //   (element) => element.id,
-        // )}");
+        bool lowerOrEqualsCurrentPage() =>
+            index <= (_pageViewController.page?.round() ?? _currentPageIndex);
+        void onInvalidIndex() {
+          if (lowerOrEqualsCurrentPage() && index != largestValidIndex) {
+            _updateCurrentPageIndex(largestValidIndex);
+          }
+        }
 
-        if (ps.isComplete && t == null) {
-          logger.finer("index: $index, empty && complete}");
-          return null;
-        } else if (!ps.isComplete) {
-          ret = FutureBuilder(
-            future: ps.future,
-            builder: (context, snapshot) {
-              logger.info("Index: $index snapshot complete "
-                  "${snapshot.hasData || snapshot.hasError} "
+        void onValidIndex() {
+          if (largestValidIndex < index) largestValidIndex = index;
+        }
+
+        var ps = ValueAsync(value: sc.getPostsOnPageAsObj(index)), t = ps.$Safe;
+        Widget ret;
+        if (ps.isComplete) {
+          if (t?.isEmpty ?? true) {
+            logger.finer(
+                "index: $index, ${t == null ? "null" : "empty"} && complete");
+            onInvalidIndex();
+            return null;
+          } else {
+            logger.finer("index: $index, sync posts: ${logE6Posts(t)}");
+            onValidIndex();
+            ret = Selector<ManagedPostCollectionSync, E6Posts?>(
+              builder: (_, posts, __) => WPostSearchResults(
+                key: ObjectKey(
+                    ((posts ?? t!).firstOrNull?.id, (posts ?? t!).count)),
+                posts: posts ?? t!,
+                expectedCount: (posts ?? t!).count,
+                disallowSelections: widget.disallowSelections,
+                fireRebuild: widget._fireRebuild,
+                pageIndex: index,
+                indexOffset: index * SearchView.i.postsPerPage,
+                stripToGridView: widget.stripToGridView,
+                useLazyBuilding: widget.useLazyBuilding,
+              ),
+              selector: (_, v) {
+                logger.info("Selector sync called");
+                return v.getPostsOnPageAsObjSync(index);
+              },
+            );
+          }
+        } else {
+          final snapshot = ValueNotifier<
+              ({
+                bool isNull,
+                bool isComplete,
+                bool hasData,
+                ({Object? error, StackTrace? stackTrace})? errorData,
+                E6Posts? data
+              })>((
+            isNull: false,
+            isComplete: false,
+            hasData: false,
+            errorData: null,
+            data: null
+          ))
+            ..addListener(() => logger.info("Returned"));
+          ps.future.then<void>((v) {
+            logger.info("ChangingSnapshot ${logE6Posts(v)}");
+            snapshot.value = (
+              isNull: v == null,
+              isComplete: true,
+              hasData: v == null,
+              errorData: null,
+              data: v,
+            );
+          }).onError((error, stackTrace) => snapshot.value = (
+                isNull: true,
+                isComplete: true,
+                hasData: false,
+                errorData: (error: error, stackTrace: stackTrace),
+                data: null,
+              ));
+          ret = SelectorNotifier(
+            key: ObjectKey(snapshot),
+            value: snapshot,
+            selector: (context, value) => value.value,
+            // future: ps.future,
+            builder: (_, snapshot, __) {
+              logger.info("Index: $index, is /* snapshot complete */: "
+                  "${snapshot.isComplete} "
                   "${logE6Posts(snapshot.data)}");
-              if (snapshot.hasData || ps.isComplete) {
+              if (snapshot.isComplete && snapshot.errorData == null) {
                 if (snapshot.data != null) {
-                  return WPostSearchResults(
-                    posts: snapshot.data!,
-                    expectedCount: SearchView.i.postsPerPage,
-                    disallowSelections: widget.disallowSelections,
-                    fireRebuild: widget._fireRebuild,
-                    pageIndex: index,
-                    indexOffset: index * SearchView.i.postsPerPage,
-                    stripToGridView: widget.stripToGridView,
-                    useLazyBuilding: widget.useLazyBuilding,
+                  onValidIndex();
+                  // return WPostSearchResults(
+                  //   posts: snapshot.data!,
+                  //   expectedCount: snapshot.data!.count,
+                  //   disallowSelections: widget.disallowSelections,
+                  //   fireRebuild: widget._fireRebuild,
+                  //   pageIndex: index,
+                  //   indexOffset: index * SearchView.i.postsPerPage,
+                  //   stripToGridView: widget.stripToGridView,
+                  //   useLazyBuilding: widget.useLazyBuilding,
+                  // );
+                  final t = snapshot.data!;
+                  return Selector<ManagedPostCollectionSync, E6Posts?>(
+                    builder: (_, posts, __) => WPostSearchResults(
+                      key: ObjectKey(
+                          ((posts ?? t).firstOrNull?.id, (posts ?? t).count)),
+                      posts: posts ?? t,
+                      expectedCount:
+                          (posts ?? t).count, //SearchView.i.postsPerPage,
+                      disallowSelections: widget.disallowSelections,
+                      fireRebuild: widget._fireRebuild,
+                      pageIndex: index,
+                      indexOffset: index * SearchView.i.postsPerPage,
+                      stripToGridView: widget.stripToGridView,
+                      useLazyBuilding: widget.useLazyBuilding,
+                    ),
+                    selector: (_, v) {
+                      logger.info("Selector sync called");
+                      return v.getPostsOnPageAsObjSync(index);
+                    },
                   );
+                  /* return Selector<ManagedPostCollectionSync, E6Posts?>(
+                      builder: (_, posts, __) => WPostSearchResults(
+                        key: ObjectKey((
+                          (posts ?? (/* snapshot.data */ ?? ps.$Safe)!).firstOrNull?.id,
+                          (posts ?? (/* snapshot.data */ ?? ps.$Safe)!).count
+                        )),
+                        posts: posts ?? (/* snapshot.data */ ?? ps.$Safe)!,
+                        expectedCount: (posts ?? (/* snapshot.data */ ?? ps.$Safe)!)
+                            .count, //SearchView.i.postsPerPage,
+                        disallowSelections: widget.disallowSelections,
+                        fireRebuild: widget._fireRebuild,
+                        pageIndex: index,
+                        indexOffset: index * SearchView.i.postsPerPage,
+                        stripToGridView: widget.stripToGridView,
+                        useLazyBuilding: widget.useLazyBuilding,
+                      ),
+                      selector: (_, v) {
+                        logger.info("Selector async called");
+                        return v.getPostsOnPageAsObjSync(index);
+                      },
+                    ); */
                 } else {
+                  onInvalidIndex();
                   return const Column(
-                    children: [Expanded(child: Text("No Results"))],
-                  );
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [Text("No Results")]);
                 }
-              } else if (snapshot.hasError) {
-                return Column(
-                  children: [
-                    Text("ERROR: ${snapshot.error}"),
-                    Text("StackTrace: ${snapshot.stackTrace}"),
-                  ],
-                );
+              } else if (snapshot.errorData != null) {
+                // onInvalidIndex();
+                return ErrorPage.logError(
+                    error: snapshot.errorData!.error,
+                    stackTrace: snapshot.errorData!.stackTrace,
+                    logger: logger);
+                /* return Column(
+                    children: [
+                      Text("ERROR: ${snapshot.error}"),
+                      Text("StackTrace: ${snapshot.stackTrace}"),
+                    ],
+                  ); */
               } else {
                 return const AspectRatio(
                   aspectRatio: 1,
@@ -578,20 +669,6 @@ class _WPostSearchResultsSwiperState extends State<
                 );
               }
             },
-          );
-        } else {
-          logger.finer("index: $index, sync posts: ${t?.map(
-            (element) => element.id,
-          )}");
-          ret = WPostSearchResults(
-            posts: t!,
-            expectedCount: SearchView.i.postsPerPage,
-            disallowSelections: widget.disallowSelections,
-            fireRebuild: widget._fireRebuild,
-            pageIndex: index,
-            indexOffset: index * SearchView.i.postsPerPage,
-            stripToGridView: widget.stripToGridView,
-            useLazyBuilding: widget.useLazyBuilding,
           );
         }
         return Column(
@@ -645,75 +722,16 @@ class _WPostSearchResultsSwiperState extends State<
                             ),
                           )),
                         );
-
-                        // return TabIndicatorWrapper(
-                        //     key: ObjectKey("$tags$numPagesInSearch"),
-                        //     numPagesInSearch: numPagesInSearch,
-                        //     updateCurrentPageIndex: _updateCurrentPageIndex,
-                        //     currentPageIndex: _currentPageIndex);
-
-                        // final tabController =
-                        //     TabController(length: numPagesInSearch, vsync: this);
-                        // final ColorScheme colorScheme =
-                        //     Theme.of(context).colorScheme;
-                        // return IndeterminatePageIndicator(
-                        //   determineNextPage: (currentPageIndex) =>
-                        //       (currentPageIndex == /* _tabController.length */
-                        //               /* _numPages */numPagesInSearch - 1)
-                        //           ? null
-                        //           : currentPageIndex + 1,
-                        //   // tabController: _tabController,
-                        //   currentPageIndex: _currentPageIndex,
-                        //   // onUpdateCurrentPageIndex: _updateCurrentPageIndex,
-                        //   onUpdateCurrentPageIndex: (newPageIndex, oldPageIndex) {
-                        //     tabController.index = newPageIndex;
-                        //     _updateCurrentPageIndex(newPageIndex);
-                        //   },
-                        //   pageIndicator: IgnorePointer(
-                        //     child: TabPageSelector(
-                        //       controller: tabController,
-                        //       color: colorScheme.surface,
-                        //       selectedColor: colorScheme.primary,
-                        //     ),
-                        //   ),
-                        // );
                       },
                       selector: (ctx, v) =>
-                          v.numPostsInSearch ?? E621.maxPageNumber,
+                          /* v.numPagesInSearch ??  */ E621.maxPageNumber,
+                      // selector: (ctx, v) =>
+                      //     v.numPostsInSearch ?? E621.maxPageNumber,
                     ),
-                    // PageIndicator(
-                    //   tabController: _tabController,
-                    //   currentPageIndex: _currentPageIndex,
-                    //   onUpdateCurrentPageIndex: _updateCurrentPageIndex,
-                    // ),
                   ],
                 )
               : root,
         ),
-        // OverlayPortal(
-        //   controller: _portal,
-        //   overlayChildBuilder: (_) => Positioned(
-        //     bottom: 0,
-        //     left: 0,
-        //     child: Row(
-        //       mainAxisAlignment: MainAxisAlignment.start,
-        //       mainAxisSize: MainAxisSize.min,
-        //       children: [
-        //         const Text("Blacklist"),
-        //         Selector<ManagedPostCollectionSync, bool>(
-        //           selector: (_, p1) => p1.filterBlacklist,
-        //           builder: (cxt, v, _) => Switch(
-        //             value: v,
-        //             onChanged: (v) => Provider.of<ManagedPostCollectionSync>(
-        //                     cxt,
-        //                     listen: false)
-        //                 .filterBlacklist = v,
-        //           ),
-        //         ),
-        //       ],
-        //     ),
-        //   ),
-        // ),
       ],
     );
   }
@@ -731,7 +749,6 @@ class _WPostSearchResultsSwiperState extends State<
   }
 
   void _updateCurrentPageIndex(int index) {
-    // if (Platform.isDesktop) _tabController.index = index;
     (_currentPageIndex - index).abs() > 1
         ? _pageViewController.jumpToPage(index)
         : _pageViewController.animateToPage(
@@ -742,7 +759,7 @@ class _WPostSearchResultsSwiperState extends State<
   }
 
   void _updateCurrentPageIndexWrapper(int index, int old) =>
-      _updateCurrentPageIndex(index);
+      index != old ? _updateCurrentPageIndex(index) : "";
 }
 
 class PostSearchResultsBuilder extends StatelessWidget
