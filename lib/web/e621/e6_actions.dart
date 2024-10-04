@@ -2178,3 +2178,306 @@ class E6BatchActionEvent<T> {
     required this.sideAction,
   });
 }
+
+class WBatchFavRemoval extends StatefulWidget {
+  final Stream<RemoveFavEvent> stream;
+  final int numPosts;
+  const WBatchFavRemoval(
+      {super.key, required this.stream, required this.numPosts});
+
+  @override
+  State<WBatchFavRemoval> createState() => _WBatchFavRemovalState();
+}
+
+class _WBatchFavRemovalState extends State<WBatchFavRemoval> {
+  late final StreamSubscription<RemoveFavEvent> sub;
+  RemoveFavEvent? curr;
+
+  @override
+  void initState() {
+    super.initState();
+    sub = widget.stream.listen(onData);
+  }
+
+  @override
+  void dispose() {
+    sub.onData(null);
+    sub.cancel().ignore();
+    super.dispose();
+  }
+
+  void onData(RemoveFavEvent e) => setState(() => curr = e);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (curr != null)
+          Text(
+              "${(curr!.progress * 100).round()}%: ${curr!.currentSent}/${curr!.totalPosts} sent, ")
+        else
+          Text("Removing ${widget.numPosts} posts from favorites"),
+        LinearProgressIndicator(value: curr?.progress),
+      ],
+    );
+  }
+}
+
+class RemoveFavEvent {
+  final List<E6PostResponse>? posts;
+  final List<E6PostResponse>? successfulPosts;
+  final List<int>? postIds;
+  final List<int>? successfulPostIds;
+  final int totalPosts;
+  final int currentSent;
+  final int currentReceived;
+  final int currentEventPostId;
+  final E6PostResponse? currentEventPost;
+  final bool wasRequest;
+  final FutureOr<Response> result;
+
+  RemoveFavEvent({
+    required this.totalPosts,
+    required this.currentSent,
+    required this.currentReceived,
+    required this.currentEventPostId,
+    required this.wasRequest,
+    required this.currentEventPost,
+    required this.result,
+    required this.posts,
+    required this.successfulPosts,
+    required this.postIds,
+    required this.successfulPostIds,
+  });
+  RemoveFavEvent.withPost({
+    required this.totalPosts,
+    required this.currentSent,
+    required this.currentReceived,
+    required this.wasRequest,
+    required E6PostResponse this.currentEventPost,
+    required List<E6PostResponse> this.posts,
+    required List<E6PostResponse> this.successfulPosts,
+    required this.result,
+  })  : currentEventPostId = currentEventPost.id,
+        postIds = null,
+        successfulPostIds = null;
+  RemoveFavEvent.withId({
+    required this.totalPosts,
+    required this.currentSent,
+    required this.currentReceived,
+    required this.wasRequest,
+    this.currentEventPost,
+    required this.currentEventPostId,
+    required this.result,
+    required List<int> this.postIds,
+    required List<int> this.successfulPostIds,
+  })  : posts = null,
+        successfulPosts = null;
+  double get progress => (currentSent + currentReceived * 3) / totalPosts * 4;
+  double get sentProgress => currentSent / totalPosts;
+  double get receivedProgress => currentReceived / totalPosts;
+  // bool get isComplete => wasRequest &&
+  // bool get wasFailure => wasRequest &&
+}
+
+Stream<RemoveFavEvent> testRemoveFavoritesWithPosts({
+  BuildContext? context,
+  required List<E6PostResponse> posts,
+  bool updatePost = true,
+}) {
+  var str = "Removing ${posts.length} posts from favorites...";
+  _logger.finer(str);
+  if (context != null && context.mounted) {
+    util.showUserMessage(context: context, content: Text(str));
+  }
+  var currentSent = 0;
+  var currentReceived = 0;
+  final successes = <E6PostResponse>[];
+
+  void onListen() {}
+  void onCancel() {}
+  final ctr = StreamController<RemoveFavEvent>.broadcast(
+    onListen: onListen,
+    onCancel: onCancel,
+  );
+  dispatch() async* {
+    for (final post in posts) {
+      yield RemoveFavEvent.withPost(
+        successfulPosts: successes,
+        posts: posts,
+        currentEventPost: post,
+        currentReceived: currentReceived,
+        currentSent: currentSent,
+        totalPosts: posts.length,
+        wasRequest: true,
+        result: e621.sendRequest(
+          e621.initFavoriteDelete(
+            postId: post.id,
+            credentials: E621AccessData.fallback?.cred,
+          ),
+          useBurst: true,
+        )..then(
+            (value) {
+              ++currentReceived;
+              lm.logResponseSmart(value, _logger);
+              if (value.statusCodeInfo.isSuccessful) {
+                final v = E6PostResponse.fromRawJson(value.body);
+                if (updatePost && post is E6PostMutable) {
+                  post.overwriteFrom(v);
+                }
+                successes.add(v);
+              }
+              ctr.add(RemoveFavEvent.withPost(
+                posts: posts,
+                successfulPosts: successes,
+                currentReceived: currentReceived,
+                currentSent: currentSent,
+                totalPosts: posts.length,
+                currentEventPost: post,
+                wasRequest: false,
+                result: value,
+              ));
+              if (currentReceived == posts.length) {
+                ctr
+                    .close()
+                    .then((_) => _logger.info("Remove fav controller closed"))
+                    .ignore();
+              }
+              /* if (value.statusCodeInfo.isSuccessful) {
+          ctr.add(RemoveFavEvent.withPost(
+            currentReceived: currentProgressReceive,
+            currentSent: currentProgressSend,
+            totalPosts: posts.length,
+            currentEventPost: post,
+            wasRequest: false,
+            result: value,
+          ));
+        } else {
+          return E6BatchActionEvent.builder(
+            currentProgress: currentProgressReceive + currentProgressSend,
+            messageBuilder: m2,
+            totalProgress: totalProgressReceive + totalProgressSend,
+            sideAction: (
+              "Undo",
+              () => addPostToFavoritesWithPost(post: posts.elementAt(i))
+            ),
+            error: value.reasonPhrase,
+          );
+        } */
+            },
+          ).ignore(),
+      );
+    }
+  }
+
+  ctr.addStream(dispatch());
+  if (context != null && context.mounted) {
+    util.showUserMessageBanner(
+        duration: null,
+        context: context,
+        content: WBatchFavRemoval(stream: ctr.stream, numPosts: posts.length));
+  }
+  return ctr.stream;
+
+  /* final results = <Future<E6BatchActionEvent<dynamic>>>[];
+  for (var i = 0; i < posts.length; i++) {
+    results.add(e621
+        .sendRequest(
+      e621.initFavoriteDelete(
+        postId: posts[i],
+        credentials: E621AccessData.fallback?.cred,
+      ),
+      useBurst: true,
+    )
+        .then(
+      (value) {
+        ++currentProgressReceive;
+        lm.logResponseSmart(value, _logger);
+        if (value.statusCodeInfo.isSuccessful) {
+          return E6BatchActionEvent.builder(
+            currentProgress: currentProgressReceive + currentProgressSend,
+            messageBuilder: m2,
+            totalProgress: totalProgressReceive + totalProgressSend,
+            sideAction: (
+              "Undo",
+              () => addPostToFavoritesWithPost(post: posts.elementAt(i))
+            ),
+          );
+        } else {
+          return E6BatchActionEvent.builder(
+            currentProgress: currentProgressReceive + currentProgressSend,
+            messageBuilder: m2,
+            totalProgress: totalProgressReceive + totalProgressSend,
+            sideAction: (
+              "Undo",
+              () => addPostToFavoritesWithPost(post: posts.elementAt(i))
+            ),
+            error: value.reasonPhrase,
+          );
+        }
+      },
+    ));
+    yield E6BatchActionEvent.builder(
+      currentProgress: ++currentProgressSend + currentProgressReceive,
+      totalProgress: totalProgressSend + totalProgressReceive,
+      messageBuilder: m,
+    );
+  }
+  yield* Stream.fromFutures(results); */
+  // return E621.sendDeleteFavoriteRequestBatch(
+  //   pIds,
+  //   username: E621AccessData.fallback?.username,
+  //   apiKey: E621AccessData.fallback?.apiKey,
+  //   onComplete: (responses) {
+  //     var total = responses.length;
+  //     responses.removeWhere(
+  //       (element) => element.statusCodeInfo.isSuccessful,
+  //     );
+  //     var sbs = "${total - responses.length}/"
+  //         "$total posts removed from favorites!";
+  //     // responses.where((r) => r.statusCode == 422).forEach((r) async {
+  //     //   var pId = int.parse(r.request!.url.queryParameters["post_id"]!);
+  //     //   if ((context != null && context.mounted) &&
+  //     //       Provider.of<cf.CachedFavorites>(context!, listen: false)
+  //     //           .postIds
+  //     //           .contains(pId)) {
+  //     //     sbs += " $pId Cached";
+  //     //   }
+  //     // });
+  //     if (context != null && context.mounted) {
+  //       ScaffoldMessenger.of(context!)
+  //         ..hideCurrentSnackBar()
+  //         ..showSnackBar(
+  //           SnackBar(
+  //             content: Text(sbs),
+  //             action: SnackBarAction(
+  //               label: "Undo",
+  //               onPressed: () async {
+  //                 E621.sendAddFavoriteRequestBatch(
+  //                   pIds,
+  //                   username: E621AccessData.fallback?.username,
+  //                   apiKey: E621AccessData.fallback?.apiKey,
+  //                   onComplete: (rs) {
+  //                     if (context.mounted) {
+  //                       ScaffoldMessenger.of(context)
+  //                         ..hideCurrentSnackBar()
+  //                         ..showSnackBar(
+  //                           SnackBar(
+  //                             content: Text(
+  //                               "${rs.where((e) => e.statusCodeInfo.isSuccessful).length}"
+  //                               "/${rs.length} posts added to favorites!",
+  //                             ),
+  //                           ),
+  //                         );
+  //                     }
+  //                   },
+  //                 );
+  //               },
+  //             ),
+  //           ),
+  //         );
+  //     }
+  //   },
+  // );
+}
