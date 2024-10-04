@@ -12,7 +12,6 @@ import 'package:fuzzy/web/e621/d_text_test_text.dart' as dtext;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/e621/search_helper.dart' as sh;
-import 'package:fuzzy/widgets/w_back_button.dart';
 import 'package:fuzzy/widgets/w_comments_pane.dart';
 import 'package:fuzzy/widgets/w_d_text_preview.dart';
 import 'package:fuzzy/widgets/w_fab_builder.dart';
@@ -23,7 +22,7 @@ import 'package:fuzzy/widgets/w_image_result.dart';
 import 'package:fuzzy/widgets/w_search_pool.dart';
 import 'package:fuzzy/widgets/w_search_set.dart';
 import 'package:e621/e621.dart' as e621;
-import 'package:j_util/j_util_widgets.dart';
+import 'package:j_util/j_util_widgets.dart' as w;
 import 'package:provider/provider.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
@@ -267,7 +266,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 context: context,
                 builder: (_) {
                   return const AlertDialog(
-                    content: WBackButton.noOverlay(child: WUpdateSet.create()),
+                    content: w.SoloBackButton.noOverlay(child: WUpdateSet.create()),
                     // scrollable: true,
                   );
                 },
@@ -392,7 +391,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                         content: SizedBox(
                           width: double.maxFinite,
                           height: double.maxFinite,
-                          child: WBackButton.noOverlay(
+                          child: w.SoloBackButton.noOverlay(
                               child: WDTextPreviewScrollable(
                             initialText: dtext.testText,
                             maxLines: 5,
@@ -412,7 +411,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                         content: SizedBox(
                           width: double.maxFinite,
                           height: double.maxFinite,
-                          child: WBackButton.noOverlay(
+                          child: w.SoloBackButton.noOverlay(
                               child: FutureBuilder(
                                   future: e621.sendRequest(
                                       util.devData.isAssigned
@@ -450,7 +449,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                         content: SizedBox(
                           width: double.maxFinite,
                           height: double.maxFinite,
-                          child: WBackButton.noOverlay(
+                          child: w.SoloBackButton.noOverlay(
                               child: FutureBuilder(
                                   future: e621
                                       .sendRequest(
@@ -494,7 +493,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                           content: SizedBox(
                         width: double.maxFinite,
                         height: double.maxFinite,
-                        child: WBackButton.noOverlay(
+                        child: w.SoloBackButton.noOverlay(
                             child: SingleChildScrollView(
                           child: WCommentsLoader(
                             postId: util.devData.isAssigned
@@ -516,7 +515,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                         content: SizedBox(
                           width: double.maxFinite,
                           height: double.maxFinite,
-                          child: WBackButton.noOverlay(
+                          child: w.SoloBackButton.noOverlay(
                             child: (() {
                               var inputText = "",
                                   mts = sh.MetaTagSearchData.fromSearchString(
@@ -556,7 +555,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
           ),
           ListTile(
             title: const Text("Toggle Use Fab"),
-            leading: SelectorNotifier(
+            leading: w.SelectorNotifier(
               value: useFab,
               selector: (_, v) => v.value,
               builder: (_, useFabState, __) => useFabState

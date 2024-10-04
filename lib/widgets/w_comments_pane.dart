@@ -6,7 +6,7 @@ import 'package:fuzzy/log_management.dart' show SymbolName;
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/dtext_formatter.dart' as dtext;
 import 'package:fuzzy/web/e621/e621.dart';
-import 'package:fuzzy/widgets/w_back_button.dart';
+import 'package:j_util/j_util_widgets.dart' as w;
 
 class WCommentsLoader extends StatefulWidget {
   final int postId;
@@ -200,7 +200,7 @@ class WComment extends StatelessWidget {
                           content: SizedBox(
                             width: double.maxFinite,
                             height: double.maxFinite,
-                            child: WBackButton(
+                            child: w.SoloBackButton.overlay(
                               child: WCreateComment.reply(comment: comment),
                             ),
                           ),

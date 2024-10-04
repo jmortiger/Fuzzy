@@ -21,12 +21,12 @@ import 'package:provider/provider.dart' show Provider;
 BoxFit imageFit = BoxFit.cover;
 const bool allowPostViewNavigation = true;
 
-class WImageResult extends StatelessWidget {
+class ImageResult extends StatelessWidget {
   // #region Logger
   static lm.Printer get print => lRecord.print;
   static lm.FileLogger get logger => lRecord.logger;
   // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("WImageResult");
+  static late final lRecord = lm.generateLogger("ImageResult");
   // #endregion Logger
   final PostListing imageListing;
   bool get isE6Post => imageListing is E6PostResponse;
@@ -41,7 +41,7 @@ class WImageResult extends StatelessWidget {
   ManagedPostCollectionSync getSc(BuildContext context,
           [bool listen = false]) =>
       Provider.of<ManagedPostCollectionSync>(context, listen: listen);
-  const WImageResult({
+  const ImageResult({
     super.key,
     required this.imageListing,
     required this.index,
@@ -85,7 +85,7 @@ class WImageResult extends StatelessWidget {
         if (isSelected ||
             (!disallowSelections &&
                 sr(context).getIsPostSelected(imageListing.id)))
-          _WCheckmark(context: context),
+          _Checkmark(context: context),
         if (isE6Post && post.isAnimatedGif)
           Positioned.directional(
               textDirection: TextDirection.ltr,
@@ -246,7 +246,7 @@ class WImageResult extends StatelessWidget {
     var IImageInfo(width: w, height: h, url: url) = imageInfo;
     if (url == "") logger.info("NO URL $index");
     var (width: sizeWidth, height: sizeHeight) =
-        WImageResult.getGridSizeEstimate(ctx);
+        ImageResult.getGridSizeEstimate(ctx);
     var (:width, :height, :cacheWidth, :cacheHeight, :aspectRatio) =
         determineResolution(w, h, sizeWidth, sizeHeight, imageFit);
     if (!SearchView.i.useProgressiveImages) {
@@ -364,8 +364,8 @@ class WImageResult extends StatelessWidget {
   }
 }
 
-class _WCheckmark extends StatelessWidget {
-  const _WCheckmark({
+class _Checkmark extends StatelessWidget {
+  const _Checkmark({
     super.key,
     required this.context,
   });

@@ -12,8 +12,8 @@ import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/web/e621/util.dart';
-import 'package:fuzzy/widgets/w_image_result.dart';
-import 'package:fuzzy/widgets/w_page_indicator.dart';
+import 'package:fuzzy/widgets/w_image_result.dart' as w;
+import 'package:fuzzy/widgets/w_page_indicator.dart' as w;
 import 'package:j_util/j_util_full.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:provider/provider.dart';
@@ -400,7 +400,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
       ErrorPage.errorWidgetWrapper(
         () => !widget.disallowSelections
             ? Selector<SearchResultsNotifier, bool>(
-                builder: (_, value, __) => WImageResult(
+                builder: (_, value, __) => w.ImageResult(
                   disallowSelections: widget.disallowSelections,
                   imageListing: data,
                   index: index,
@@ -414,7 +414,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
                 ),
                 selector: (_, v) => v.getIsPostSelected(data.id),
               )
-            : WImageResult(
+            : w.ImageResult(
                 disallowSelections: widget.disallowSelections,
                 imageListing: data,
                 index: index,
@@ -700,7 +700,7 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper> {
                     root,
                     Selector<ManagedPostCollectionSync, int>(
                       builder: (context, numPagesInSearch, child) {
-                        return IndeterminatePageIndicator.builder(
+                        return w.IndeterminatePageIndicator.builder(
                           determineNextPage: (currentPageIndex) =>
                               (currentPageIndex == numPagesInSearch - 1)
                                   ? null

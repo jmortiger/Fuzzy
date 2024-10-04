@@ -19,11 +19,11 @@ import 'package:fuzzy/web/e621/dtext_formatter.dart' as dt;
 import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
-import 'package:fuzzy/widgets/w_back_button.dart';
 import 'package:fuzzy/widgets/w_comments_pane.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
 import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
+import 'package:j_util/j_util_widgets.dart' as w;
 import 'package:progressive_image/progressive_image.dart' show ProgressiveImage;
 import 'package:url_launcher/url_launcher.dart';
 
@@ -1223,7 +1223,7 @@ class _WarnPageState extends State<WarnPage> {
     return continued
         ? widget.child != null
             ? widget.child!
-            : const WBackButton()
+            : const w.SoloBackButton.overlay()
         : const SizedBox.expand();
   }
 }
