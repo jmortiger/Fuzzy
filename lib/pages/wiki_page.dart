@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/main.dart';
 import 'package:fuzzy/web/e621/dtext_formatter.dart' as dtext;
 import 'package:e621/e621.dart' as e621;
 
@@ -31,28 +32,146 @@ typedef WikiPageParameters = ({
   String? title
 });
 
-class WikiPageBuilder extends StatefulWidget
-    implements IRoute<WikiPageBuilder> {
-  static const routeNameString = "/wiki_pages";
+class WikiPageByTitleRoute with IRoute<WikiPageLoader> {
+  static const routeNameConst = "/wiki_pages",
+      routePathConst = "/wiki_pages/show_or_new",
+      hasStaticPathConst = true,
+      routeSegmentsConst = ["wiki_pages", "show_or_new"];
+
   @override
-  get routeName => routeNameString;
+  Widget generateWidgetForRoute(RouteSettings settings) =>
+      generateWidgetForRouteStatic(settings);
+  static Widget generateWidgetForRouteStatic(RouteSettings settings) {
+    final (:id, :parameters, :url) = IRoute.legacyRouteInit(settings);
+    return legacyBuilder(settings, id, url, parameters)!;
+  }
+
+  @override
+  get hasStaticPath => hasStaticPathConst;
+  @override
+  get routeSegments => routeSegmentsConst;
+  @override
+  get routeName => routeNameConst;
+  @override
+  get routeSegmentsFolded => routePathConst;
+  static Widget? legacyBuilder(RouteSettings settings, int? id, Uri url,
+      Map<String, String> parameters) {
+    try {
+      try {
+        final v = (settings.arguments as dynamic).wikiPage!;
+        return WikiPage(wikiPage: v);
+      } catch (_) {
+        final String? title = url.queryParameters["search[title]"] ??
+            url.queryParameters["title"] ??
+            (settings.arguments as dynamic)?.title;
+        if (title != null) {
+          return WikiPageLoader.fromTitle(title: title);
+        } else {
+          routeLogger.severe(
+            "Routing failure\n"
+            "\tRoute: ${settings.name}\n"
+            "\tId: $id\n"
+            "\tArgs: ${settings.arguments}",
+          );
+          return null;
+        }
+      }
+    } catch (e, s) {
+      routeLogger.severe(
+        "Routing failure\n"
+        "\tRoute: ${settings.name}\n"
+        "\tId: $id\n"
+        "\tArgs: ${settings.arguments}",
+        e,
+        s,
+      );
+      return null;
+    }
+  }
+}
+
+class WikiPageLoader extends StatefulWidget with IRoute<WikiPageLoader> {
+  static const routeNameConst = "/wiki_pages",
+      routePathConst = "/wiki_pages/${IRoute.idPathParameter}",
+      hasStaticPathConst = false,
+      routeSegmentsConst = ["wiki_pages", IRoute.idPathParameter];
+
+  @override
+  Widget generateWidgetForRoute(RouteSettings settings) =>
+      generateWidgetForRouteStatic(settings);
+  static Widget generateWidgetForRouteStatic(RouteSettings settings) {
+    final (:id, :parameters, :url) = IRoute.legacyRouteInit(settings);
+    return legacyBuilder(settings, id, url, parameters)!;
+  }
+
+  @override
+  get hasStaticPath => hasStaticPathConst;
+  @override
+  get routeSegments => routeSegmentsConst;
+  @override
+  get routeName => routeNameConst;
+  @override
+  get routeSegmentsFolded => routePathConst;
+  static Widget? legacyBuilder(RouteSettings settings, int? id, Uri url,
+      Map<String, String> parameters) {
+    try {
+      try {
+        final v = (settings.arguments as dynamic).wikiPage!;
+        return WikiPage(wikiPage: v);
+      } catch (_) {
+        id ??= (settings.arguments as WikiPageParameters?)?.id;
+        if (id != null) {
+          return WikiPageLoader.fromId(id: id);
+        } else if ((url.queryParameters["search[title]"] ??
+                url.queryParameters["title"] ??
+                (settings.arguments as WikiPageParameters?)?.title) !=
+            null) {
+          return WikiPageLoader.fromTitle(
+            title: url.queryParameters["search[title]"] ??
+                url.queryParameters["title"] ??
+                (settings.arguments as WikiPageParameters).title!,
+          );
+        } else {
+          routeLogger.severe(
+            "Routing failure\n"
+            "\tRoute: ${settings.name}\n"
+            "\tId: $id\n"
+            "\tArgs: ${settings.arguments}",
+          );
+          return null;
+        }
+      }
+    } catch (e, s) {
+      routeLogger.severe(
+        "Routing failure\n"
+        "\tRoute: ${settings.name}\n"
+        "\tId: $id\n"
+        "\tArgs: ${settings.arguments}",
+        e,
+        s,
+      );
+      return null;
+    }
+  }
+
   final bool isFullPage;
   final String? title;
   final int? id;
   final e621.WikiPage? wikiPage;
-  const WikiPageBuilder.fromPage({
+
+  const WikiPageLoader.fromPage({
     super.key,
     required e621.WikiPage this.wikiPage,
     this.isFullPage = true,
   })  : title = null,
         id = null;
-  const WikiPageBuilder.fromTitle({
+  const WikiPageLoader.fromTitle({
     super.key,
     required String this.title,
     this.isFullPage = true,
   })  : wikiPage = null,
         id = null;
-  const WikiPageBuilder.fromId({
+  const WikiPageLoader.fromId({
     super.key,
     required int this.id,
     this.isFullPage = true,
@@ -60,10 +179,10 @@ class WikiPageBuilder extends StatefulWidget
         title = null;
 
   @override
-  State<WikiPageBuilder> createState() => _WikiPageBuilderState();
+  State<WikiPageLoader> createState() => _WikiPageLoaderState();
 }
 
-class _WikiPageBuilderState extends State<WikiPageBuilder> {
+class _WikiPageLoaderState extends State<WikiPageLoader> {
   // ignore: unnecessary_late
   static late final logger = lm.generateLogger("WikiPage").logger;
   e621.WikiPage? wikiPage;

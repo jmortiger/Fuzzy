@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert' as dc;
 
+import 'package:e621/e621_api.dart' show maxPageNumber;
 import 'package:flutter/foundation.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/models/app_settings.dart';
@@ -111,9 +112,9 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     final n = numPagesInSearch;
     return n == null
         ? null
-        : n <= E621.maxPageNumber
+        : n <= maxPageNumber
             ? n
-            : E621.maxPageNumber;
+            : maxPageNumber;
   }
   // ValueAsync<int> get numPagesInSearch => _numPostsInSearch != null
   //     ? ValueAsync(value: (_numPostsInSearch! / postsPerPage).ceil())
@@ -301,10 +302,13 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
                       ?.inst
                       .$
           ? _e6posts
-          : _e6posts = _genFromStartAndCount(
+          : _e6posts = _genFromRange(
               start: currentPageFirstPostIndex,
-              count: postsPerPage,
             );
+  // : _e6posts = _genFromStartAndCount(
+  //     start: currentPageFirstPostIndex,
+  //     count: postsPerPage,
+  //   );
 
   @override
   set posts(E6Posts? v) {
@@ -389,7 +393,8 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     bool? filterBlacklist,
   ]) =>
       (isPageLoaded(index))
-          ? _genFromStartAndCount(
+          // ? _genFromStartAndCount(
+          ? _genFromRange(
               start: getPageFirstPostIndex(index),
               filterBlacklist: filterBlacklist,
             )
@@ -403,14 +408,16 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     final s = checkLoading(parameters.copyWith(pageIndex: index + 1));
     if (s != null) {
       return s.then((v) => v != null
-          ? _genFromStartAndCount(
+          // ? _genFromStartAndCount(
+          ? _genFromRange(
               start: getPageFirstPostIndex(index),
               filterBlacklist: filterBlacklist,
             )
           : null);
     }
     return await tryRetrievePage(index)
-        ? _genFromStartAndCount(
+        // ? _genFromStartAndCount(
+        ? _genFromRange(
             start: getPageFirstPostIndex(index),
             filterBlacklist: filterBlacklist,
           )
@@ -460,6 +467,50 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         : null;
   }
 
+  /* /// {@macro loadWarn}
+  FutureOr<E6PostResponse?> getPostByIndexOverall(
+    final int index, [
+    bool? filterBlacklist,
+  ]) =>
+      (getPostByIndexOverallSync(index, filterBlacklist) ??
+              getPostByIndexOverallAsync(index, filterBlacklist))
+          as FutureOr<E6PostResponse?>;
+
+  /// {@macro notLoadWarn}
+  E6PostResponse? getPostByIndexOverallSync(
+    final int index, [
+    bool? filterBlacklist,
+  ]) =>
+      (isPostIndexLoaded(index))
+          ? _getRawPostFromRange(
+              start: getPageFirstPostIndex(index),
+              filterBlacklist: filterBlacklist,
+            )
+          : null;
+
+  /// {@macro loadWarn}
+  Future<Iterable<E6PostResponse>?> getPostByIndexOverallAsync(
+    final int index, [
+    bool? filterBlacklist,
+  ]) async {
+    final s = checkLoading(parameters.copyWith(pageIndex: index + 1));
+    if (s != null) {
+      return s.then((v) => v != null
+          ? _getRawPostFromRange(
+              start: getPageFirstPostIndex(index),
+              filterBlacklist: filterBlacklist,
+            )
+          : null);
+    }
+    return await tryRetrievePage(index)
+        ? _getRawPostFromRange(
+            start: getPageFirstPostIndex(index),
+            filterBlacklist: filterBlacklist,
+          )
+        : null;
+  } */
+
+  /// TODO: Check if posts are already in collection before?
   bool assignPagePosts(
       final int pageIndex, final Iterable<E6PostResponse> toAdd) {
     switch (getPageFirstPostIndex(pageIndex)) {
@@ -467,6 +518,10 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
         final t = toAdd.toList();
         if (t.isEmpty) return true;
         do {
+          if (_startingPage == 0) {
+            logger.severe("_startingPage was about to go to 0");
+            return false;
+          }
           _startingPage--;
           for (int i = 0; t.isNotEmpty && postsPerPage > i; i++) {
             collection._posts.addFirst(E6PostEntrySync(value: t.removeLast()));
@@ -520,7 +575,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           .firstWhere(
             (e) =>
                 !SearchView.i.blacklistFavs && e.$2.$.isFavorited ||
-                !hasBlacklistedTag(e.$2.$.tagList),
+                !hasBlacklistedTags(e.$2.$.tagSet),
             orElse: () => (-1, E6PostEntrySync(value: E6PostResponse.error)),
           )
           .$1;
@@ -693,6 +748,9 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
           lastPostIdCached);
   bool isPageLoaded(int pageIndex) =>
       pageIndex >= startingPageIndex && pageIndex <= lastStoredPageIndex;
+  bool isPostIndexLoaded(int postIndex) =>
+      postIndex >= getPageFirstPostIndex(startingPageIndex) &&
+      postIndex <= getPageLastPostIndex(lastStoredPageIndex);
 
   bool? couldPageBeLoadable(int pageIndex) => isPageLoaded(pageIndex) ||
           (pageIndex < startingPageIndex && (hasPriorPage ?? false)) ||
@@ -1104,11 +1162,14 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     int? end,
     bool? filterBlacklist,
   }) =>
-      _getFromRange(
+      // _getFromRange(
+      _getFromRangeConfigurable(
         start: start,
         end: end,
         filterBlacklist: filterBlacklist,
-      ).map((e) => e.$);
+        mapper: (e) => e.$,
+      );
+  // ).map((e) => e.$);
 
   /// If [ensureCount] is true, adds posts if blacklist is filtered.
   ///
@@ -1119,12 +1180,15 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
     bool? filterBlacklist,
     bool ensureCount = true,
   }) =>
-      _getFromStartAndCount(
+      // _getFromStartAndCount(
+      _getFromStartAndCountConfigurable(
         start: start,
         count: count,
         filterBlacklist: filterBlacklist,
         ensureCount: ensureCount,
-      ).map((e) => e.$);
+        mapper: (e) => e.$,
+      );
+  // ).map((e) => e.$);
 
   /// Doesn't add posts if blacklist is filtered.
   ///
@@ -1140,12 +1204,35 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
             [],
             (acc, e, _, __) =>
                 (!SearchView.i.blacklistFavs && e.$.isFavorited) ||
-                        !hasBlacklistedTag(e.$.tagList)
+                        !hasBlacklistedTags(e.$.tagSet)
                     ? (acc..add(e))
                     : acc,
             breakIfTrue: (_, __, i, ___) => i + start >= count + start,
           )
         : collection._posts.skip(start).take(count);
+  }
+
+  /// Doesn't add posts if blacklist is filtered.
+  ///
+  /// If null, [end] defaults to [postsPerPage] + [start].
+  Iterable<T> _getFromRangeConfigurable<T>({
+    int start = 0,
+    int? end,
+    bool? filterBlacklist,
+    required T Function(E6PostEntrySync e) mapper,
+  }) {
+    final count = (end ?? (postsPerPage + start)) - start;
+    return (filterBlacklist ?? _filterBlacklist)
+        ? collection._posts.skip(start).foldTo<List<T>>(
+            [],
+            (acc, e, _, __) =>
+                (!SearchView.i.blacklistFavs && e.$.isFavorited) ||
+                        !hasBlacklistedTags(e.$.tagSet)
+                    ? (acc..add(mapper(e)))
+                    : acc,
+            breakIfTrue: (_, __, i, ___) => i + start >= count + start,
+          )
+        : collection._posts.skip(start).take(count).map(mapper);
   }
 
   /// If [ensureCount] is true, adds posts if blacklist is filtered.
@@ -1163,7 +1250,7 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
                 [],
                 (acc, e, _, __) =>
                     !SearchView.i.blacklistFavs && e.$.isFavorited ||
-                            !hasBlacklistedTag(e.$.tagList)
+                            !hasBlacklistedTags(e.$.tagSet)
                         ? (acc..add(e))
                         : acc,
                 breakIfTrue: (acc, _, __, ___) =>
@@ -1172,8 +1259,43 @@ class ManagedPostCollectionSync extends SearchCacheLegacy {
             : collection._posts.skip(start).take(count ?? postsPerPage).where(
                 (e) =>
                     !SearchView.i.blacklistFavs && e.$.isFavorited ||
-                    !hasBlacklistedTag(e.$.tagList))
+                    !hasBlacklistedTags(e.$.tagSet))
         : collection._posts.skip(start).take(count ?? postsPerPage);
+  }
+
+  /// If [ensureCount] is true, adds posts if blacklist is filtered.
+  ///
+  /// If null, [count] defaults to [postsPerPage].
+  Iterable<T> _getFromStartAndCountConfigurable<T>({
+    int start = 0,
+    int? count,
+    bool? filterBlacklist,
+    bool ensureCount = true,
+    required T Function(E6PostEntrySync e) mapper,
+  }) {
+    return (filterBlacklist ?? _filterBlacklist)
+        ? ensureCount
+            ? collection._posts.skip(start).foldTo<List<T>>(
+                [],
+                (acc, e, _, __) =>
+                    !SearchView.i.blacklistFavs && e.$.isFavorited ||
+                            !hasBlacklistedTags(e.$.tagSet)
+                        ? (acc..add(mapper(e)))
+                        : acc,
+                breakIfTrue: (acc, _, __, ___) =>
+                    acc.length >= (count ?? postsPerPage),
+              )
+            : collection._posts
+                .skip(start)
+                .take(count ?? postsPerPage)
+                .fold<List<T>>(
+                    [],
+                    (acc, e) =>
+                        !SearchView.i.blacklistFavs && e.$.isFavorited ||
+                                !hasBlacklistedTags(e.$.tagSet)
+                            ? (acc..add(mapper(e)))
+                            : acc)
+        : collection._posts.skip(start).take(count ?? postsPerPage).map(mapper);
   }
 
   // void _onUserSearchBegan(SearchArgs e) {

@@ -2,35 +2,71 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
+import 'package:fuzzy/main.dart';
 import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/web/e621/dtext_formatter.dart' as dtext;
 import 'package:fuzzy/web/e621/e621.dart';
-import 'package:e621/e621.dart'
-    show User, UserDetailed, UserLoggedIn, UserLoggedInDetail;
+import 'package:e621/e621.dart';
 
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/widgets/w_post_thumbnail.dart';
 
 import '../web/e621/e621_access_data.dart';
 
-class UserProfilePage extends StatelessWidget
-    implements IRoute<UserProfilePage> {
-  // #region Logger
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
+class UserProfilePage extends StatelessWidget with IRoute<UserProfilePage> {
   // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("UserProfilePage");
-  // #endregion Logger
-  static const routeNameString = "/";
+  static late final logger = lm.generateLogger("UserProfilePage").logger;
+  // #region Routing
+  static const routeNameConst = "/users",
+      routeSegmentsConst = ["users", IRoute.idPathParameter],
+      routePathConst = "/users/${IRoute.idPathParameter}",
+      hasStaticPathConst = false;
   @override
-  get routeName => routeNameString;
+  get routeName => routeNameConst;
+  @override
+  get hasStaticPath => hasStaticPathConst;
+  @override
+  get routeSegments => routeSegmentsConst;
+  @override
+  get routeSegmentsFolded => routePathConst;
+
+  @override
+  Widget generateWidgetForRoute(RouteSettings settings) =>
+      generateWidgetForRouteStatic(settings);
+  static Widget generateWidgetForRouteStatic(RouteSettings settings) {
+    final id = IRoute.decodePathParameter<int>(
+      settings,
+      routeSegmentsConst,
+      hasStaticPathConst,
+    );
+    if (id == null) {
+      routeLogger.severe(
+        "Routing failure: no id\n"
+        "\tRoute: ${settings.name}\n"
+        "\tId: $id\n"
+        "\tArgs: ${settings.arguments}",
+      );
+      throw StateError("Routing failure: no id\n"
+          "\tRoute: ${settings.name}\n"
+          "\tId: $id\n"
+          "\tArgs: ${settings.arguments}");
+    }
+    final rp = RouteParameterResolver.fromDynamic(settings.arguments),
+        user = rp.user,
+        username = rp.username;
+    return UserProfilePageLoader(id: id, user: user, username: username);
+  }
+  // #endregion Routing
+
   final User user;
-  UserDetailed? get userD => user is UserDetailed ? user as UserDetailed : null;
-  UserLoggedIn? get userL => user is UserLoggedIn ? user as UserLoggedIn : null;
+  final UserDetailedMixin? userD;
+  final CurrentUser? userL;
 
   const UserProfilePage({
     super.key,
     required this.user,
-  });
+  })  : userD = user is UserDetailed ? user : null,
+        userL = user is UserLoggedIn ? user : null;
   static Widget generateFavStats(UserLoggedIn userL) => Text.rich(TextSpan(
         text: "FavCount: ${userL.favoriteCount}/${userL.favoriteLimit} (",
         children: [
@@ -48,7 +84,7 @@ class UserProfilePage extends StatelessWidget
           const TextSpan(text: " left)"),
         ],
       ));
-  static Widget generateFavStatsFull(UserLoggedIn userL, [int? deletedFavs]) =>
+  static Widget generateFavStatsFull(CurrentUser userL, [int? deletedFavs]) =>
       deletedFavs != null
           ? Text.rich(TextSpan(
               text: "FavCount: ${userL.favoriteCount}/${userL.favoriteLimit} (",
@@ -104,188 +140,216 @@ class UserProfilePage extends StatelessWidget
         ),
       ),
       body: SingleChildScrollView(
-        child: Column(children: [
-          if (user.avatarId != null) WPostThumbnail.withId(id: user.avatarId!),
-          Text("Created At: ${user.createdAt}"),
-          Text("Level: ${user.levelString}(${user.level})"),
-          Text("Post Update Count: ${user.postUpdateCount}"),
-          Text("Post Upload Count: ${user.postUploadCount}"),
-          Text("Note Update Count: ${user.noteUpdateCount}"),
-          Text("Is Banned: ${user.isBanned}"),
-          Text("Can Approve Posts: ${user.canApprovePosts}"),
-          Text("Can Upload Free: ${user.canUploadFree}"),
-          Text("Base Upload Limit: ${user.baseUploadLimit}"),
-          if (userL != null) generateFavStatsFull(userL!),
-          if (userL != null) Text("Tag Query Limit: ${userL!.tagQueryLimit}"),
-          if (userL != null) Text("Blacklist Users: ${userL!.blacklistUsers}"),
-          if (userL != null)
-            Text("Blacklisted Tags: ${userL!.blacklistedTags}"),
-          if (userL != null) Text("Favorite Tags: ${userL!.favoriteTags}"),
-          if (userL != null) Text("Api Burst Limit: ${userL!.apiBurstLimit}"),
-          if (userL != null)
-            Text("API Regen Multiplier: ${userL!.apiRegenMultiplier}"),
-          if (userL != null)
-            Text("Remaining API Limit: ${userL!.remainingApiLimit}"),
-        ]),
+        padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (user.avatarId != null)
+              WPostThumbnail.withId(id: user.avatarId!),
+            Text("Created At: ${user.createdAt}"),
+            Text("Level: ${user.levelString}(${user.level})"),
+            if (userD != null)
+              ExpansionTile(
+                  title: const Text("ProfileAbout"),
+                  children: [Text.rich(dtext.parse(userD!.profileAbout))]),
+            if (userD != null) Text("ProfileArtInfo: ${userD!.profileArtInfo}"),
+            if (userD != null)
+              Text("Post Update Count: ${user.postUpdateCount}"),
+            Text("Post Upload Count: ${user.postUploadCount}"),
+            Text("Note Update Count: ${user.noteUpdateCount}"),
+            Text("Is Banned: ${user.isBanned}"),
+            Text("Can Approve Posts: ${user.canApprovePosts}"),
+            Text("Can Upload Free: ${user.canUploadFree}"),
+            Text("Base Upload Limit: ${user.baseUploadLimit}"),
+            if (userL != null) generateFavStatsFull(userL!),
+            if (userL != null) Text("Tag Query Limit: ${userL!.tagQueryLimit}"),
+            if (userL != null)
+              Text("Blacklist Users: ${userL!.blacklistUsers}"),
+            if (userL != null)
+              Text("Blacklisted Tags: ${userL!.blacklistedTags}"),
+            if (userL != null) Text("Favorite Tags: ${userL!.favoriteTags}"),
+            if (userL != null) Text("Api Burst Limit: ${userL!.apiBurstLimit}"),
+            if (userL != null)
+              Text("API Regen Multiplier: ${userL!.apiRegenMultiplier}"),
+            if (userL != null)
+              Text("Remaining API Limit: ${userL!.remainingApiLimit}"),
+            if (userD != null) ...[
+              Text("Artist Version Count: ${userD!.artistVersionCount}"),
+              Text("Comment Count: ${userD!.commentCount}"),
+              Text("Favorite Count: ${userD!.favoriteCount}"),
+              Text("Flag Count: ${userD!.flagCount}"),
+              Text("Forum Post Count: ${userD!.forumPostCount}"),
+              UserFeedbackCount(user: userD!),
+              Text("Pool Version Count: ${userD!.poolVersionCount}"),
+              Text("Upload Limit: ${userD!.uploadLimit}"),
+              Text("Wiki Page Version Count: ${userD!.wikiPageVersionCount}"),
+            ]
+          ],
+        ),
       ),
     );
   }
 }
 
-class UserProfileLoaderPage extends StatefulWidget
-    implements IRoute<UserProfileLoaderPage> {
-  static lm.FileLogger get logger => UserProfilePage.logger;
-  static const routeNameString = "/";
+class UserFeedbackCount extends StatelessWidget {
+  final UserDetailedMixin user;
+  const UserFeedbackCount({super.key, required this.user});
+
   @override
-  get routeName => routeNameString;
-  final User? _user;
+  Widget build(BuildContext context) {
+    return Text.rich(TextSpan(text: "Feedback Count: ", children: [
+      const TextSpan(
+          text: "↑",
+          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+      TextSpan(text: ": ${user.positiveFeedbackCount} | "),
+      const TextSpan(
+          text: "-",
+          style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+      TextSpan(text: ": ${user.neutralFeedbackCount} | "),
+      const TextSpan(
+          text: "↓",
+          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+      TextSpan(text: ": ${user.negativeFeedbackCount}"),
+    ]));
+  }
+}
+
+typedef UserPageArguments = ({
+  int? id,
+  E621AccessData? data,
+  String? username,
+  User? user
+});
+
+class UserProfilePageLoader extends StatefulWidget
+    with IRoute<UserProfilePageLoader> {
+  static lm.FileLogger get logger => UserProfilePage.logger;
+  // #region Routing
+  static const routeNameConst = UserProfilePage.routeNameConst,
+      routeSegmentsConst = UserProfilePage.routeSegmentsConst,
+      routePathConst = UserProfilePage.routePathConst,
+      hasStaticPathConst = UserProfilePage.hasStaticPathConst;
+  @override
+  get routeName => routeNameConst;
+  @override
+  get hasStaticPath => hasStaticPathConst;
+  @override
+  get routeSegments => routeSegmentsConst;
+  @override
+  get routeSegmentsFolded => routePathConst;
+
+  @override
+  Widget generateWidgetForRoute(RouteSettings settings) =>
+      generateWidgetForRouteStatic(settings);
+  static Widget generateWidgetForRouteStatic(RouteSettings settings) =>
+      UserProfilePage.generateWidgetForRouteStatic(settings);
+  // #endregion Routing
+  final User? user;
   final E621AccessData? data;
   final String? username;
   final int? id;
 
-  const UserProfileLoaderPage({
+  const UserProfilePageLoader({
     super.key,
-    required User user,
+    this.user,
+    this.id,
+    this.data,
+    this.username,
+  }) : assert(
+          (user ?? id ?? data ?? username) != null,
+          "At least 1 of `user`, `id`, `data`, or `username` must be non-null",
+        );
+  const UserProfilePageLoader.byUser({
+    super.key,
+    required User this.user,
   })  : data = null,
         username = null,
-        id = null,
-        _user = user;
-  const UserProfileLoaderPage.loadFromAccessData({
+        id = null;
+  const UserProfilePageLoader.loadFromAccessData({
     super.key,
     required E621AccessData this.data,
   })  : username = null,
         id = null,
-        _user = null;
-  const UserProfileLoaderPage.getByName({
+        user = null;
+  const UserProfilePageLoader.getByName({
     super.key,
     required String this.username,
   })  : data = null,
         id = null,
-        _user = null;
-  const UserProfileLoaderPage.getById({
+        user = null;
+  const UserProfilePageLoader.getById({
     super.key,
     required int this.id,
   })  : data = null,
         username = null,
-        _user = null;
-  // FutureOr<User?> get user {
-  //   if (_user != null) return _user;
-  //   logger.finest("No User obj, trying access data");
-  //   var d = (data ??
-  //               E621AccessData.userData.$Safe ??
-  //               (isDebug ? E621AccessData.devAccessData.$Safe : null))
-  //           ?.cred,
-  //       username = this.username ?? d?.username;
-  //   if (d == null) {
-  //     logger.finest("No access data, trying by name");
-  //   }
-  //   if (username == null || username.isEmpty) {
-  //     logger.warning("No user info available: cannot find user");
-  //     return null;
-  //   }
-  //   var r = e621.initUserSearch(
-  //     searchNameMatches: username,
-  //     credentials: d,
-  //     limit: 1,
-  //   );
-  //   logRequest(r, logger);
-  //   return e621.sendRequest(r).then((v) {
-  //     if (v.statusCodeInfo.isError) {
-  //       logResponse(v, logger, lm.LogLevel.SEVERE);
-  //       return null;
-  //     } else if (!v.statusCodeInfo.isSuccessful) {
-  //       logResponse(v, logger, lm.LogLevel.WARNING);
-  //       return null;
-  //     } else {
-  //       logResponse(v, logger, lm.LogLevel.INFO);
-  //       try {
-  //         return UserLoggedIn.fromRawJson(v.body);
-  //       } catch (e) {
-  //         return User.fromRawJson(v.body);
-  //       }
-  //     }
-  //   });
-  // }
-
-  // /// Based on the provided user info, attempts to get, in order:
-  // /// 1. [UserLoggedInDetail]
-  // /// 1. [UserDetailed]
-  // /// 1. [UserLoggedIn]
-  // /// 1. [User]
-  // FutureOr<User?> get userMostSpecific {
-  //   var id = this.id;
-  //   if (_user != null) {
-  //     if (_user is UserLoggedInDetail || _user is UserDetailed) {
-  //       return _user;
-  //     } else {
-  //       logger.finest("Attempting to retrieve more specific user "
-  //           "info for user ${_user.id} (${_user.name})");
-  //       id = _user.id;
-  //     }
-  //   } else {
-  //     logger.finest("No User obj, trying id");
-  //   }
-  //   var d = (data ??
-  //           E621AccessData.userData.$Safe ??
-  //           (isDebug ? E621AccessData.devAccessData.$Safe : null))
-  //       ?.cred;
-  //   if (id != null) {
-  //     if (d == null) {
-  //       logger.info("No credential data, can't get logged in data.");
-  //     }
-  //     var r = e621.initUserGet(
-  //       id,
-  //       credentials: d,
-  //     );
-  //     logRequest(r, logger);
-  //     return e621.sendRequest(r).then(E621.resolveGetUserFuture);
-  //   }
-  //   logger.finest("No id, trying access data");
-  //   var username = this.username ?? d?.username;
-  //   if (d == null) {
-  //     logger.finest("No access data, trying by name");
-  //   }
-  //   if (username == null || username.isEmpty) {
-  //     logger.warning("No user info available: cannot find user");
-  //     return null;
-  //   }
-  //   var r = e621.initUserSearch(
-  //     searchNameMatches: username,
-  //     credentials: d,
-  //     limit: 1,
-  //   );
-  //   logRequest(r, logger);
-  //   return e621.sendRequest(r).then((v) {
-  //     if (v.statusCodeInfo.isError) {
-  //       logResponse(v, logger, lm.LogLevel.SEVERE);
-  //       return null;
-  //     } else if (!v.statusCodeInfo.isSuccessful) {
-  //       logResponse(v, logger, lm.LogLevel.WARNING);
-  //       return null;
-  //     } else {
-  //       logResponse(v, logger, lm.LogLevel.FINER);
-  //       User t;
-  //       try {
-  //         t = UserLoggedIn.fromRawJson(v.body);
-  //       } catch (e) {
-  //         t = User.fromRawJson(v.body);
-  //       }
-  //       logger.info("Launching request for User ${t.id} (${t.name})");
-  //       var r = e621.initUserGet(
-  //         t.id,
-  //         credentials: d,
-  //       );
-  //       logRequest(r, logger);
-  //       return e621.sendRequest(r).then(E621.resolveGetUserFuture);
-  //     }
-  //   });
-  // }
+        user = null;
+  factory UserProfilePageLoader.fromRoute(RouteSettings settings) {
+    if (settings.arguments != null) {
+      switch (settings.arguments) {
+        case UserPageArguments args:
+          return UserProfilePageLoader(
+            // data: args.data,
+            id: args.id,
+            user: args.user,
+            username: args.username,
+          );
+        case User args:
+          return UserProfilePageLoader(user: args);
+        case int args:
+          return UserProfilePageLoader(id: args);
+        case E621AccessData args:
+          return UserProfilePageLoader(data: args);
+        case String args:
+          return UserProfilePageLoader(username: args);
+        case dynamic args:
+          try {
+            return UserProfilePageLoader(user: args.user!);
+          } catch (_) {
+            try {
+              return UserProfilePageLoader(id: args.id!);
+            } catch (_) {
+              try {
+                return UserProfilePageLoader(id: args.userId!);
+              } catch (_) {
+                try {
+                  return UserProfilePageLoader(username: args.username!);
+                } catch (_) {
+                  try {
+                    return UserProfilePageLoader(data: args.data!);
+                  } catch (_) {
+                    throw ArgumentError.value(
+                        settings.arguments,
+                        "settings.arguments",
+                        "must have one of `int? id`, `E621AccessData? data`, `String? username`, `User? user`");
+                  }
+                }
+              }
+            }
+          }
+      }
+    }
+    final uri = Uri.parse(settings.name!);
+    assert(routeNameConst.contains(uri.pathSegments.first));
+    if (uri.pathSegments.length > 1) {
+      return UserProfilePageLoader(id: int.parse(uri.pathSegments[1]));
+    }
+    final id = uri.queryParameters["id"] ??
+        uri.queryParameters["user_id"] ??
+        uri.queryParameters["userId"];
+    final name = uri.queryParameters["name"] ??
+        uri.queryParameters["user_name"] ??
+        uri.queryParameters["username"];
+    return UserProfilePageLoader(
+      id: id != null ? int.tryParse(id) : null,
+      username: name,
+    );
+  }
 
   @override
-  State<UserProfileLoaderPage> createState() => _UserProfileLoaderPageState();
+  State<UserProfilePageLoader> createState() => _UserProfilePageLoaderState();
 }
 
-class _UserProfileLoaderPageState extends State<UserProfileLoaderPage> {
+class _UserProfilePageLoaderState extends State<UserProfilePageLoader> {
   FutureOr<User?>? userFuture;
   User? user;
   @override
@@ -305,12 +369,13 @@ class _UserProfileLoaderPageState extends State<UserProfileLoaderPage> {
     }
 
     super.initState();
-    userFuture = E621.retrieveUserNonDetailed(
-      user: widget._user,
+    userFuture = E621.retrieveUserMostSpecific(
+      id: widget.id,
+      user: widget.user,
       data: widget.data,
       username: widget.username,
     ); //widget.user;
-    if (userFuture.runtimeType == UserDetailed) {
+    if (userFuture is User) {
       E621.tryUpdateLoggedInUser(user = userFuture as User);
       userFuture = null;
     } else if (userFuture.runtimeType == User) {
@@ -377,13 +442,15 @@ class _UserProfileLoaderPageState extends State<UserProfileLoaderPage> {
                 appBar: AppBar(
                   title: const Text("User "),
                 ),
-                body: const Column(
+                body:
+                    spinnerFitted /* const Column(
                   children: [spinnerExpanded],
-                ),
+                ) */
+                ,
               )
             : Scaffold(
-                appBar: AppBar(),
-                body: const Text("Failed"),
+                appBar: AppBar(title: const Text("Failed to load")),
+                body: const Text("Failed to load"),
               );
   }
 }

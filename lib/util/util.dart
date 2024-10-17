@@ -9,7 +9,6 @@ import 'package:fuzzy/main.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart' as path;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:url_launcher/url_launcher.dart';
 
@@ -22,36 +21,31 @@ late final _lRecord = lm.generateLogger("Util");
 
 typedef JsonMap = Map<String, dynamic>;
 const isDebug = kDebugMode;
-final LazyInitializer<PackageInfo> packageInfo = LazyInitializer(
-  () => PackageInfo.fromPlatform(),
-);
-final LazyInitializer<String> version = LazyInitializer(
-  () async => (await packageInfo.getItem()).version,
-  defaultValue: "VERSION_NUMBER",
-);
+final packageInfo = LazyInitializer(PackageInfo.fromPlatform);
+final version = LazyInitializer(
+    () async => (await packageInfo.getItem()).version,
+    defaultValue: "VERSION_NUMBER");
 
 /// The absolute path to user-accessible data.
-final appDataPath = LazyInitializer(() => (Platform.isWeb)
+final appDataPath = LazyInitializer(() => Platform.isWeb
     ? Future.sync(() => "")
-    : path.getDownloadsDirectory /* getApplicationDocumentsDirectory */ ().then(
-          (value) => value!.absolute.path,
-        ));
-final devDataString = LazyInitializer<String>(() =>
-    (rootBundle.loadString("assets/devData.json")
-      ..onError(defaultOnError /* onErrorPrintAndRethrow */)));
-final devData = LazyInitializer<JsonMap>(
-    () async => dc.jsonDecode(await devDataString.getItem()));
-final pref =
-    LazyInitializer<SharedPreferences>(() => SharedPreferences.getInstance());
-FutureOr<T> onErrorPrintAndRethrow<T>(Object? e, StackTrace stackTrace) {
-  _print(e);
-  _print(stackTrace);
-  throw e!;
-}
+    : path.getDownloadsDirectory().then((v) => v!.absolute.path));
+final devDataString = LazyInitializer(
+    () => rootBundle.loadString("assets/devData.json").onError((e, s) {
+          _logger.warning("Couldn't load dev data string", e, s);
+          return "";
+        }).then((v) => v == "" ? null : v));
+final devData = LazyInitializer(() async => devDataString
+        .getItemAsync()
+        .then((v) => dc.jsonDecode(v!) as JsonMap?)
+        .onError((e, s) {
+      _logger.warning("Couldn't load dev data", e, s);
+      return null;
+    }));
 
-T defaultOnError<T>(Object? error, StackTrace trace) {
-  _print(error);
-  return _print(trace) as T;
+T defaultOnError<T>(Object? e, StackTrace s) {
+  _logger.severe(e, e, s);
+  Error.throwWithStackTrace(e!, s);
 }
 
 // #region User Message
@@ -244,6 +238,28 @@ Size calculateTextSize({
   return textPainter.size;
 }
 
+Widget getFullPageSpinner(BuildContext ctx,
+    {AppBar? appBar, Widget? appBarTitle}) {
+  const stretchVertically = Column(
+      mainAxisSize: MainAxisSize.max,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [spinnerExpanded]);
+  const stretchHorizontally = Row(
+      mainAxisSize: MainAxisSize.max,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [spinnerExpanded]);
+  final s = MediaQuery.sizeOf(ctx);
+  final Widget root =
+      s.width > s.height ? stretchVertically : stretchHorizontally;
+  return (appBar ?? appBarTitle) != null
+      ? SafeArea(
+          child: Scaffold(
+              appBar: appBar ?? AppBar(title: appBarTitle), body: root))
+      : SafeArea(child: root);
+}
+
 const fullPageSpinner = Scaffold(
   body: SafeArea(child: Column(children: [spinnerExpanded])),
 );
@@ -252,6 +268,16 @@ const spinnerExpanded = Expanded(
     aspectRatio: 1,
     child: CircularProgressIndicator(),
   ),
+);
+const spinnerFitted = Padding(
+  padding: EdgeInsets.all(8.0),
+  child: FittedBox(
+      fit: BoxFit.contain,
+      child: SizedBox(
+        width: 1000,
+        height: 1000,
+        child: CircularProgressIndicator(),
+      )),
 );
 // #region Url and Link Stuff
 const commonTopLevelDomainStr = "com|org|gov|net|edu|jp|us|au|uk|tv"; //|mil|xxx
@@ -285,7 +311,11 @@ const linkifierOptions = LinkifyOptions(
   excludeLastPeriod: true,
   defaultToHttps: true,
 );
-Future<bool?> defaultTryLaunchUrl(Uri url, {BuildContext? ctx}) =>
+Future<bool?> defaultTryLaunchUrl(
+  Uri url, {
+  BuildContext? ctx,
+  bool tryRegardless = false,
+}) =>
     canLaunchUrl(url).then<bool?>((value) => value
         ? launchUrl(url)
         : ctx != null && ctx.mounted
@@ -305,13 +335,68 @@ Future<bool?> defaultTryLaunchUrl(Uri url, {BuildContext? ctx}) =>
                   ],
                 ),
               )
-            : null);
+            : tryRegardless
+                ? launchUrl(url)
+                : null);
 
 Future<bool?> defaultOnLinkifyOpen(LinkableElement link) {
-  final url = Uri.parse(link.url);
-  return canLaunchUrl(url).then<bool?>(
-    (value) => value ? launchUrl(url) : null,
-  );
+  return defaultTryLaunchUrl(Uri.parse(link.url), tryRegardless: true);
+}
+
+Future<bool?>? defaultLaunchE6Url({
+  required BuildContext context,
+  required Uri url,
+  Object? arguments,
+  bool? launchInApp,
+}) {
+  if (supportedFirstPathSegments.contains(
+        url.pathSegments.first,
+      ) &&
+      context.mounted) {
+    switch (launchInApp) {
+      case true:
+        Navigator.pushNamed(context, url.toString(), arguments: arguments);
+        return null;
+      case false:
+        return defaultTryLaunchUrl(url);
+      case null:
+        return showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text("Launch In App")),
+              TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text("Launch In Browser")),
+            ],
+          ),
+        ).then((v) => switch (v) {
+              true => context.mounted
+                  ? Navigator.pushNamed(context, url.toString())
+                  : defaultTryLaunchUrl(url),
+              false => defaultTryLaunchUrl(url),
+              null => null,
+            });
+    }
+  }
+  return defaultTryLaunchUrl(url);
+}
+
+Future<bool?>? defaultTryLaunchE6Url({
+  required BuildContext context,
+  required Uri url,
+  Object? arguments,
+}) {
+  if (supportedFirstPathSegments.contains(
+        url.pathSegments.first,
+      ) &&
+      context.mounted) {
+    Navigator.pushNamed(context, url.toString(), arguments: arguments);
+    return null;
+  }
+  return defaultTryLaunchUrl(url);
 }
 
 Future<bool?>? defaultOnE6LinkifyOpen(
@@ -422,59 +507,6 @@ T? contextCheck<T>(
     context != null && context.mounted
         ? ifTrue(context)
         : ifFalse?.call(context) ?? null as T?;
-ButtonStyle? modifyTextButtonStyle(
-  BuildContext context, {
-  WidgetStateProperty<TextStyle?>? textStyle,
-  WidgetStateProperty<Color?>? backgroundColor,
-  WidgetStateProperty<Color?>? foregroundColor,
-  WidgetStateProperty<Color?>? overlayColor,
-  WidgetStateProperty<Color?>? shadowColor,
-  WidgetStateProperty<Color?>? surfaceTintColor,
-  WidgetStateProperty<double?>? elevation,
-  WidgetStateProperty<EdgeInsetsGeometry?>? padding,
-  WidgetStateProperty<Size?>? minimumSize,
-  WidgetStateProperty<Size?>? fixedSize,
-  WidgetStateProperty<Size?>? maximumSize,
-  WidgetStateProperty<Color?>? iconColor,
-  WidgetStateProperty<double?>? iconSize,
-  WidgetStateProperty<BorderSide?>? side,
-  WidgetStateProperty<OutlinedBorder?>? shape,
-  WidgetStateProperty<MouseCursor?>? mouseCursor,
-  VisualDensity? visualDensity,
-  MaterialTapTargetSize? tapTargetSize,
-  Duration? animationDuration,
-  bool? enableFeedback,
-  AlignmentGeometry? alignment,
-  InteractiveInkFeatureFactory? splashFactory,
-  Widget Function(BuildContext, Set<WidgetState>, Widget?)? backgroundBuilder,
-  Widget Function(BuildContext, Set<WidgetState>, Widget?)? foregroundBuilder,
-}) =>
-    Theme.of(context).textButtonTheme.style?.copyWith(
-          textStyle: textStyle,
-          backgroundColor: backgroundColor,
-          foregroundColor: foregroundColor,
-          overlayColor: overlayColor,
-          shadowColor: shadowColor,
-          surfaceTintColor: surfaceTintColor,
-          elevation: elevation,
-          padding: padding,
-          minimumSize: minimumSize,
-          fixedSize: fixedSize,
-          maximumSize: maximumSize,
-          iconColor: iconColor,
-          iconSize: iconSize,
-          side: side,
-          shape: shape,
-          mouseCursor: mouseCursor,
-          visualDensity: visualDensity,
-          tapTargetSize: tapTargetSize,
-          animationDuration: animationDuration,
-          enableFeedback: enableFeedback,
-          alignment: alignment,
-          splashFactory: splashFactory,
-          backgroundBuilder: backgroundBuilder,
-          foregroundBuilder: foregroundBuilder,
-        );
 
 /// If [delay] is null, uses `Future.sync`; otherwise, uses `Future.delayed`
 Stream<E> toListStream<E>(Iterable<E> collection, {Duration? delay}) async* {
@@ -499,4 +531,34 @@ Future<List<E>> toListAsync<E>(Iterable<E> collection) async {
   }
   return r;
   // return growable ? r : r.toList(growable: false);
+}
+
+void addTextToClipboard(String tag, [BuildContext? context, bool pop = false]) {
+  Clipboard.setData(ClipboardData(text: tag))
+      // ignore: use_build_context_synchronously
+      .then((v) => contextCheck(context, (context) {
+            showUserMessage(
+              context: context,
+              content: Text("$tag added to clipboard."),
+            );
+            if (pop) Navigator.pop(context);
+          }));
+}
+
+class TypeException extends TypeError implements Exception {
+  final dynamic message;
+  TypeException.fromTypes(Type actual, {Type? expected, List<Type>? valid})
+      : message =
+            "TypeError: $actual is not ${(expected ?? valid?.firstOrNull) != null ? "of type ${expected ?? (valid!.length > 1 ? valid.length > 2 ? "${valid.take(valid.length - 1).join(", ")} or ${valid.last}" : valid.join(" or ") : valid.firstOrNull)}" : "is not valid."}";
+  TypeException.fromTypeStrings(String actual,
+      {String? expected, List<String>? valid})
+      : message =
+            "TypeError: $actual is not ${(expected ?? valid?.firstOrNull) != null ? "of type ${expected ?? (valid!.length > 1 ? valid.length > 2 ? "${valid.take(valid.length - 1).join(", ")} or ${valid.last}" : valid.join(" or ") : valid.firstOrNull)}" : "is not valid."}";
+
+  @override
+  String toString() {
+    Object? message = this.message;
+    if (message == null) return "Exception";
+    return "Exception: $message";
+  }
 }

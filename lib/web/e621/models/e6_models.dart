@@ -1,12 +1,12 @@
 // https://www.liquid-technologies.com/online-json-to-schema-converter
 // https://app.quicktype.io/
-// import 'package:fuzzy/web/e621/models/tag_d_b.dart';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/log_management.dart' show LogRes;
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/util.dart';
@@ -15,7 +15,7 @@ import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 
 // ignore: unnecessary_late
-late final _lRecord = lm.generateLogger("E6Models");
+late final _logger = lm.generateLogger("E6Models").logger;
 
 typedef JsonOut = Map<String, dynamic>;
 
@@ -28,6 +28,11 @@ abstract class E6Posts with ListMixin<E6PostResponse> {
   // E6Posts fromJsonConstructor(JsonOut json);
   E6PostResponse? tryGet(
     int index, {
+    bool checkForValidFileUrl = true,
+    bool allowDeleted = true,
+    bool filterBlacklist = false,
+  });
+  Iterable<E6PostResponse> tryGetAll({
     bool checkForValidFileUrl = true,
     bool allowDeleted = true,
     bool filterBlacklist = false,
@@ -78,13 +83,13 @@ final class E6PostsLazy extends E6Posts {
     try {
       if (checkForValidFileUrl) {
         index += (allowDeleted ? restrictedIndices : unavailableIndices)
-            .where((element) => element <= index)
+            .where((e) => e <= index)
             .length;
         iterate();
       }
       while (filterBlacklist &&
           (SearchView.i.blacklistFavs || !this[index].isFavorited) &&
-          hasBlacklistedTag(this[index].tagList)) {
+          hasBlacklistedTags(this[index].tagSet)) {
         ++index;
         iterate();
       }
@@ -92,6 +97,36 @@ final class E6PostsLazy extends E6Posts {
     } catch (e) {
       return null;
     }
+  }
+
+  final _postListFiltered = <E6PostResponse>[];
+  @override
+  List<E6PostResponse> tryGetAll({
+    bool checkForValidFileUrl = true,
+    bool allowDeleted = true,
+    bool filterBlacklist = false,
+  }) {
+    advanceToEnd();
+    return _postListFiltered.isEmpty
+        ? _postList.foldTo<List<E6PostResponse>>(
+            _postListFiltered,
+            (acc, _, i, __) => acc
+              ..add(tryGet(
+                i,
+                allowDeleted: allowDeleted,
+                checkForValidFileUrl: checkForValidFileUrl,
+                filterBlacklist: filterBlacklist,
+              )!),
+            breakIfTrue: (_, __, i, ___) =>
+                tryGet(
+                  i,
+                  allowDeleted: allowDeleted,
+                  checkForValidFileUrl: checkForValidFileUrl,
+                  filterBlacklist: filterBlacklist,
+                ) ==
+                null,
+          )
+        : _postListFiltered;
   }
 
   @override
@@ -123,7 +158,7 @@ final class E6PostsLazy extends E6Posts {
           .map((e) => E6PostResponse.fromJson(e));
 
   @override
-  void advanceToEnd() => tryGet(E621.maxPostsPerSearch + 5);
+  void advanceToEnd() => tryGet(e621.maxPostSearchLimit + 5);
 
   @override
   int get length => count;
@@ -134,6 +169,7 @@ final class E6PostsLazy extends E6Posts {
   void operator []=(int index, E6PostResponse value) => throw "Non-Modifiable";
 }
 
+/// TODO: Allow mutable posts to be added/removed from sets when altered?
 final class E6PostsSync extends E6Posts {
   @override
   final Set<int> restrictedIndices = {};
@@ -158,7 +194,7 @@ final class E6PostsSync extends E6Posts {
       while (filterBlacklist &&
           (filterSet.contains(index) ||
               ((SearchView.i.blacklistFavs || !this[index].isFavorited) &&
-                  hasBlacklistedTag(this[index].tagList)))) {
+                  hasBlacklistedTags(this[index].tagSet)))) {
         ++index;
       }
       return this[index];
@@ -170,6 +206,32 @@ final class E6PostsSync extends E6Posts {
     } catch (e) {
       return null;
     }
+  }
+
+  @override
+  Iterable<E6PostResponse> tryGetAll({
+    bool checkForValidFileUrl = true,
+    bool allowDeleted = true,
+    bool filterBlacklist = false,
+  }) {
+    return posts.foldTo<List<E6PostResponse>>(
+      <E6PostResponse>[],
+      (acc, _, i, __) => acc
+        ..add(tryGet(
+          i,
+          allowDeleted: allowDeleted,
+          checkForValidFileUrl: checkForValidFileUrl,
+          filterBlacklist: filterBlacklist,
+        )!),
+      breakIfTrue: (_, __, i, ___) =>
+          tryGet(
+            i,
+            allowDeleted: allowDeleted,
+            checkForValidFileUrl: checkForValidFileUrl,
+            filterBlacklist: filterBlacklist,
+          ) ==
+          null,
+    );
   }
 
   @override
@@ -193,7 +255,8 @@ final class E6PostsSync extends E6Posts {
   //       posts.indicesWhere((e, i, l) => !e.file.hasValidUrl).toSet();
   factory E6PostsSync.fromJson(JsonOut json) => E6PostsSync(
       posts: (json["posts"] as List)
-          .mapAsList((e, i, l) => E6PostMutable.fromJson(e)));
+          .map((e) => E6PostMutable.fromJson(e))
+          .toList());
   factory E6PostsSync.fromRawJson(String json) =>
       E6PostsSync.fromJson(jsonDecode(json));
 
@@ -211,7 +274,7 @@ final class E6PostsSync extends E6Posts {
       posts[index] = value; //throw "Non-Modifiable";
 }
 
-class E6PostResponse implements PostListing, e621.Post {
+class E6PostResponse with e621.BaseModel implements PostListing, e621.Post {
   // #region Json Fields
   /// {@template id}
   /// The ID number of the post.
@@ -294,7 +357,7 @@ class E6PostResponse implements PostListing, e621.Post {
 
   /// (array group)
   @override
-  final E6Relationships relationships;
+  final e621.PostRelationships relationships;
 
   /// The ID of the user that approved the post, if available.
   @override
@@ -332,6 +395,8 @@ class E6PostResponse implements PostListing, e621.Post {
   ITagData get tagData => tags;
   @override
   List<String> get tagList => tags.allTags;
+  @override
+  Set<String> get tagSet => tags.tagsSet;
   bool get isAnimatedGif =>
       file.extension == "gif" && tags.meta.contains("animated");
 
@@ -356,7 +421,7 @@ class E6PostResponse implements PostListing, e621.Post {
     favCount: -1,
     sources: [],
     pools: [],
-    relationships: E6Relationships.error,
+    relationships: errorRelationships,
     approverId: -1,
     uploaderId: -1,
     description: "",
@@ -409,16 +474,40 @@ class E6PostResponse implements PostListing, e621.Post {
           ];
   }
 
+  E6PostResponse.fromBaseInstance(e621.Post i)
+      : id = i.id,
+        createdAt = i.createdAt,
+        updatedAt = i.updatedAt,
+        file = E6FileResponse.fromInstance(i.file, i.flags.deleted),
+        preview = E6Preview.fromInstance(i.preview, i.flags.deleted),
+        sample = E6Sample.fromInstance(i.sample, i.flags.deleted),
+        score = i.score,
+        tags = E6PostTags.fromInstance(i.tags),
+        lockedTags = i.lockedTags,
+        changeSeq = i.changeSeq,
+        flags = E6FlagsBit.fromInstance(i.flags),
+        rating = i.rating,
+        favCount = i.favCount,
+        sources = i.sources,
+        pools = i.pools,
+        relationships = i.relationships,
+        approverId = i.approverId,
+        uploaderId = i.uploaderId,
+        description = i.description,
+        commentCount = i.commentCount,
+        isFavorited = i.isFavorited,
+        hasNotes = i.hasNotes,
+        duration = i.duration;
   E6PostResponse.fromJson(JsonOut json)
       : id = json["id"] as int,
         createdAt = DateTime.parse(json["created_at"]),
         updatedAt = DateTime.parse(json["updated_at"]),
-        file = E6FileResponse.fromJson(json["file"]
-          ..["url"] ??= (json["flags"]["deleted"] as bool) ? deletedUrl : null),
-        preview = E6Preview.fromJson(json["preview"]
-          ..["url"] ??= (json["flags"]["deleted"] as bool) ? deletedUrl : null),
-        sample = E6Sample.fromJson(json["sample"]
-          ..["url"] ??= (json["flags"]["deleted"] as bool) ? deletedUrl : null),
+        file = E6FileResponse.fromJson(json["file"],
+            deleted: (json["flags"]["deleted"] as bool)),
+        preview = E6Preview.fromJson(json["preview"],
+            deleted: (json["flags"]["deleted"] as bool)),
+        sample = E6Sample.fromJson(json["sample"],
+            deleted: (json["flags"]["deleted"] as bool)),
         score = e621.Score.fromJson(json["score"]),
         tags = E6PostTags.fromJson(json["tags"]),
         lockedTags = (json["locked_tags"] as List).cast<String>(),
@@ -428,7 +517,7 @@ class E6PostResponse implements PostListing, e621.Post {
         favCount = json["fav_count"] as int,
         sources = (json["sources"] as List).cast<String>(),
         pools = (json["pools"] as List).cast<int>(),
-        relationships = E6Relationships.fromJson(json["relationships"]),
+        relationships = e621.PostRelationships.fromJson(json["relationships"]),
         approverId = json["approver_id"] as int?,
         uploaderId = json["uploader_id"] as int,
         description = json["description"] as String,
@@ -436,6 +525,7 @@ class E6PostResponse implements PostListing, e621.Post {
         isFavorited = json["is_favorited"] as bool,
         hasNotes = json["has_notes"] as bool,
         duration = json["duration"] as num?;
+  @override
   Map<String, dynamic> toJson() => {
         "id": id,
         "createdAt": createdAt.toIso8601String(),
@@ -503,7 +593,7 @@ class E6PostResponse implements PostListing, e621.Post {
         favCount: favCount ?? this.favCount,
         sources: sources ?? this.sources,
         pools: pools ?? this.pools,
-        relationships: relationships as E6Relationships? ?? this.relationships,
+        relationships: relationships ?? this.relationships,
         approverId: (approverId ?? 1) < 0 ? approverId : this.approverId,
         uploaderId: uploaderId ?? this.uploaderId,
         description: description ?? this.description,
@@ -514,7 +604,7 @@ class E6PostResponse implements PostListing, e621.Post {
       );
 }
 
-class E6PostMutable implements E6PostResponse {
+class E6PostMutable with e621.BaseModel implements E6PostResponse {
   // #region Json Fields
   /// The ID number of the post.
   @override
@@ -578,7 +668,7 @@ class E6PostMutable implements E6PostResponse {
 
   /// (array group)
   @override
-  E6Relationships relationships;
+  e621.PostRelationships relationships;
 
   /// The ID of the user that approved the post, if available.
   @override
@@ -617,6 +707,8 @@ class E6PostMutable implements E6PostResponse {
   @override
   List<String> get tagList => tags.allTags;
   @override
+  Set<String> get tagSet => tags.tagsSet;
+  @override
   bool get isAnimatedGif =>
       file.extension == "gif" && tags.meta.contains("animated");
   @override
@@ -640,7 +732,7 @@ class E6PostMutable implements E6PostResponse {
     favCount: -1,
     sources: [],
     pools: [],
-    relationships: E6Relationships.error,
+    relationships: errorRelationships,
     approverId: -1,
     uploaderId: -1,
     description: "",
@@ -732,7 +824,7 @@ class E6PostMutable implements E6PostResponse {
         favCount: favCount ?? this.favCount,
         sources: sources ?? this.sources,
         pools: pools ?? this.pools,
-        relationships: relationships as E6Relationships? ?? this.relationships,
+        relationships: relationships ?? this.relationships,
         approverId: (approverId ?? 1) < 0 ? approverId : this.approverId,
         uploaderId: uploaderId ?? this.uploaderId,
         description: description ?? this.description,
@@ -782,8 +874,7 @@ class E6PostMutable implements E6PostResponse {
     this.favCount = favCount ?? this.favCount;
     this.sources = sources ?? this.sources;
     this.pools = pools ?? this.pools;
-    this.relationships =
-        relationships as E6Relationships? ?? this.relationships;
+    this.relationships = relationships ?? this.relationships;
     this.approverId = (approverId ?? 1) >= 0 ? approverId : this.approverId;
     this.uploaderId = uploaderId ?? this.uploaderId;
     this.description = description ?? this.description;
@@ -868,7 +959,30 @@ class E6PostMutable implements E6PostResponse {
         isFavorited = i.isFavorited,
         hasNotes = i.hasNotes,
         duration = i.duration;
-
+  E6PostMutable.fromBaseInstance(e621.Post i)
+      : id = i.id,
+        createdAt = i.createdAt,
+        updatedAt = i.updatedAt,
+        file = E6FileResponse.fromInstance(i.file, i.flags.deleted),
+        preview = E6Preview.fromInstance(i.preview, i.flags.deleted),
+        sample = E6Sample.fromInstance(i.sample, i.flags.deleted),
+        score = i.score,
+        tags = E6PostTags.fromInstance(i.tags),
+        lockedTags = i.lockedTags,
+        changeSeq = i.changeSeq,
+        flags = E6FlagsBit.fromInstance(i.flags),
+        rating = i.rating,
+        favCount = i.favCount,
+        sources = i.sources,
+        pools = i.pools,
+        relationships = i.relationships,
+        approverId = i.approverId,
+        uploaderId = i.uploaderId,
+        description = i.description,
+        commentCount = i.commentCount,
+        isFavorited = i.isFavorited,
+        hasNotes = i.hasNotes,
+        duration = i.duration;
   @override
   Map<String, dynamic> toJson() => {
         "id": id,
@@ -897,7 +1011,9 @@ class E6PostMutable implements E6PostResponse {
       };
 }
 
-class PostNotifier extends ChangeNotifier implements E6PostMutable {
+class PostNotifier extends ChangeNotifier
+    with e621.BaseModel
+    implements E6PostMutable {
   // #region Json Fields
   /// The ID number of the post.
   int _id;
@@ -1110,15 +1226,15 @@ class PostNotifier extends ChangeNotifier implements E6PostMutable {
   }
 
   /// (array group)
-  E6Relationships _relationships;
+  e621.PostRelationships _relationships;
 
   /// (array group)
   @override
-  E6Relationships get relationships => _relationships;
+  e621.PostRelationships get relationships => _relationships;
 
   /// (array group)
   @override
-  set relationships(E6Relationships value) {
+  set relationships(e621.PostRelationships value) {
     _relationships = value;
     notifyListeners();
   }
@@ -1228,6 +1344,8 @@ class PostNotifier extends ChangeNotifier implements E6PostMutable {
   @override
   List<String> get tagList => tags.allTags;
   @override
+  Set<String> get tagSet => tags.tagsSet;
+  @override
   bool get isAnimatedGif =>
       file.extension == "gif" && tags.meta.contains("animated");
   @override
@@ -1251,7 +1369,7 @@ class PostNotifier extends ChangeNotifier implements E6PostMutable {
     favCount: -1,
     sources: [],
     pools: [],
-    relationships: E6Relationships.error,
+    relationships: errorRelationships,
     approverId: -1,
     uploaderId: -1,
     description: "",
@@ -1276,7 +1394,7 @@ class PostNotifier extends ChangeNotifier implements E6PostMutable {
     required int favCount,
     required List<String> sources,
     required List<int> pools,
-    required E6Relationships relationships,
+    required e621.PostRelationships relationships,
     required int? approverId,
     required int uploaderId,
     required String description,
@@ -1365,7 +1483,7 @@ class PostNotifier extends ChangeNotifier implements E6PostMutable {
         favCount: favCount ?? this.favCount,
         sources: sources ?? this.sources,
         pools: pools ?? this.pools,
-        relationships: relationships as E6Relationships? ?? this.relationships,
+        relationships: relationships ?? this.relationships,
         approverId: (approverId ?? 1) < 0 ? approverId : this.approverId,
         uploaderId: uploaderId ?? this.uploaderId,
         description: description ?? this.description,
@@ -1416,8 +1534,7 @@ class PostNotifier extends ChangeNotifier implements E6PostMutable {
     this.favCount = favCount ?? this.favCount;
     this.sources = sources ?? this.sources;
     this.pools = pools ?? this.pools;
-    this.relationships =
-        relationships as E6Relationships? ?? this.relationships;
+    this.relationships = relationships ?? this.relationships;
     this.approverId = (approverId ?? 1) >= 0 ? approverId : this.approverId;
     this.uploaderId = uploaderId ?? this.uploaderId;
     this.description = description ?? this.description;
@@ -1504,6 +1621,30 @@ class PostNotifier extends ChangeNotifier implements E6PostMutable {
         _isFavorited = i.isFavorited,
         _hasNotes = i.hasNotes,
         _duration = i.duration;
+  PostNotifier.fromBaseInstance(e621.Post i)
+      : _id = i.id,
+        _createdAt = i.createdAt,
+        _updatedAt = i.updatedAt,
+        _file = E6FileResponse.fromInstance(i.file, i.flags.deleted),
+        _preview = E6Preview.fromInstance(i.preview, i.flags.deleted),
+        _sample = E6Sample.fromInstance(i.sample, i.flags.deleted),
+        _score = i.score,
+        _tags = E6PostTags.fromInstance(i.tags),
+        _lockedTags = i.lockedTags,
+        _changeSeq = i.changeSeq,
+        _flags = E6FlagsBit.fromInstance(i.flags),
+        _rating = i.rating,
+        _favCount = i.favCount,
+        _sources = i.sources,
+        _pools = i.pools,
+        _relationships = i.relationships,
+        _approverId = i.approverId,
+        _uploaderId = i.uploaderId,
+        _description = i.description,
+        _commentCount = i.commentCount,
+        _isFavorited = i.isFavorited,
+        _hasNotes = i.hasNotes,
+        _duration = i.duration;
 
   @override
   Map<String, dynamic> toJson() => {
@@ -1547,23 +1688,6 @@ class E6FileResponse extends E6Preview implements e621.File {
   /// The md5 of the file.
   @override
   final String md5;
-
-  /* /// The URL where the file is hosted on E6.
-  ///
-  /// If auth is not provided, this may be null. This is currently replaced
-  /// with an empty string in from json.
-  /// https://e621.net/help/global_blacklist
-  @override
-  final String url;
-  bool get hasValidUrl =>
-      url.isNotEmpty &&
-      (_address.isAssigned
-          ? true
-          : (_address.$Safe = Uri.tryParse(url)) != null);
-
-  final Late<Uri> _address = Late();
-  @override
-  Uri get address => Uri.parse(url); */
   static const error = E6FileResponse(
     width: -1,
     height: -1,
@@ -1580,14 +1704,20 @@ class E6FileResponse extends E6Preview implements e621.File {
     required this.md5,
     required super.url,
   });
-  factory E6FileResponse.fromJson(JsonOut json) => E6FileResponse(
-        width: json["width"] as int,
-        height: json["height"] as int,
-        ext: json["ext"] as String,
-        size: json["size"] as int,
-        md5: json["md5"] as String,
-        url: json["url"] as String? ?? "",
-      );
+  E6FileResponse.fromJson(
+    super.json, {
+    super.deleted = false,
+    super.deletedUrlReplacement = deletedUrl,
+    super.otherUrlReplacement = "",
+  })  : ext = json["ext"] as String,
+        size = json["size"] as int,
+        md5 = json["md5"] as String,
+        super.fromJson();
+  E6FileResponse.fromInstance(e621.File super.instance, [super.deleted = false])
+      : ext = instance.ext,
+        size = instance.size,
+        md5 = instance.md5,
+        super.fromInstance();
   @override
   JsonOut toJson() => {
         "width": width,
@@ -1616,7 +1746,8 @@ class E6FileResponse extends E6Preview implements e621.File {
       );
 }
 
-class E6Preview extends e621.Preview with IImageInfo, RetrieveImageProvider {
+class E6Preview extends e621.PreviewNonNull
+    with IImageInfo, RetrieveImageProvider {
   @override
   String get extension => url.substring(url.lastIndexOf(".") + 1);
 
@@ -1637,23 +1768,26 @@ class E6Preview extends e621.Preview with IImageInfo, RetrieveImageProvider {
     required super.height,
     required super.url,
   });
-  factory E6Preview.fromJson(JsonOut json) => E6Preview(
-        width: json["width"],
-        height: json["height"],
-        url: json["url"] as String? ?? "",
-      );
-  JsonOut toJson() => {
-        "width": width,
-        "height": height,
-        "url": url,
-      };
+  E6Preview.fromJson(
+    super.json, {
+    super.deleted = false,
+    super.deletedUrlReplacement = deletedUrl,
+    super.otherUrlReplacement = "",
+  }) : super.fromJson();
+  E6Preview.fromInstance(e621.Preview instance, [bool deleted = false])
+      : super(
+          height: instance.height,
+          url: instance.url ?? (deleted ? deletedUrl : ""),
+          width: instance.width,
+        );
 }
 
-class E6Sample extends E6Preview implements ISampleInfo, e621.Sample {
+class E6Sample extends E6Preview implements ISampleInfo, e621.SampleNonNull {
   /// If the post has a sample/thumbnail or not. (True/False)
   @override
   final bool has;
 
+  @override
   final Alternates? alternates;
 
   @override
@@ -1673,15 +1807,18 @@ class E6Sample extends E6Preview implements ISampleInfo, e621.Sample {
     required super.url,
     this.alternates,
   });
-  factory E6Sample.fromJson(JsonOut json) => E6Sample(
-        has: json["has"],
-        width: json["width"],
-        height: json["height"],
-        url: json["url"] as String? ?? "",
-        alternates: json["alternates"] != null
-            ? Alternates.fromJson(json["alternates"])
+  E6Sample.fromJson(
+    super.json, {
+    super.deleted = false,
+    super.deletedUrlReplacement = deletedUrl,
+    super.otherUrlReplacement = "",
+  })  : has = json["has"],
+        // url= json["url"] as String? ?? "",
+        alternates = json["alternates"] != null
+            ? Alternates.fromJson(json["alternates"],
+                deleted: (json["url"] as String?) == deletedUrl)
             : null,
-      );
+        super.fromJson();
   @override
   JsonOut toJson() => {
         "has": has,
@@ -1690,6 +1827,13 @@ class E6Sample extends E6Preview implements ISampleInfo, e621.Sample {
         "url": url,
         "alternates": alternates?.toJson(),
       };
+
+  E6Sample.fromInstance(e621.Sample super.instance, [super.deleted = false])
+      : has = instance.has,
+        alternates = instance.alternates != null
+            ? Alternates.fromInstance(instance.alternates!)
+            : null,
+        super.fromInstance();
 }
 
 const errorScore = e621.Score(
@@ -1697,54 +1841,57 @@ const errorScore = e621.Score(
   down: -1,
   total: -1,
 );
-// class E6Score extends e621.Score {
-//   static const error = E6Score(
-//     up: -1,
-//     down: -1,
-//     total: -1,
-//   );
+/* class VotedScore extends e621.Score {
+  static const error = VotedScore(
+    up: -1,
+    down: -1,
+    total: -1,
+  );
 
-//   const E6Score({
-//     required super.up,
-//     required super.down,
-//     required super.total,
-//   });
-//   factory E6Score.fromJson(JsonOut json) => E6Score(
-//         up: json["up"] as int,
-//         down: json["down"] as int,
-//         total: json["total"] as int,
-//       );
+  const VotedScore({
+    required super.up,
+    required super.down,
+    required super.total,
+  });
+  factory VotedScore.fromJson(JsonOut json) => VotedScore(
+        up: json["up"] as int,
+        down: json["down"] as int,
+        total: json["total"] as int,
+      );
 
-//   @override
-//   Map<String, dynamic> toJson() => {
-//         "up": up,
-//         "down": down,
-//         "total": total,
-//       };
+  @override
+  Map<String, dynamic> toJson() => {
+        "up": up,
+        "down": down,
+        "total": total,
+      };
 
-//   @override
-//   E6Score copyWith({
-//     int? up,
-//     int? down,
-//     int? total,
-//   }) =>
-//       E6Score(
-//         up: up ?? this.up,
-//         down: down ?? this.down,
-//         total: total ?? this.total,
-//       );
-// }
+  @override
+  VotedScore copyWith({
+    int? up,
+    int? down,
+    int? total,
+  }) =>
+      VotedScore(
+        up: up ?? this.up,
+        down: down ?? this.down,
+        total: total ?? this.total,
+      );
+} */
 
 class E6PostTags extends e621.PostTags implements ITagData {
-  List<String> get allTags => [
-        ...general,
-        ...species,
-        ...character,
+  /* List<String> get allTags => [
         ...artist,
-        ...invalid,
+        ...copyright,
+        ...character,
+        ...species,
+        ...general,
         ...lore,
-        ...meta
-      ];
+        ...meta,
+        ...invalid,
+      ]; */
+  List<String> get allTags => tagsSet.toList();
+  final Set<String> tagsSet;
   @override
   List<String> getByCategory(e621.TagCategory c) =>
       getByCategorySafe(c) ??
@@ -1770,6 +1917,7 @@ class E6PostTags extends e621.PostTags implements ITagData {
     lore: ["ERROR"],
     meta: ["ERROR"],
     copyright: ["ERROR"],
+    tagsSet: {"ERROR"},
   );
   const E6PostTags({
     required super.general,
@@ -1780,29 +1928,48 @@ class E6PostTags extends e621.PostTags implements ITagData {
     required super.lore,
     required super.meta,
     required super.copyright,
+    required this.tagsSet,
   });
-  factory E6PostTags.fromJson(JsonOut json) => E6PostTags(
-        general: (json["general"] as List).cast<String>(),
-        species: (json["species"] as List).cast<String>(),
-        character: (json["character"] as List).cast<String>(),
-        artist: (json["artist"] as List).cast<String>(),
-        invalid: (json["invalid"] as List).cast<String>(),
-        lore: (json["lore"] as List).cast<String>(),
-        meta: (json["meta"] as List).cast<String>(),
-        copyright: (json["copyright"] as List).cast<String>(),
-      );
-
-  @override
-  Map<String, dynamic> toJson() => {
-        "general": general,
-        "species": species,
-        "character": character,
-        "artist": artist,
-        "invalid": invalid,
-        "lore": lore,
-        "meta": meta,
-        "copyright": copyright,
-      };
+  E6PostTags.fromJson(JsonOut json)
+      : this(
+            general: (json["general"] as List).cast<String>(),
+            species: (json["species"] as List).cast<String>(),
+            character: (json["character"] as List).cast<String>(),
+            artist: (json["artist"] as List).cast<String>(),
+            invalid: (json["invalid"] as List).cast<String>(),
+            lore: (json["lore"] as List).cast<String>(),
+            meta: (json["meta"] as List).cast<String>(),
+            copyright: (json["copyright"] as List).cast<String>(),
+            tagsSet: {
+              ...(json["artist"] as List).cast<String>(),
+              ...(json["copyright"] as List).cast<String>(),
+              ...(json["character"] as List).cast<String>(),
+              ...(json["species"] as List).cast<String>(),
+              ...(json["general"] as List).cast<String>(),
+              ...(json["lore"] as List).cast<String>(),
+              ...(json["meta"] as List).cast<String>(),
+              ...(json["invalid"] as List).cast<String>(),
+            });
+  E6PostTags.fromInstance(e621.PostTags tags)
+      : this(
+            general: tags.general,
+            species: tags.species,
+            character: tags.character,
+            artist: tags.artist,
+            invalid: tags.invalid,
+            lore: tags.lore,
+            meta: tags.meta,
+            copyright: tags.copyright,
+            tagsSet: {
+              ...tags.artist,
+              ...tags.copyright,
+              ...tags.character,
+              ...tags.species,
+              ...tags.general,
+              ...tags.lore,
+              ...tags.meta,
+              ...tags.invalid,
+            });
   static const specialTags = [
     "anonymous_artist",
     "avoid_posting",
@@ -1881,16 +2048,7 @@ class E6Flags extends e621.PostFlags {
         ratingLocked: json["rating_locked"] as bool,
         deleted: json["deleted"] as bool,
       );
-  JsonOut toJson() => {
-        "pending": pending,
-        "flagged": flagged,
-        "noteLocked": noteLocked,
-        "statusLocked": statusLocked,
-        "ratingLocked": ratingLocked,
-        "deleted": deleted,
-      };
 
-  // @override
   E6Flags copyWith({
     bool? pending,
     bool? flagged,
@@ -1963,7 +2121,7 @@ enum PostFlags {
   bool hasFlag(int f) => (PostFlags.toInt(this) & f) == PostFlags.toInt(this);
 }
 
-class E6FlagsBit implements E6Flags, e621.PostFlags {
+class E6FlagsBit with e621.BaseModel implements E6Flags, e621.PostFlags {
   @override
   bool get deleted => (_data & deletedFlag) == deletedFlag;
 
@@ -1995,14 +2153,24 @@ class E6FlagsBit implements E6Flags, e621.PostFlags {
             (statusLocked ? statusLockedFlag : 0) +
             (ratingLocked ? ratingLockedFlag : 0) +
             (deleted ? deletedFlag : 0);
-  factory E6FlagsBit.fromJson(JsonOut json) => E6FlagsBit(
-        pending: json["pending"] as bool,
-        flagged: json["flagged"] as bool,
-        noteLocked: json["note_locked"] as bool,
-        statusLocked: json["status_locked"] as bool,
-        ratingLocked: json["rating_locked"] as bool,
-        deleted: json["deleted"] as bool,
-      );
+  E6FlagsBit.fromJson(JsonOut json)
+      : this(
+          pending: json["pending"] as bool,
+          flagged: json["flagged"] as bool,
+          noteLocked: json["note_locked"] as bool,
+          statusLocked: json["status_locked"] as bool,
+          ratingLocked: json["rating_locked"] as bool,
+          deleted: json["deleted"] as bool,
+        );
+  E6FlagsBit.fromInstance(e621.PostFlags flags)
+      : this(
+          pending: flags.pending,
+          flagged: flags.flagged,
+          noteLocked: flags.noteLocked,
+          statusLocked: flags.statusLocked,
+          ratingLocked: flags.ratingLocked,
+          deleted: flags.deleted,
+        );
   static int getValue({
     bool pending = false,
     bool flagged = false,
@@ -2054,73 +2222,54 @@ class E6FlagsBit implements E6Flags, e621.PostFlags {
       };
 }
 
-class E6Relationships extends e621.PostRelationships {
-  static const error = E6Relationships(
-    parentId: -1,
-    hasChildren: false,
-    hasActiveChildren: false,
-    children: [],
-  );
-  const E6Relationships({
-    required super.parentId,
-    required super.hasChildren,
-    required super.hasActiveChildren,
-    required super.children,
-  });
-  factory E6Relationships.fromJson(JsonOut json) => E6Relationships(
-        parentId: json["parent_id"] as int?,
-        hasChildren: json["has_children"] as bool,
-        hasActiveChildren: json["has_active_children"] as bool,
-        children: (json["children"] as List).cast<int>(),
-      );
-  JsonOut toJson() => {
-        "parentId": parentId,
-        "hasChildren": hasChildren,
-        "hasActiveChildren": hasActiveChildren,
-        "children": children,
-      };
-}
+const errorRelationships = e621.PostRelationships(
+  parentId: -1,
+  hasChildren: false,
+  hasActiveChildren: false,
+  children: [],
+);
 
-class Alternates {
-  Alternate? the480P;
-  Alternate? the720P;
-  Alternate? original;
-  Map<String, Alternate> alternates;
+@Deprecated("Use e621.PostRelationships")
+typedef E6PostRelationships = e621.PostRelationships;
 
-  Alternates({
-    this.the480P,
-    this.the720P,
-    this.original,
-    required this.alternates,
-  });
+class Alternates with e621.BaseModel implements e621.AlternatesNonNull {
+  @override
+  Alternate? get $480p => alternates["480p"];
+  @override
+  Alternate? get $720p => alternates["720p"];
+  @override
+  Alternate? get original => alternates["original"];
+  @override
+  final Map<String, Alternate> alternates;
 
-  factory Alternates.fromJson(Map<String, dynamic> json) => Alternates(
-        the480P: json["480p"] == null ? null : Alternate.fromJson(json["480p"]),
-        the720P: json["720p"] == null ? null : Alternate.fromJson(json["720p"]),
-        original: json["original"] == null
-            ? null
-            : Alternate.fromJson(json["original"]),
-        alternates: {
+  Alternates({required this.alternates});
+
+  Alternates.fromJson(
+    Map<String, dynamic> json, {
+    bool deleted = false,
+    String deletedUrlReplacement = deletedUrl,
+    String otherUrlReplacement = "",
+  }) : alternates = {
           for (var e in json.entries)
-            e.key: Alternate.fromJson(e.value as JsonOut)
-        },
-      );
+            e.key: Alternate.fromJson(e.value as JsonOut,
+                deleted: deleted, deletedUrlReplacement: deletedUrlReplacement)
+        };
 
-  Map<String, dynamic> toJson() => {
-        "480p": the480P?.toJson(),
-        "720p": the720P?.toJson(),
-        "original": original?.toJson(),
-      };
+  @override
+  Map<String, dynamic> toJson() => alternates;
+
+  Alternates.fromInstance(
+    e621.Alternates instance, [
+    bool isDeleted = false,
+  ]) : alternates = {
+          for (var e in instance.alternates.entries)
+            e.key: Alternate.fromInstance(e.value, isDeleted)
+        };
 }
 
-class Alternate extends e621.Alternate with IImageInfo {
+class Alternate extends e621.AlternateNonNull
+    with IImageInfo, RetrieveImageProvider {
   static const types = ["video"];
-  // @override
-  // int height;
-  // String type;
-  // List<String?> urls;
-  // @override
-  // int width;
 
   @override
   Uri get address => Uri.parse(url);
@@ -2129,26 +2278,38 @@ class Alternate extends e621.Alternate with IImageInfo {
   String get extension => IImageInfoBare.extensionImpl(this);
 
   @override
-  bool get hasValidUrl => (urls[0] ?? urls[1]) != null;
+  bool get hasValidUrl =>
+      (Uri.tryParse(urls[0]) ?? Uri.tryParse(urls[1])) != null;
 
   @override
   bool get isAVideo => true;
 
   @override
-  String get url => urls[0] ?? urls[1]!;
-  Alternate({
+  String get url =>
+      (Uri.tryParse(urls[0]) ?? Uri.tryParse(urls[1]))?.toString() ?? urls[0];
+  const Alternate({
     required super.height,
     required super.type,
     required super.urls,
     required super.width,
   });
 
-  factory Alternate.fromJson(Map<String, dynamic> json) => Alternate(
-        height: json["height"],
-        type: json["type"],
-        urls: List<String?>.from(json["urls"].map((x) => x)),
-        width: json["width"],
-      );
+  Alternate.fromJson(
+    super.json, {
+    super.deleted = false,
+    super.deletedUrlReplacement = deletedUrl,
+    super.otherUrlReplacement = "",
+  }) : super.fromJson();
+
+  Alternate.fromInstance(e621.Alternate instance, [bool isDeleted = false])
+      : this(
+          height: instance.height,
+          type: instance.type,
+          urls: instance.urls
+              .map((x) => x ?? (isDeleted ? deletedUrl : ""))
+              .toList(growable: false),
+          width: instance.width,
+        );
 
   // @override
   // Map<String, dynamic> toJson() => {
@@ -2181,10 +2342,7 @@ enum PostType {
 
 class PoolModel extends e621.Pool {
   // #region Logger
-  static lm.Printer get print => _lRecord.print;
-  static lm.FileLogger get logger => _lRecord.logger;
-  // // ignore: unnecessary_late
-  // static late final lRecord = lm.generateLogger("PoolModel");
+  static lm.FileLogger get logger => _logger;
   // #endregion Logger
   PoolModel({
     required super.id,
@@ -2200,8 +2358,7 @@ class PoolModel extends e621.Pool {
     required super.postCount,
   }) {
     posts = LazyInitializer<List<E6PostResponse>>(
-      () async => getOrderedPosts(postIds, poolId: id),
-    );
+        () => getOrderedPosts(postIds, searchString: searchById));
   }
   factory PoolModel.fromRawJson(String json) =>
       PoolModel.fromJson(jsonDecode(json));
@@ -2234,6 +2391,7 @@ class PoolModel extends e621.Pool {
           postCount: json["post_count"],
         );
   late final LazyInitializer<List<E6PostResponse>> posts;
+
   String get namePretty => name.replaceAll("_", " ");
 
   Future<List<E6PostResponse>> getPosts({
@@ -2242,82 +2400,100 @@ class PoolModel extends e621.Pool {
   }) =>
       getOrderedPosts(
         postIds,
-        poolId: id,
+        searchString: searchById,
         postsPerPage: postsPerPage,
         page: page,
       );
+}
 
-  /// TODO: Still not iron-clad in terms of ordering and page offsets.
-  ///
-  /// Uses `order:id_asc` to try and grab them in order. If there are too many
-  /// posts and a lot are out of order, this could cause failure somewhere.
-  static Future<List<E6PostResponse>> getOrderedPosts(
-    List<int> postIds, {
-    int? poolId,
-    int? postsPerPage,
-    int page = 1,
-  }) async {
-    if (page <= 0) page = 1;
-    postsPerPage ??= SearchView.i.postsPerPage;
-    if (postIds.length > e621.maxPostsPerSearch) {
-      logger.warning("Too many posts in pool for a single search request");
-    } else if (postIds.length > postsPerPage) {
-      logger.warning("Too many posts in pool for 1 page");
-    } else if (poolId == null && postIds.length > e621.maxTagsPerSearch - 1) {
-      logger.warning("Too many posts in pool for 1 search (use the pool id)");
-      postsPerPage = e621.maxTagsPerSearch - 1;
-    }
-    try {
-      final searchString =
-          "${(poolId != null ? "pool:$poolId" : postIds.getRange(
-                0,
-                min(postIds.length, postsPerPage),
-              ).fold(
-                "",
-                (previousValue, element) => "$previousValue~id:$element ",
-              ))} order:id_asc";
-      final response = await E621.performPostSearch(
-          tags: searchString, limit: postsPerPage, pageNumber: page);
-      logger.finer("first: ${postIds.first}");
-      logger.finer(response.responseBody);
-      logger.finer(response.statusCode);
-      final t1 = (jsonDecode(
-        (response).responseBody,
-      )["posts"] as List);
-      logger.finer("# posts in response: ${t1.length}");
-      int postOffset = (page - 1) * postsPerPage;
-      logger.finer(
-          "offset from start of poolIds[$postOffset] = ${postIds[postOffset]}");
-      // Sort them by order in pool
-      final t2 = postIds.getRange(postOffset, postIds.length).reduceUntilTrue(
-        (acc, e, i, l) {
-          var match =
-              t1.firstWhere((t) => e == (t["id"] as int), orElse: () => null);
-          return match != null
-              ? ((acc..add(E6PostResponse.fromJson(match))), false)
-              // Force it to stay alive until it's at least close.
-              : (acc, acc.length > l.length);
-        },
-        <E6PostResponse>[],
-      );
-      logger.finer("# posts after sorting: ${t2.length}");
-      if (t1.length != t2.length) {
-        logger.warning(
-            "# posts before ${t1.length} & after ${t2.length} sorting mismatched. There is likely 1 or more posts whose id is out of order with its order in the pool. This will likely cause problems.");
-      }
-      return t2;
-    } catch (e, s) {
-      logger.severe(
-          "Failed to getOrderedPosts(poolId: $poolId, postsPerPage: $postsPerPage, page: $page), defaulting to empty array. PostIds: $postIds",
-          e,
-          s);
-      return [];
-    }
+/// TODO: Still not iron-clad in terms of ordering and page offsets.
+///
+/// Uses `order:id_asc` to try and grab them in order. If there are too many
+/// posts and a lot are out of order, this could cause failure somewhere.
+///
+/// [searchString] should be `collection.searchById`
+Future<List<E6PostResponse>> getOrderedPosts(
+  List<int> postIds, {
+  String? searchString,
+  int? postsPerPage,
+  int page = 1,
+}) async {
+  return (await PostIdsAnalysis(postIds).getPostsLegacy<E6PostMutable>(
+          searchString: searchString, postsPerPage: postsPerPage, page: page))
+      .toList() as List<E6PostResponse>;
+  /* final idData = PostIdsAnalysis(postIds);
+  postsPerPage ??= SearchView.i.postsPerPage;
+  if (postIds.length > e621.maxPostSearchLimit) {
+    _logger.warning("Too many posts in collection for a single search request");
+  } else if (postIds.length > postsPerPage) {
+    _logger.warning("Too many posts in collection for 1 page");
+  } else if (searchString == null &&
+      postIds.length > E621.currentTagQueryLimit - 1) {
+    _logger.warning(
+        "Too many posts in collection for 1 search (use the searchString)");
+    postsPerPage = E621.currentTagQueryLimit - 1;
   }
+  final maxPages = postIds.length ~/ postsPerPage;
+  page = page <= 0
+      ? 1
+      : page > maxPages
+          ? maxPages
+          : page;
+  final start = postsPerPage * (page - 1),
+      end = min(postIds.length, postsPerPage + start);
+  try {
+    searchString ??= "${(postIds.getRange(
+          start,
+          end,
+        ).fold(
+          "",
+          (previousValue, element) => "$previousValue~id:$element ",
+        ))} ${(idData.isOrderedHighToLow ? e621.Order.idDesc : e621.Order.id).searchString}";
+    // final response = await E621.performPostSearch(
+    //     tags: searchString, limit: postsPerPage, pageNumber: page);
+    // final response = await e621.sendRequest(e621.initPostSearch(
+    //     tags: searchString, limit: postsPerPage, page: page.toString()))
+    final response = await e621.sendRequest(e621.initPostSearch(
+        tags: searchString, limit: postsPerPage, page: page.toString()))
+      ..log(_logger);
+    _logger.finer("first: ${postIds.first}");
+    // _logger.finer(response.responseBody);
+    // _logger.finer(response.statusCode);
+    // final t1 = (jsonDecode((response).responseBody)["posts"] as List);
+    final t1 = (jsonDecode(response.body)["posts"] as List);
+    _logger.finer("# posts in response: ${t1.length}");
+    int postOffset = (page - 1) * postsPerPage;
+    _logger.finer(
+        "postOffset = $postOffset; postIds[$postOffset] = ${postIds[postOffset]}");
+    // Sort them by order in collection
+    final t2 = postIds.getRange(postOffset, postIds.length).foldUntilTrue(
+      <E6PostResponse>[],
+      (acc, e, _, l) {
+        var match =
+            t1.firstWhere((t) => e == (t["id"] as int), orElse: () => null);
+        return match != null
+            ? ((acc..add(E6PostMutable.fromJson(match))), false)
+            // Force it to stay alive until it's at least close.
+            : (acc, acc.length > l.length);
+      },
+    );
+    _logger.finer("# posts after sorting: ${t2.length}");
+    if (t1.length != t2.length) {
+      _logger.warning(
+          "# posts before ${t1.length} & after ${t2.length} sorting mismatched. There is likely 1 or more posts whose id is out of order with its order in the pool. This will likely cause problems.");
+    }
+    return t2;
+  } catch (e, s) {
+    _logger.severe(
+        "Failed to getOrderedPosts(searchString: $searchString, postsPerPage: $postsPerPage, page: $page), defaulting to empty array. PostIds: $postIds",
+        e,
+        s);
+    return [];
+  } */
 }
 
 class SetModel extends e621.PostSet {
-  static lm.FileLogger get logger => _lRecord.logger;
+  static lm.FileLogger get logger => _logger;
   SetModel({
     required super.id,
     required super.createdAt,
@@ -2332,8 +2508,7 @@ class SetModel extends e621.PostSet {
     required super.postIds,
   }) {
     posts = LazyInitializer<List<E6PostResponse>>(
-      () async => getOrderedPosts(postIds, setId: id),
-    );
+        () => getOrderedPosts(postIds, searchString: searchById));
   }
   factory SetModel.fromRawJson(String json) =>
       SetModel.fromJson(jsonDecode(json));
@@ -2374,75 +2549,21 @@ class SetModel extends e621.PostSet {
   }) =>
       getOrderedPosts(
         postIds,
-        setId: id,
+        searchString: searchById,
         postsPerPage: postsPerPage,
         page: page,
       );
+}
 
-  /// TODO: Still not iron-clad in terms of ordering and page offsets.
-  ///
-  /// Uses `order:id_asc` to try and grab them in order. If there are too many
-  /// posts and a lot are out of order, this could cause failure somewhere.
-  static Future<List<E6PostResponse>> getOrderedPosts(
-    List<int> postIds, {
-    int? setId,
-    int? postsPerPage,
-    int page = 1,
-  }) async {
-    if (page <= 0) page = 1;
-    postsPerPage ??= SearchView.i.postsPerPage;
-    if (postIds.length > e621.maxPostsPerSearch) {
-      logger.warning("Too many posts in set for a single search request");
-    } else if (postIds.length > postsPerPage) {
-      logger.warning("Too many posts in set for 1 page");
-    } else if (setId == null && postIds.length > e621.maxTagsPerSearch - 1) {
-      logger.warning("Too many posts in set for 1 search (use the set id)");
-      postsPerPage = e621.maxTagsPerSearch - 1;
-    }
-    try {
-      final searchString = "${(setId != null ? "set:$setId" : postIds.getRange(
-            0,
-            min(postIds.length, postsPerPage),
-          ).fold(
-            "",
-            (previousValue, element) => "$previousValue~id:$element ",
-          ))} order:id_asc";
-      final response = await E621.performPostSearch(
-          tags: searchString, limit: postsPerPage, pageNumber: page);
-      logger.finer("first: ${postIds.first}");
-      logger.finer(response.responseBody);
-      logger.finer(response.statusCode);
-      final t1 = (jsonDecode(
-        (response).responseBody,
-      )["posts"] as List);
-      logger.finer("# posts in response: ${t1.length}");
-      int postOffset = (page - 1) * postsPerPage;
-      logger.finer(
-          "offset from start of setIds[$postOffset] = ${postIds[postOffset]}");
-      // Sort them by order in set
-      final t2 = postIds.getRange(postOffset, postIds.length).reduceUntilTrue(
-        (acc, e, i, l) {
-          var match =
-              t1.firstWhere((t) => e == (t["id"] as int), orElse: () => null);
-          return match != null
-              ? ((acc..add(E6PostResponse.fromJson(match))), false)
-              // Force it to stay alive until it's at least close.
-              : (acc, acc.length > l.length);
-        },
-        <E6PostResponse>[],
-      );
-      logger.finer("# posts after sorting: ${t2.length}");
-      if (t1.length != t2.length) {
-        logger.warning(
-            "# posts before ${t1.length} & after ${t2.length} sorting mismatched. There is likely 1 or more posts whose id is out of order with its order in the set. This will likely cause problems.");
-      }
-      return t2;
-    } catch (e, s) {
-      logger.severe(
-          "Failed to getOrderedPosts(setId: $setId, postsPerPage: $postsPerPage, page: $page), defaulting to empty array. PostIds: $postIds",
-          e,
-          s);
-      return [];
-    }
+/// TODO: Accelerate post grabbing by always using the max limit, and simply slicing the expected sectors out.
+getXPosts(int pageNumber, int totalPosts, int limit) {
+  if (limit >= e621.maxPostSearchLimit) {
+    return;
+  }
+  if (pageNumber == 1) {
+    return;
+  }
+  if (totalPosts <= limit) {
+    return;
   }
 }

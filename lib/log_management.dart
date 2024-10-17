@@ -92,6 +92,7 @@ Future<String> logsPathInit() async {
 const mainFileName = "main";
 final mainFile = LateFinal<File?>();
 Future<void> init() async {
+  if (mainFile.isAssigned) return;
   hierarchicalLoggingEnabled = true;
   await logPath.getItemAsync().then(
         (v) => Platform.isWeb

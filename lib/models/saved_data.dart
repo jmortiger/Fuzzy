@@ -4,7 +4,8 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/util/util.dart' hide pref;
+import 'package:fuzzy/util/shared_preferences.dart';
 import 'package:e621/e621.dart' as e6;
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/serialization.dart' show Storable;
@@ -96,7 +97,8 @@ class SavedDataE6 extends ChangeNotifier {
   }) {
     if (searches == null) {
       if (!isInit) {
-        SavedDataE6.searches = ListNotifier<SavedSearchData>.empty(growable: true);
+        SavedDataE6.searches =
+            ListNotifier<SavedSearchData>.empty(growable: true);
         storageAsync.then((v) {
           if (!validateUniqueness()) _save();
           SavedDataE6.searches.addListener(notifyListeners);
@@ -110,7 +112,8 @@ class SavedDataE6 extends ChangeNotifier {
   }
   SavedDataE6.recycle() {
     if (!isInit) {
-      SavedDataE6.searches = ListNotifier<SavedSearchData>.empty(growable: true);
+      SavedDataE6.searches =
+          ListNotifier<SavedSearchData>.empty(growable: true);
       storageAsync.then((v) {
         searches = v;
         if (!validateUniqueness()) {
@@ -213,6 +216,22 @@ class SavedDataE6 extends ChangeNotifier {
           _save();
         }
       });
+    });
+  }
+  static Future<void> initAsync() async {
+    if (isInit) return;
+    return file.getItemAsync().then((f) {
+      (f
+              ?.readAsString()
+              .then((v) => SavedDataE6.fromJson(jsonDecode(v)).$searches) ??
+          loadFromPref()
+              .then((v) => SavedDataE6.defaultInit(searches: v).$searches));
+      //     .then((v) {
+      //   searches = v..addListener(notifyListeners);
+      //   if (!validateUniqueness(searches: v)) {
+      //     _save();
+      //   }
+      // });
     });
   }
 

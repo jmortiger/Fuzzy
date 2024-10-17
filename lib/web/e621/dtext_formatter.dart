@@ -254,6 +254,9 @@ enum DTextMatchers {
     ),
   ),
 
+  /// TODO: Failed on this https://e621.net/wiki_pages/270.json
+  /// TODO: Failed on this https://e621.net/show_or_new?title=the_legend_of_zelda
+
   /// [Ref](https://e621.net/help/dtext#colors)
   color(
     r"\[color(?:=(?<data>(?<tagCategory>"
@@ -271,17 +274,24 @@ enum DTextMatchers {
   tagLink(r"\[\[(?:(?<tag>.*?)\|){0,1}(?<main>.+?)\]\]", linkStyle),
   anchor(r"\[(?<data>#.+?)\](?<main>(?<=\]))", incorrectlyParsedStyle),
   searchLink(r"{{(?<main>(?<data>.+?))}}", linkStyle),
-  postLink(r"(?<main>post #(?<data>[0-9]+))", linkStyle),
-  postChangesLink(r"(?<main>post changes #(?<data>[0-9]+))", linkStyle),
-  topicLink(r"(?<main>topic #(?<data>[0-9]+))", linkStyle),
-  commentLink(r"(?<main>comment #(?<data>[0-9]+))", linkStyle),
-  blipLink(r"(?<main>blip #(?<data>[0-9]+))", linkStyle),
-  poolLink(r"(?<main>pool #(?<data>[0-9]+))", linkStyle),
-  setLink(r"(?<main>set #(?<data>[0-9]+))", linkStyle),
-  takedownLink(r"(?<main>takedown #(?<data>[0-9]+))", linkStyle),
-  recordLink(r"(?<main>record #(?<data>[0-9]+))", linkStyle),
-  ticketLink(r"(?<main>ticket #(?<data>[0-9]+))", linkStyle),
-  postThumbnail(r"(?<main>thumb #(?<data>[0-9]+))", incorrectlyParsedStyle),
+  postLink(r"(?<main>post #(?<data>[0-9]+))", linkStyle, caseSensitive: false),
+  postChangesLink(r"(?<main>post changes #(?<data>[0-9]+))", linkStyle,
+      caseSensitive: false),
+  topicLink(r"(?<main>topic #(?<data>[0-9]+))", linkStyle,
+      caseSensitive: false),
+  commentLink(r"(?<main>comment #(?<data>[0-9]+))", linkStyle,
+      caseSensitive: false),
+  blipLink(r"(?<main>blip #(?<data>[0-9]+))", linkStyle, caseSensitive: false),
+  poolLink(r"(?<main>pool #(?<data>[0-9]+))", linkStyle, caseSensitive: false),
+  setLink(r"(?<main>set #(?<data>[0-9]+))", linkStyle, caseSensitive: false),
+  takedownLink(r"(?<main>takedown #(?<data>[0-9]+))", linkStyle,
+      caseSensitive: false),
+  recordLink(r"(?<main>record #(?<data>[0-9]+))", linkStyle,
+      caseSensitive: false),
+  ticketLink(r"(?<main>ticket #(?<data>[0-9]+))", linkStyle,
+      caseSensitive: false),
+  postThumbnail(r"(?<main>thumb #(?<data>[0-9]+))", incorrectlyParsedStyle,
+      caseSensitive: false),
   // Block formatting
   quote(
     r"\[quote\](?<main>.*?)\[\/quote\]",
@@ -918,7 +928,7 @@ InlineSpan tryParse(
 
 String convertToLink(String link) => link
     .replaceAllMapped(
-      RegExp(r"(\s)([A-Z])"),
+      RegExp(r"(\s)([A-Za-z])"),
       (match) => "_${match.group(2)!.toLowerCase()}",
     )
     .replaceAllMapped(

@@ -1,14 +1,16 @@
 import 'dart:convert' as dc;
 import 'dart:io' as io;
-import 'dart:ui' show Color, FilterQuality;
 
-import 'package:flutter/material.dart';
+import 'package:e621/e621.dart' as e621;
+import 'package:e621/e621.dart' show TagCategory;
+import 'package:flutter/material.dart'
+    show Color, FilterQuality, SliverGridDelegateWithFixedCrossAxisCount;
+import 'package:fuzzy/util/shared_preferences.dart' as util;
+import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/widgets/w_image_result.dart' show PostInfoPaneItem;
-import 'package:e621/e621.dart' show TagCategory;
-import 'package:e621/e621.dart' as e621;
-import 'package:fuzzy/util/util.dart' as util;
 import 'package:j_util/j_util_full.dart' show LazyInitializer, Platform;
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// TODO: Integrate ChangeNotifier?
 class AppSettingsRecord {
@@ -45,13 +47,14 @@ class AppSettingsRecord {
       "type:swf",
     },
     forceSafe: false,
-    autoLoadUserProfile: false,
+    autoLoadUserProfile: true,
     applyProfileBlacklist: true,
     applyProfileFavTags: true,
     upvoteOnFavorite: true,
     enableDownloads: false,
     maxSearchesToSave: 200,
   );
+  // ignore: unnecessary_late
   factory AppSettingsRecord.fromJson(Map<String, dynamic> json) =>
       AppSettingsRecord(
         postView: PostViewData.fromJson(
@@ -97,61 +100,197 @@ class AppSettings implements AppSettingsRecord {
   static const fileName = "settings.json";
   static final _fileFullPath = LazyInitializer(
       () async => "${await util.appDataPath.getItem()}/$fileName");
-  static final _file = (Platform.isWeb)
-      ? null
-      : LazyInitializer(() async {
-          var t = io.File(await _fileFullPath.getItem());
-          return (await t.exists())
-              ? t
-              : await (await t.create(recursive: true, exclusive: true))
-                  .writeAsString(
-                      dc.jsonEncode(AppSettings.defaultSettings.toJson()));
-        });
-  static LazyInitializer<io.File> get myFile => _file!;
+  static final myFile = LazyInitializer(() async {
+    if (Platform.isWeb) return null;
+    var t = io.File(await _fileFullPath.getItem());
+    return (await t.exists())
+        ? t
+        : await (await t.create(recursive: true, exclusive: true))
+            .writeAsString(dc.jsonEncode(AppSettings.defaultSettings.toJson()));
+  });
+  // static LazyInitializer<io.File> get myFile => _file!;
+  // static Future<AppSettings> loadSettings() async {
+  //   return (Platform.isWeb)
+  //       ? loadFromPref()
+  //       // ? ((await util.devData.getItem())?["settings"] == null
+  //       //     ? defaultSettings
+  //       //     : AppSettings.fromJson(util.devData.$Safe?["settings"]))
+  //       : loadSettingsFromFile();
+  // }
+
   static Future<AppSettings> loadSettingsFromFile() async {
-    return (Platform.isWeb)
-        ? ((await util.devData.getItem())["settings"] == null
-            ? defaultSettings
-            : AppSettings.fromJson(util.devData.$["settings"]))
-        : AppSettings.fromJson(
-            dc.jsonDecode(
-                (await (await myFile.getItem()).readAsString()).printMe()),
-          );
+    final devSettings =
+            util.devData.$Safe?["settings"] as Map<String, dynamic>?,
+        s = (await (await myFile.getItem())?.readAsString());
+    var j = (s != null
+        ? dc.jsonDecode(s) as Map<String, dynamic>
+        : await util.loadJsonFromPrefWithTypeMap(
+            typeMap,
+            prefix: "$localStoragePrefix.",
+          ));
+    if (devSettings != null) {
+      j = (j?..updateAll((k, v) => v ?? devSettings[k])) ?? devSettings;
+    }
+    return j != null
+        ? AppSettings.fromJson(j)
+        : AppSettings.fromRecord(defaultSettings);
   }
 
-  static Future<AppSettings> loadInstanceFromFile() =>
-      loadSettingsFromFile()..then((value) => e621.useNsfw = !value.forceSafe);
+  static Future<AppSettings> loadInstance() =>
+      loadSettingsFromFile()..then((v) => e621.useNsfw = !v.forceSafe).ignore();
 
-  Future<AppSettings> loadFromFile() async {
-    return switch (Platform.getPlatform()) {
-      Platform.web => this..overwriteWithRecord(defaultSettings),
-      Platform.android || Platform.iOS => this
-        ..overwriteWithRecord(AppSettings.fromJson(
-            dc.jsonDecode(await (await myFile.getItem()).readAsString()))),
-      _ => throw UnsupportedError("platform not supported"),
-    };
-  }
+  Future<AppSettings> loadFromFile() =>
+      loadSettingsFromFile().then((v) => this..overwriteWithRecord(v));
 
-  static Future<io.File?> writeSettingsToFile([AppSettings? a]) async =>
-      switch (Platform.getPlatform()) {
-        Platform.web => null,
-        Platform.android ||
-        Platform.iOS =>
-          (await myFile.getItem()).writeAsString(
-            dc.jsonEncode(a ?? i ?? defaultSettings)..printMe(),
-            flush: true,
-          ),
-        _ => throw UnsupportedError("platform not supported"),
-      };
-  Future<io.File?> writeToFile() async => writeSettingsToFile(this);
+  /// Returns the currently stored value.
+  static Future<String?> writeSettingsToFile([AppSettings? a]) async =>
+      (await myFile.getItem())
+          ?.writeAsString(dc.jsonEncode(a ?? i ?? defaultSettings), flush: true)
+          .then((v) => v.readAsString()) ??
+      writeToPref(a ?? i ?? defaultSettings).then((v) => v
+          ? dc.jsonEncode(util.loadJsonFromPrefWithTypeMapSync(typeMap))
+          : null);
+  Future<String?> writeToFile() => writeSettingsToFile(this);
   // #endregion FileIO
+
+  // #region SharedPreferences
+  static final Map<String, String> typeMap = util.makePrefTypeMap(
+    util.fromJsonMapToPrefMap(
+      defaultSettings.toJson(),
+      "$localStoragePrefix.",
+    ),
+    appendSuffix: false,
+  );
+  static const localStoragePrefix = 'app_settings';
+  static const localStorageLengthKeySuffix = '.length';
+  static Future<bool> writeToPref([AppSettings? data]) =>
+      (data ??= AppSettings.i) == null
+          ? Future.value(false)
+          : util.writeToPref(
+              util.fromJsonMapToPrefMap(data!.toJson(), "$localStoragePrefix."),
+            );
+  /* data ??= AppSettings.i;
+    if (data == null) return Future.value(false);
+    return util.writeToPref(
+        util.fromJsonMapToPrefTypedMap(data.toJson(), "$localStoragePrefix.")); */
+  /* 
+    data ??= AppSettings.i;
+    if (data == null) return Future.value(false);
+    return util.pref.getItemAsync().then((v) {
+      final success = <Future<bool>>[];
+      for (final el in data!.toPrefMap().entries) {
+        switch (el) {
+          case MapEntry(key: String key, value: String value):
+            success.add(v.setString(key, value));
+            break;
+          case MapEntry(key: String key, value: bool value):
+            success.add(v.setBool(key, value));
+            break;
+          case MapEntry(key: String key, value: int value):
+            success.add(v.setInt(key, value));
+            break;
+          case MapEntry(key: String key, value: double value):
+            success.add(v.setDouble(key, value));
+            break;
+          case MapEntry(key: String key, value: List value):
+            if (value.isEmpty) {
+              success.add(v.setStringList(key, []));
+              break;
+            }
+            switch (value) {
+              case List<String> value:
+                success.add(v.setStringList(key, value));
+                break;
+              case List<bool> _:
+              case List<int> _:
+              case List<double> _:
+                success
+                    .add(v.setStringList(key, value.map((e) => "$e").toList()));
+                break;
+              default:
+                throw UnsupportedError(
+                    "${value.runtimeType} of $key not supported");
+            }
+            break;
+          case MapEntry(key: String key, value: dynamic value):
+            throw UnsupportedError(
+                "${value.runtimeType} of $key not supported");
+        }
+      }
+      return Future.wait(success).then((val) => val.foldUntil<bool>(
+          true, (p, e, _, __) => p && e,
+          breakIfTrue: (p, _, __, ___) => !p));
+      // return success.fold(
+      //     l,
+      //     (previousValue, element) => (previousValue is Future<bool>)
+      //         ? previousValue.then((s) => element.then((s1) => s && s1))
+      //         : element.then((s1) => previousValue && s1));
+    }); */
+
+  static Future<AppSettings> loadFromPref() =>
+      util.pref.getItemAsync().then((v) => AppSettings.loadFromPrefSync(v)!);
+  static AppSettings? loadFromPrefSync([SharedPreferences? pref]) =>
+      (pref ??= util.pref.$Safe) == null
+          ? null
+          : AppSettings.fromJson(util.loadJsonFromPrefWithTypeMapSync(
+              typeMap,
+              prefInst: pref,
+              prefix: "$localStoragePrefix.",
+            )!);
+  /* // return AppSettings.fromJson(util.loadJsonFromPrefWithKeysSync(util
+    //     .fromJsonMapToPrefMap(defaultSettings.toJson(), "$localStoragePrefix.")
+    //     .keys,
+    //     prefInst: pref)!);
+    if ((pref ??= util.pref.$Safe) == null) return null;
+    pref!;
+    final data = <String, dynamic>{};
+    for (final el in defaultSettings.toPrefMap().entries) {
+      switch (el) {
+        case MapEntry(key: String key, value: String _):
+          data[key] = pref.getString(key);
+          break;
+        case MapEntry(key: String key, value: bool _):
+          data[key] = pref.getBool(key);
+          break;
+        case MapEntry(key: String key, value: int _):
+          data[key] = pref.getInt(key);
+          break;
+        case MapEntry(key: String key, value: double _):
+          data[key] = pref.getDouble(key);
+          break;
+        case MapEntry(key: String key, value: List value):
+          switch (value) {
+            case List<String> _:
+              data[key] = pref.getStringList(key);
+              break;
+            case List<bool> _:
+              data[key] =
+                  pref.getStringList(key)?.map((e) => bool.parse(e)).toList();
+            case List<int> _:
+              data[key] =
+                  pref.getStringList(key)?.map((e) => int.parse(e)).toList();
+            case List<double> _:
+              data[key] =
+                  pref.getStringList(key)?.map((e) => double.parse(e)).toList();
+              break;
+            default:
+              throw UnsupportedError(
+                  "${value.runtimeType} of $key not supported");
+          }
+          break;
+        case MapEntry(key: String key, value: dynamic value):
+          throw UnsupportedError("${value.runtimeType} of $key not supported");
+      }
+    }
+    return AppSettings.fromPrefMap(data); */
+  // #endregion SharedPreferences
 
   static final defaultSettings =
       AppSettings.fromRecord(AppSettingsRecord.defaultSettings);
   static final priorSettings = LazyInitializer(loadSettingsFromFile);
 
   // #region Singleton
-  static final _instance = LazyInitializer<AppSettings>(loadInstanceFromFile);
+  static final _instance = LazyInitializer<AppSettings>(loadInstance);
   static Future<AppSettings> get instance async =>
       _instance.isAssigned ? _instance.$ : await _instance.getItem();
   static AppSettings? get i => _instance.$Safe;
@@ -161,6 +300,67 @@ class AppSettings implements AppSettingsRecord {
   Map<String, dynamic> toJson() => toRecord().toJson();
   factory AppSettings.fromJson(Map<String, dynamic> json) =>
       AppSettings.fromRecord(AppSettingsRecord.fromJson(json));
+  Map<String, dynamic> toPrefMap([
+    String prefix = localStoragePrefix,
+  ]) {
+    final json =
+            toJson().map((k, v) => MapEntry<String, dynamic>("$prefix.$k", v)),
+        waitList = <String, dynamic>{},
+        toRemove = <String>[];
+
+    json.addAll((json["$prefix.postView"] as Map<String, dynamic>)
+        .map<String, dynamic>(
+            (k, v) => MapEntry<String, dynamic>("$prefix.postView.$k", v)));
+    json.addAll((json["$prefix.searchView"] as Map<String, dynamic>)
+        .map<String, dynamic>(
+            (k, v) => MapEntry<String, dynamic>("$prefix.searchView.$k", v)));
+    json.remove("$prefix.postView");
+    json.remove("$prefix.searchView");
+    json.entries.forEach((e) {
+      if (e.value is Map<String, dynamic>) {
+        toRemove.add(e.key);
+        waitList.addAll((e.value as Map<String, dynamic>)
+            .map((key, value) => MapEntry("${e.key}.$key", value)));
+      }
+    });
+    json.addAll(waitList);
+    toRemove.forEach(json.remove);
+    final failure = json.entries
+        .where((e) => switch (e.value) {
+              int _ ||
+              String _ ||
+              double _ ||
+              bool _ ||
+              List<int> _ ||
+              List<String> _ ||
+              List<double> _ ||
+              List<bool> _ =>
+                false,
+              _ => true,
+            })
+        .fold("", (p, e) => "$p ${e.key} (${e.value.runtimeType})");
+    assert(failure.isEmpty,
+        "$failure are not of type int, String, double, bool, List<int>, List<String>, List<double>, List<bool>");
+    return json;
+  }
+
+  /* factory AppSettings.fromPrefMap(
+    Map<String, dynamic> json, [
+    String prefix = localStoragePrefix,
+  ]) {
+    return AppSettings.fromJson(json.entries.fold(
+      {"postView": <String, dynamic>{}, "searchView": <String, dynamic>{}},
+      (p, e) => e.key.startsWith("$prefix.postView.")
+          ? (p
+            ..["postView"]![e.key.substring("$prefix.postView.".length)] =
+                e.value)
+          : e.key.startsWith("$prefix.searchView.")
+              ? (p
+                ..["searchView"]![
+                    e.key.substring("$prefix.searchView.".length)] = e.value)
+              : (p..[e.key.substring(e.key.indexOf(".") + 1)] = e.value),
+    ));
+  } */
   // #endregion JSON (indirect, don't need updating w/ new fields)
 
   factory AppSettings.fromRecord(AppSettingsRecord r) => AppSettings.all(
@@ -246,6 +446,7 @@ class AppSettings implements AppSettingsRecord {
       ? (_favoriteTags
         ..addAll(E621.loggedInUser.$.favoriteTags.split(RegExp(r"\s"))))
       : _favoriteTags;
+  // TODO: backing store for all blacklisted tags
   Set<String> _blacklistedTags;
   @override
   Set<String> get blacklistedTags => _blacklistedTags;
@@ -372,8 +573,12 @@ class PostViewData {
                 ?.map((e) => TagCategory.fromJson(e))
                 .toList() ??
             defaultData.tagOrder,
-        tagColors: (json["tagColors"])?.map<TagCategory, Color>(
-                (k, v) => MapEntry(TagCategory.fromJson(k), Color(v))) ??
+        tagColors: (json["tagColors"])?.map<TagCategory, Color>((k, v) =>
+                MapEntry<TagCategory, Color>(
+                    TagCategory.fromJson(k),
+                    (v != null
+                        ? Color(v)
+                        : defaultData.tagColors[TagCategory.fromJson(k)])!)) ??
             defaultData.tagColors,
         colorTags: json["colorTags"] ?? defaultData.colorTags,
         colorTagHeaders: json["colorTagHeaders"] ?? defaultData.colorTagHeaders,
@@ -399,8 +604,9 @@ class PostViewData {
                 defaultData.imageFilterQuality.name)),
       );
   Map<String, dynamic> toJson() => {
-        "tagOrder": tagOrder,
-        "tagColors": tagColors.map((k, v) => MapEntry(k.toJson(), v.value)),
+        "tagOrder": tagOrder.map<String>((e) => e.toJson()).toList(),
+        "tagColors":
+            tagColors.map<String, int>((k, v) => MapEntry(k.toJson(), v.value)),
         "colorTags": colorTags,
         "colorTagHeaders": colorTagHeaders,
         // "allowOverflow": allowOverflow,
@@ -589,13 +795,14 @@ class SearchViewData {
         postsPerRow: 3,
         horizontalGridSpace: 4,
         verticalGridSpace: 4,
-        postInfoBannerItems: PostInfoPaneItem.values,
+        postInfoBannerItems: PostInfoPaneItem.valuesSet,
         widthToHeightRatio: 1,
         useProgressiveImages: true,
         numSavedSearchesInSearchBar: 5,
         lazyLoad: false,
         blacklistFavs: false,
         lazyBuilding: false,
+        preferPoolName: true,
         preferSetShortname: true,
         tagDbPath: "",
         maxCharsInPostInfo: 100,
@@ -604,12 +811,13 @@ class SearchViewData {
   final int postsPerRow;
   final double horizontalGridSpace;
   final double verticalGridSpace;
-  final List<PostInfoPaneItem> postInfoBannerItems;
+  final Set<PostInfoPaneItem> postInfoBannerItems;
   final double widthToHeightRatio;
   final bool useProgressiveImages;
   final int numSavedSearchesInSearchBar;
   final bool lazyLoad;
   final bool lazyBuilding;
+  final bool preferPoolName;
 
   /// {@template blacklistFavs}
   /// Apply blacklist to favorited posts.
@@ -635,10 +843,25 @@ class SearchViewData {
     required this.lazyLoad,
     required this.blacklistFavs,
     required this.lazyBuilding,
+    required this.preferPoolName,
     required this.preferSetShortname,
     required this.tagDbPath,
     required this.maxCharsInPostInfo,
   });
+  static _postInfoBannerItemsParser(Map<String, dynamic> json) {
+    try {
+      return (json["postInfoBannerItems"] as List?)
+          ?.map((e) => PostInfoPaneItem.fromJson(e))
+          .toSet();
+    } catch (_) {
+      return (json["postInfoBannerItems"] as String?)
+          ?.replaceAll(RegExp(r"^{|}$"), "")
+          .split(",")
+          .map((e) => PostInfoPaneItem.fromJson(e))
+          .toSet();
+    }
+  }
+
   factory SearchViewData.fromJson(Map<String, dynamic> json) => SearchViewData(
         postsPerPage: json["postsPerPage"] ?? defaultData.postsPerPage,
         postsPerRow: json["postsPerRow"] ?? defaultData.postsPerRow,
@@ -646,11 +869,18 @@ class SearchViewData {
             json["horizontalGridSpace"] ?? defaultData.horizontalGridSpace,
         verticalGridSpace:
             json["verticalGridSpace"] ?? defaultData.verticalGridSpace,
-        postInfoBannerItems: (json["postInfoBannerItems"] as String?)
-                ?.split(",")
-                .map((e) => PostInfoPaneItem.fromJson(e))
-                .toList() ??
-            defaultData.postInfoBannerItems,
+        postInfoBannerItems:
+            _postInfoBannerItemsParser(json) ?? defaultData.postInfoBannerItems,
+        /* postInfoBannerItems: (json["postInfoBannerItems"] as List?)
+                ?.map((e) => PostInfoPaneItem.fromJson(e))
+                .toSet() ??
+            defaultData.postInfoBannerItems, */
+        // postInfoBannerItems: (json["postInfoBannerItems"] as String?)
+        //         ?.replaceAll(RegExp(r"^{|}$"), "")
+        //         .split(",")
+        //         .map((e) => PostInfoPaneItem.fromJson(e))
+        //         .toSet() ??
+        //     defaultData.postInfoBannerItems,
         widthToHeightRatio:
             json["widthToHeightRatio"] ?? defaultData.widthToHeightRatio,
         useProgressiveImages:
@@ -659,6 +889,7 @@ class SearchViewData {
             defaultData.numSavedSearchesInSearchBar,
         lazyLoad: json["lazyLoad"] ?? defaultData.lazyLoad,
         lazyBuilding: json["lazyBuilding"] ?? defaultData.lazyBuilding,
+        preferPoolName: json["preferPoolName"] ?? defaultData.preferPoolName,
         blacklistFavs: json["blacklistFavs"] ?? defaultData.blacklistFavs,
         preferSetShortname:
             json["preferSetShortname"] ?? defaultData.preferSetShortname,
@@ -671,17 +902,20 @@ class SearchViewData {
         "postsPerRow": postsPerRow,
         "horizontalGridSpace": horizontalGridSpace,
         "verticalGridSpace": verticalGridSpace,
-        "postInfoBannerItems": postInfoBannerItems.fold(
-          "",
-          (previousValue, element) =>
-              "${previousValue.isNotEmpty ? '$previousValue,' : previousValue}"
-              "${element.name}",
-        ),
+        "postInfoBannerItems":
+            postInfoBannerItems.map((e) => e.name).toList(growable: false),
+        // "postInfoBannerItems": "{${postInfoBannerItems.fold(
+        //   "",
+        //   (previousValue, element) =>
+        //       "$previousValue${previousValue.isNotEmpty ? ',' : ""}"
+        //       "${element.name}",
+        // )}}",
         "widthToHeightRatio": widthToHeightRatio,
         "useProgressiveImages": useProgressiveImages,
         "numSavedSearchesInSearchBar": numSavedSearchesInSearchBar,
         "lazyLoad": lazyLoad,
         "lazyBuilding": lazyBuilding,
+        "preferPoolName": preferPoolName,
         "blacklistFavs": blacklistFavs,
         "preferSetShortname": preferSetShortname,
         "tagDbPath": tagDbPath,
@@ -690,6 +924,13 @@ class SearchViewData {
 }
 
 class SearchView implements SearchViewData {
+  static SliverGridDelegateWithFixedCrossAxisCount get gridDelegate =>
+      SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: SearchView.i.postsPerRow,
+        crossAxisSpacing: SearchView.i.horizontalGridSpace,
+        mainAxisSpacing: SearchView.i.verticalGridSpace,
+        childAspectRatio: SearchView.i.widthToHeightRatio,
+      );
   int _postsPerPage;
   @override
   int get postsPerPage => _postsPerPage;
@@ -720,10 +961,10 @@ class SearchView implements SearchViewData {
               v <= SearchViewData.verticalGridSpaceBounds.max)
           ? _verticalGridSpace = v
           : "";
-  List<PostInfoPaneItem> _postInfoBannerItems;
+  Set<PostInfoPaneItem> _postInfoBannerItems;
   @override
-  List<PostInfoPaneItem> get postInfoBannerItems => _postInfoBannerItems;
-  set postInfoBannerItems(List<PostInfoPaneItem> v) => _postInfoBannerItems = v;
+  Set<PostInfoPaneItem> get postInfoBannerItems => _postInfoBannerItems;
+  set postInfoBannerItems(Set<PostInfoPaneItem> v) => _postInfoBannerItems = v;
   double _widthToHeightRatio;
   @override
   double get widthToHeightRatio => _widthToHeightRatio;
@@ -748,6 +989,10 @@ class SearchView implements SearchViewData {
   @override
   bool get lazyBuilding => _lazyBuilding;
   set lazyBuilding(bool v) => _lazyBuilding = v;
+  bool _preferPoolName;
+  @override
+  bool get preferPoolName => _preferPoolName;
+  set preferPoolName(bool v) => _preferPoolName = v;
 
   /// {@macro blacklistFavs}
   bool _blacklistFavs;
@@ -774,13 +1019,14 @@ class SearchView implements SearchViewData {
     required double horizontalGridSpace,
     required double verticalGridSpace,
     required int maxCharsInPostInfo,
-    required List<PostInfoPaneItem> postInfoBannerItems,
+    required Set<PostInfoPaneItem> postInfoBannerItems,
     required double widthToHeightRatio,
     required bool useProgressiveImages,
     required int numSavedSearchesInSearchBar,
     required bool lazyLoad,
     required bool blacklistFavs,
     required bool lazyBuilding,
+    required bool preferPoolName,
     required bool preferSetShortname,
     required String tagDbPath,
   })  : _postsPerPage = postsPerPage,
@@ -794,6 +1040,7 @@ class SearchView implements SearchViewData {
         _lazyLoad = lazyLoad,
         _blacklistFavs = blacklistFavs,
         _lazyBuilding = lazyBuilding,
+        _preferPoolName = preferPoolName,
         _preferSetShortname = preferSetShortname,
         _tagDbPath = tagDbPath,
         _maxCharsInPostInfo = maxCharsInPostInfo;
@@ -810,6 +1057,7 @@ class SearchView implements SearchViewData {
         lazyLoad: searchView.lazyLoad,
         blacklistFavs: searchView.blacklistFavs,
         lazyBuilding: searchView.lazyBuilding,
+        preferPoolName: searchView.preferPoolName,
         preferSetShortname: searchView.preferSetShortname,
         tagDbPath: searchView.tagDbPath,
         maxCharsInPostInfo: searchView.maxCharsInPostInfo,
@@ -819,13 +1067,14 @@ class SearchView implements SearchViewData {
     _postsPerRow = searchView.postsPerRow;
     _horizontalGridSpace = searchView.horizontalGridSpace;
     _verticalGridSpace = searchView.verticalGridSpace;
-    _postInfoBannerItems = searchView.postInfoBannerItems.toList();
+    _postInfoBannerItems = searchView.postInfoBannerItems.toSet();
     _widthToHeightRatio = searchView.widthToHeightRatio;
     _useProgressiveImages = searchView.useProgressiveImages;
     _numSavedSearchesInSearchBar = searchView.numSavedSearchesInSearchBar;
     _lazyLoad = searchView.lazyLoad;
     _blacklistFavs = searchView.blacklistFavs;
     _lazyBuilding = searchView.lazyBuilding;
+    _preferPoolName = searchView.preferPoolName;
     _preferSetShortname = searchView.preferSetShortname;
     _tagDbPath = searchView.tagDbPath;
     _maxCharsInPostInfo = searchView.maxCharsInPostInfo;
@@ -843,6 +1092,7 @@ class SearchView implements SearchViewData {
         lazyLoad: lazyLoad,
         blacklistFavs: blacklistFavs,
         lazyBuilding: lazyBuilding,
+        preferPoolName: preferPoolName,
         preferSetShortname: preferSetShortname,
         tagDbPath: tagDbPath,
         maxCharsInPostInfo: maxCharsInPostInfo,

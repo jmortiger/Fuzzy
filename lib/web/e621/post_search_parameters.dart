@@ -94,6 +94,18 @@ final class PostSearchParametersStrict
     required String pageModifier,
     required int postId,
   }) : page = "$pageModifier$postId";
+  PostSearchParametersStrict.fromDisparatePageParameters({
+    required this.tags,
+    required this.limit,
+    required String? pageModifier,
+    required int? postId,
+    required int? pageNumber,
+  }) : page = encodeValidPageParameterFromOptions(
+              pageNumber: pageNumber,
+              pageModifier: pageModifier,
+              id: postId,
+            ) ??
+            "1";
   // const PostSearchParametersStrict.withDefaults({
   //   this.tags = "",
   //   required this.limit,
@@ -430,6 +442,7 @@ mixin PageSearchParameterNullable {
       (page!.hasOnlyNumeric ||
           ((page![0] == "a" || page![0] == "b") &&
               page!.substring(1).hasOnlyNumeric));
+  String get validPage => isValidPage(page) ? page! : "1";
   bool get usesPageNumber =>
       (page?.isNotEmpty ?? false) && page!.hasOnlyNumeric;
   bool get usesPageOffset =>
@@ -442,26 +455,47 @@ mixin PageSearchParameterNullable {
 
   int? get pageNumber => usesPageNumber ? int.parse(page!) : null;
   int? get pageIndex => usesPageNumber ? int.parse(page!) - 1 : null;
+  String? nextValidPage([int? lastIdOnPage]) => !isValidPage(page)
+      ? "2"
+      : switch (getPageModifier(page)) {
+          "a" => "b${getId(page)!}",
+          "b" => isValidId(lastIdOnPage ?? -1) ? "b${lastIdOnPage!}" : null,
+          _ => "${getPageNumber(page)! + 1}"
+        };
+  String? priorValidPage([int? firstIdOnPage]) => !isValidPage(page)
+      ? null
+      : switch (getPageModifier(page)) {
+          "b" => "a${getId(page)!}",
+          "a" => isValidId(firstIdOnPage ?? -1) ? "a${firstIdOnPage!}" : null,
+          _ => getPageNumber(page)! > 0 ? "${getPageNumber(page)! - 1}" : null,
+        };
 }
-bool isValidPage(String? page) =>
+bool isValidPage(String? page, {bool fullValidation = true}) =>
     (page?.isNotEmpty ?? false) &&
-    (page!.hasOnlyNumeric ||
-        ((page[0] == "a" || page[0] == "b") &&
-            page.substring(1).hasOnlyNumeric));
+    (fullValidation
+        ? (isValidPageNumber(int.tryParse(page!) ?? -1) ||
+            ((page[0] == "a" || page[0] == "b") &&
+                isValidId(int.tryParse(page.substring(1)) ?? -1)))
+        : (page!.hasOnlyNumeric ||
+            ((page[0] == "a" || page[0] == "b") &&
+                page.substring(1).hasOnlyNumeric)));
+bool isValidId(int id) => switch (id) { >= 0 => true, _ => false };
+bool isValidPageNumber(int pageNumber) =>
+    switch (pageNumber) { > 0 && <= 750 => true, _ => false };
 bool usesPageNumber(String? page) =>
     (page?.isNotEmpty ?? false) && page!.hasOnlyNumeric;
 bool usesPageOffset(String? page) =>
     (page?.isNotEmpty ?? false) &&
     (page![0] == "a" || page[0] == "b") &&
     page.substring(1).hasOnlyNumeric;
-String? toPageModifier(String? page) => usesPageOffset(page) ? page![0] : null;
+String? getPageModifier(String? page) => usesPageOffset(page) ? page![0] : null;
 
-int? toId(String? page) =>
+int? getId(String? page) =>
     usesPageOffset(page) ? int.parse(page!.substring(1)) : null;
 
-int? toPageNumber(String? page) =>
+int? getPageNumber(String? page) =>
     usesPageNumber(page) ? int.parse(page!) : null;
-int? toPageIndex(String? page) =>
+int? getPageIndex(String? page) =>
     usesPageNumber(page) ? int.parse(page!) - 1 : null;
 mixin PageSearchParameter implements PageSearchParameterNullable {
   @override
@@ -472,6 +506,8 @@ mixin PageSearchParameter implements PageSearchParameterNullable {
       (page.hasOnlyNumeric ||
           ((page[0] == "a" || page[0] == "b") &&
               page.substring(1).hasOnlyNumeric));
+  @override
+  String get validPage => isValidPage(page) ? page : "1";
   @override
   bool get usesPageNumber => page.isNotEmpty && page.hasOnlyNumeric;
   @override
@@ -489,6 +525,22 @@ mixin PageSearchParameter implements PageSearchParameterNullable {
   int? get pageNumber => usesPageNumber ? int.parse(page) : null;
   @override
   int? get pageIndex => usesPageNumber ? int.parse(page) - 1 : null;
+  @override
+  String? nextValidPage([int? lastIdOnPage]) => !isValidPage(page)
+      ? "2"
+      : switch (getPageModifier(page)) {
+          "a" => "b${getId(page)!}",
+          "b" => isValidId(lastIdOnPage ?? -1) ? "b${lastIdOnPage!}" : null,
+          _ => "${getPageNumber(page)! + 1}"
+        };
+  @override
+  String? priorValidPage([int? firstIdOnPage]) => !isValidPage(page)
+      ? null
+      : switch (getPageModifier(page)) {
+          "b" => "a${getId(page)!}",
+          "a" => isValidId(firstIdOnPage ?? -1) ? "a${firstIdOnPage!}" : null,
+          _ => getPageNumber(page)! > 0 ? "${getPageNumber(page)! - 1}" : null,
+        };
 }
 bool isValidPageStrict(String page) =>
     page.isNotEmpty &&
@@ -501,15 +553,15 @@ bool usesPageOffsetStrict(String page) =>
     page.isNotEmpty &&
     (page[0] == "a" || page[0] == "b") &&
     page.substring(1).hasOnlyNumeric;
-String? toPageModifierStrict(String page) =>
+String? getPageModifierStrict(String page) =>
     usesPageOffsetStrict(page) ? page[0] : null;
 
-int? toIdStrict(String page) =>
+int? getIdStrict(String page) =>
     usesPageOffsetStrict(page) ? int.parse(page.substring(1)) : null;
 
-int? toPageNumberStrict(String page) =>
+int? getPageNumberStrict(String page) =>
     usesPageNumberStrict(page) ? int.parse(page) : null;
-int? toPageIndexStrict(String page) =>
+int? getPageIndexStrict(String page) =>
     usesPageNumberStrict(page) ? int.parse(page) - 1 : null;
 
 /* abstract interface class IHasNullablePostSearchParameter<
@@ -588,20 +640,20 @@ typedef PageParsed = ({String? pageModifier, int? id, int? pageNumber});
 dynamic parsePageParameterDirectly(String? page) => !isValidPage(page)
     ? null
     : usesPageOffsetStrict(page!)
-        ? (pageModifier: toPageModifierStrict(page)!, id: toIdStrict(page)!)
-        : toPageNumberStrict(page)!;
+        ? (pageModifier: getPageModifierStrict(page)!, id: getIdStrict(page)!)
+        : getPageNumberStrict(page)!;
 PageParsed? parsePageParameterStrict(String? page) =>
     page == null || !isValidPage(page)
         ? null
         : (
-            pageModifier: toPageModifierStrict(page),
-            id: toIdStrict(page),
-            pageNumber: toPageNumberStrict(page)
+            pageModifier: getPageModifierStrict(page),
+            id: getIdStrict(page),
+            pageNumber: getPageNumberStrict(page)
           );
 PageParsed parsePageParameter(String? page) => (
-      pageModifier: toPageModifier(page),
-      id: toId(page),
-      pageNumber: toPageNumber(page)
+      pageModifier: getPageModifier(page),
+      id: getId(page),
+      pageNumber: getPageNumber(page)
     );
 
 mixin SearchParametersNullable
@@ -809,4 +861,15 @@ abstract interface class ComparableRecord<T extends ComparableRecord<T>> {
 
   @override
   int get hashCode;
+}
+
+enum PageModifier {
+  after("a"),
+  before("b");
+
+  static const prior = after;
+  static const next = before;
+
+  final String query;
+  const PageModifier(this.query);
 }

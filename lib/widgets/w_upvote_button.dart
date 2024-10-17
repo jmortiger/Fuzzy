@@ -18,7 +18,7 @@ class WUpvoteButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WPullTab(
+    return PullTab(
       anchorAlignment: AnchorAlignment.bottom,
       openIcon: const Icon(Icons.import_export),
       // initialOpen: true,

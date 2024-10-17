@@ -3,9 +3,15 @@ import 'dart:convert' as dc;
 
 import 'package:e621/e621.dart' as e621;
 import 'package:flutter/material.dart';
+import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/main.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/cached_favorites.dart' as cf;
+import 'package:fuzzy/models/saved_data.dart';
+import 'package:fuzzy/models/tag_subscription.dart';
+import 'package:fuzzy/pages/pool_view_page.dart';
+import 'package:fuzzy/pages/wiki_page.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/e621_access_data.dart';
@@ -25,6 +31,25 @@ late final lRecord = lm.generateLogger("E6Actions");
 // #endregion Logger
 
 // #region Favorites
+Iterable<E6PostResponse> _filterOnFav(
+  Iterable<E6PostResponse> posts,
+  bool removeFav,
+  bool canEditPosts,
+) {
+  switch (posts) {
+    case List<E6PostResponse> _:
+      if (!canEditPosts) continue cannotEdit;
+      try {
+        return posts..removeWhere((e) => e.isFavorited == removeFav);
+      } catch (_) {
+        continue cannotEdit;
+      }
+    cannotEdit:
+    default:
+      return posts = posts.where((e) => e.isFavorited != removeFav);
+  }
+}
+
 Future<E6PostResponse> addPostToFavoritesWithPost({
   BuildContext? context,
   required E6PostResponse post,
@@ -61,8 +86,8 @@ Future<E6PostResponse?> _addPostToFavorites({
   return E621
       .sendAddFavoriteRequest(
     id,
-    username: E621AccessData.fallback?.username,
-    apiKey: E621AccessData.fallback?.apiKey,
+    username: E621AccessData.allowedUserDataSafe?.username,
+    apiKey: E621AccessData.allowedUserDataSafe?.apiKey,
   )
       .then(
     (v) {
@@ -124,14 +149,11 @@ Future<E6PostResponse?> _removePostFromFavorites({
     util.showUserMessage(context: context, content: Text(out));
   }
   return E621
-      .sendRequest(
-        E621.initFavoriteDelete(
-          id,
-          username: E621AccessData.fallback?.username,
-          apiKey: E621AccessData.fallback?.apiKey,
-        ),
-      )
-      .toResponse()
+      .sendDeleteFavoriteRequest(
+    id,
+    username: E621AccessData.allowedUserDataSafe?.username,
+    apiKey: E621AccessData.allowedUserDataSafe?.apiKey,
+  )
       .then((v) {
     lm.logResponseSmart(v, _logger);
     var postRet = v.statusCodeInfo.isSuccessful
@@ -165,11 +187,15 @@ Future<E6PostResponse?> _removePostFromFavorites({
   });
 }
 
+/// If [canEditPosts] is true, the [posts] collection may be altered. If this is a [List], this may cause problems.
 Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithPosts({
   BuildContext? context,
   required Iterable<E6PostResponse> posts,
   bool updatePost = true,
+  bool filterFavoritedPosts = true,
+  bool canEditPosts = false,
 }) {
+  if (filterFavoritedPosts) posts = _filterOnFav(posts, true, canEditPosts);
   var str = "Adding ${posts.length} posts to favorites...";
   _logger.finer(str);
   if (context != null && context.mounted) {
@@ -181,8 +207,8 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithPosts({
   final pIds = posts.map((e) => e.id);
   return E621.sendAddFavoriteRequestBatch(
     pIds,
-    username: E621AccessData.fallback?.username,
-    apiKey: E621AccessData.fallback?.apiKey,
+    username: E621AccessData.allowedUserDataSafe?.username,
+    apiKey: E621AccessData.allowedUserDataSafe?.apiKey,
     onComplete: (responses) {
       var total = responses.length;
       responses.removeWhere(
@@ -208,8 +234,8 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithPosts({
             () async {
               E621.sendDeleteFavoriteRequestBatch(
                 pIds,
-                username: E621AccessData.fallback?.username,
-                apiKey: E621AccessData.fallback?.apiKey,
+                username: E621AccessData.allowedUserDataSafe?.username,
+                apiKey: E621AccessData.allowedUserDataSafe?.apiKey,
                 onComplete: (rs) {
                   if (context.mounted) {
                     util.showUserMessage(
@@ -245,8 +271,8 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithIds({
   }
   return E621.sendAddFavoriteRequestBatch(
     postIds,
-    username: E621AccessData.fallback?.username,
-    apiKey: E621AccessData.fallback?.apiKey,
+    username: E621AccessData.allowedUserDataSafe?.username,
+    apiKey: E621AccessData.allowedUserDataSafe?.apiKey,
     onComplete: (responses) {
       var total = responses.length;
       responses.removeWhere(
@@ -272,8 +298,8 @@ Future< /* Iterable<E6PostResponse> */ void> addToFavoritesWithIds({
             () async {
               E621.sendDeleteFavoriteRequestBatch(
                 postIds,
-                username: E621AccessData.fallback?.username,
-                apiKey: E621AccessData.fallback?.apiKey,
+                username: E621AccessData.allowedUserDataSafe?.username,
+                apiKey: E621AccessData.allowedUserDataSafe?.apiKey,
                 onComplete: (rs) {
                   if (context.mounted) {
                     util.showUserMessage(
@@ -307,8 +333,8 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithPosts({
   final pIds = posts.map((e) => e.id);
   return E621.sendDeleteFavoriteRequestBatch(
     pIds,
-    username: E621AccessData.fallback?.username,
-    apiKey: E621AccessData.fallback?.apiKey,
+    username: E621AccessData.allowedUserDataSafe?.username,
+    apiKey: E621AccessData.allowedUserDataSafe?.apiKey,
     onComplete: (responses) {
       var total = responses.length;
       responses.removeWhere(
@@ -334,8 +360,8 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithPosts({
             () async {
               E621.sendAddFavoriteRequestBatch(
                 pIds,
-                username: E621AccessData.fallback?.username,
-                apiKey: E621AccessData.fallback?.apiKey,
+                username: E621AccessData.allowedUserDataSafe?.username,
+                apiKey: E621AccessData.allowedUserDataSafe?.apiKey,
                 onComplete: (rs) {
                   if (context.mounted) {
                     util.showUserMessage(
@@ -367,8 +393,8 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithIds({
   }
   return E621.sendDeleteFavoriteRequestBatch(
     postIds,
-    username: E621AccessData.fallback?.username,
-    apiKey: E621AccessData.fallback?.apiKey,
+    username: E621AccessData.allowedUserDataSafe?.username,
+    apiKey: E621AccessData.allowedUserDataSafe?.apiKey,
     onComplete: (responses) {
       var total = responses.length;
       responses.removeWhere(
@@ -394,8 +420,8 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithIds({
             () async {
               E621.sendAddFavoriteRequestBatch(
                 postIds,
-                username: E621AccessData.fallback?.username,
-                apiKey: E621AccessData.fallback?.apiKey,
+                username: E621AccessData.allowedUserDataSafe?.username,
+                apiKey: E621AccessData.allowedUserDataSafe?.apiKey,
                 onComplete: (rs) {
                   if (context.mounted) {
                     util.showUserMessage(
@@ -418,6 +444,7 @@ Future< /* Iterable<E6PostResponse> */ void> removeFromFavoritesWithIds({
 // #endregion Favorites
 
 // #region SetMulti
+/// TODO: Multiselect
 Future<e621.PostSet?> removeFromSetWithPosts({
   required BuildContext context,
   required List<E6PostResponse> posts,
@@ -443,12 +470,14 @@ Future<e621.PostSet?> removeFromSetWithPosts({
           // initialSearchOrder: e621.SetOrder.updatedAt,
           // initialSearchName: null,
           // initialSearchShortname: null,
-          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
-          filterResults: (set) => posts.reduceUntilTrue(
+          filterResults: (set) => posts.foldUntilTrue(
+              false,
               (accumulator, elem, index, list) => set.postIds.contains(elem.id)
                   ? (true, true)
-                  : (accumulator, false),
-              false),
+                  : (accumulator, false)),
+          // onSelected: (e621.PostSet set) => "",
+          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
+          // onMultiselectCompleted: (_) => "",
         ),
         // scrollable: true,
       );
@@ -467,15 +496,13 @@ Future<e621.PostSet?> removeFromSetWithPosts({
         ),
       );
     }
-    final searchString =
-        "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
-    var res = await E621
-        .sendRequest(e621.initSetRemovePosts(
-          v.id,
-          posts.map((e) => e.id).toList(),
-          credentials: E621AccessData.fallback?.cred,
-        ))
-        .toResponse();
+    // final searchString =
+    //     "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
+    var res = await e621.sendRequest(e621.initSetRemovePosts(
+      v.id,
+      posts.map((e) => e.id).toList(),
+      credentials: E621AccessData.allowedUserDataSafe?.cred,
+    ));
 
     lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
@@ -492,19 +519,20 @@ Future<e621.PostSet?> removeFromSetWithPosts({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(
-                        title: Text("Set ${v!.id}: ${v.shortname}"),
-                      ),
-                      body: WPostSearchResults.directResultFromSearch(
-                        searchString,
-                      ),
-                    ),
-                  ),
-                ),
+            _makeOnSeeSet(context, v)
+            // () => Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => Scaffold(
+            //           appBar: AppBar(
+            //             title: Text("Set ${v!.id}: ${v.shortname}"),
+            //           ),
+            //           body: WPostSearchResults.directResultFromSearch(
+            //             searchString,
+            //           ),
+            //         ),
+            //       ),
+            //     ),
           ),
         );
       }
@@ -518,17 +546,18 @@ Future<e621.PostSet?> removeFromSetWithPosts({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(),
-                      body: WPostSearchResults.directResultFromSearch(
-                        searchString,
-                      ),
-                    ),
-                  ),
-                ),
+            _makeOnSeeSet(context, v)
+            // () => Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => Scaffold(
+            //           appBar: AppBar(),
+            //           body: WPostSearchResults.directResultFromSearch(
+            //             searchString,
+            //           ),
+            //         ),
+            //       ),
+            //     ),
           ),
         );
         return null;
@@ -544,6 +573,7 @@ Future<e621.PostSet?> removeFromSetWithPosts({
   return v;
 }
 
+/// TODO: Multiselect
 Future<e621.PostSet?> addToSetWithPosts({
   required BuildContext context,
   required List<E6PostResponse> posts,
@@ -569,13 +599,15 @@ Future<e621.PostSet?> addToSetWithPosts({
           // initialSearchOrder: e621.SetOrder.updatedAt,
           // initialSearchName: null,
           // initialSearchShortname: null,
-          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
-          filterResults: (set) => posts.reduceUntilTrue(
+          filterResults: (set) => posts.foldUntilTrue(
+              false,
               (accumulator, elem, index, list) => !set.postIds.contains(elem.id)
                   ? (true, true)
-                  : (accumulator, false),
-              false),
+                  : (accumulator, false)),
           showCreateSetButton: true,
+          // onSelected: (e621.PostSet set) => "",
+          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
+          // onMultiselectCompleted: (_) => "",
         ),
         // scrollable: true,
       );
@@ -592,15 +624,13 @@ Future<e621.PostSet?> addToSetWithPosts({
             "length ${v.postCount})"),
       );
     }
-    final searchString =
-        "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
-    var res = await E621
-        .sendRequest(e621.initSetAddPosts(
-          v.id,
-          posts.map((e) => e.id).toList(),
-          credentials: E621AccessData.fallback?.cred,
-        ))
-        .toResponse();
+    // final searchString =
+    //     "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
+    var res = await e621.sendRequest(e621.initSetAddPosts(
+      v.id,
+      posts.map((e) => e.id).toList(),
+      credentials: E621AccessData.allowedUserDataSafe?.cred,
+    ));
 
     lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
@@ -617,19 +647,20 @@ Future<e621.PostSet?> addToSetWithPosts({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(
-                        title: Text("Set ${v!.id}: ${v.shortname}"),
-                      ),
-                      body: WPostSearchResults.directResultFromSearch(
-                        searchString,
-                      ),
-                    ),
-                  ),
-                ),
+            _makeOnSeeSet(context, v)
+            // () => Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => Scaffold(
+            //           appBar: AppBar(
+            //             title: Text("Set ${v!.id}: ${v.shortname}"),
+            //           ),
+            //           body: WPostSearchResults.directResultFromSearch(
+            //             searchString,
+            //           ),
+            //         ),
+            //       ),
+            //    ),
           ),
         );
       }
@@ -644,17 +675,18 @@ Future<e621.PostSet?> addToSetWithPosts({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(),
-                      body: WPostSearchResults.directResultFromSearch(
-                        searchString,
-                      ),
-                    ),
-                  ),
-                ),
+            _makeOnSeeSet(context, v)
+            // () => Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => Scaffold(
+            //           appBar: AppBar(),
+            //           body: WPostSearchResults.directResultFromSearch(
+            //             searchString,
+            //           ),
+            //         ),
+            //       ),
+            //     ),
           ),
         );
         return null;
@@ -670,6 +702,7 @@ Future<e621.PostSet?> addToSetWithPosts({
   return v;
 }
 
+/// TODO: Multiselect
 Future<e621.PostSet?> removeFromSetWithIds({
   required BuildContext context,
   required List<int> postIds,
@@ -695,12 +728,14 @@ Future<e621.PostSet?> removeFromSetWithIds({
           // initialSearchOrder: e621.SetOrder.updatedAt,
           // initialSearchName: null,
           // initialSearchShortname: null,
-          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
-          filterResults: (set) => postIds.reduceUntilTrue(
+          filterResults: (set) => postIds.foldUntilTrue(
+              false,
               (accumulator, elem, index, list) => set.postIds.contains(elem)
                   ? (true, true)
-                  : (accumulator, false),
-              false),
+                  : (accumulator, false)),
+          // onSelected: (e621.PostSet set) => "",
+          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
+          // onMultiselectCompleted: (_) => "",
         ),
         // scrollable: true,
       );
@@ -717,15 +752,13 @@ Future<e621.PostSet?> removeFromSetWithIds({
             "length ${v.postCount})"),
       );
     }
-    final searchString =
-        "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
-    var res = await E621
-        .sendRequest(e621.initSetRemovePosts(
-          v.id,
-          postIds,
-          credentials: E621AccessData.fallback?.cred,
-        ))
-        .toResponse();
+    // final searchString =
+    //     "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
+    var res = await e621.sendRequest(e621.initSetRemovePosts(
+      v.id,
+      postIds,
+      credentials: E621AccessData.allowedUserDataSafe?.cred,
+    ));
 
     lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
@@ -742,19 +775,20 @@ Future<e621.PostSet?> removeFromSetWithIds({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(
-                        title: Text("Set ${v!.id}: ${v.shortname}"),
-                      ),
-                      body: WPostSearchResults.directResultFromSearch(
-                        searchString,
-                      ),
-                    ),
-                  ),
-                ),
+            _makeOnSeeSet(context, v)
+            // () => Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => Scaffold(
+            //           appBar: AppBar(
+            //             title: Text("Set ${v!.id}: ${v.shortname}"),
+            //           ),
+            //           body: WPostSearchResults.directResultFromSearch(
+            //             searchString,
+            //           ),
+            //         ),
+            //       ),
+            //     ),
           ),
         );
       }
@@ -769,17 +803,18 @@ Future<e621.PostSet?> removeFromSetWithIds({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(),
-                      body: WPostSearchResults.directResultFromSearch(
-                        searchString,
-                      ),
-                    ),
-                  ),
-                ),
+            _makeOnSeeSet(context, v)
+            // () => Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => Scaffold(
+            //           appBar: AppBar(),
+            //           body: WPostSearchResults.directResultFromSearch(
+            //             searchString,
+            //           ),
+            //         ),
+            //       ),
+            //     ),
           ),
         );
         return null;
@@ -795,6 +830,7 @@ Future<e621.PostSet?> removeFromSetWithIds({
   return v;
 }
 
+/// TODO: Multiselect
 Future<e621.PostSet?> addToSetWithIds({
   required BuildContext context,
   required List<int> postIds,
@@ -820,13 +856,15 @@ Future<e621.PostSet?> addToSetWithIds({
           // initialSearchOrder: e621.SetOrder.updatedAt,
           // initialSearchName: null,
           // initialSearchShortname: null,
-          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
-          filterResults: (set) => postIds.reduceUntilTrue(
+          filterResults: (set) => postIds.foldUntilTrue(
+              false,
               (accumulator, elem, index, list) => !set.postIds.contains(elem)
                   ? (true, true)
-                  : (accumulator, false),
-              false),
+                  : (accumulator, false)),
           showCreateSetButton: true,
+          // onSelected: (e621.PostSet set) => "",
+          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
+          // onMultiselectCompleted: (_) => "",
         ),
         // scrollable: true,
       );
@@ -843,15 +881,13 @@ Future<e621.PostSet?> addToSetWithIds({
               " posts to set ${v.id} (${v.shortname}, "
               "length ${v.postCount})"));
     }
-    final searchString =
-        "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
-    var res = await E621
-        .sendRequest(e621.initSetAddPosts(
-          v.id,
-          postIds,
-          credentials: E621AccessData.fallback?.cred,
-        ))
-        .toResponse();
+    // final searchString =
+    //     "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
+    var res = await e621.sendRequest(e621.initSetAddPosts(
+      v.id,
+      postIds,
+      credentials: E621AccessData.allowedUserDataSafe?.cred,
+    ));
 
     lm.logResponseSmart(res, _logger);
     if (res.statusCodeInfo.isSuccessful) {
@@ -867,19 +903,20 @@ Future<e621.PostSet?> addToSetWithIds({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(
-                        title: Text("Set ${v!.id}: ${v.shortname}"),
-                      ),
-                      body: WPostSearchResults.directResultFromSearch(
-                        searchString,
-                      ),
-                    ),
-                  ),
-                ),
+            _makeOnSeeSet(context, v)
+            // () => Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => Scaffold(
+            //           appBar: AppBar(
+            //             title: Text("Set ${v!.id}: ${v.shortname}"),
+            //           ),
+            //           body: WPostSearchResults.directResultFromSearch(
+            //             searchString,
+            //           ),
+            //         ),
+            //       ),
+            //     ),
           ),
         );
       }
@@ -894,17 +931,18 @@ Future<e621.PostSet?> addToSetWithIds({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(),
-                      body: WPostSearchResults.directResultFromSearch(
-                        searchString,
-                      ),
-                    ),
-                  ),
-                ),
+            _makeOnSeeSet(context, v)
+            // () => Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => Scaffold(
+            //           appBar: AppBar(),
+            //           body: WPostSearchResults.directResultFromSearch(
+            //             searchString,
+            //           ),
+            //         ),
+            //       ),
+            //     ),
           ),
         );
         return null;
@@ -922,6 +960,7 @@ Future<e621.PostSet?> addToSetWithIds({
 // #endregion SetMulti
 
 // #region SetSingle
+/// TODO: Multiselect
 Future<e621.PostSet?> removeFromSetWithPost({
   required BuildContext context,
   required E6PostResponse post,
@@ -944,8 +983,10 @@ Future<e621.PostSet?> removeFromSetWithPost({
           // initialSearchOrder: e621.SetOrder.updatedAt,
           // initialSearchName: null,
           // initialSearchShortname: null,
-          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
           filterResults: (set) => set.postIds.contains(post.id),
+          // onSelected: (e621.PostSet set) => "",
+          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
+          // onMultiselectCompleted: (_) => "",
         ),
         // scrollable: true,
       );
@@ -958,15 +999,13 @@ Future<e621.PostSet?> removeFromSetWithPost({
     if (context.mounted) {
       util.showUserMessage(context: context, content: Text(logString));
     }
-    final searchString =
-        "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
-    var res = await E621
-        .sendRequest(e621.initSetRemovePosts(
-          v.id,
-          [post.id],
-          credentials: E621AccessData.fallback?.cred,
-        ))
-        .toResponse();
+    // final searchString =
+    //     "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
+    var res = await e621.sendRequest(e621.initSetRemovePosts(
+      v.id,
+      [post.id],
+      credentials: E621AccessData.allowedUserDataSafe?.cred,
+    ));
 
     lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
@@ -983,19 +1022,20 @@ Future<e621.PostSet?> removeFromSetWithPost({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(
-                        title: Text("Set ${v!.id}: ${v.shortname}"),
-                      ),
-                      body: WPostSearchResults.directResultFromSearch(
-                        searchString,
-                      ),
-                    ),
-                  ),
-                ),
+            _makeOnSeeSet(context, v)
+            // () => Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => Scaffold(
+            //           appBar: AppBar(
+            //             title: Text("Set ${v!.id}: ${v.shortname}"),
+            //           ),
+            //           body: WPostSearchResults.directResultFromSearch(
+            //             searchString,
+            //           ),
+            //         ),
+            //       ),
+            //     ),
           ),
         );
       }
@@ -1009,7 +1049,8 @@ Future<e621.PostSet?> removeFromSetWithPost({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
+            _makeOnSeeSet(context, v)
+            /* () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
@@ -1019,7 +1060,7 @@ Future<e621.PostSet?> removeFromSetWithPost({
                       ),
                     ),
                   ),
-                ),
+                ), */
           ),
         );
         return null;
@@ -1035,6 +1076,7 @@ Future<e621.PostSet?> removeFromSetWithPost({
   return v;
 }
 
+/// TODO: Multiselect
 Future<e621.PostSet?> addToSetWithPost({
   required BuildContext context,
   required E6PostResponse post,
@@ -1057,9 +1099,11 @@ Future<e621.PostSet?> addToSetWithPost({
           // initialSearchOrder: e621.SetOrder.updatedAt,
           // initialSearchName: null,
           // initialSearchShortname: null,
-          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
           filterResults: (set) => !set.postIds.contains(post.id),
           showCreateSetButton: true,
+          // onSelected: (e621.PostSet set) => "",
+          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
+          // onMultiselectCompleted: (_) => "",
         ),
         // scrollable: true,
       );
@@ -1074,13 +1118,11 @@ Future<e621.PostSet?> addToSetWithPost({
     }
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
-    var res = await E621
-        .sendRequest(e621.initSetAddPosts(
-          v.id,
-          [post.id],
-          credentials: E621AccessData.fallback?.cred,
-        ))
-        .toResponse();
+    var res = await e621.sendRequest(e621.initSetAddPosts(
+      v.id,
+      [post.id],
+      credentials: E621AccessData.allowedUserDataSafe?.cred,
+    ));
 
     lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
@@ -1097,19 +1139,20 @@ Future<e621.PostSet?> addToSetWithPost({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(
-                        title: Text("Set ${v!.id}: ${v.shortname}"),
-                      ),
-                      body: WPostSearchResults.directResultFromSearch(
-                        searchString,
-                      ),
-                    ),
-                  ),
-                ),
+            _makeOnSeeSet(context, v)
+            // () => Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => Scaffold(
+            //           appBar: AppBar(
+            //             title: Text("Set ${v!.id}: ${v.shortname}"),
+            //           ),
+            //           body: WPostSearchResults.directResultFromSearch(
+            //             searchString,
+            //           ),
+            //         ),
+            //       ),
+            //     ),
           ),
         );
       }
@@ -1150,6 +1193,7 @@ Future<e621.PostSet?> addToSetWithPost({
   return v;
 }
 
+/// TODO: Multiselect
 Future<e621.PostSet?> removeFromSetWithId({
   required BuildContext context,
   required int postId,
@@ -1172,8 +1216,10 @@ Future<e621.PostSet?> removeFromSetWithId({
           // initialSearchOrder: e621.SetOrder.updatedAt,
           // initialSearchName: null,
           // initialSearchShortname: null,
-          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
           filterResults: (set) => set.postIds.contains(postId),
+          // onSelected: (e621.PostSet set) => "",
+          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
+          // onMultiselectCompleted: (_) => "",
         ),
         // scrollable: true,
       );
@@ -1186,15 +1232,13 @@ Future<e621.PostSet?> removeFromSetWithId({
     if (context.mounted) {
       util.showUserMessage(context: context, content: Text(logString));
     }
-    final searchString =
-        "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
-    var res = await E621
-        .sendRequest(e621.initSetRemovePosts(
-          v.id,
-          [postId],
-          credentials: E621AccessData.fallback?.cred,
-        ))
-        .toResponse();
+    // final searchString =
+    //     "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
+    var res = await e621.sendRequest(e621.initSetRemovePosts(
+      v.id,
+      [postId],
+      credentials: E621AccessData.allowedUserDataSafe?.cred,
+    ));
 
     lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
@@ -1211,19 +1255,20 @@ Future<e621.PostSet?> removeFromSetWithId({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(
-                        title: Text("Set ${v!.id}: ${v.shortname}"),
-                      ),
-                      body: WPostSearchResults.directResultFromSearch(
-                        searchString,
-                      ),
-                    ),
-                  ),
-                ),
+            _makeOnSeeSet(context, v)
+            // () => Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (_) => Scaffold(
+            //           appBar: AppBar(
+            //             title: Text("Set ${v!.id}: ${v.shortname}"),
+            //           ),
+            //           body: WPostSearchResults.directResultFromSearch(
+            //             searchString,
+            //           ),
+            //         ),
+            //       ),
+            //     ),
           ),
         );
       }
@@ -1238,17 +1283,18 @@ Future<e621.PostSet?> removeFromSetWithId({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(),
-                      body: WPostSearchResults.directResultFromSearch(
-                        searchString,
-                      ),
-                    ),
-                  ),
-                ),
+            _makeOnSeeSet(context, v)
+            // () => Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => Scaffold(
+            //           appBar: AppBar(),
+            //           body: WPostSearchResults.directResultFromSearch(
+            //             searchString,
+            //           ),
+            //         ),
+            //       ),
+            //     ),
           ),
         );
         return null;
@@ -1264,6 +1310,7 @@ Future<e621.PostSet?> removeFromSetWithId({
   return v;
 }
 
+/// TODO: Multiselect
 Future<e621.PostSet?> addToSetWithId({
   required BuildContext context,
   required int postId,
@@ -1286,9 +1333,11 @@ Future<e621.PostSet?> addToSetWithId({
           // initialSearchOrder: e621.SetOrder.updatedAt,
           // initialSearchName: null,
           // initialSearchShortname: null,
-          onSelected: (e621.PostSet set) => Navigator.pop(context, set),
+          onSelected: (e621.PostSet set) => "",
+          // onSelected: (e621.PostSet set) => Navigator.pop(context, set),
           filterResults: (set) => !set.postIds.contains(postId),
           showCreateSetButton: true,
+          onMultiselectCompleted: (_) => "",
         ),
         // scrollable: true,
       );
@@ -1303,13 +1352,11 @@ Future<e621.PostSet?> addToSetWithId({
     }
     final searchString =
         "set:${SearchView.i.preferSetShortname ? v.shortname : v.id}";
-    var res = await E621
-        .sendRequest(e621.initSetAddPosts(
-          v.id,
-          [postId],
-          credentials: E621AccessData.fallback?.cred,
-        ))
-        .toResponse();
+    var res = await e621.sendRequest(e621.initSetAddPosts(
+      v.id,
+      [postId],
+      credentials: E621AccessData.allowedUserDataSafe?.cred,
+    ));
 
     lm.logResponseSmart(res, _logger);
     // if (res.statusCode == 201) {
@@ -1326,19 +1373,20 @@ Future<e621.PostSet?> addToSetWithId({
           content: Text(out),
           action: (
             "See Set",
-            () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(
-                        title: Text("Set ${v!.id}: ${v.shortname}"),
-                      ),
-                      body: WPostSearchResults.directResultFromSearch(
-                        searchString,
-                      ),
-                    ),
-                  ),
-                ),
+            _makeOnSeeSet(context, v)
+            // () => Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => Scaffold(
+            //           appBar: AppBar(
+            //             title: Text("Set ${v!.id}: ${v.shortname}"),
+            //           ),
+            //           body: WPostSearchResults.directResultFromSearch(
+            //             searchString,
+            //           ),
+            //         ),
+            //       ),
+            //     ),
           ),
         );
       }
@@ -1378,6 +1426,36 @@ Future<e621.PostSet?> addToSetWithId({
   }
   return v;
 }
+
+VoidFunction _makeOnSeeSet(BuildContext context, e621.PostSet v) =>
+    () => Navigator.pushNamed(
+          context,
+          "/${SetViewPage.routeSegmentsConst.first}/${v!.id}",
+          arguments: RouteParameterResolver(id: v.id, set: v),
+          /* MaterialPageRoute(
+                    builder: (_) => Scaffold(
+                      appBar: AppBar(
+                        title: Text("Set ${v!.id}: ${v.shortname}"),
+                      ),
+                      body: WPostSearchResults.directResultFromSearch(
+                        searchString,
+                      ),
+                    ),
+                  ), */
+        );
+// () => Navigator.push(
+//       context,
+//       MaterialPageRoute(
+//         builder: (context) => Scaffold(
+//           appBar: AppBar(
+//             title: Text("Set ${v!.id}: ${v.shortname}"),
+//           ),
+//           body: WPostSearchResults.directResultFromSearch(
+//             searchString,
+//           ),
+//         ),
+//       ),
+//     );
 // #endregion SetSingle
 
 // #region Vote
@@ -1400,7 +1478,7 @@ List<Future<E6PostResponse>> voteOnPostsWithPosts({
           postId: post.id,
           score: isUpvote ? 1 : -1,
           noUnvote: noUnvote,
-          credentials: E621AccessData.fallback?.cred,
+          credentials: E621AccessData.allowedUserDataSafe?.cred,
         ),
         _logger,
         lm.LogLevel.INFO);
@@ -1410,7 +1488,7 @@ List<Future<E6PostResponse>> voteOnPostsWithPosts({
         postId: post.id,
         score: isUpvote ? 1 : -1,
         noUnvote: noUnvote,
-        credentials: E621AccessData.fallback?.cred,
+        credentials: E621AccessData.allowedUserDataSafe?.cred,
       ),
     )
         .then(
@@ -1466,7 +1544,7 @@ List<Future<e621.UpdatedScore?>> voteOnPostsWithPostIds({
               postId: postId,
               score: isUpvote ? 1 : -1,
               noUnvote: noUnvote,
-              credentials: E621AccessData.fallback?.cred,
+              credentials: E621AccessData.allowedUserDataSafe?.cred,
             ),
           )
               .then(
@@ -1525,7 +1603,7 @@ Future<E6PostResponse> voteOnPostWithPost({
       postId: post.id,
       score: isUpvote ? 1 : -1,
       noUnvote: noUnvote,
-      credentials: E621AccessData.fallback?.cred,
+      credentials: E621AccessData.allowedUserDataSafe?.cred,
     ),
   )
       .then(
@@ -1579,7 +1657,7 @@ Future<e621.UpdatedScore?> voteOnPostWithId({
       postId: postId,
       score: isUpvote ? 1 : -1,
       noUnvote: noUnvote,
-      credentials: E621AccessData.fallback?.cred,
+      credentials: E621AccessData.allowedUserDataSafe?.cred,
     ),
   )
       .then(
@@ -1630,8 +1708,9 @@ Future<String?> downloadPostRoot(E6PostResponse post) =>
       name: "[${post.id}] ${post.file.url.split(RegExp(r"\\|/")).last}",
       link: saver.LinkDetails(
         link: post.file.url,
-        headers: (E621AccessData.fallbackForced?.cred ?? e621.activeCredentials)
-            ?.addToTyped({}),
+        headers:
+            (E621AccessData.forcedUserDataSafe?.cred ?? e621.activeCredentials)
+                ?.addToTyped({}),
       ),
       // bytes: r.bodyBytes,
       ext: "",
@@ -2103,7 +2182,7 @@ Stream<RemoveFavEvent> testRemoveFavoritesWithPosts({
         result: e621.sendRequest(
           e621.initFavoriteDelete(
             postId: post.id,
-            credentials: E621AccessData.fallback?.cred,
+            credentials: E621AccessData.allowedUserDataSafe?.cred,
           ),
           useBurst: true,
         )..then(
@@ -2180,7 +2259,7 @@ Stream<RemoveFavEvent> testRemoveFavoritesWithIds({
         result: e621.sendRequest(
           e621.initFavoriteDelete(
             postId: post,
-            credentials: E621AccessData.fallback?.cred,
+            credentials: E621AccessData.allowedUserDataSafe?.cred,
           ),
           useBurst: true,
         )..then(
@@ -2228,3 +2307,269 @@ Stream<RemoveFavEvent> testRemoveFavoritesWithIds({
   }
   return ctr.stream;
 }
+
+// #region Tag Based
+void makeNewSearch(
+        {required String searchText, required BuildContext context}) =>
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => buildHomePageWithProviders(
+            searchText: searchText,
+          ),
+        ));
+// void addToCurrentSearch{
+//                     widget.onAddToSearch?.call(tag);
+//                     // widget.tagsToAdd?.add(tag);
+//                     Navigator.pop(context);
+//                   }
+// #region Blacklist
+bool isInLocalBlacklist(String tag, {bool defaultIfNull = true}) =>
+    AppSettings.i?.blacklistedTags.contains(tag) ?? defaultIfNull;
+bool? isInLocalBlacklistSafe(String tag) =>
+    AppSettings.i?.blacklistedTags.contains(tag);
+bool addToLocalBlacklist({
+  required String tag,
+  required BuildContext context,
+  bool pop = true,
+}) {
+  if (pop) Navigator.pop(context);
+  if (AppSettings.i?.blacklistedTags.add(tag) ?? false) {
+    AppSettings.i?.writeToFile();
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool removeFromLocalBlacklist({
+  required String tag,
+  required BuildContext context,
+  bool pop = true,
+}) {
+  if (pop) Navigator.pop(context);
+  if (AppSettings.i?.blacklistedTags.remove(tag) ?? false) {
+    AppSettings.i?.writeToFile();
+    return true;
+  } else {
+    return false;
+  }
+}
+// #endregion Blacklist
+
+// #region Favorite Tags
+bool isInLocalFavorites(String tag, {bool defaultIfNull = true}) =>
+    AppSettings.i?.favoriteTags.contains(tag) ?? defaultIfNull;
+bool? isInLocalFavoritesSafe(String tag) =>
+    AppSettings.i?.favoriteTags.contains(tag);
+bool addToLocalFavorites({
+  required String tag,
+  required BuildContext context,
+  bool pop = true,
+}) {
+  if (pop) Navigator.pop(context);
+  if (AppSettings.i?.favoriteTags.add(tag) ?? false) {
+    AppSettings.i?.writeToFile();
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool removeFromLocalFavorites({
+  required String tag,
+  required BuildContext context,
+  bool pop = true,
+}) {
+  if (pop) Navigator.pop(context);
+  if (AppSettings.i?.favoriteTags.remove(tag) ?? false) {
+    AppSettings.i?.writeToFile();
+    return true;
+  } else {
+    return false;
+  }
+}
+// #endregion Favorite Tags
+
+// #region Saved Searches
+String _defaultFormatter(String search) => search.trim();
+bool isInSavedSearches(
+  String search, [
+  String Function(String) formatter = _defaultFormatter,
+]) =>
+    SavedDataE6.all.any((e) => formatter(e.searchString) == search);
+Future<SavedSearchData?> addToSavedSearches({
+  required String text,
+  required BuildContext context,
+  String? parent,
+  String? title,
+  bool pop = false,
+}) {
+  if (pop) Navigator.pop(context);
+  return showSavedElementEditDialogue(
+    context,
+    initialData: text,
+    initialParent: parent,
+    initialTitle: title ?? text,
+    initialUniqueId: text,
+  ).then((value) => value != null
+      ? SavedDataE6.doOnInit(() {
+          final t = SavedSearchData.fromTagsString(
+            searchString: value.mainData,
+            title: value.title,
+            uniqueId: value.uniqueId ?? "",
+            parent: value.parent ?? "",
+          );
+          SavedDataE6.$addAndSaveSearch(t);
+          return t;
+        })
+      : null);
+}
+
+Future<SavedSearchData?> addToASavedSearch({
+  required String text,
+  required BuildContext context,
+  bool pop = false,
+  // String? parent,
+  // String? title,
+}) {
+  if (pop) Navigator.pop(context);
+  return showDialog<SavedSearchData>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text("Select a search"),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SavedDataE6.buildParentedView(
+            context: context,
+            generateOnTap: (e) => () => Navigator.pop(context, e),
+          ),
+        ),
+      );
+    },
+  ).then((e) => e == null
+      ? null
+      : showSavedElementEditDialogue(
+          // ignore: use_build_context_synchronously
+          context,
+          initialData: "${e.searchString} $text",
+          initialParent: e.parent,
+          initialTitle: e.title,
+          initialUniqueId: e.uniqueId,
+          initialEntry: e,
+        ).then((v) {
+          if (v == null) return null;
+          final r = SavedSearchData.fromTagsString(
+            searchString: v.mainData,
+            title: v.title,
+            uniqueId: v.uniqueId ?? "",
+            parent: v.parent ?? "",
+          );
+          SavedDataE6.$editAndSave(original: e, edited: r);
+          return r;
+        }));
+}
+// #endregion Saved Searches
+
+void searchForTagWikiInBrowser(
+  String tag, [
+  BuildContext? context,
+  bool pop = true,
+]) {
+  final url = Uri.parse("https://e621.net/wiki_pages/show_or_new?title=$tag");
+  util.defaultTryLaunchUrl(url);
+  if (pop) util.contextCheck(context, (c) => Navigator.pop(c));
+}
+
+void popUpTagWikiPage({
+  required String tag,
+  required BuildContext context,
+  bool pop = true,
+}) {
+  if (pop) Navigator.pop(context);
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: AppBar(title: Text(tag)),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: WikiPageLoader.fromTitle(
+            title: tag,
+            isFullPage: false,
+          ),
+        ),
+      ),
+    ),
+  );
+  /* showDialog(
+    context: context,
+    builder: (context) {
+      e621.WikiPage? result;
+      Future<e621.WikiPage>? f;
+      f = e621
+          .sendRequest(E621.initWikiTagSearchRequest(tag: tag))
+          .then((value) => e621.WikiPage.fromRawJson(value.body));
+      return AlertDialog(
+        content: SizedBox(
+          width: double.maxFinite,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              f
+                  ?.then((v) => setState(() {
+                        result = v;
+                        f?.ignore();
+                        f = null;
+                      }))
+                  .ignore();
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (f != null)
+                      // util.spinnerExpanded
+                      const CircularProgressIndicator()
+                    else
+                      result != null
+                          ? Text.rich(dt.parse(result!.body))
+                          : const Text("Failed to load"),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    },
+  ); */
+}
+
+bool isSubscribed(String tag) =>
+    SubscriptionManager.subscriptions.any((e) => e.tag == tag);
+Future<bool> addSubscription(
+  String tag,
+  int lastId, [
+  BuildContext? context,
+  bool pop = true,
+]) {
+  if (pop) util.contextCheck(context, (context) => Navigator.pop(context));
+  return SubscriptionManager.subscriptions
+          .add(TagSubscription(tag: tag, lastId: lastId))
+      ? SubscriptionManager.writeToStorage()
+      : Future.value(false);
+}
+
+Future<bool> removeSubscription(
+  String tag,
+  int lastId, [
+  BuildContext? context,
+  bool pop = true,
+]) {
+  if (pop) util.contextCheck(context, (context) => Navigator.pop(context));
+  return SubscriptionManager.subscriptions.remove(
+          SubscriptionManager.subscriptions.firstWhere((e) => e.tag == tag))
+      ? SubscriptionManager.writeToStorage()
+      : Future.value(false);
+}
+// #endregion Tag Based

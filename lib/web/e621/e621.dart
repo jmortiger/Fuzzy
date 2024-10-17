@@ -52,18 +52,18 @@ sealed class E621 {
   static const int softRateLimit = 2;
   static const int idealRateLimit = 3;
   static final http.Client client = http.Client();
-  static const maxPostsPerSearch = e621.maxPostsPerSearch;
-  static const maxPageNumber = e621.maxPageNumber;
   static DateTime timeOfLastRequest =
       DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   static ListQueue<DateTime> burstTimes = ListQueue(60);
 
   // #region User Account Data
   static String? get usernameFormatted =>
-      loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username;
+      loggedInUser.$Safe?.name ?? E621AccessData.forcedUserDataSafe?.username;
   static final loggedInUser = LateInstance<e621.UserLoggedIn>();
+  static int get currentTagQueryLimit =>
+      loggedInUser.$Safe?.tagQueryLimit ?? e621.maxTagsPerSearch;
 
-  /// Won't update unless [user] is non-null and of type [e621.UserLoggedIn] or (if [alwaysUpdateMatchingUser] is `true`) if [loggedInUser] is assigned and is the same user (i.e. have matching [e621.User.id]s).
+  /// Won't update unless [user] is non-null and of type [e621.UserLoggedIn] or (if [alwaysUpdateMatchingUser] is `true`) if [loggedInUser] is assigned and is the same user (i.e. have matching [e621.User.id]s). Will update any fields available.
   static bool tryUpdateLoggedInUser(
     e621.User? user, {
     bool alwaysUpdateMatchingUser = true,
@@ -97,7 +97,7 @@ sealed class E621 {
   static LazyInitializer<int> _deletedFavs = LazyInitializer(() =>
       E621.findTotalPostNumber(
           tags:
-              "fav:${E621AccessData.fallbackForced?.username} status:deleted"));
+              "fav:${E621AccessData.forcedUserDataSafe?.username} status:deleted"));
   static int? getDeletedFavsSync() {
     if (_deletedFavs.isAssigned) {
       return _deletedFavs.$;
@@ -106,7 +106,7 @@ sealed class E621 {
         _logger.severe(e, e, s);
         _deletedFavs = LazyInitializer(() => E621.findTotalPostNumber(
             tags:
-                "fav:${E621AccessData.fallbackForced?.username} status:deleted"));
+                "fav:${E621AccessData.forcedUserDataSafe?.username} status:deleted"));
         return e;
       });
     }
@@ -122,20 +122,20 @@ sealed class E621 {
       } catch (e) {
         _deletedFavs = LazyInitializer(() => E621.findTotalPostNumber(
             tags:
-                "fav:${E621AccessData.fallbackForced?.username} status:deleted"));
+                "fav:${E621AccessData.forcedUserDataSafe?.username} status:deleted"));
         return null;
       }
     }
   }
 
-  static FutureOr<e621.User?> retrieveUserNonDetailed(
-      {e621.User? user, E621AccessData? data, String? username}) {
+  static FutureOr<e621.User?> retrieveUserNonDetailed({
+    e621.User? user,
+    E621AccessData? data,
+    String? username,
+  }) {
     if (user != null) return user;
     _logger.finest("No User obj, trying access data");
-    var d = (data ??
-            E621AccessData.userData.$Safe ??
-            (isDebug ? E621AccessData.devAccessData.$Safe : null))
-        ?.cred;
+    var d = (data ?? E621AccessData.forcedUserDataSafe)?.cred;
     if (d == null) {
       _logger.finest("No access data, trying by name");
     }
@@ -169,6 +169,8 @@ sealed class E621 {
   /// 1. [UserDetailed]
   /// 1. [UserLoggedIn]
   /// 1. [User]
+  ///
+  /// Will prioritize
   static FutureOr<e621.User?> retrieveUserMostSpecific({
     e621.User? user,
     E621AccessData? data,
@@ -188,10 +190,7 @@ sealed class E621 {
     } else {
       _logger.finest("No User obj, trying id");
     }
-    var d = (data ??
-            E621AccessData.userData.$Safe ??
-            (isDebug ? E621AccessData.devAccessData.$Safe : null))
-        ?.cred;
+    var d = (data ?? E621AccessData.forcedUserDataSafe)?.cred;
     if (id != null) {
       if (d == null) {
         _logger.info("No credential data, can't get logged in data.");
@@ -265,7 +264,7 @@ sealed class E621 {
 
   // #endregion Saved Search Parsing
   static String get userFavoriteSearch => r"(?<=^|\s|\+)fav:"
-      "${loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username ?? r"$^"}"
+      "${loggedInUser.$Safe?.name ?? E621AccessData.forcedUserDataSafe?.username ?? r"$^"}"
       r"(?=$|\s)";
   static RegExp get userFavoriteSearchRegex =>
       RegExp(userFavoriteSearch, caseSensitive: false);
@@ -362,6 +361,7 @@ sealed class E621 {
   }
 
   /// Won't blow the rate limit
+  @Deprecated("Use e621.sendRequest")
   static Future<http.StreamedResponse> sendRequest(
     http.Request request, {
     bool useBurst = false,
@@ -634,7 +634,7 @@ sealed class E621 {
 
   static Future<e621.UserDetailed?> getUserDetailedFromId(int id,
       [e621.E6Credentials? c]) {
-    var d = c ?? E621AccessData.fallback?.cred;
+    var d = c ?? E621AccessData.allowedUserDataSafe?.cred;
     if (d == null) {
       _logger.finest("No access data");
     }
@@ -654,8 +654,8 @@ sealed class E621 {
       (logRequest
           ? logAndSendRequest(
               e621.initUserGet(userId, credentials: credentials))
-          : e621.sendRequest(
-              e621.initUserGet(userId, credentials: credentials)))
+          : e621
+              .sendRequest(e621.initUserGet(userId, credentials: credentials)))
         ..then((v) {
           final t = resolveGetUserFuture(v);
           if (t is e621.UserLoggedInDetail) loggedInUser.$ = t;
@@ -745,9 +745,26 @@ sealed class E621 {
     var t1 = await t.stream.bytesToString();
     E6Posts? t2;
     try {
-      t2 = E6PostsSync.fromJson(jsonDecode(t1));
-    } catch (e) {
-      _print("performPostSearch: $e");
+      t2 = E6PostsSync.fromRawJson(t1);
+    } catch (e, s) {
+      if (t.statusCode != 200) {
+        _logger.warning(
+            "performPostSearch: ${t.statusCode}: ${t.reasonPhrase} ($t1)",
+            e,
+            s);
+      } else {
+        _logger.finest(
+            "Probably no items in results for:"
+            "\n\ttags: $tags"
+            "\n\tlimit: $limit"
+            "\n\tpage: ${encodeValidPageParameterFromOptions(
+              pageModifier: pageModifier,
+              id: postId,
+              pageNumber: pageNumber,
+            )}",
+            e,
+            s);
+      }
     }
     var a2 = SearchResultArgs.fromSearchArgs(
       responseBody: t1,
@@ -827,7 +844,7 @@ sealed class E621 {
     final String? apiKey,
     final bool checkOnNonFullPages = false,
   }) async {
-    const sLimit = e621.maxPostsPerSearch;
+    const sLimit = e621.maxPostSearchLimit;
     tags = fillTagTemplate(tags);
     final cred = getAuth(username, apiKey);
     f({
@@ -1056,13 +1073,13 @@ sealed class E621 {
               username: username!,
               apiKey: apiKey!,
             )
-          : E621AccessData.fallback?.cred;
+          : E621AccessData.allowedUserDataSafe?.cred;
   static String? getValidUsername(
     String? username,
   ) =>
       (username?.isNotEmpty ?? false)
           ? username
-          : E621AccessData.fallback?.cred.username;
+          : E621AccessData.allowedUserDataSafe?.cred.username;
   /* static String? getValidApiKey(
     String? apiKey,
   ) =>
@@ -1099,6 +1116,7 @@ sealed class E621 {
             // initialSearchShortname: null,
             onSelected: (e621.PostSet set) => Navigator.pop(context, set),
             showCreateSetButton: true,
+            onMultiselectCompleted: null,
           ),
           // scrollable: true,
         );
@@ -1110,7 +1128,7 @@ sealed class E621 {
           .sendRequest(e621.initSetAddPosts(
             v.id,
             [postListing.id],
-            credentials: cred ?? E621AccessData.fallback?.cred,
+            credentials: cred ?? E621AccessData.allowedUserDataSafe?.cred,
           ))
           .toResponse();
       if (res.statusCode == 201) {
@@ -1322,6 +1340,8 @@ Future<({String username, String apiKey})?> launchLogInDialog(
         E621AccessData.withDefaultAssured(
                 apiKey: v.apiKey, username: v.username)
             .then((v2) {
+          // TODO: Multiple accounts
+          // ignore: deprecated_member_use_from_same_package
           E621AccessData.userData.$ = v2;
           E621AccessData.tryWrite().then<void>(
             (success) => success
@@ -1343,15 +1363,10 @@ Future<({String username, String apiKey})?> launchLogInDialog(
       }
       return v;
     });
-FutureOr<void> showSavedE621AccessDataFile(BuildContext context) =>
-    context.mounted
-        ? showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              content: Text(
-                E621AccessData.tryLoadAsStringSync(E621AccessData.userData.$) ??
-                    "",
-              ),
-            ),
-          )
-        : null;
+FutureOr<void> showSavedE621AccessDataFile(BuildContext ctx) => ctx.mounted
+    ? showDialog(
+        context: ctx,
+        builder: (_) => AlertDialog(
+              content: Text(E621AccessData.tryLoadAsStringSync() ?? ""),
+            ))
+    : "";

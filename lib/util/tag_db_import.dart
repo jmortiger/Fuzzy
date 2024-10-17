@@ -32,6 +32,10 @@ Future<String> _decodeFromServer(http.StreamedResponse data) {
   return data.stream.toBytes().then((v) => _decodeFromList(v));
 }
 
+Future<String> _decodeFromServerNonStreamed(http.Response data) {
+  return _decodeFromList(data.bodyBytes);
+}
+
 Future<String> _decodeFromList(List<int> data) {
   return _fromList(a.GZipDecoder().decodeBytes(data));
 }
@@ -76,6 +80,14 @@ Future<String> processPlaintextData<T>(
           ? _decodeFromServer(d)
           : throw UnsupportedError(
               "Uncompressed StreamedResponse not supported"),
+      Future<http.Response> d => isCompressed
+          ? d.then((v) => _decodeFromServerNonStreamed(v))
+          //_decodeFromServerNonStreamed(await d)
+          : throw UnsupportedError(
+              "Uncompressed Future<Response> not supported"),
+      http.Response d => isCompressed
+          ? _decodeFromServerNonStreamed(d)
+          : throw UnsupportedError("Uncompressed Response not supported"),
       List<int> d => isCompressed ? _decodeFromList(d) : _fromList(d),
       File d => isCompressed ? _decodeFromFileIo(d) : d.readAsString(),
       dynamic f =>
@@ -146,7 +158,8 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
             _logger.severe(e, e, s);
             return await compute(
               processCompressedTagDbData,
-              await E621.sendRequest(e621.initDbExportTagsGet()),
+              // await E621.sendRequest(e621.initDbExportTagsGet()),
+              await e621.sendRequest(e621.initDbExportTagsGet()),
             );
           }
         }
@@ -166,7 +179,8 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
       _logger.severe(e, e, s);
       return await compute(
         processCompressedTagDbData,
-        await E621.sendRequest(e621.initDbExportTagsGet()),
+        // await E621.sendRequest(e621.initDbExportTagsGet()),
+        await e621.sendRequest(e621.initDbExportTagsGet()),
       );
     }
   }
@@ -174,7 +188,8 @@ final LazyInitializer<TagDB> tagDbLazy = LazyInitializer(() async {
 
 Future<String> getDatabaseFileFromServer() async =>
     processCompressedPlaintextData(
-        await E621.sendRequest(e621.initDbExportTagsGet()));
+        // await E621.sendRequest(e621.initDbExportTagsGet()));
+        await e621.sendRequest(e621.initDbExportTagsGet()));
 // Future<String> getDatabaseFileFromServer() async => compute(
 //     processCompressedPlaintextData,
 //     await E621.sendRequest(e621.initDbExportTagsGet()));

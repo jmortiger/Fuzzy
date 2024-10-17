@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fuzzy/i_route.dart';
+import 'package:fuzzy/main.dart' show routeLogger;
 import 'package:fuzzy/pages/error_page.dart';
-import 'package:fuzzy/pages/settings_page.dart';
+import 'package:fuzzy/pages/post_view_page.dart';
+import 'package:fuzzy/pages/settings_page.dart' as w;
+import 'package:fuzzy/widget_lib.dart' as w;
 import 'package:fuzzy/util/string_comparator.dart';
 import 'package:fuzzy/util/util.dart' as util;
 import 'package:fuzzy/util/tag_db_import.dart' as tag_d_b;
@@ -11,6 +14,7 @@ import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:e621/e621.dart' as e621;
 import 'package:fuzzy/log_management.dart' as lm;
+// import 'package:fuzzy/web/models/image_listing.dart';
 import 'package:fuzzy/widgets/w_post_thumbnail.dart';
 import 'package:j_util/j_util_full.dart';
 
@@ -190,7 +194,7 @@ class _EditPostPageState extends State<EditPostPage> {
                 postIsRatingLocked: postIsRatingLocked,
                 postIsNoteLocked: postIsNoteLocked,
                 postEditReason: postEditReason,
-                credentials: E621AccessData.fallback?.cred,
+                credentials: E621AccessData.allowedUserDataSafe?.cred,
               );
               lm.logRequest(req, logger, lm.LogLevel.INFO);
               if (debugDeactivate) return;
@@ -220,7 +224,7 @@ class _EditPostPageState extends State<EditPostPage> {
                 postIsRatingLocked: postIsRatingLocked,
                 postIsNoteLocked: postIsNoteLocked,
                 postEditReason: postEditReason,
-                credentials: E621AccessData.fallback?.cred,
+                credentials: E621AccessData.allowedUserDataSafe?.cred,
               );
               lm.logRequest(req, logger, lm.LogLevel.INFO);
             }
@@ -279,7 +283,7 @@ class _EditPostPageState extends State<EditPostPage> {
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: WEnumField(
+              child: w.WEnumField(
                 name: "Rating",
                 getVal: () =>
                     PostRating.getFromJsonResponse(postRating ?? post.rating),
@@ -772,11 +776,148 @@ class _WTagItemState extends State<WTagItem> {
 
 // typedef EditPostPage
 class EditPostPageLoader extends StatelessWidget
-    implements IRoute<EditPostPageLoader> {
+    with IRoute<EditPostPageLoader> {
   static lm.FileLogger get logger => _EditPostPageState.logger;
-  static const routeNameString = "/post_edit";
+  // #region Routing
+  static const routeNameConst = "/post_edit",
+      routeSegmentsConst = ["post_edit"],
+      hasStaticPathConst = false;
+  static const routePathConst = "/posts/${IRoute.idPathParameter}";
   @override
-  String get routeName => routeNameString;
+  get routeSegmentsFolded => routePathConst;
+  static getPathParameterParser(int i) =>
+      IRoute.pathParametersMethod[routeSegmentsConst[i]];
+  static bool acceptsRoutePath(RouteSettings settings) {
+    final Uri? uri;
+    if (settings.name == null ||
+        (uri = Uri.tryParse(settings.name!)) == null ||
+        uri!.pathSegments.length != routeSegmentsConst.length ||
+        hasStaticPathConst &&
+            uri.pathSegments.anyFull((e, i, _) => e != routeSegmentsConst[i])) {
+      return false;
+    }
+    final id = uri.pathSegments.foldTo<int?>(null, (p, e, i, _) {
+          if (e == routeSegmentsConst[i]) return p;
+          if (p != null) {
+            routeLogger.warning(
+                "[PostViewPage.acceptsRoutePath] Shouldn't be able to have "
+                "2 id param slots in path.\n\t"
+                "settings.name: ${settings.name}");
+          }
+          return getPathParameterParser(i)?.call(e)!;
+        },
+            breakIfTrue: (_, e, i, __) => !(e != routeSegmentsConst[i] &&
+                getPathParameterParser(i)?.call(e) == null)) ??
+        RouteParameters.retrieveIdFromArguments(settings);
+    return id != null;
+  }
+
+  static Widget generateWidgetForRouteStatic(RouteSettings settings) {
+    final id = Uri.parse(settings.name!).pathSegments.foldTo<int?>(null,
+            (p, e, i, _) {
+          if (e == routeSegmentsConst[i]) return p;
+          if (p != null) {
+            routeLogger.warning(
+                "[PostViewPage.acceptsRoutePath] Shouldn't be able to have "
+                "2 id param slots in path.\n\t"
+                "settings.name: ${settings.name}");
+          }
+          return getPathParameterParser(i)?.call(e)!;
+        },
+            breakIfTrue: (_, e, i, __) => !(e != routeSegmentsConst[i] &&
+                getPathParameterParser(i)?.call(e) == null)) ??
+        RouteParameters.retrieveIdFromArguments(settings)!;
+    final post = RouteParameters.retrievePostFromArguments(settings);
+    return post == null
+        ? EditPostPageLoader(postId: id)
+        : EditPostPage(
+            post: post is E6PostResponse
+                ? post
+                : E6PostResponse.fromBaseInstance(post));
+  }
+
+  static Widget? tryGenerateWidgetForRouteStatic(RouteSettings settings) {
+    final Uri? uri;
+    if ((uri = IRoute.retrieveValidUri(
+            settings, routeSegmentsConst, hasStaticPathConst)) ==
+        null) {
+      return null;
+    }
+    final id = uri!.pathSegments.foldTo<int?>(null, (p, e, i, _) {
+          if (e == routeSegmentsConst[i]) return p;
+          if (p != null) {
+            routeLogger.warning(
+                "[PostViewPage.acceptsRoutePath] Shouldn't be able to have "
+                "2 id param slots in path.\n\t"
+                "settings.name: ${settings.name}");
+          }
+          return getPathParameterParser(i)?.call(e)!;
+        },
+            breakIfTrue: (_, e, i, __) => !(e != routeSegmentsConst[i] &&
+                getPathParameterParser(i)?.call(e) == null)) ??
+        RouteParameters.retrieveIdFromArguments(settings);
+    if (id == null) return null;
+    final post = RouteParameters.retrievePostFromArguments(settings);
+    return post == null
+        ? EditPostPageLoader(postId: id)
+        : EditPostPage(
+            post: post is E6PostResponse
+                ? post
+                : E6PostResponse.fromBaseInstance(post));
+  }
+
+  @override
+  get routeName => routeNameConst;
+  @override
+  get routeSegments => routeSegmentsConst;
+  @override
+  get hasStaticPath => false;
+
+  @override
+  bool acceptsRoute(RouteSettings settings) => acceptsRoutePath(settings);
+
+  @override
+  Widget generateWidgetForRoute(RouteSettings settings) =>
+      generateWidgetForRouteStatic(settings);
+
+  @override
+  Widget? tryGenerateWidgetForRoute(RouteSettings settings) =>
+      tryGenerateWidgetForRouteStatic(settings);
+  static Widget? legacyBuilder(RouteSettings settings, int? id, Uri url,
+      Map<String, String> parameters) {
+    try {
+      try {
+        final v = (settings.arguments as dynamic)!.post as E6PostResponse;
+        return EditPostPage(post: v);
+      } catch (e) {
+        id ??= (settings.arguments as PostViewParameters?)?.id ??
+            int.tryParse(parameters["postId"] ?? "");
+        if (id != null) {
+          return EditPostPageLoader(postId: id);
+        } else {
+          routeLogger.severe(
+            "Routing failure\n"
+            "\tRoute: ${settings.name}\n"
+            "\tId: $id\n"
+            "\tArgs: ${settings.arguments}",
+          );
+          return null;
+        }
+      }
+    } catch (e, s) {
+      routeLogger.severe(
+        "Routing failure\n"
+        "\tRoute: ${settings.name}\n"
+        "\tId: $id\n"
+        "\tArgs: ${settings.arguments}",
+        e,
+        s,
+      );
+      return null;
+    }
+  }
+
+  // #endregion Routing
   final int? postId;
   final E6PostResponse? post;
 
@@ -797,7 +938,7 @@ class EditPostPageLoader extends StatelessWidget
         : FutureBuilder(
             future: e621.sendRequest(e621.initPostGet(
               postId!,
-              credentials: E621AccessData.fallbackForced?.cred,
+              credentials: E621AccessData.forcedUserDataSafe?.cred,
             )),
             builder: (context, snapshot) {
               if (snapshot.hasData) {

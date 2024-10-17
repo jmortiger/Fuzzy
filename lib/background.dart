@@ -22,6 +22,10 @@ void callbackDispatcher() {
   });
 }
 
+/// Must be after
+/// * `WidgetsFlutterBinding.ensureInitialized();` (I believe)
+///
+/// TODO: Notifications
 Future<void> init() async {
   // await flutterLocalNotificationsPlugin.initialize(initializationSettings,
   //     onDidReceiveNotificationResponse: onDidReceiveNotificationResponse);

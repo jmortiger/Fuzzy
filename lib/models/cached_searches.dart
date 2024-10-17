@@ -2,7 +2,8 @@ import 'dart:async' as async_lib;
 import 'dart:convert';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/search_data.dart';
-import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/util/util.dart' hide pref;
+import 'package:fuzzy/util/shared_preferences.dart';
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/serialization.dart';
 
@@ -21,6 +22,7 @@ class CachedSearches {
   static const fileName = "CachedSearches.json";
 
   static final file = LazyInitializer.immediate(() async {
+    // TODO: Pull into initializers
     E621.searchBegan.subscribe(onSearchBegan);
     try {
       return Platform.isWeb
@@ -33,7 +35,8 @@ class CachedSearches {
     }
   });
 
-  static async_lib.FutureOr<List<SearchData>> loadFromStorageAsync() async {
+  static async_lib.FutureOr<List<SearchData>> loadFromStorageAsync(
+      [void _]) async {
     changed.subscribe(CachedSearches._save);
     var t = await (await file.getItem())?.readAsString();
     return (t != null)
@@ -94,7 +97,7 @@ class CachedSearches {
   }
 
   static List<SearchData> loadFromJson(List json) =>
-      searches = json.mapAsList((e, i, l) => SearchData.fromJson(e));
+      searches = json.map((e) => SearchData.fromJson(e)).toList();
   static List toJson() => _searches;
   // #endregion IO
 

@@ -1,22 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
 import 'package:fuzzy/log_management.dart' as lm;
+import 'package:fuzzy/main.dart';
+import 'package:fuzzy/models/app_settings.dart';
+import 'package:fuzzy/models/selected_posts.dart';
 import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/util/util.dart';
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/dtext_formatter.dart' as dt;
+import 'package:fuzzy/web/e621/e6_actions.dart' as esa;
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
+import 'package:fuzzy/widget_lib.dart' as w;
 
 import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
+import 'package:provider/provider.dart';
 
-class PoolViewPage extends StatefulWidget implements IRoute<PoolViewPage> {
-  static const routeNameString = "/poolView";
+// TODO: Add pool:### & set:## support to blacklist
+class PoolViewPage extends StatefulWidget with IRoute<PoolViewPage> {
+  // #region Routing
+  static const routeNameConst = "/pools",
+      routeSegmentsConst = ["pools", IRoute.idPathParameter],
+      routePathConst = "/pools/${IRoute.idPathParameter}",
+      hasStaticPathConst = false;
   @override
-  get routeName => routeNameString;
+  get routeName => routeNameConst;
+  @override
+  get hasStaticPath => hasStaticPathConst;
+  @override
+  get routeSegments => routeSegmentsConst;
+  @override
+  get routeSegmentsFolded => routePathConst;
+  @override
+  Widget generateWidgetForRoute(RouteSettings settings) =>
+      generateWidgetForRouteStatic(settings);
+
+  static Widget generateWidgetForRouteStatic(RouteSettings settings) {
+    final url = Uri.parse(settings.name!);
+    final parameters = tryParsePathToQuery(url);
+    int? id;
+    try {
+      id = (settings.arguments as dynamic)?.id ??
+          int.tryParse(parameters["id"] ?? "");
+    } catch (_) {
+      id = int.tryParse(parameters["id"] ?? "");
+    }
+    return PoolViewPageLoader.legacyBuilder(settings, id, url, parameters)!;
+  }
+
   final PoolModel pool;
   const PoolViewPage({super.key, required this.pool});
+  // #endregion Routing
 
   @override
   State<PoolViewPage> createState() => _PoolViewPageState();
@@ -32,6 +67,9 @@ class _PoolViewPageState extends State<PoolViewPage> {
   Future<List<E6PostResponse>>? loadingPosts;
   int currentPage = 1;
   JPureEvent rebuild = JPureEvent();
+  String get searchString =>
+      (SearchView.i.preferPoolName ? widget.pool.searchByName : null) ??
+      widget.pool.searchById;
   @override
   void initState() {
     super.initState();
@@ -66,8 +104,98 @@ class _PoolViewPageState extends State<PoolViewPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-            "Pool ${widget.pool.id}: ${widget.pool.namePretty} by ${pool.creatorName} (${pool.creatorId})"),
+        title: SelectableText.rich(
+          TextSpan(
+              text: "Pool ${widget.pool.id}: ${widget.pool.namePretty} by ",
+              children: [
+                WidgetSpan(
+                    child: w.UserIdentifier(
+                  id: pool.creatorId,
+                  name: pool.creatorName,
+                ))
+                // WidgetSpan(
+                //     child: Tooltip(
+                //   message: "Open User #${pool.creatorId}",
+                //   // TODO: Linkify
+                //   // child: SelectableText(pool.creatorName),
+                //   child: GestureDetector(
+                //     onTap: () => defaultTryLaunchE6Url(
+                //         context: context,
+                //         url: e621.baseUri
+                //             .replace(path: "users/${pool.creatorId}")),
+                //     child: Text(pool.creatorName),
+                //   ),
+                // ))
+              ]),
+          maxLines: 1,
+        ),
+        actions: [
+          SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: StatefulBuilder(builder: (context, setState) {
+                return Row(mainAxisSize: MainAxisSize.min, children: [
+                  /* if ((widget.pool.searchByName != null
+                            ? !esa.isInSavedSearches(widget.pool.searchByName!)
+                            : true) &&
+                        !esa.isInSavedSearches(widget.pool.searchById)) */
+                  TextButton(
+                    onPressed: () => esa
+                        .addToSavedSearches(
+                          text: searchString,
+                          context: context,
+                          parent: "Pool",
+                          title: widget.pool.namePretty,
+                        )
+                        .then((v) => v != null ? setState(() {}) : ""),
+                    child: const Text("Add to Saved Searches"),
+                  ),
+                  // else if (esa.isInSavedSearches(searchString))
+                  //   TextButton(
+                  //     onPressed: () => esa.removeFromSavedSearches(
+                  //       text: searchString,
+                  //       context: context,
+                  //       parent: "Pool",
+                  //       title: widget.pool.namePretty,
+                  //     ),
+                  //     child: const Text("Add to Saved Searches"),
+                  //   ),
+                  TextButton(
+                    onPressed: () => esa.addToASavedSearch(
+                      text: searchString,
+                      context: context,
+                    ),
+                    child: const Text("Add to a Saved Search"),
+                  ),
+                  if ((widget.pool.searchByName != null
+                          ? !esa.isSubscribed(widget.pool.searchByName!)
+                          : true) &&
+                      !esa.isSubscribed(widget.pool.searchById))
+                    TextButton(
+                      onPressed: () => esa
+                          .addSubscription(
+                            searchString,
+                            widget.pool.postIds.last,
+                            context,
+                            false,
+                          )
+                          .then((v) => v ? setState(() {}) : ""),
+                      child: const Text("Subscribe"),
+                    )
+                  else
+                    TextButton(
+                      onPressed: () => esa
+                          .removeSubscription(
+                            searchString,
+                            widget.pool.postIds.last,
+                            context,
+                            false,
+                          )
+                          .then((v) => v ? setState(() {}) : ""),
+                      child: const Text("Unsubscribe"),
+                    ),
+                ]);
+              }))
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -89,6 +217,7 @@ class _PoolViewPageState extends State<PoolViewPage> {
                   expectedCount: posts.length,
                   disallowSelections: true,
                   stripToGridView: true,
+                  useProviderForPosts: false,
                   fireRebuild: rebuild,
                 ),
               ),
@@ -135,27 +264,91 @@ class _PoolViewPageState extends State<PoolViewPage> {
 
 typedef PoolViewParameters = ({e621.Pool? pool, int? id});
 
-class PoolViewPageBuilder extends StatelessWidget
-    implements IRoute<PoolViewPageBuilder> {
-  static const routeNameString = "/pools";
+/// TODO: Add support for using pool name
+class PoolViewPageLoader extends StatelessWidget
+    with IRoute<PoolViewPageLoader> {
+  // #region Routing
+  static const routeNameConst = "/pools",
+      routePathConst = "/pools/${IRoute.idPathParameter}",
+      routeSegmentsConst = ["pools", IRoute.idPathParameter],
+      hasStaticPathConst = false;
   @override
-  get routeName => routeNameString;
-  final int poolId;
+  get routeName => routeNameConst;
+  @override
+  get hasStaticPath => hasStaticPathConst;
+  @override
+  get routeSegments => routeSegmentsConst;
+  @override
+  get routeSegmentsFolded => routePathConst;
+  @override
+  Widget generateWidgetForRoute(RouteSettings settings) =>
+      generateWidgetForRouteStatic(settings);
+  static Widget generateWidgetForRouteStatic(RouteSettings settings) {
+    final url = Uri.parse(settings.name!);
+    final parameters = tryParsePathToQuery(url);
+    int? id;
+    try {
+      id = (settings.arguments as dynamic)?.id ??
+          int.tryParse(parameters["id"] ?? "");
+    } catch (_) {
+      id = int.tryParse(parameters["id"] ?? "");
+    }
+    return PoolViewPageLoader.legacyBuilder(settings, id, url, parameters)!;
+  }
 
-  const PoolViewPageBuilder({
-    required this.poolId,
+  static Widget? legacyBuilder(RouteSettings settings, int? id, Uri url,
+      Map<String, String> parameters) {
+    try {
+      try {
+        final v = (settings.arguments as dynamic).pool!;
+        return ChangeNotifierProvider(
+          create: (_) => SelectedPosts(),
+          child: PoolViewPage(
+              pool: v is PoolModel ? v : PoolModel.fromInstance(v)),
+        );
+      } catch (e) {
+        id ??= (settings.arguments as PoolViewParameters?)?.id;
+        if (id != null) {
+          return ChangeNotifierProvider(
+              create: (_) => SelectedPosts(),
+              child: PoolViewPageLoader(id: id));
+        } else {
+          routeLogger.severe(
+            "Routing failure\n"
+            "\tRoute: ${settings.name}\n"
+            "\tId: $id\n"
+            "\tArgs: ${settings.arguments}",
+          );
+          return null;
+        }
+      }
+    } catch (e, s) {
+      routeLogger.severe(
+        "Routing failure\n"
+        "\tRoute: ${settings.name}\n"
+        "\tId: $id\n"
+        "\tArgs: ${settings.arguments}",
+        e,
+        s,
+      );
+      return null;
+    }
+  }
+  // #endregion Routing
+
+  final int id;
+
+  const PoolViewPageLoader({
+    required this.id,
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: E621
-          .sendRequest(e621.initPoolGet(poolId))
-          .toResponse()
-          .then((v) => PoolViewPage(
-                pool: PoolModel.fromRawJson(v.body),
-              )),
+      future: e621.sendRequest(e621.initPoolGet(id)).then((v) => PoolViewPage(
+            pool: PoolModel.fromRawJson(v.body),
+          )),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           try {
@@ -175,7 +368,7 @@ class PoolViewPageBuilder extends StatelessWidget
           );
         } else {
           return Scaffold(
-            appBar: AppBar(title: Text("Pool $poolId")),
+            appBar: AppBar(title: Text("Pool $id")),
             body: const Column(children: [spinnerExpanded]),
           );
         }
@@ -184,10 +377,38 @@ class PoolViewPageBuilder extends StatelessWidget
   }
 }
 
-class SetViewPage extends StatefulWidget implements IRoute<SetViewPage> {
-  static const routeNameString = "/setView";
+class SetViewPage extends StatefulWidget with IRoute<SetViewPage> {
+  // #region Routing
+  // static const routeNameConst = "/setView",
+  static const routeNameConst = "/post_sets",
+      routePathConst = "/post_sets/${IRoute.idPathParameter}",
+      routeSegmentsConst = ["post_sets", IRoute.idPathParameter],
+      hasStaticPathConst = false;
   @override
-  get routeName => routeNameString;
+  get routeName => routeNameConst;
+  @override
+  get hasStaticPath => hasStaticPathConst;
+  @override
+  get routeSegments => routeSegmentsConst;
+  @override
+  get routeSegmentsFolded => routePathConst;
+  @override
+  Widget generateWidgetForRoute(RouteSettings settings) =>
+      generateWidgetForRouteStatic(settings);
+  static Widget generateWidgetForRouteStatic(RouteSettings settings) {
+    final url = Uri.parse(settings.name!),
+        parameters = tryParsePathToQuery(url);
+    int? id;
+    try {
+      id = (settings.arguments as dynamic)?.id ??
+          int.tryParse(parameters["id"] ?? "");
+    } catch (_) {
+      id = int.tryParse(parameters["id"] ?? "");
+    }
+    return SetViewPageLoader.legacyBuilder(settings, id, url, parameters)!;
+  }
+
+  // #endregion Routing
   final SetModel set;
   const SetViewPage({super.key, required this.set});
 
@@ -196,7 +417,7 @@ class SetViewPage extends StatefulWidget implements IRoute<SetViewPage> {
 }
 
 // var forcePostUniqueness = true;
-
+/// TODO: Currently forced to use ordered methodology, make optional, default to 'set:id'
 class _SetViewPageState extends State<SetViewPage> {
   // ignore: unnecessary_late
   static late final logger = lm.generateLogger("SetViewPage").logger;
@@ -217,13 +438,10 @@ class _SetViewPageState extends State<SetViewPage> {
           setState(() {
             if (posts.isNotEmpty) {
               posts.addAll(data);
+              final before = posts.length,
+                  after = (posts = posts.toSet().toList()).length;
               logger.finer(
-                "posts.length before set conversion: ${posts.length}",
-              );
-              posts = posts.toSet().toList();
-              logger.finer(
-                "posts.length after set conversion: ${posts.length}",
-              );
+                  "posts set conversion\n\tbefore: $before\n\tafter: $after");
             } else {
               posts = data;
             }
@@ -239,10 +457,10 @@ class _SetViewPageState extends State<SetViewPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          "Set ${widget.set.id}: ${widget.set.name} "
-          "(${set.shortname}) by ${set.creatorId}",
-        ),
+        title: Text.rich(TextSpan(
+          text: "Set ${set.id}: ${set.name} (${set.shortname}) by ",
+          children: [WidgetSpan(child: w.UserIdentifier(id: set.creatorId))],
+        )),
       ),
       body: SafeArea(
         child: Column(
@@ -264,6 +482,7 @@ class _SetViewPageState extends State<SetViewPage> {
                   expectedCount: posts.length,
                   disallowSelections: true,
                   stripToGridView: true,
+                  useProviderForPosts: false,
                   fireRebuild: rebuild,
                 ),
               ),
@@ -310,27 +529,83 @@ class _SetViewPageState extends State<SetViewPage> {
 
 typedef SetViewParameters = ({e621.PostSet? set, int? id});
 
-class SetViewPageBuilder extends StatelessWidget
-    implements IRoute<SetViewPageBuilder> {
-  static const routeNameString = "/post_sets";
+class SetViewPageLoader extends StatelessWidget with IRoute<SetViewPageLoader> {
+  // #region Routing
+  static const routeNameConst = "/post_sets",
+      routePathConst = "/post_sets/${IRoute.idPathParameter}",
+      routeSegmentsConst = ["post_sets", IRoute.idPathParameter],
+      hasStaticPathConst = false;
   @override
-  get routeName => routeNameString;
-  final int setId;
+  get routeName => routeNameConst;
+  @override
+  get hasStaticPath => hasStaticPathConst;
+  @override
+  get routeSegments => routeSegmentsConst;
+  @override
+  get routeSegmentsFolded => routePathConst;
+  @override
+  Widget generateWidgetForRoute(RouteSettings settings) =>
+      generateWidgetForRouteStatic(settings);
+  static Widget generateWidgetForRouteStatic(RouteSettings settings) {
+    final url = Uri.parse(settings.name!),
+        parameters = tryParsePathToQuery(url);
+    int? id;
+    try {
+      id = (settings.arguments as dynamic)?.id ??
+          int.tryParse(parameters["id"] ?? "");
+    } catch (_) {
+      id = int.tryParse(parameters["id"] ?? "");
+    }
+    return SetViewPageLoader.legacyBuilder(settings, id, url, parameters)!;
+  }
 
-  const SetViewPageBuilder({
-    required this.setId,
+  static Widget? legacyBuilder(RouteSettings settings, int? id, Uri url,
+      Map<String, String> parameters) {
+    try {
+      try {
+        final v = (settings.arguments as dynamic).set!;
+        return SetViewPage(set: v is SetModel ? v : SetModel.fromInstance(v));
+      } catch (e) {
+        id ??= (settings.arguments as SetViewParameters?)?.id;
+        if (id != null) {
+          return SetViewPageLoader(id: id);
+        } else {
+          routeLogger.severe(
+            "Routing failure\n"
+            "\tRoute: ${settings.name}\n"
+            "\tId: $id\n"
+            "\tArgs: ${settings.arguments}",
+          );
+          return null;
+        }
+      }
+    } catch (e, s) {
+      routeLogger.severe(
+        "Routing failure\n"
+        "\tRoute: ${settings.name}\n"
+        "\tId: $id\n"
+        "\tArgs: ${settings.arguments}",
+        e,
+        s,
+      );
+      return null;
+    }
+  }
+  // #endregion Routing
+
+  final int id;
+
+  const SetViewPageLoader({
+    required this.id,
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: E621
-          .sendRequest(e621.initSetGet(setId))
-          .toResponse()
-          .then((v) => SetViewPage(
-                set: SetModel.fromRawJson(v.body),
-              )),
+      future: e621
+          .sendRequest(e621.initSetGet(id))
+          .then((v) => SetViewPage(set: SetModel.fromRawJson(v.body))),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           try {
@@ -350,7 +625,7 @@ class SetViewPageBuilder extends StatelessWidget
           );
         } else {
           return Scaffold(
-            appBar: AppBar(title: Text("Set $setId")),
+            appBar: AppBar(title: Text("Set $id")),
             body: const Column(children: [spinnerExpanded]),
           );
         }

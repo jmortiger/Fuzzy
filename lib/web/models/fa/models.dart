@@ -88,6 +88,8 @@ class Post extends fa.Post implements PostListingBare {
 
   @override
   List<String> get tagList => tagData.all;
+  @override
+  Set<String> get tagSet => tagData.all.toSet();
 }
 
 class TagData implements ITagData {

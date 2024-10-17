@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:fuzzy/util/util.dart';
+import 'package:fuzzy/util/util.dart' hide pref;
+import 'package:fuzzy/util/shared_preferences.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/serialization.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
+/// TODO: Allow multiple accounts
+/// TODO: Replace with e621 lib access data class
 final class E621AccessData with Storable<E621AccessData> {
   // #region Logger
   static lm.Printer get print => lRecord.print;
@@ -14,21 +17,45 @@ final class E621AccessData with Storable<E621AccessData> {
   // ignore: unnecessary_late
   static late final lRecord = lm.generateLogger("E621AccessData");
   // #endregion Logger
-  static final devAccessData = LazyInitializer<E621AccessData>(() async =>
-      E621AccessData.fromJson((await devData.getItem())["e621"] as JsonOut));
+  @Deprecated("Don't use directly, use fallbackForced")
+  static final devAccessData = LazyInitializer<E621AccessData?>(
+      () async => E621AccessData.fromJson((await devData.getItem())?["e621"]));
+  @Deprecated("Don't use directly, use fallbackForced")
   static String? get devApiKey => devAccessData.$Safe?.apiKey;
+  @Deprecated("Don't use directly, use fallbackForced")
   static String? get devUsername => devAccessData.$Safe?.username;
+  @Deprecated("Don't use directly, use fallbackForced")
   static String? get devUserAgent => devAccessData.$Safe?.userAgent;
   static bool useLoginData = true;
   static bool toggleUseLoginData() => useLoginData = !useLoginData;
 
   /// TODO: refactor behind fallback.
+  @Deprecated("Don't use directly, use forcedUserData")
   static final userData = LateInstance<E621AccessData>();
-  static E621AccessData? fallback = useLoginData ? fallbackForced : null;
+  static E621AccessData allowedUserData = useLoginData
+      ? forcedUserData
+      : (throw "useLoginData == false; you need to force use login data");
+  static E621AccessData? allowedUserDataSafe =
+      useLoginData ? forcedUserDataSafe : null;
 
   /// Disregards state of [useLoginData].
-  static E621AccessData? fallbackForced =
+  static E621AccessData forcedUserData =
+      // ignore: deprecated_member_use_from_same_package
+      isDebug ? (userData.$Safe ?? devAccessData.$Safe)! : userData.$;
+
+  /// Disregards state of [useLoginData].
+  static E621AccessData? forcedUserDataSafe =
+      // ignore: deprecated_member_use_from_same_package
       userData.$Safe ?? (isDebug ? devAccessData.$Safe : null);
+
+  /// Disregards state of [useLoginData].
+  static FutureOr<E621AccessData>? forcedUserDataAsync =
+      // ignore: deprecated_member_use_from_same_package
+      userData.$Safe ??
+          (isDebug
+              // ignore: deprecated_member_use_from_same_package
+              ? devAccessData.getItem() as FutureOr<E621AccessData>
+              : null);
   static const fileName = "credentials.json";
   static final filePathFull = LazyInitializer<String>(
     () async =>
@@ -43,7 +70,7 @@ final class E621AccessData with Storable<E621AccessData> {
             ?.readAsString();
   }
 
-  static String? tryLoadAsStringSync([E621AccessData? data]) {
+  static String? tryLoadAsStringSync(/* [E621AccessData? data] */) {
     return Platform.isWeb
         ? pref.$Safe?.getString(localStorageKey)
         : Storable.tryGetStorageSync(
@@ -52,10 +79,12 @@ final class E621AccessData with Storable<E621AccessData> {
   }
 
   static Future<E621AccessData?> tryLoad() async {
-    devAccessData.$Safe;
+    // ignore: deprecated_member_use_from_same_package
+    if (isDebug) await devAccessData.getItem();
     if (Platform.isWeb) {
       var t = (await pref.getItem()).getString(localStorageKey);
       logger.warning("From Local Storage: $t");
+      // ignore: deprecated_member_use_from_same_package
       if (t != null) return userData.$ = E621AccessData.fromJson(jsonDecode(t));
     }
     var t = await (await Storable.tryGetStorageAsync(
@@ -71,6 +100,7 @@ final class E621AccessData with Storable<E621AccessData> {
       return null;
     }
     try {
+      // ignore: deprecated_member_use_from_same_package
       return userData.$ = E621AccessData.fromJson(jsonDecode(t));
     } catch (e) {
       logger.warning(
@@ -86,9 +116,8 @@ final class E621AccessData with Storable<E621AccessData> {
         "Failed to $operation: $data"
         "\n\tfileName: $fileName"
         "\n\tfilePathFull: ${filePathFull.$Safe}"
-        "\n\tfile.isAssigned: ${data?.file.isAssigned}"
-        "\n\tfile.\$Safe?.existsSync(): "
-        "${data?.file.$Safe?.existsSync()}",
+        "\n\tisAssigned: ${data?.isAssigned}"
+        "\n\texistsSafe: ${data?.existsSafe}",
       );
   static const localStorageKey = "e6Access";
   static Future<bool> tryWriteToLocalStorage(E621AccessData data) =>
@@ -100,6 +129,7 @@ final class E621AccessData with Storable<E621AccessData> {
       pref.getItemAsync().then((v) => v.setString(localStorageKey, ""));
 
   static Future<bool> tryWrite([E621AccessData? data]) async {
+    // ignore: deprecated_member_use_from_same_package
     data ??= userData.$Safe;
     if (data != null) {
       if (Platform.isWeb) {
@@ -107,7 +137,7 @@ final class E621AccessData with Storable<E621AccessData> {
             "Attempting with Local Storage.");
         return tryWriteToLocalStorage(data);
       }
-      if (!data.file.isAssigned) {
+      if (!data.isAssigned) {
         logger.warning(
             "data.file.isAssigned was false. Attempting initialization");
         await data.initStorageAsync(filePathFull.getItem()).onError(
@@ -125,6 +155,7 @@ final class E621AccessData with Storable<E621AccessData> {
   }
 
   static Future<bool> tryClear([E621AccessData? data]) async {
+    // ignore: deprecated_member_use_from_same_package
     data ??= userData.$Safe;
     if (data != null) {
       if (Platform.isWeb) {
@@ -132,7 +163,7 @@ final class E621AccessData with Storable<E621AccessData> {
             "Attempting with Local Storage.");
         return tryClearFromLocalStorage(data);
       }
-      if (!data.file.isAssigned) {
+      if (!data.isAssigned) {
         logger.warning(
             "data.file.isAssigned was false. Attempting initialization");
         await data.initStorageAsync(filePathFull.getItem()).onError(
@@ -155,7 +186,7 @@ final class E621AccessData with Storable<E621AccessData> {
           "Attempting with Local Storage.");
       return tryClearFromLocalStorage(this);
     }
-    if (!file.isAssigned) {
+    if (!isAssigned) {
       logger.warning("file.isAssigned was false. Attempting initialization");
       await initStorageAsync(filePathFull.getItem()).onError(
         (e, s) => logger.warning("Failed to initialize Storable", e, s),

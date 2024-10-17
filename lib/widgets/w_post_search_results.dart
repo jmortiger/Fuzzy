@@ -1,21 +1,23 @@
 import 'dart:convert' as dc;
 
+import 'package:collection/collection.dart';
+import 'package:e621/e621_api.dart' show maxPostSearchLimit, maxPageNumber;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:fuzzy/i_route.dart';
+// import 'package:fuzzy/i_route.dart';
+// import 'package:fuzzy/main.dart';
 import 'package:fuzzy/models/app_settings.dart';
-import 'package:fuzzy/models/search_results.dart';
+// import 'package:fuzzy/models/selected_posts.dart';
 import 'package:fuzzy/pages/error_page.dart';
-import 'package:fuzzy/util/util.dart' as util
-    show defaultOnLinkifyOpen, fullPageSpinner;
+import 'package:fuzzy/util/util.dart' as util show fullPageSpinner;
 import 'package:fuzzy/web/e621/e621.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
 import 'package:fuzzy/web/e621/util.dart';
-import 'package:fuzzy/widgets/w_image_result.dart' as w;
-import 'package:fuzzy/widgets/w_page_indicator.dart' as w;
+import 'package:fuzzy/widgets/post_grid.dart';
+import 'package:fuzzy/widget_lib.dart' as w;
 import 'package:j_util/j_util_full.dart';
-import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:provider/provider.dart';
 // import 'package:url_launcher/url_launcher.dart';
 
@@ -23,30 +25,53 @@ import 'package:fuzzy/log_management.dart' as lm;
 
 class WPostSearchResults extends StatefulWidget {
   // ignore: unnecessary_late
-  static late final _logger = lm.generateLogger("WPostSearchResults").logger;
+  static late final logger = lm.generateLogger("WPostSearchResults").logger;
 
   final int pageIndex;
   final int indexOffset;
   final E6Posts? _posts;
-  E6Posts posts(BuildContext context,
-          {bool listen = false, bool? filterBlacklist}) =>
-      useProviderForPosts
-          ? E6PostsSync(
-              posts: Provider.of<ManagedPostCollectionSync>(context,
-                          listen: listen)
-                      .getPostsOnPageAsObjSync(pageIndex, filterBlacklist) ??
-                  _posts?.posts.toList() ??
-                  [])
-          : _posts ??
-              E6PostsSync(
-                  posts: Provider.of<ManagedPostCollectionSync>(context,
-                              listen: listen)
-                          .getPostsOnPageAsObjSync(
-                              pageIndex, filterBlacklist) ??
-                      []);
-  final int expectedCount;
+  /* E6Posts posts(
+    BuildContext context, {
+    bool listen = false,
+    bool? filterBlacklist,
+  }) {
+    final f = useProviderForPosts ? Provider.of<ManagedPostCollectionSync>(context,
+                        listen: listen)
+                    .getPostsOnPageAsObjSync(pageIndex, filterBlacklist)??:;
+    return useProviderForPosts
+        ? E6PostsSync(
+            posts: Provider.of<ManagedPostCollectionSync>(context,
+                        listen: listen)
+                    .getPostsOnPageAsObjSync(pageIndex, filterBlacklist) ??
+                (filterBlacklist == null
+                        ? _posts?.posts
+                        : _posts?.tryGetAll(filterBlacklist: filterBlacklist))
+                    ?.toList() ??
+                [])
+        : _posts ??
+            E6PostsSync(
+                posts: Provider.of<ManagedPostCollectionSync>(context,
+                            listen: listen)
+                        .getPostsOnPageAsObjSync(pageIndex, filterBlacklist) ??
+                    []);
+  } */
 
-  bool get usesLazyPosts => posts is E6PostsLazy;
+  @Deprecated("")
+  E6Posts posts(
+    BuildContext context, {
+    bool listen = false,
+    bool? filterBlacklist,
+  }) =>
+      (useProviderForPosts
+          ? Provider.of<ManagedPostCollectionSync>(context, listen: listen)
+                  .getPostsOnPageAsObjSync(pageIndex, filterBlacklist) ??
+              _posts
+          : _posts ??
+              Provider.of<ManagedPostCollectionSync>(context, listen: listen)
+                  .getPostsOnPageAsObjSync(pageIndex, filterBlacklist)) ??
+      E6PostsSync(posts: []);
+
+  final int expectedCount;
 
   final bool useLazyBuilding;
 
@@ -66,21 +91,18 @@ class WPostSearchResults extends StatefulWidget {
     this.useLazyBuilding = false,
     this.disallowSelections = false,
     this.stripToGridView = false,
-    bool? useProviderForPosts,
+    required this.useProviderForPosts,
     JPureEvent? fireRebuild,
   })  : _posts = posts,
-        _fireRebuild = fireRebuild,
-        useProviderForPosts = useProviderForPosts ?? !stripToGridView;
+        _fireRebuild = fireRebuild;
   const WPostSearchResults.useProvider({
     super.key,
-    // this.posts,
     required this.expectedCount, // = 50,
     this.pageIndex = 0,
     this.indexOffset = 0,
     this.useLazyBuilding = false,
     this.disallowSelections = false,
     this.stripToGridView = false,
-    bool? useProviderForPosts,
     JPureEvent? fireRebuild,
   })  : _posts = null,
         _fireRebuild = fireRebuild,
@@ -114,7 +136,8 @@ class WPostSearchResults extends StatefulWidget {
 
   @override
   State<WPostSearchResults> createState() => _WPostSearchResultsState();
-
+  @factory
+  @widgetFactory
   static Widget directResults(List<int> postIds) => FutureBuilder(
         future: (E621
             .performPostSearch(
@@ -122,7 +145,7 @@ class WPostSearchResults extends StatefulWidget {
                 "order:id_asc",
                 (previousValue, element) => "$previousValue ~id:$element",
               ),
-              limit: E621.maxPostsPerSearch,
+              limit: maxPostSearchLimit,
             )
             .then((v) => E6PostsSync.fromJson(dc.jsonDecode(v.responseBody)))),
         builder: (context, snapshot) {
@@ -131,7 +154,8 @@ class WPostSearchResults extends StatefulWidget {
               return WPostSearchResults(
                 posts: snapshot.data!,
                 disallowSelections: true,
-                expectedCount: E621.maxPostsPerSearch,
+                expectedCount: maxPostSearchLimit,
+                useProviderForPosts: false,
               );
             } catch (e, s) {
               return Scaffold(
@@ -167,6 +191,8 @@ class WPostSearchResults extends StatefulWidget {
     );
   }
 
+  @factory
+  @widgetFactory
   static Widget directResultFromSearch(
     String tags, {
     String? pageModifier,
@@ -191,8 +217,9 @@ class WPostSearchResults extends StatefulWidget {
               final r = WPostSearchResults(
                 posts: snapshot.data!,
                 disallowSelections: true,
-                expectedCount: E621.maxPostsPerSearch,
+                expectedCount: maxPostSearchLimit,
                 stripToGridView: true,
+                useProviderForPosts: false,
               );
               return stripToWidget
                   ? r
@@ -218,7 +245,7 @@ class WPostSearchResults extends StatefulWidget {
             return ErrorPage(
               error: snapshot.error,
               stackTrace: snapshot.stackTrace,
-              logger: _logger,
+              logger: logger,
             );
           } else {
             return util.fullPageSpinner;
@@ -230,16 +257,18 @@ class WPostSearchResults extends StatefulWidget {
 /// TODO: Keep scroll pos when toggling blacklist
 class _WPostSearchResultsState extends State<WPostSearchResults>
     with WBlacklistToggle {
-  static lm.FileLogger get _logger => WPostSearchResults._logger;
+  static lm.FileLogger get logger => WPostSearchResults.logger;
 
-  int? trueCount;
+  // int? trueCount;
 
-  E6PostsSync? get postSync => (widget.posts.runtimeType == E6PostsSync)
-      ? (widget.posts as E6PostsSync)
-      : null;
-  E6PostsLazy? get postLazy => (widget.posts.runtimeType == E6PostsLazy)
-      ? (widget.posts as E6PostsLazy)
-      : null;
+  // @Deprecated("Non functional")
+  // E6PostsSync? get postSync => (widget.posts.runtimeType == E6PostsSync)
+  //     ? (widget.posts as E6PostsSync)
+  //     : null;
+  // @Deprecated("Non functional")
+  // E6PostsLazy? get postLazy => (widget.posts.runtimeType == E6PostsLazy)
+  //     ? (widget.posts as E6PostsLazy)
+  //     : null;
 
   void _rebuildCallback() => setState(() {});
 
@@ -247,16 +276,23 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
   @override
   late final OverlayPortalController portalController;
   @override
-  int? get blacklistedPostCount => widget
-      .posts(context, filterBlacklist: false)
-      .posts
-      .where((e) =>
+  int? get blacklistedPostCount => (widget.useProviderForPosts
+          ? Provider.of<ManagedPostCollectionSync>(context, listen: false)
+              .getPostsOnPageSync(widget.pageIndex, false)
+          : widget._posts?.posts)
+      ?.where((e) =>
           (SearchView.i.blacklistFavs || !e.isFavorited) &&
-          hasBlacklistedTag(e.tagList))
+          hasBlacklistedTags(e.tagSet))
       .length;
+  // @override
+  // int? get blacklistedPostCount => widget
+  //     .posts(context, filterBlacklist: false)
+  //     .posts
+  //     .where((e) =>
+  //         (SearchView.i.blacklistFavs || !e.isFavorited) &&
+  //         hasBlacklistedTags(e.tagSet))
+  //     .length;
 
-  @override
-  E6Posts get posts => widget.posts(context);
   @override
   bool get useProvider => widget.useProviderForPosts;
   bool _filterBlacklist = true;
@@ -274,8 +310,6 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
         : "";
   }
 
-  // @override
-  // late final ValueNotifier<bool>? filterBlacklistNotifier;
   @override
   final ValueNotifier<bool>? filterBlacklistNotifier = null;
   // #endregion Blacklist Mixin
@@ -283,14 +317,15 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
   @override
   void initState() {
     super.initState();
-    trueCount = postSync?.posts.length;
+    // trueCount = (widget.useProviderForPosts
+    //       ? Provider.of<ManagedPostCollectionSync>(context, listen: false)
+    //           .getPostsOnPageSync(widget.pageIndex, false)
+    //       : widget._posts)?.posts.length;
     // widget._onSelectionCleared?.subscribe(_clearSelectionsCallback);
     widget._fireRebuild?.subscribe(_rebuildCallback);
-    postLazy?.onFullyIterated.subscribe(
-      (FullyIteratedArgs posts) => setState(() {
-        trueCount = posts.posts.length;
-      }),
-    );
+    // postLazy?.onFullyIterated.subscribe(
+    //   (posts) => setState(() => trueCount = posts.posts.length),
+    // );
     portalController = OverlayPortalController()..show();
     // filterBlacklistNotifier = !widget.useProviderForPosts
     //     ? (ValueNotifier(true)..addListener())
@@ -307,7 +342,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
 
   @override
   Widget build(BuildContext context) {
-    final sc = widget.useProviderForPosts //!widget.stripToGridView
+    /* final sc = widget.useProviderForPosts //!widget.stripToGridView
         ? Provider.of<ManagedPostCollectionSync>(context, listen: false)
         : null;
     final root = widget.useLazyBuilding
@@ -318,7 +353,9 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
               mainAxisSpacing: SearchView.i.verticalGridSpace,
               childAspectRatio: SearchView.i.widthToHeightRatio,
             ),
-            itemCount: estimatedCount,
+            itemCount: widget.posts(context) is! E6PostsLazy
+                ? widget.posts(context).count
+                : trueCount ?? widget.expectedCount,
             itemBuilder: (_, i) {
               // TODO: Make not dependent on current page / first loaded page.
               i += sc!.currentPageFirstPostIndex;
@@ -329,8 +366,8 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
           )
         : widget.useProviderForPosts //!widget.stripToGridView
             ? Selector<ManagedPostCollectionSync, Iterable<E6PostResponse>?>(
-                selector: (context, value) =>
-                    value.getPostsOnPageSync(widget.pageIndex, filterBlacklist),
+                selector: (context, v) =>
+                    v.getPostsOnPageSync(widget.pageIndex, filterBlacklist),
                 builder: (_, v, __) => GridView.count(
                   crossAxisCount: SearchView.i.postsPerRow,
                   crossAxisSpacing: SearchView.i.horizontalGridSpace,
@@ -339,7 +376,7 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
                   controller: scroll,
                   children: sc!
                           .getPostsOnPageSync(widget.pageIndex, filterBlacklist)
-                          ?.mapAsList((e, i, _) => constructImageResult(
+                          ?.mapTo((e, i, _) => constructImageResult(
                                 e,
                                 i + sc.getPageFirstPostIndex(widget.pageIndex),
                               ))
@@ -354,18 +391,31 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
                 childAspectRatio: SearchView.i.widthToHeightRatio,
                 controller: scroll,
                 children: (() {
-                  final usedPosts = <E6PostResponse>{};
-                  return Iterable<int>.generate(estimatedCount)
-                      .reduceUntilTrue<List<Widget>>((acc, _, i, __) {
-                    final p = widget
-                        .posts(context)
-                        .tryGet(i, filterBlacklist: filterBlacklist);
-                    if (p != null && usedPosts.add(p)) {
-                      acc.add(constructImageResult(p, i));
-                    }
-                    return (acc, p == null);
-                  }, []);
+                  final usedPosts = <E6PostResponse>{},
+                      acc = <Widget>[],
+                      posts = widget.posts(context, filterBlacklist: false);
+                  for (var i = 0,
+                          p = posts.tryGet(i, filterBlacklist: filterBlacklist);
+                      i < estimatedCount && p != null;
+                      ++i,
+                      p = posts.tryGet(i, filterBlacklist: filterBlacklist)) {
+                    if (usedPosts.add(p)) acc.add(constructImageResult(p, i));
+                  }
+                  return acc;
                 })(),
+                // children: (() {
+                //   final usedPosts = <E6PostResponse>{};
+                //   return Iterable<int>.generate(estimatedCount)
+                //       .reduceUntilTrue<List<Widget>>((acc, _, i, __) {
+                //     final p = widget
+                //         .posts(context)
+                //         .tryGet(i, filterBlacklist: filterBlacklist);
+                //     if (p != null && usedPosts.add(p)) {
+                //       acc.add(constructImageResult(p, i));
+                //     }
+                //     return (acc, p == null);
+                //   }, []);
+                // })(),
               );
     return !widget.stripToGridView
         ? Column(
@@ -388,19 +438,51 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
             context,
             child: root,
             blacklistedPosts: blacklistedPostCount,
-          );
+          ); */
+    return buildBlacklistToggle(
+      context,
+      child: widget.useProviderForPosts
+          ? Selector<ManagedPostCollectionSync, E6PostsSync>(
+              builder: (_, posts, __) => PostGrid(
+                posts: posts,
+                disallowSelections: widget.disallowSelections,
+                filterBlacklist: filterBlacklist,
+                useProviderForPosts: widget.useProviderForPosts,
+                indexOffset: widget.indexOffset,
+                pageIndex: widget.pageIndex,
+                stripToGridView: widget.stripToGridView,
+                useLazyBuilding: widget.useLazyBuilding,
+              ),
+              selector: (_, v) => v.getPostsOnPageAsObjSync(
+                  widget.pageIndex, filterBlacklist) as E6PostsSync,
+              shouldRebuild: (prior, next) => const DeepCollectionEquality()
+                  .equals(prior.posts, next.posts),
+            )
+          : PostGrid(
+              posts: widget._posts! as E6PostsSync,
+              disallowSelections: widget.disallowSelections,
+              filterBlacklist: filterBlacklist,
+              useProviderForPosts: widget.useProviderForPosts,
+              indexOffset: widget.indexOffset,
+              pageIndex: widget.pageIndex,
+              stripToGridView: widget.stripToGridView,
+              useLazyBuilding: widget.useLazyBuilding,
+            ),
+      blacklistedPosts: blacklistedPostCount,
+    );
   }
 
-  int get estimatedCount => widget.usesLazyPosts
-      ? widget.posts(context).count
-      : trueCount ?? widget.expectedCount;
+  // int get estimatedCount => widget.posts(context) is! E6PostsLazy
+  //     ? widget.posts(context).count
+  //     : trueCount ?? widget.expectedCount;
 
-  @widgetFactory
+  /* @widgetFactory
   Widget constructImageResult(E6PostResponse data, int index) =>
       ErrorPage.errorWidgetWrapper(
         () => !widget.disallowSelections
-            ? Selector<SearchResultsNotifier, bool>(
+            ? Selector<SelectedPosts, bool>(
                 builder: (_, value, __) => w.ImageResult(
+                  key: ObjectKey(data.id),
                   disallowSelections: widget.disallowSelections,
                   imageListing: data,
                   index: index,
@@ -420,14 +502,17 @@ class _WPostSearchResultsState extends State<WPostSearchResults>
                 index: index,
                 filterBlacklist: filterBlacklist,
                 postsCache: widget.disallowSelections
-                    ? widget
-                        .posts(context, filterBlacklist: filterBlacklist)
-                        .posts
+                    ? widget.useProviderForPosts
+                        ? Provider.of<ManagedPostCollectionSync>(context)
+                                .getPostsOnPageAsObjSync(
+                                    widget.pageIndex, filterBlacklist) ??
+                            widget._posts
+                        : widget._posts
                     : null,
                 isSelected: false,
               ),
-        logger: _logger,
-      ).value;
+        logger: logger,
+      ).value; */
 }
 
 class WPostSearchResultsSwiper extends StatefulWidget {
@@ -440,6 +525,7 @@ class WPostSearchResultsSwiper extends StatefulWidget {
   final bool disallowSelections;
 
   final bool stripToGridView;
+  final bool useProviderForPosts;
 
   final JPureEvent? _fireRebuild;
   const WPostSearchResultsSwiper({
@@ -450,7 +536,8 @@ class WPostSearchResultsSwiper extends StatefulWidget {
     this.disallowSelections = false,
     this.stripToGridView = false,
     JPureEvent? fireRebuild,
-  }) : _fireRebuild = fireRebuild;
+  })  : _fireRebuild = fireRebuild,
+        useProviderForPosts = true;
   @widgetFactory
   static Widget buildItFull(BuildContext context) => Column(
         children: [
@@ -542,6 +629,7 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper> {
                 indexOffset: index * SearchView.i.postsPerPage,
                 stripToGridView: widget.stripToGridView,
                 useLazyBuilding: widget.useLazyBuilding,
+                useProviderForPosts: widget.useProviderForPosts,
               ),
               selector: (_, v) {
                 logger.info("Selector sync called");
@@ -617,6 +705,7 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper> {
                       indexOffset: index * SearchView.i.postsPerPage,
                       stripToGridView: widget.stripToGridView,
                       useLazyBuilding: widget.useLazyBuilding,
+                      useProviderForPosts: widget.useProviderForPosts,
                     ),
                     selector: (_, v) {
                       logger.info("Selector sync called");
@@ -699,32 +788,31 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper> {
                   children: <Widget>[
                     root,
                     Selector<ManagedPostCollectionSync, int>(
-                      builder: (context, numPagesInSearch, child) {
-                        return w.IndeterminatePageIndicator.builder(
-                          determineNextPage: (currentPageIndex) =>
-                              (currentPageIndex == numPagesInSearch - 1)
-                                  ? null
-                                  : currentPageIndex + 1,
-                          currentPageIndex: _currentPageIndex,
-                          onUpdateCurrentPageIndex:
-                              _updateCurrentPageIndexWrapper,
-                          pageIndicatorBuilder: (cxt, currentPageIndex) =>
-                              IgnorePointer(
-                                  child: Text(
-                            "tabController.index: $currentPageIndex, tabController.length: $numPagesInSearch",
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              shadows: [
-                                Shadow(color: Colors.black, blurRadius: 1),
-                                Shadow(color: Colors.black, blurRadius: 5),
-                              ],
-                            ),
-                          )),
-                        );
-                      },
+                      builder: (context, numPagesInSearch, child) =>
+                          w.IndeterminatePageIndicator.builder(
+                        determineNextPage: (currentPageIndex) =>
+                            (currentPageIndex == numPagesInSearch - 1)
+                                ? null
+                                : currentPageIndex + 1,
+                        currentPageIndex: _currentPageIndex,
+                        onUpdateCurrentPageIndex:
+                            _updateCurrentPageIndexWrapper,
+                        pageIndicatorBuilder: (cxt, currentPageIndex) =>
+                            IgnorePointer(
+                                child: Text(
+                          "tabController.index: $currentPageIndex, tabController.length: $numPagesInSearch",
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            shadows: [
+                              Shadow(color: Colors.black, blurRadius: 1),
+                              Shadow(color: Colors.black, blurRadius: 5),
+                            ],
+                          ),
+                        )),
+                      ),
                       selector: (ctx, v) =>
-                          /* v.numPagesInSearch ??  */ E621.maxPageNumber,
+                          /* v.numPagesInSearch ??  */ maxPageNumber,
                       // selector: (ctx, v) =>
                       //     v.numPostsInSearch ?? E621.maxPageNumber,
                     ),
@@ -738,14 +826,10 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper> {
 
   void _handlePageViewChanged(int currentPageIndex) {
     _currentPageIndex = currentPageIndex;
-    if (!Platform.isDesktop) {
-      return;
-    }
+    if (!Platform.isDesktop) return;
     Provider.of<ManagedPostCollectionSync>(context, listen: false)
         .goToPage(_currentPageIndex);
-    setState(() {
-      _currentPageIndex = currentPageIndex;
-    });
+    setState(() => _currentPageIndex = currentPageIndex);
   }
 
   void _updateCurrentPageIndex(int index) {
@@ -758,16 +842,17 @@ class _WPostSearchResultsSwiperState extends State<WPostSearchResultsSwiper> {
           );
   }
 
+  /// TODO: Lock out while animating?
   void _updateCurrentPageIndexWrapper(int index, int old) =>
       index != old ? _updateCurrentPageIndex(index) : "";
 }
 
-class PostSearchResultsBuilder extends StatelessWidget
-    implements IRoute<PostSearchResultsBuilder> {
+/* class PostSearchResultsLoader extends StatelessWidget
+    with IRoute<PostSearchResultsLoader> {
   final String? tags;
   final int? limit;
   final String? page;
-  const PostSearchResultsBuilder({super.key, this.tags, this.limit, this.page});
+  const PostSearchResultsLoader({super.key, this.tags, this.limit, this.page});
 
   @override
   Widget build(BuildContext context) {
@@ -775,22 +860,63 @@ class PostSearchResultsBuilder extends StatelessWidget
         limit: limit, page: page, stripToWidget: false);
   }
 
+  // #region Routing
   @override
-  String get routeName => routeNameString;
-  static const routeNameString = "/posts";
-}
+  get routeName => routeNameConst;
+  @override
+  get routeSegments => routeSegmentsConst;
+  @override
+  get hasStaticPath => hasStaticPathConst;
+
+  @override
+  bool acceptsRoute(RouteSettings settings) => acceptsRoutePath(settings);
+  static const routeNameConst = "/posts",
+      // routeNameFullString = "/posts",
+      routeSegmentsConst = ["posts"],
+      hasStaticPathConst = true;
+  static bool acceptsRoutePath(RouteSettings settings) {
+    parsePathParam(int i, String e) =>
+      IRoute.pathParametersMethod[routeSegmentsConst[i]]?.call(e);
+    final Uri? uri;
+    if ((uri = IRoute.retrieveValidUri(
+            settings, routeSegmentsConst, hasStaticPathConst)) ==
+        null) {
+      return false;
+    }
+    final id = uri!.pathSegments.foldTo<int?>(null, (p, e, i, _) {
+          if (e == routeSegmentsConst[i]) return p;
+          if (p != null) {
+            routeLogger.warning(
+                "[PostViewPage.acceptsRoutePath] Shouldn't be able to have "
+                "2 id param slots in path.\n\t"
+                "settings.name: ${settings.name}");
+          }
+          return parsePathParam(i,e)! as int;
+        },
+            breakIfTrue: (_, e, i, __) => !(e != routeSegmentsConst[i] &&
+                parsePathParam(i,e) == null)) ??
+        RouteParameters.retrieveIdFromArguments(settings);
+    return id != null;
+  }
+  // #endregion Routing
+} */
 
 mixin WBlacklistToggle<T extends StatefulWidget> on State<T> {
   OverlayPortalController get portalController;
   int? get blacklistedPostCount;
+
+  /// Use to make only the switch rebuild rather than needing to trigger the State to rebuild.
   bool get useProvider;
-  E6Posts get posts;
+
+  /// Use to make only the switch rebuild rather than needing to trigger the State to rebuild.
   ValueNotifier<bool>? get filterBlacklistNotifier;
+
+  /// The fallback for fully customized behavior; used if [useProvider] is false and [filterBlacklistNotifier] is null.
   bool get filterBlacklist;
 
-  /// Trigger reload through this
+  /// The fallback for fully customized behavior; used if [useProvider] is false and [filterBlacklistNotifier] is null. Must Trigger reload through this if used.
   set filterBlacklist(bool v);
-  // @override
+  @nonVirtual
   Widget buildBlacklistToggle(
     BuildContext context, {
     int? blacklistedPosts,
@@ -834,46 +960,6 @@ mixin WBlacklistToggle<T extends StatefulWidget> on State<T> {
                     value: filterBlacklist,
                     onChanged: (v) => filterBlacklist = v,
                   )
-              ],
-            ),
-          ),
-        ),
-        child: child,
-      );
-}
-
-mixin WBlacklistToggleProvider<T extends StatefulWidget> on State<T> {
-  OverlayPortalController get portalController;
-  int? get blacklistedPostCount;
-  // @override
-  Widget buildBlacklistToggle(
-    BuildContext context, {
-    int? blacklistedPosts,
-    Widget? child,
-  }) =>
-      OverlayPortal(
-        controller: portalController,
-        overlayChildBuilder: (_) => Positioned(
-          bottom: 0,
-          left: 0,
-          child: Container(
-            color: const Color.fromARGB(168, 32, 32, 32),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                    "Blacklisted: ${blacklistedPosts ?? blacklistedPostCount ?? "?"}"),
-                Selector<ManagedPostCollectionSync, bool>(
-                  selector: (_, p1) => p1.filterBlacklist,
-                  builder: (cxt, v, _) => Switch(
-                    value: v,
-                    onChanged: (v) => Provider.of<ManagedPostCollectionSync>(
-                            cxt,
-                            listen: false)
-                        .filterBlacklist = v,
-                  ),
-                ),
               ],
             ),
           ),

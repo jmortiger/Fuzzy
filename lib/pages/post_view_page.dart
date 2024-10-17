@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
@@ -9,6 +10,7 @@ import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/main.dart';
 import 'package:fuzzy/models/app_settings.dart';
 import 'package:fuzzy/models/saved_data.dart';
+import 'package:fuzzy/models/selected_posts.dart';
 import 'package:fuzzy/models/tag_subscription.dart';
 import 'package:fuzzy/pages/error_page.dart';
 import 'package:fuzzy/pages/pool_view_page.dart';
@@ -21,6 +23,7 @@ import 'package:fuzzy/web/e621/models/e6_models.dart';
 import 'package:fuzzy/web/models/image_listing.dart';
 import 'package:fuzzy/widgets/w_comments_pane.dart';
 import 'package:fuzzy/widgets/w_video_player_screen.dart';
+import 'package:fuzzy/widget_lib.dart' as w_;
 import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart';
 import 'package:j_util/j_util_widgets.dart' as w;
@@ -44,15 +47,154 @@ const headerStyle = TextStyle(
   decoration: TextDecoration.underline,
 );
 
-class PostViewPage extends StatefulWidget
-    implements /* IReturnsTags,  */ IRoute<PostViewPage> {
-  // #region Logger
-  static lm.Printer get print => lRecord.print;
-  static lm.FileLogger get logger => lRecord.logger;
+class PostViewPage extends StatefulWidget with IRoute<PostViewPage> {
   // ignore: unnecessary_late
-  static late final lRecord = lm.generateLogger("PostViewPage");
-  // #endregion Logger
-  static const routeNameString = "/posts";
+  static late final logger = lm.generateLogger("PostViewPage").logger;
+  // #region Routing
+  static const routeNameConst = "/posts",
+      routeSegmentsConst = ["posts", IRoute.idPathParameter],
+      routePathConst = "/posts/${IRoute.idPathParameter}",
+      hasStaticPathConst = false;
+
+  @override
+  get routeName => routeNameConst;
+  @override
+  get routeSegments => routeSegmentsConst;
+  @override
+  get hasStaticPath => false;
+  @override
+  get routeSegmentsFolded => routePathConst;
+  static getPathParameterParser(int i) =>
+      IRoute.pathParametersMethod[routeSegmentsConst[i]];
+  // static int? getPathParameterParser(int i, String uriPathSegAt) =>
+  //     IRoute.pathParametersMethod[routeSegmentsConst[i]]!.call(uriPathSegAt);
+  static bool acceptsRoutePath(RouteSettings settings) {
+    parsePathParam(int i, String e) =>
+        IRoute.pathParametersMethod[routeSegmentsConst[i]]?.call(e);
+    final Uri? uri;
+    if ((uri = IRoute.retrieveValidUri(
+            settings, routeSegmentsConst, hasStaticPathConst)) ==
+        null) {
+      return false;
+    }
+    final id = uri!.pathSegments.foldTo<int?>(null, (p, e, i, _) {
+      if (e == routeSegmentsConst[i]) return p;
+      if (p != null) {
+        routeLogger.warning(
+            "[PostViewPage.acceptsRoutePath] Shouldn't be able to have more"
+            " than 1 id params in path. Preserving prior id.\n\t"
+            "settings.name: ${settings.name}");
+        return p;
+      }
+      return parsePathParam(i, e)! as int;
+    },
+            breakIfTrue: (_, e, i, __) => !(e != routeSegmentsConst[i] &&
+                parsePathParam(i, e) ==
+                    null)) /*  ??
+        RouteParameters.retrieveIdFromArguments(settings) */
+        ;
+    return id != null;
+  }
+
+  @override
+  bool acceptsRoute(RouteSettings settings) => acceptsRoutePath(settings);
+  @override
+  Widget generateWidgetForRoute(RouteSettings settings) =>
+      generateWidgetForRouteStatic(settings);
+
+  static Widget generateWidgetForRouteStatic(RouteSettings settings) {
+    final id = Uri.parse(settings.name!).pathSegments.foldTo<int?>(null,
+            (p, e, i, _) {
+          if (e == routeSegmentsConst[i]) return p;
+          if (p != null) {
+            routeLogger.warning(
+                "[PostViewPage.acceptsRoutePath] Shouldn't be able to have "
+                "2 id param slots in path.\n\t"
+                "settings.name: ${settings.name}");
+          }
+          return getPathParameterParser(i)?.call(e)!;
+        },
+            breakIfTrue: (_, e, i, __) => !(e != routeSegmentsConst[i] &&
+                getPathParameterParser(i)?.call(e) == null)) ??
+        RouteParameters.retrieveIdFromArguments(settings)!;
+    final post = RouteParameters.retrievePostFromArguments(settings);
+    return post == null || post is! PostListing
+        ? PostViewPageLoader(postId: id)
+        : PostViewPage(
+            postListing: post is! PostListing
+                ? E6PostResponse.fromBaseInstance(post)
+                : post as PostListing);
+  }
+
+  @override
+  Widget? tryGenerateWidgetForRoute(RouteSettings settings) =>
+      tryGenerateWidgetForRouteStatic(settings);
+
+  static Widget? tryGenerateWidgetForRouteStatic(RouteSettings settings) {
+    final Uri? uri;
+    if ((uri = IRoute.retrieveValidUri(
+            settings, routeSegmentsConst, hasStaticPathConst)) ==
+        null) {
+      return null;
+    }
+    final id = uri!.pathSegments.foldTo<int?>(null, (p, e, i, _) {
+          if (e == routeSegmentsConst[i]) return p;
+          if (p != null) {
+            routeLogger.warning(
+                "[PostViewPage.acceptsRoutePath] Shouldn't be able to have "
+                "2 id param slots in path.\n\t"
+                "settings.name: ${settings.name}");
+          }
+          return getPathParameterParser(i)?.call(e)!;
+        },
+            breakIfTrue: (_, e, i, __) => !(e != routeSegmentsConst[i] &&
+                getPathParameterParser(i)?.call(e) == null)) ??
+        RouteParameters.retrieveIdFromArguments(settings);
+    if (id == null) return null;
+    final post = RouteParameters.retrievePostFromArguments(settings);
+    return post == null || post is! PostListing
+        ? PostViewPageLoader(postId: id)
+        : PostViewPage(
+            postListing: post is! PostListing
+                ? E6PostResponse.fromBaseInstance(post)
+                : post as PostListing);
+  }
+
+  static Widget? legacyBuilder(RouteSettings settings, int? id, Uri url,
+      Map<String, String> parameters) {
+    try {
+      try {
+        final v = (settings.arguments as dynamic).post!;
+        return PostViewPage(postListing: v);
+      } catch (e) {
+        id ??= (settings.arguments as PostViewParameters?)?.id ??
+            int.tryParse(parameters["postId"] ?? "");
+        if (id != null) {
+          return PostViewPageLoader(postId: id);
+        } else {
+          routeLogger.severe(
+            "Routing failure\n"
+            "\tRoute: ${settings.name}\n"
+            "\tId: $id\n"
+            "\tArgs: ${settings.arguments}",
+          );
+          return null;
+        }
+      }
+    } catch (e, s) {
+      routeLogger.severe(
+        "Routing failure\n"
+        "\tRoute: ${settings.name}\n"
+        "\tId: $id\n"
+        "\tArgs: ${settings.arguments}",
+        e,
+        s,
+      );
+      return null;
+    }
+  }
+
+  // #endregion Routing
   final PostListing postListing;
   final void Function(String addition)? onAddToSearch;
   final void Function()? onPop;
@@ -60,18 +202,17 @@ class PostViewPage extends StatefulWidget
   final bool Function()? getFullscreen;
   final void Function(bool)? setFullscreen;
   final List<Widget>? extraActions;
-  // @override
-  // final List<String>? tagsToAdd;
   final List<E6PostResponse>? selectedPosts;
+  final SelectedPosts? srn;
   const PostViewPage({
     super.key,
     required this.postListing,
     this.onAddToSearch,
     this.onPop,
-    // this.tagsToAdd,
     bool this.startFullscreen = false,
     this.extraActions,
     this.selectedPosts,
+    this.srn,
   })  : getFullscreen = null,
         setFullscreen = null;
   const PostViewPage.overrideFullscreen({
@@ -79,16 +220,13 @@ class PostViewPage extends StatefulWidget
     required this.postListing,
     this.onAddToSearch,
     this.onPop,
-    // this.tagsToAdd,
     this.startFullscreen,
     this.extraActions,
     this.selectedPosts,
     required bool Function() this.getFullscreen,
     required void Function(bool) this.setFullscreen,
+    this.srn,
   });
-
-  @override
-  get routeName => PostViewPage.routeNameString;
 
   @override
   State<PostViewPage> createState() => _PostViewPageState();
@@ -113,7 +251,7 @@ class _PostViewPageState
   /// 1. It's not an animated gif (the only animated gif asset
   /// is the original, no alternates)
   IImageInfo getImageInfo(double screenWidth) {
-    var i = widget.postListing.file.isAVideo
+    IImageInfo? i = widget.postListing.file.isAVideo
         ? switch (PostView.i.videoQuality) {
             FilterQuality.low => e6Post.sample.alternates?.alternates["480p"] ??
                 e6Post.sample.alternates?.alternates["720p"] ??
@@ -209,16 +347,18 @@ class _PostViewPageState
       "devicePixelRatioOf: $dpr\n"
       "Calculated pixel width (w * dpr): $screenWidth",
     );
-    var IImageInfo(width: w, height: h, url: url) = getImageInfo(screenWidth);
+    // var IImageInfo(width: w, height: h, url: url) = getImageInfo(screenWidth);
+    var info = getImageInfo(screenWidth);
     return Scaffold(
       body: SafeArea(
         child: Stack(
           children: [
             if (!treatAsFullscreen)
               _buildBody(
-                w: w,
-                h: h,
-                url: url,
+                // w: w,
+                // h: h,
+                // url: url,
+                info: info,
                 screenWidth: screenWidth,
               ),
             if (treatAsFullscreen)
@@ -233,9 +373,10 @@ class _PostViewPageState
                   onTap: toggleFullscreen,
                   child: InteractiveViewer(
                     child: _buildImageContent(
-                      url: url,
-                      w: w,
-                      h: h,
+                      // url: url,
+                      // w: w,
+                      // h: h,
+                      info: info,
                       screenWidth: screenWidth,
                       fit: BoxFit.contain,
                     ),
@@ -259,6 +400,7 @@ class _PostViewPageState
         customActions: widget.extraActions,
         selectedPosts: widget.selectedPosts,
         onClearSelections: () => widget.selectedPosts?.clear(),
+        selectedPostIds: widget.srn?.selectedPostIds,
       ),
       /* MediaQuery.sizeOf(context).height / 32 */
       // bottomNavigationBar: ConstrainedBox(
@@ -328,11 +470,13 @@ class _PostViewPageState
   // }
 
   Widget _buildBody({
-    required int w,
-    required int h,
-    required String url,
+    // required int w,
+    // required int h,
+    // required String url,
+    required IImageInfo info,
     double? screenWidth,
   }) {
+    final IImageInfo(width: w, height: h, url: url) = info;
     final mqWidth = MediaQuery.sizeOf(context).width,
         maxWidth =
             screenWidth ?? mqWidth * MediaQuery.devicePixelRatioOf(context);
@@ -357,7 +501,7 @@ class _PostViewPageState
             ),
             child: AspectRatio(
               aspectRatio: ar,
-              child: _buildMainContent(url, w, h),
+              child: _buildMainContent(/* url, w, h */ info),
             ),
           ),
           Row(
@@ -369,22 +513,37 @@ class _PostViewPageState
             ],
           ),
           if (e6Post.relationships.hasParent ||
-              e6Post.relationships.hasActiveChildren)
+              e6Post.relationships.hasChildren /* hasActiveChildren */)
             // TODO: Render a sliver
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: Row(children: [
-                if (e6Post.relationships.hasParent) const Text("Parent: "),
+              child: Text.rich(TextSpan(children: [
                 if (e6Post.relationships.hasParent)
-                  _buildSinglePostViewButton(
-                      context, e6Post.relationships.parentId!),
-                if (e6Post.relationships.hasActiveChildren)
-                  const Text("Children: "),
-                if (e6Post.relationships.hasActiveChildren)
+                  const TextSpan(text: "Parent: "),
+                if (e6Post.relationships.hasParent)
+                  WidgetSpan(
+                      child: _buildSinglePostViewButton(
+                          context, e6Post.relationships.parentId!)),
+                if (e6Post.relationships.hasChildren /* hasActiveChildren */)
+                  const TextSpan(text: "Children: "),
+                if (e6Post.relationships.hasChildren /* hasActiveChildren */)
                   ...e6Post.relationships.children.map(
-                    (e) => _buildSinglePostViewButton(context, e),
+                    (e) => WidgetSpan(
+                        child: _buildSinglePostViewButton(context, e)),
                   ),
-              ]),
+              ])),
+              // child: Row(children: [
+              //   if (e6Post.relationships.hasParent) const Text("Parent: "),
+              //   if (e6Post.relationships.hasParent)
+              //     _buildSinglePostViewButton(
+              //         context, e6Post.relationships.parentId!),
+              //   if (e6Post.relationships.hasChildren/* hasActiveChildren */)
+              //     const Text("Children: "),
+              //   if (e6Post.relationships.hasChildren/* hasActiveChildren */)
+              //     ...e6Post.relationships.children.map(
+              //       (e) => _buildSinglePostViewButton(context, e),
+              //     ),
+              // ]),
             ),
           if (e6Post.pools.firstOrNull != null)
             Row(children: [
@@ -393,27 +552,62 @@ class _PostViewPageState
                   onPressed: () {
                     Navigator.pushNamed(
                       context,
-                      "${PoolViewPageBuilder.routeNameString}?poolId=$e",
+                      "${PoolViewPageLoader.routeNameConst}?id=$e",
                     );
                   },
                   child: Text(e.toString()))),
             ]),
           if (e6Post.description.isNotEmpty)
-            ExpansionTile(
-              title: const ListTile(
-                title: Text("Description", style: descriptionTheme),
+            // ExpansionTile(
+            //   title: const ListTile(
+            //     title: Text("Description", style: descriptionTheme),
+            //   ),
+            //   initiallyExpanded: PostView.i.startWithDescriptionExpanded,
+            //   children: [
+            //     SelectableText.rich(
+            //       ErrorPage.errorWrapper(
+            //             () => dt.parse(e6Post.description, context) as TextSpan,
+            //             logger: logger,
+            //           ).value ??
+            //           TextSpan(text: e6Post.description),
+            //     )
+            //   ],
+            // ),
+            if (PostView.i.startWithDescriptionExpanded)
+              ExpansionTile(
+                title: const ListTile(
+                  title: Text("Description", style: descriptionTheme),
+                ),
+                initiallyExpanded: PostView.i.startWithDescriptionExpanded,
+                children: [
+                  SelectableText.rich(
+                    ErrorPage.errorWrapper(
+                          () =>
+                              dt.parse(e6Post.description, context) as TextSpan,
+                          logger: logger,
+                        ).value ??
+                        TextSpan(text: e6Post.description),
+                  )
+                ],
+              )
+            else
+              w_.ExpansionTileAsync.delayLoading(
+                debugName: "Description ${e6Post.id}",
+                title: const ListTile(
+                  title: Text("Description", style: descriptionTheme),
+                ),
+                childrenBuilder: (context, setState) => compute(
+                    (d) => [
+                          SelectableText.rich(
+                            ErrorPage.errorWrapper(
+                                  () => dt.parse(d, context) as TextSpan,
+                                  logger: logger,
+                                ).value ??
+                                TextSpan(text: d),
+                          )
+                        ],
+                    e6Post.description),
               ),
-              initiallyExpanded: PostView.i.startWithDescriptionExpanded,
-              children: [
-                SelectableText.rich(
-                  ErrorPage.errorWrapper(
-                        () => dt.parse(e6Post.description, context) as TextSpan,
-                        logger: logger,
-                      ).value ??
-                      TextSpan(text: e6Post.description),
-                )
-              ],
-            ),
           ..._buildTagsDisplay(context),
           _buildSourcesDisplay(),
           WCommentsLoader(postId: e6Post.id),
@@ -429,9 +623,8 @@ class _PostViewPageState
               context,
               MaterialPageRoute(
                 builder: (_) => FutureBuilder(
-                  future: E621
+                  future: e621
                       .sendRequest(e621.initPostGet(e))
-                      .toResponse()
                       .then((v) => jsonDecode(v.body)),
                   builder: (_, snapshot) {
                     return snapshot.hasData
@@ -469,13 +662,18 @@ class _PostViewPageState
           child: Text(e.toString()));
   @widgetFactory
   Widget _buildMainContent(
-    final String url,
-    final int w,
-    final int h, {
+    // final String url,
+    // final int w,
+    // final int h, {
+    final IImageInfo info, {
     double? screenWidth,
     BuildContext? context,
   }) {
+    final IImageInfo(width: w, height: h, url: url) = info;
     context ??= this.context;
+    if (url == deletedUrl) {
+      return Image(image: (info as RetrieveImageProvider).createResizeImage());
+    }
     if (widget.postListing.file.isAVideo) {
       return ErrorPage.errorWidgetWrapper(
         () => WVideoPlayerScreen(
@@ -487,9 +685,10 @@ class _PostViewPageState
         children: [
           Positioned.fill(
               child: _buildImageContent(
-            url: url,
-            w: w,
-            h: h,
+            // url: url,
+            // w: w,
+            // h: h,
+            info: info,
             screenWidth: screenWidth,
           )),
           _buildFullscreenToggle(),
@@ -510,12 +709,14 @@ class _PostViewPageState
   static const progressiveImageBlur = 10.0;
   @widgetFactory
   Widget _buildImageContent({
-    required final String url,
-    required final int w,
-    required final int h,
+    // required final String url,
+    // required final int w,
+    // required final int h,
+    required IImageInfo info,
     double? screenWidth,
     final BoxFit fit = BoxFit.fitWidth,
   }) {
+    final IImageInfo(width: w, height: h, url: url) = info;
     screenWidth ??= MediaQuery.sizeOf(context).width *
         MediaQuery.devicePixelRatioOf(context);
     if (!pvs.useProgressiveImages) {
@@ -659,19 +860,47 @@ class _PostViewPageState
     e621.TagCategory? category,
   ) {
     return _willTagDisplayBeNonNull(category)
-        ? ExpansionTile(
-            initiallyExpanded: PostView.i.startWithTagsExpanded,
-            title: _buildTagDisplayHeader(context, headerStyle, category!),
-            dense: true,
-            visualDensity: VisualDensity.compact,
-            expandedAlignment: Alignment.centerLeft,
-            expandedCrossAxisAlignment: CrossAxisAlignment.start,
-            children: _buildTagDisplayList(
-              context,
-              headerStyle,
-              category,
-            ).toList(growable: false),
-          )
+        // ? ExpansionTile(
+        //     initiallyExpanded: PostView.i.startWithTagsExpanded,
+        //     title: _buildTagDisplayHeader(context, headerStyle, category!),
+        //     dense: true,
+        //     visualDensity: VisualDensity.compact,
+        //     expandedAlignment: Alignment.centerLeft,
+        //     expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        //     children: _buildTagDisplayList(
+        //       context,
+        //       headerStyle,
+        //       category,
+        //     ).toList(growable: false),
+        //   )
+        ? PostView.i.startWithTagsExpanded
+            ? ExpansionTile(
+                initiallyExpanded: true,
+                title: _buildTagDisplayHeader(context, headerStyle, category!),
+                dense: true,
+                visualDensity: VisualDensity.compact,
+                expandedAlignment: Alignment.centerLeft,
+                expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                children: _buildTagDisplayList(
+                  context,
+                  headerStyle,
+                  category,
+                ).toList(growable: false),
+              )
+            : w_.ExpansionTileAsync.delayLoading(
+                debugName:
+                    "${category?.name} _buildTagDisplayFoldout ${e6Post.id}",
+                title: _buildTagDisplayHeader(context, headerStyle, category!),
+                dense: true,
+                visualDensity: VisualDensity.compact,
+                expandedAlignment: Alignment.centerLeft,
+                expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                childrenBuilder: (context, setState) => compute(
+                    ((BuildContext, TextStyle, e621.TagCategory) v) =>
+                        _buildTagDisplayList(v.$1, v.$2, v.$3)
+                            .toList(growable: false),
+                    (context, headerStyle, category)),
+              )
         : null;
   }
 
@@ -705,6 +934,7 @@ class _PostViewPageState
         ));
   }
 
+  /// TODO: Pull some of these into e6actions
   void showTagDialog({
     required String tag,
     required e621.TagCategory category,
@@ -900,7 +1130,7 @@ class _PostViewPageState
                           content: SizedBox(
                             width: double.maxFinite,
                             child: SingleChildScrollView(
-                              child: WikiPageBuilder.fromTitle(
+                              child: WikiPageLoader.fromTitle(
                                 title: tag,
                                 isFullPage: false,
                               ),
@@ -987,10 +1217,16 @@ class _PostViewPageState
     );
   }
 
-  Widget _buildSourcesDisplay() => ExpansionTile(
+  Widget _buildSourcesDisplay() => w_.ExpansionTileAsync.delayLoading(
+        debugName: "Sources ${e6Post.id}",
         title: const Text("Sources", style: headerStyle),
-        children: _buildSources().toList(),
+        childrenBuilder: (context, setState) =>
+            compute((s) => s.toList(), _buildSources()),
       );
+  // Widget _buildSourcesDisplay() => ExpansionTile(
+  //       title: const Text("Sources", style: headerStyle),
+  //       children: _buildSources().toList(),
+  //     );
   Iterable<Widget> _buildSources() => e6Post.sources.map(
         (e) => Linkify(
           onOpen: (link) async {
@@ -1086,10 +1322,32 @@ class WPostViewBackButton extends StatelessWidget {
 typedef PostViewParameters = ({int? id, PostListing? post});
 
 class PostViewPageLoader extends StatelessWidget
-    implements IRoute<PostViewPageLoader> {
-  static const routeNameString = PostViewPage.routeNameString;
+    with IRoute<PostViewPageLoader> {
+  // #region Routing
+  static const routeNameConst = PostViewPage.routeNameConst;
   @override
-  String get routeName => routeNameString;
+  get routeName => routeNameConst;
+  @override
+  get hasStaticPath => PostViewPage.hasStaticPathConst;
+  @override
+  get routeSegments => PostViewPage.routeSegmentsConst;
+
+  @override
+  get routeSegmentsFolded => PostViewPage.routePathConst;
+
+  @override
+  bool acceptsRoute(RouteSettings settings) =>
+      PostViewPage.acceptsRoutePath(settings);
+
+  @override
+  Widget generateWidgetForRoute(RouteSettings settings) =>
+      PostViewPage.generateWidgetForRouteStatic(settings);
+
+  @override
+  Widget? tryGenerateWidgetForRoute(RouteSettings settings) =>
+      PostViewPage.tryGenerateWidgetForRouteStatic(settings);
+  // #endregion Routing
+
   final int postId;
 
   const PostViewPageLoader({super.key, required this.postId});
@@ -1099,7 +1357,7 @@ class PostViewPageLoader extends StatelessWidget
     return FutureBuilder(
       future: e621.sendRequest(e621.initPostGet(
         postId,
-        credentials: E621AccessData.fallback?.cred,
+        credentials: E621AccessData.allowedUserDataSafe?.cred,
       )),
       builder: (context, snapshot) {
         if (snapshot.hasData) {

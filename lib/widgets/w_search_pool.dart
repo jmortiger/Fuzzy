@@ -1,12 +1,9 @@
-import 'dart:convert';
-
 import 'package:e621/e621.dart' as e621;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fuzzy/pages/settings_page.dart';
+import 'package:fuzzy/pages/settings_page.dart' as w;
+import 'package:fuzzy/widget_lib.dart' as w;
 import 'package:fuzzy/web/e621/post_search_parameters.dart';
-import 'package:http/http.dart';
-import 'package:j_util/j_util_full.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 
 import '../web/e621/e621_access_data.dart';
@@ -131,30 +128,20 @@ class _WSearchPoolState extends State<WSearchPool> {
             searchCategory: searchCategory,
             searchOrder: searchOrder,
             limit: limit,
-            credentials: E621AccessData.userData.$Safe?.cred,
+            credentials: E621AccessData.allowedUserDataSafe?.cred,
           )
           .send()
           .then((v) async {
-            var t =
-                await ByteStream(v.stream.asBroadcastStream()).bytesToString();
-            var step = jsonDecode(t);
-            try {
-              return (step as List).mapAsList(
-                (e, index, list) => e621.Pool.fromJson(e),
-              );
-            } catch (e) {
-              return <e621.Pool>[];
-            }
+            return v.stream
+                .bytesToString()
+                .then((e) => e621.Pool.fromRawJsonResults(e));
+            //.then((t) => jsonDecode(t)).then((step) => (step as List).map((e) => e621.Pool.fromRawJson(e)).toList());
+            // return (step as List).map((e) => e621.Pool.fromJson(e)).toList();
           })
-          .onError((e, s) {
-            logger.severe(e, e, s);
-            return <e621.Pool>[];
-          })
-          .then((v) => widget.filterResults == null
-              ? v
-              : v.where(widget.filterResults!).toList())
+          .then((v) =>
+              widget.filterResults == null ? v : v.where(widget.filterResults!))
           .then((v) async {
-            if (widget.filterResultsAsync == null) return v;
+            if (widget.filterResultsAsync == null) return v.toList();
             // final f =
             //     await Future.wait(v.map((e) => widget.filterResultsAsync!(e)));
             // // for (var i = 0; i < v.length; i++) {
@@ -273,13 +260,13 @@ class _WSearchPoolState extends State<WSearchPool> {
                       : null,
                 ),
               ),
-              WIntegerField(
+              w.WIntegerField(
                 name: "Pool Creator Id",
                 getVal: () => searchCreatorId ?? -1,
                 setVal: (v) => searchCreatorId = v,
                 validateVal: (p1) => p1 != null && p1 >= 0,
               ),
-              WBooleanTristateField(
+              w.WBooleanTristateField(
                 name: "Pool Is Active",
                 subtitle: "${searchIsActive ?? "N/A"}",
                 getVal: () =>
@@ -297,25 +284,25 @@ class _WSearchPoolState extends State<WSearchPool> {
                         : null */
                 ,
               ),
-              WBooleanTristateField(
+              w.WBooleanTristateField(
                 name: "Pool Category",
                 subtitle: categoryText,
                 getVal: () => determineCategoryVal(searchCategory),
                 setVal: (v) => searchCategory = determineCategory(v),
               ),
-              WEnumField(
+              w.WEnumField(
                 name: "Order",
                 getVal: () => searchOrder ?? e621.PoolOrder.updatedAt,
                 setVal: (Enum v) => searchOrder = v as e621.PoolOrder,
                 values: e621.PoolOrder.values,
               ),
-              WIntegerField(
+              w.WIntegerField(
                 name: "Limit",
                 getVal: () => limit ?? 50,
                 setVal: (v) => limit = v,
                 validateVal: (p1) => p1 != null && p1 > 0 && p1 <= 320,
               ),
-              WIntegerField(
+              w.WIntegerField(
                 name: "Page Number",
                 getVal: () => p.pageNumber ?? 50,
                 setVal: (v) => p.pageNumber = v,

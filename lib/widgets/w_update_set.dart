@@ -5,6 +5,7 @@ import 'package:e621/e621.dart' as e621;
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:j_util/j_util_full.dart';
 
+/// TODO: Check if editable first, something like WarnPage?
 class WUpdateSet extends StatefulWidget {
   final e621.PostSet? set;
   const WUpdateSet({super.key, required e621.PostSet this.set});
@@ -142,7 +143,10 @@ class _WUpdateSetState extends State<WUpdateSet> {
                 title: const Text("Is Public?"),
                 leading: Text("$postSetIsPublic"),
                 subtitle: const Text(
-                  "Private sets are only visible to you. Public sets are visible to anyone, but only you and users you assign as maintainers can edit the set. Only accounts three days or older can make public sets.",
+                  "Private sets are only visible to you. Public sets are "
+                  "visible to anyone, but only you and users you assign as "
+                  "maintainers can edit the set. Only accounts three days or "
+                  "older can make public sets.",
                 ),
               ),
               ListTile(
@@ -156,7 +160,10 @@ class _WUpdateSetState extends State<WUpdateSet> {
                 title: const Text("Transfer On Delete?"),
                 leading: Text("$postSetTransferOnDelete"),
                 subtitle: const Text(
-                  'If "Transfer on Delete" is enabled, when a post is deleted from the site, its parent (if any) will be added to this set in its place. Disable if you want posts to simply be removed from this set with no replacement.',
+                  'If "Transfer on Delete" is enabled, when a post is deleted '
+                  'from the site, its parent (if any) will be added to this '
+                  'set in its place. Disable if you want posts to simply be '
+                  'removed from this set with no replacement.',
                 ),
               ),
               Row(
@@ -174,7 +181,7 @@ class _WUpdateSetState extends State<WUpdateSet> {
                                     postSetTransferOnDelete:
                                         postSetTransferOnDelete,
                                     credentials:
-                                        E621AccessData.fallbackForced?.cred,
+                                        E621AccessData.forcedUserDataSafe?.cred,
                                   )
                                 : e621.initSetEdit(
                                     widget.set!.id,
@@ -184,7 +191,8 @@ class _WUpdateSetState extends State<WUpdateSet> {
                                     postSetIsPublic: postSetIsPublic,
                                     postSetTransferOnDelete:
                                         postSetTransferOnDelete,
-                                    credentials: E621AccessData.fallback?.cred,
+                                    credentials: E621AccessData
+                                        .allowedUserDataSafe?.cred,
                                   );
                             lm.logRequest(r, logger, lm.LogLevel.INFO);
                             if ((determineNameErrorText(postSetName) ??
@@ -206,6 +214,23 @@ class _WUpdateSetState extends State<WUpdateSet> {
                                 Navigator.pop(this.context,
                                     e621.PostSet.fromRawJson(res.body));
                               }
+                            } else if (context.mounted ||
+                                (context = this.context).mounted) {
+                              util.showUserMessage(
+                                context: context,
+                                content: Text(
+                                  "Failed To Create Set: ${res.statusCode} "
+                                  "(${res.reasonPhrase})",
+                                ),
+                                action: (
+                                  "Show body",
+                                  () => showDialog(
+                                      context: context,
+                                      builder: (_) =>
+                                          AlertDialog(content: Text(res.body)))
+                                ),
+                                duration: const Duration(seconds: 4),
+                              );
                             }
                           }
                         : null,

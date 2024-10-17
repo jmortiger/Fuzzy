@@ -8,27 +8,6 @@ import 'package:e621/e621.dart' as e6;
 import 'package:j_util/j_util_full.dart';
 
 import '../web/e621/e621.dart';
-import 'package:fuzzy/log_management.dart' as lm;
-
-import '../web/e621/e621_access_data.dart';
-
-// ignore: unnecessary_late
-late final _logger = lm.generateLogger("SearchViewModel").logger;
-
-class SearchViewModel extends ChangeNotifier {
-  bool toggleSendAuthHeaders() {
-    E621AccessData.useLoginData = !E621AccessData.useLoginData;
-    notifyListeners();
-    if (E621AccessData.useLoginData && E621AccessData.fallback == null) {
-      E621AccessData.devAccessData.getItemAsync().then(
-            (v) => _logger.fine("Dev e621 Auth Loaded"),
-          );
-    }
-    return E621AccessData.useLoginData;
-  }
-
-  SearchViewModel();
-}
 
 class MultiSearch {
   var s1 = LateInstance<E6PostsSync>();

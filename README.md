@@ -34,4 +34,5 @@ An (eventual) all-in-one mobile frontend for multiple image submission sites. Cu
 * Subscriptions
 * Combining (at least 2) searches (e.g. (a or b) and (c or d))
 * FurAffinity
-* Allow deleting saved searches from settings
+* Allow deleting cached searches from settings
+* 

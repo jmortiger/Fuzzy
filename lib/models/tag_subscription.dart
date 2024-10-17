@@ -5,13 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/log_management.dart' show LogReq, LogRes;
 import 'package:fuzzy/pages/error_page.dart';
-import 'package:fuzzy/util/util.dart' as util;
+import 'package:fuzzy/util/util.dart' as util hide pref;
+import 'package:fuzzy/util/shared_preferences.dart' as util;
+import 'package:fuzzy/web/e621/dtext_formatter.dart';
 import 'package:fuzzy/web/e621/e621_access_data.dart';
 import 'package:fuzzy/web/e621/models/e6_models.dart';
-import 'package:fuzzy/widgets/w_post_search_results.dart';
+import 'package:fuzzy/widget_lib.dart' as w;
 import 'package:e621/e621.dart' as e621;
 import 'package:j_util/j_util_full.dart'
-    show LazyInitializer, ListIterators, Platform, StatusCodes;
+    show LazyInitializer, Platform, StatusCodes;
 import 'package:j_util/serialization.dart';
 import 'package:shared_preferences/shared_preferences.dart' as sp;
 
@@ -20,25 +22,35 @@ class TagSubscription {
   final int lastId;
   final Set<int> cachedPosts;
 
-  const TagSubscription(
-      {required this.tag, this.lastId = -1, this.cachedPosts = const {}});
+  const TagSubscription({
+    required this.tag,
+    this.lastId = -1,
+    this.cachedPosts = const {},
+  });
 
   Map<String, dynamic> toJson() => {
         "tag": tag,
         "lastId": lastId,
-        "cachedPosts": cachedPosts,
+        "cachedPosts": cachedPosts.toList(),
       };
   factory TagSubscription.fromJson(Map<String, dynamic> json) =>
       TagSubscription(
         tag: json["tag"],
         lastId: json["lastId"],
-        cachedPosts: json["cachedPosts"],
+        cachedPosts: (json["cachedPosts"] as List<int>).toSet(),
       );
   List<Future<bool>> writeToPref(String prefix, sp.SharedPreferences pref) => [
         pref.setString("$prefix.tag", tag),
         pref.setInt("$prefix.lastId", lastId),
         pref.setStringList("$prefix.cachedPosts",
             cachedPosts.map((e) => e.toString()).toList()),
+      ];
+  static List<Future<bool>> removeFromPref(
+          String prefix, sp.SharedPreferences pref) =>
+      [
+        pref.remove("$prefix.tag"),
+        pref.remove("$prefix.lastId"),
+        pref.remove("$prefix.cachedPosts"),
       ];
   static TagSubscription? loadFromPrefSafe(
       String prefix, sp.SharedPreferences pref) {
@@ -78,6 +90,14 @@ class TagSubscription {
         lastId: lastId ?? this.lastId,
         cachedPosts: cachedPosts ?? this.cachedPosts,
       );
+  @override
+  bool operator ==(Object other) =>
+      other is TagSubscription && other.tag == tag;
+
+  @override
+  int get hashCode => tag.hashCode;
+
+  static const TagSubscription empty = TagSubscription(tag: "", lastId: 0);
 }
 
 class SubscriptionManager {
@@ -111,26 +131,30 @@ class SubscriptionManager {
   static const localStoragePrefix = 'tsm';
   static const localStorageLengthKey = '$localStoragePrefix.length';
 
-  static Future<List<TagSubscription>> get storageAsync async =>
-      await ((await file.getItemAsync())
+  static Future< /* List<TagSubscription> */ Set<TagSubscription>>
+      get storageAsync async => await ((await file.getItemAsync())
               ?.readAsString()
               .then((v) => SubscriptionManager.fromJson(jsonDecode(v))) ??
           loadFromPref());
-  static List<TagSubscription>? get storageSync {
+  static /* List<TagSubscription> */ Set<TagSubscription>? get storageSync {
     String? t = file.$Safe?.readAsStringSync();
     return (t == null)
         ? loadFromPrefTrySync()
         : SubscriptionManager.fromJson(jsonDecode(t));
   }
 
-  static Future<bool> writeToPref([List<TagSubscription>? collection]) {
+  static Future<bool> writeToPref([Iterable<TagSubscription>? collection]) {
     collection ??= SubscriptionManager._subscriptions;
     return util.pref.getItemAsync().then((v) {
+      final priorLength = v.getInt(localStorageLengthKey) ?? 0;
       final l = v.setInt(localStorageLengthKey, collection!.length);
       final success = <Future<bool>>[];
       for (var i = 0; i < collection.length; i++) {
-        final e1 = collection[i];
-        e1.writeToPref("$localStoragePrefix.$i", v);
+        final e1 = collection.elementAt(i);
+        success.addAll(e1.writeToPref("$localStoragePrefix.$i", v));
+      }
+      for (var i = collection.length; i < priorLength; i++) {
+        TagSubscription.removeFromPref("$localStoragePrefix.$i", v);
       }
       return success.fold(
           l,
@@ -140,10 +164,11 @@ class SubscriptionManager {
     });
   }
 
-  static Future<List<TagSubscription>> loadFromPref({bool store = true}) =>
+  static Future< /* List<TagSubscription> */ Set<TagSubscription>> loadFromPref(
+          {bool store = true}) =>
       util.pref.getItemAsync().then((v) {
         final length = v.getInt(localStorageLengthKey) ?? 0;
-        var data = <TagSubscription>[];
+        var data = <TagSubscription>{} /* [] */;
         for (var i = 0; i < length; i++) {
           data.add(
             TagSubscription.loadFromPref("$localStoragePrefix.$i", v),
@@ -151,10 +176,11 @@ class SubscriptionManager {
         }
         return store ? _subscriptions = data : data;
       });
-  static List<TagSubscription>? loadFromPrefTrySync({bool store = true}) {
+  static /* List<TagSubscription> */ Set<TagSubscription>? loadFromPrefTrySync(
+      {bool store = true}) {
     if (util.pref.$Safe == null) return null;
     final length = util.pref.$.getInt(localStorageLengthKey) ?? 0;
-    var data = <TagSubscription>[];
+    var data = <TagSubscription>{} /* [] */;
     for (var i = 0; i < length; i++) {
       data.add(
         TagSubscription.loadFromPref("$localStoragePrefix.$i", util.pref.$),
@@ -163,9 +189,11 @@ class SubscriptionManager {
     return store ? _subscriptions = data : data;
   }
 
-  static FutureOr<List<TagSubscription>> loadFromStorageAsync(
-      {bool store = true}) async {
-    var str = await Storable.tryLoadStringAsync(
+  static FutureOr< /* List<TagSubscription> */ Set<TagSubscription>>
+      loadFromStorageAsync({bool store = true}) async {
+    final t = await storageAsync;
+    return store ? _subscriptions = t : t;
+    /* var str = await Storable.tryLoadStringAsync(
       await fileFullPath.getItem(),
     );
     if (str == null) {
@@ -173,23 +201,24 @@ class SubscriptionManager {
         final t = SubscriptionManager.fromJson({"subscriptions": []});
         return store ? _subscriptions = t : t;
       } catch (e) {
-        final t = <TagSubscription>[];
+        final t = <TagSubscription>{} /* [] */;
         return store ? _subscriptions = t : t;
       }
     } else {
       final t = SubscriptionManager.fromJson(jsonDecode(str));
       return store ? _subscriptions = t : t;
-    }
+    } */
   }
 
-  static List<TagSubscription>? loadFromStorageSync({bool store = true}) {
+  static /* List<TagSubscription> */ Set<TagSubscription>? loadFromStorageSync(
+      {bool store = true}) {
     var str = Storable.tryLoadStringSync(fileFullPath.$);
     if (str == null) {
       try {
         final t = SubscriptionManager.fromJson({"subscriptions": []});
         return store ? _subscriptions = t : t;
       } catch (e) {
-        final t = <TagSubscription>[];
+        final t = <TagSubscription>{} /* [] */;
         return store ? _subscriptions = t : t;
       }
     } else {
@@ -198,50 +227,46 @@ class SubscriptionManager {
     }
   }
 
-  static List<TagSubscription> fromJson(Map<String, dynamic> json) =>
-      List.of((json["subscriptions"] as List).mapAsList(
-        (e, index, list) => TagSubscription.fromJson(e),
-      ));
+  static /* List<TagSubscription> */ Set<TagSubscription> fromJson(
+          Map<String, dynamic> json) =>
+      /* List */ Set.of((json["subscriptions"] as List)
+          .map((e) => TagSubscription.fromJson(e)));
   static Map<String, dynamic> toJson() => {
         "subscriptions": subscriptions,
       };
-  static void writeToStorage(/* [List<TagSubscription>? data] */) {
+  static Future<bool> writeToStorage(/* [List<TagSubscription>? data] */) {
     // data ??= _subscriptions;
-    if (!Platform.isWeb) {
-      file.$Safe
-          ?.writeAsString(jsonEncode(toJson()))
-          .catchError((e, s) {
-            print(e, lm.LogLevel.WARNING, e, s);
-            return e;
-          })
-          .then(
-            (value) => print("Write successful"),
-          )
-          .catchError((e, s) => print(e, lm.LogLevel.WARNING, e, s));
-    } else {
-      writeToPref().then((v) => v
-          ? print("SavedDataE6 stored successfully: ${jsonEncode(toJson())}",
-              lm.LogLevel.FINE)
-          : print("SavedDataE6 failed to store: ${jsonEncode(toJson())}",
-              lm.LogLevel.SEVERE));
-    }
+    return (!Platform.isWeb
+        ? file
+            .getItemAsync()
+            .then((v) => v!.writeAsString(jsonEncode(toJson())))
+            .then((_) => true)
+            .catchError((_) => false)
+        : writeToPref())
+      ..then((v) => v
+              ? logger.fine(
+                  "SubscriptionManager stored successfully: ${jsonEncode(toJson())}")
+              : logger.warning(
+                  "SubscriptionManager failed to store: ${jsonEncode(toJson())}"))
+          .ignore();
   }
 
   // #endregion IO
-  static late List<TagSubscription> _subscriptions;
-  static List<TagSubscription> get subscriptions => _subscriptions;
+  static late /* List<TagSubscription> */ Set<TagSubscription> _subscriptions;
+  static /* List<TagSubscription> */ Set<TagSubscription> get subscriptions =>
+      _subscriptions;
   static const String batchTaskName = "checkSubscriptions";
   static bool get isInit {
     try {
       _subscriptions.isEmpty;
       return true;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
 
   static Duration frequency = const Duration(hours: 12);
-  static void initAndCheckSubscriptions({
+  static Future<void> initAndCheckSubscriptions({
     lm.FileLogger? logger,
     E621AccessData? accessData,
   }) async {
@@ -249,28 +274,52 @@ class SubscriptionManager {
     accessData ??= await E621AccessData.tryLoad();
     bool hasChanges = false;
     final l = await SubscriptionManager.loadFromStorageAsync();
-    for (int i = 0; i < l.length; ++i) {
+    for (var e in l) {
       final res = (await e621.sendRequest(
           e621.initPostSearch(
               credentials: accessData?.cred,
-              tags: l[i].tag,
-              limit: e621.maxPostsPerSearch)
+              tags: e.tag,
+              limit: e621.maxPostSearchLimit)
             ..log(logger)))
         ..log(logger);
       if (res.statusCodeInfo.isSuccessful) {
         final posts = E6PostResponse.fromRawJsonResults(res.body).toList();
         final lastIndex =
-            posts.lastIndexWhere((element) => element.id > l[i].lastId);
+            posts.lastIndexWhere((element) => element.id > e.lastId);
         if (lastIndex < 0 || lastIndex > posts.length) {
           continue;
         }
-        l[i] = l[i].copyWith(
-            cachedPosts: Set.of(l[i].cachedPosts)
-              ..addAll(posts.take(lastIndex + 1).map((e) => e.id)));
+        l
+          ..remove(e)
+          ..add(e.copyWith(
+              cachedPosts: Set.of(e.cachedPosts)
+                ..addAll(posts.take(lastIndex + 1).map((e) => e.id))));
         hasChanges = true;
         // TODO: NOTIFICATIONS
       }
     }
+    // for (int i = 0; i < l.length; ++i) {
+    //   final res = (await e621.sendRequest(
+    //       e621.initPostSearch(
+    //           credentials: accessData?.cred,
+    //           tags: l[i].tag,
+    //           limit: e621.maxPostSearchLimit)
+    //         ..log(logger)))
+    //     ..log(logger);
+    //   if (res.statusCodeInfo.isSuccessful) {
+    //     final posts = E6PostResponse.fromRawJsonResults(res.body).toList();
+    //     final lastIndex =
+    //         posts.lastIndexWhere((element) => element.id > l[i].lastId);
+    //     if (lastIndex < 0 || lastIndex > posts.length) {
+    //       continue;
+    //     }
+    //     l[i] = l[i].copyWith(
+    //         cachedPosts: Set.of(l[i].cachedPosts)
+    //           ..addAll(posts.take(lastIndex + 1).map((e) => e.id)));
+    //     hasChanges = true;
+    //     // TODO: NOTIFICATIONS
+    //   }
+    // }
     if (hasChanges) {
       SubscriptionManager.writeToStorage();
     }
@@ -284,6 +333,7 @@ class SubscriptionPage extends StatefulWidget {
   State<SubscriptionPage> createState() => _SubscriptionPageState();
 }
 
+/// TOD: Fix layout bugs
 class _SubscriptionPageState extends State<SubscriptionPage> {
   String title = "";
   @override
@@ -301,19 +351,22 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
 
   Widget buildFutureFromStorage(
     BuildContext context,
-    AsyncSnapshot<List<TagSubscription>> snapshot,
+    AsyncSnapshot< /* List<TagSubscription> */ Set<TagSubscription>> snapshot,
   ) {
     return snapshot.hasData ? buildRoot(snapshot.data!) : util.fullPageSpinner;
   }
 
-  Scaffold buildRoot(List<TagSubscription> data) {
+  Scaffold buildRoot(/* List<TagSubscription> */ Set<TagSubscription> data) {
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: PageView(
-          onPageChanged: (value) => setState(() {
-                title = data.elementAtOrNull(value)?.tag ?? "";
-              }),
-          children: data.map(buildPostResultViewFromTagSubscription).toList()),
+      appBar: AppBar(title: Text.rich(parse("{{$title}}", context))),
+      body: SafeArea(
+        child: PageView(
+            onPageChanged: (value) => setState(() {
+                  title = data.elementAtOrNull(value)?.tag ?? "";
+                }),
+            children:
+                data.map(buildPostResultViewFromTagSubscription).toList()),
+      ),
     );
   }
 
@@ -330,8 +383,8 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                     tags: e.cachedPosts.length > e621.maxTagsPerSearch
                         ? e.cachedPosts.fold("", (prior, t) => "~id:$t $prior")
                         : e.tag,
-                    credentials: E621AccessData.fallbackForced?.cred,
-                    limit: e621.maxPostsPerSearch)
+                    credentials: E621AccessData.forcedUserDataSafe?.cred,
+                    limit: e621.maxPostSearchLimit)
                   ..log(SubscriptionManager.logger))
               ..then((v) => v.log(SubscriptionManager.logger)).ignore(),
             builder: buildFutureFromSearchResults,
@@ -345,12 +398,12 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
       return ErrorPage.errorWidgetWrapper(logger: SubscriptionManager.logger,
           () {
         final ps = E6PostsSync.fromRawJson(snapshot.data!.body);
-        return WPostSearchResults(
+        return w.PostGrid(
           posts: ps,
-          expectedCount: ps.length,
+          // expectedCount: ps.length,
           stripToGridView: true,
           disallowSelections: true,
-          useProviderForPosts: false,
+          useProviderForPosts: false, filterBlacklist: false,
         );
       }).value;
     } else if (snapshot.hasError) {
@@ -363,8 +416,3 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     }
   }
 }
-
-// class PersistentStorageManager {
-//   static final Map<String, (File? file, Future<bool> Function(dynamic data) writeAsync, Future<dynamic> Function(File? file) readAsync)> ioData = {};
-//   static void register()
-// }

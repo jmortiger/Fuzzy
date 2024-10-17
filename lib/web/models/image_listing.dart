@@ -16,6 +16,7 @@ abstract interface class PostListingBare {
   int get id;
   DateTime get createdAt;
   List<String> get tagList;
+  Set<String> get tagSet;
   ITagData get tagData;
   IImageInfoBare get file;
   IImageInfoBare get preview;

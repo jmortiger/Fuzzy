@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fuzzy/intent.dart';
 import 'package:fuzzy/main.dart';
 import 'package:fuzzy/models/app_settings.dart';
-import 'package:fuzzy/models/search_view_model.dart';
 import 'package:fuzzy/models/tag_subscription.dart';
 import 'package:fuzzy/pages/settings_page.dart';
 import 'package:fuzzy/pages/tag_db_editor.dart';
@@ -51,9 +50,8 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
   // ignore: unnecessary_late
   static late final lRecord = lm.generateLogger("WHomeEndDrawer");
   // #endregion Logger
-  SearchViewModel get svm =>
-      Provider.of<SearchViewModel>(context, listen: false);
 
+  // ignore: deprecated_member_use_from_same_package
   /// It's better to directly check if [E621AccessData.userData] is assigned,
   /// but this forces the end drawer to rebuild when changed.
   bool isLoggedIn = false;
@@ -61,7 +59,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
   @override
   void initState() {
     super.initState();
-    isLoggedIn = E621AccessData.fallback != null;
+    isLoggedIn = E621AccessData.allowedUserDataSafe != null;
   }
 
   @override
@@ -73,7 +71,8 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
               ? const DrawerHeader(child: Text("Menu"))
               // : DrawerHeader(child: Text(E621AccessData.fallback?.username ?? "FAIL")),
               : WUserDrawerHeaderLoader(
-                  data: E621AccessData.fallback ?? E621AccessData.errorData,
+                  data: E621AccessData.allowedUserDataSafe ??
+                      E621AccessData.errorData,
                   user: E621.loggedInUser.$Safe,
                 ),
           ListTile(
@@ -85,7 +84,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                   MaterialPageRoute(
                     builder: (context) => const SettingsPage(),
                   )).then(
-                (value) => AppSettings.writeSettingsToFile(),
+                (value) => AppSettings.i?.writeToFile(),
               );
             },
           ),
@@ -108,7 +107,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
           //       Navigator.push(
           //           context,
           //           MaterialPageRoute(
-          //             builder: (context) => UserProfileLoaderPage.getByName(
+          //             builder: (context) => UserProfilePageLoader.getByName(
           //                 username: E621AccessData.fallback!.username),
           //           ));
           //     },
@@ -124,7 +123,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                       title: const Text("Log Out?"),
                       content: Text(
                         "Do you really want to log out of account "
-                        "${E621AccessData.fallback!.username}?",
+                        "${E621AccessData.allowedUserDataSafe!.username}?",
                       ),
                       actions: [
                         TextButton(
@@ -146,7 +145,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 ).then((v) {
                   switch (v) {
                     case true:
-                      E621AccessData.userData.$Safe
+                      E621AccessData.forcedUserDataSafe
                           ?.tryClearAsync()
                           .then((success) => this.context.mounted
                               ? util.showUserMessage(
@@ -177,11 +176,10 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             subtitle: Text(E621AccessData.useLoginData ? "On" : "Off"),
             onTap: () {
               print("Before: ${E621AccessData.useLoginData}");
-              setState(
-                () => //E621AccessData.toggleUseLoginData
-                    Provider.of<SearchViewModel>(context, listen: false)
-                        .toggleSendAuthHeaders(),
-              ); // Just to trigger rebuild
+              setState(() => E621AccessData.toggleUseLoginData()
+                  /* () => Provider.of<SearchViewModel>(context, listen: false)
+                        .toggleSendAuthHeaders(), */
+                  ); // Just to trigger rebuild
               print("After: ${E621AccessData.useLoginData}");
               // Navigator.pop(context);
             },
@@ -205,9 +203,9 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
             onTap: () {
               logger.finer("Search Set activated");
               Navigator.pop(context);
-              showDialog<e621.PostSet>(
+              /* showDialog<e621.PostSet>(
                 context: context,
-                builder: (context) {
+                builder: (ctx) {
                   return AlertDialog(
                     content: WSearchSet(
                       initialLimit: 10,
@@ -218,11 +216,48 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                       initialSearchName: null,
                       initialSearchShortname: null,
                       onSelected: (e621.PostSet set) =>
-                          Navigator.pop(context, set),
+                          Navigator.pop(ctx, set),
                     ),
                     // scrollable: true,
                   );
                 },
+              ) */
+              Navigator.push(
+                context,
+                MaterialPageRoute<e621.PostSet>(
+                  builder: (ctx) => WSearchSet(
+                    isFullPage: true,
+                    initialLimit: 10,
+                    initialPage: null,
+                    initialSearchCreatorName:
+                        E621AccessData.allowedUserDataSafe?.username,
+                    initialSearchOrder: e621.SetOrder.updatedAt,
+                    initialSearchName: null,
+                    initialSearchShortname: null,
+                    // onSelected: (_) => "",
+                    onSelected: (e621.PostSet set) => Navigator.pop(ctx, set),
+                    // onMultiselectCompleted: (_) => "",
+                  ),
+                ),
+                // Navigator.pushNamed<dynamic>(
+                //   context,
+                //   Uri.parse(SearchSetRoute.routePathConst).replace(queryParameters: {
+                //     "search[creator_name]":E621AccessData.allowedUserDataSafe?.username,
+                //     "limit":"10",
+                //     "search[order]":e621.SetOrder.updatedAt.query,
+                //   }).toString(),
+                //   /* MaterialPageRoute<e621.PostSet>(
+                //     builder: (ctx) => WSearchSet(
+                //       isFullPage: true,
+                //       initialLimit: 10,
+                //       initialSearchCreatorName:
+                //           E621AccessData.allowedUserDataSafe?.username,
+                //       initialSearchOrder: e621.SetOrder.updatedAt,
+                //       // onSelected: (_) => "",
+                //       onSelected: (e621.PostSet set) => Navigator.pop(ctx, set),
+                //       // onMultiselectCompleted: (_) => "",
+                //     ),
+                //   ), */
               ).then((v) => v != null
                   ? widget.onSearchRequested?.call(
                       SearchView.i.preferSetShortname
@@ -266,7 +301,8 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                 context: context,
                 builder: (_) {
                   return const AlertDialog(
-                    content: w.SoloBackButton.noOverlay(child: WUpdateSet.create()),
+                    content:
+                        w.SoloBackButton.noOverlay(child: WUpdateSet.create()),
                     // scrollable: true,
                   );
                 },
@@ -290,7 +326,7 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                     MaterialPageRoute(
                       builder: (_) => buildHomePageWithProviders(
                           searchText:
-                              "fav:${E621.loggedInUser.$Safe?.name ?? E621AccessData.fallbackForced?.username} status:deleted"),
+                              "fav:${E621.loggedInUser.$Safe?.name ?? E621AccessData.forcedUserDataSafe?.username} status:deleted"),
                     ));
               },
             ),
@@ -413,13 +449,16 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                           height: double.maxFinite,
                           child: w.SoloBackButton.noOverlay(
                               child: FutureBuilder(
-                                  future: e621.sendRequest(
-                                      util.devData.isAssigned
-                                          ? e621.initGetCommentRequest(
-                                              id: util.devData
-                                                  .$["e621"]["comments"].first)
-                                          : e621.initSearchCommentsRequest(
-                                              limit: 1)),
+                                  future: e621.sendRequest(util
+                                          .devData.isAssigned
+                                      ? e621.initGetCommentRequest(
+                                          id: util
+                                                  .devData
+                                                  .$Safe?["e621"]["comments"]
+                                                  .first ??
+                                              3)
+                                      : e621.initSearchCommentsRequest(
+                                          limit: 1)),
                                   builder: (context, snapshot) {
                                     if (snapshot.hasData) {
                                       return WComment(
@@ -455,9 +494,10 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                                       .sendRequest(
                                         util.devData.isAssigned
                                             ? e621.initSearchCommentsRequest(
-                                                searchPostId:
-                                                    util.devData.$["e621"]
-                                                        ["posts"]["comments"],
+                                                searchPostId: util.devData
+                                                            .$Safe?["e621"]
+                                                        ["posts"]["comments"] ??
+                                                    14,
                                               )
                                             : e621.initSearchCommentsRequest(
                                                 searchPostId: 1699321,
@@ -496,9 +536,9 @@ class _WHomeEndDrawerState extends State<WHomeEndDrawer> {
                         child: w.SoloBackButton.noOverlay(
                             child: SingleChildScrollView(
                           child: WCommentsLoader(
-                            postId: util.devData.isAssigned
-                                ? util.devData.$["e621"]["posts"]["comments2"]
-                                : 1699321,
+                            postId: util.devData.$Safe?["e621"]["posts"]
+                                    ["comments2"] ??
+                                1699321,
                           ),
                         )),
                       )));
@@ -619,19 +659,16 @@ class WUserDrawerHeader extends StatelessWidget {
       DrawerHeader(
         child: InkWell(
           onTap: user == null
-              ? () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => UserProfileLoaderPage.getByName(
-                            username: data.username),
-                      ));
-                }
+              ? () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => UserProfilePageLoader.getByName(
+                        username: data.username),
+                  ))
               : () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        UserProfileLoaderPage.getById(id: user.id),
+                    builder: (_) => UserProfilePageLoader.getById(id: user.id),
                   )),
           child: root,
         ),

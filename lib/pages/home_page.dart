@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fuzzy/i_route.dart';
+import 'package:fuzzy/main.dart';
 // import 'package:fuzzy/log_management.dart' as lm;
 import 'package:fuzzy/pages/saved_searches_page.dart';
 import 'package:fuzzy/web/e621/post_collection.dart';
@@ -8,19 +9,71 @@ import 'package:fuzzy/widgets/w_fab_builder.dart';
 import 'package:fuzzy/widgets/w_post_search_results.dart';
 import 'package:provider/provider.dart';
 
-import '../web/e621/e621_access_data.dart';
 import '../widgets/w_home_end_drawer.dart';
 import '../widgets/w_search_bar.dart';
 
-class HomePage extends StatefulWidget implements IRoute<HomePage> {
-  static const routeNameString = "/";
+class HomePage extends StatefulWidget with IRoute<HomePage> {
+  // #region Routing
   static const allRoutesString = ["/", "/posts"];
+  static const routeNameConst = "/";
+  static const routeSegmentsConst = [""];
+  // static const routeSegmentsConst = ["posts"];
+  static const routePathConst = "/";
+  // static const routePathConst = "/posts";
+  static const hasStaticPathConst = true;
   @override
-  get routeName => routeNameString;
+  get routeName => routeNameConst;
+  @override
+  get routeSegmentsFolded => routePathConst;
+  @override
+  get hasStaticPath => hasStaticPathConst;
+  @override
+  get routeSegments => routeSegmentsConst;
+
+  @override
+  Widget generateWidgetForRoute(RouteSettings settings) {
+    final url = Uri.parse(settings.name ?? "/");
+    return buildHomePageWithProviders(
+      searchText: url.queryParameters["tags"],
+      limit: int.tryParse(url.queryParameters["limit"] ?? ""),
+      page: url.queryParameters["page"],
+    );
+  }
+
+  static Widget? legacyBuilder(RouteSettings settings, int? id, Uri url) {
+    try {
+      try {
+        final v = (settings.arguments as dynamic)!;
+        return buildHomePageWithProviders(
+          searchText: v.tags as String?,
+          limit: v.limit as int?,
+          page: v.page as String?,
+        );
+      } catch (e) {
+        return buildHomePageWithProviders(
+          searchText: url.queryParameters["tags"],
+          limit: int.tryParse(url.queryParameters["limit"] ?? ""),
+          page: url.queryParameters["page"],
+        );
+      }
+    } catch (e, s) {
+      routeLogger.severe(
+        "Routing failure\n"
+        "\tRoute: ${settings.name}\n"
+        "\tId: $id\n"
+        "\tArgs: ${settings.arguments}",
+        e,
+        s,
+      );
+      return null;
+    }
+  }
+  // #endregion Routing
 
   final String? initialTags;
   final String? initialLimit;
   final String? initialPage;
+
   const HomePage({
     super.key,
     this.initialTags,
@@ -42,9 +95,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    if (!E621AccessData.devAccessData.isAssigned) {
-      E621AccessData.devAccessData.getItem();
-    }
     toFillSearchWith = sc.searchText;
   }
 
@@ -115,7 +165,7 @@ class _HomePageState extends State<HomePage> {
     // Provider.of<ManagedPostCollectionSync>(context, listen: false).launchSearch(
     //   context: context,
     //   searchViewNotifier:
-    //       Provider.of<SearchResultsNotifier?>(context, listen: false),
+    //       Provider.of<SelectedPosts?>(context, listen: false),
     //   limit: limit,
     //   pageModifier: pageModifier,
     //   pageNumber: pageNumber,
